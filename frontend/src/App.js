@@ -15,6 +15,7 @@ import CategoriesPage from "@/pages/CategoriesPage";
 import MaintenancesPage from "@/pages/MaintenancesPage";
 import NewMaintenancePage from "@/pages/NewMaintenancePage";
 import MaintenanceDetailPage from "@/pages/MaintenanceDetailPage";
+import StockPage from "@/pages/StockPage";
 import Layout from "@/components/Layout";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
