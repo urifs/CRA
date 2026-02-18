@@ -600,8 +600,209 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
         preventive_count=preventive_count,
         corrective_count=corrective_count,
         total_spent=total_spent,
-        recent_maintenances=recent_maintenances
+        recent_maintenances=recent_maintenances,
+        low_stock_count=await db.stock_items.count_documents({
+            "user_id": current_user["id"],
+            "$expr": {"$lte": ["$quantity", "$min_quantity"]}
+        })
     )
+
+# ============ STOCK ROUTES ============
+
+@api_router.post("/stock/items", response_model=StockItemResponse)
+async def create_stock_item(item: StockItemCreate, current_user: dict = Depends(get_current_user)):
+    item_id = str(uuid.uuid4())
+    item_doc = {
+        "id": item_id,
+        "name": item.name,
+        "code": item.code or "",
+        "category": item.category or "",
+        "unit": item.unit,
+        "quantity": item.quantity,
+        "min_quantity": item.min_quantity,
+        "unit_price": item.unit_price or 0,
+        "location": item.location or "",
+        "notes": item.notes or "",
+        "user_id": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.stock_items.insert_one(item_doc)
+    
+    return StockItemResponse(
+        id=item_id,
+        name=item.name,
+        code=item.code or "",
+        category=item.category or "",
+        unit=item.unit,
+        quantity=item.quantity,
+        min_quantity=item.min_quantity,
+        unit_price=item.unit_price or 0,
+        location=item.location or "",
+        notes=item.notes or "",
+        is_low_stock=item.quantity <= item.min_quantity,
+        created_at=item_doc["created_at"]
+    )
+
+@api_router.get("/stock/items", response_model=List[StockItemResponse])
+async def get_stock_items(low_stock_only: bool = False, current_user: dict = Depends(get_current_user)):
+    query = {"user_id": current_user["id"]}
+    if low_stock_only:
+        query["$expr"] = {"$lte": ["$quantity", "$min_quantity"]}
+    
+    items = await db.stock_items.find(query, {"_id": 0}).sort("name", 1).to_list(1000)
+    
+    return [StockItemResponse(
+        id=i["id"],
+        name=i["name"],
+        code=i.get("code", ""),
+        category=i.get("category", ""),
+        unit=i.get("unit", "un"),
+        quantity=i["quantity"],
+        min_quantity=i.get("min_quantity", 0),
+        unit_price=i.get("unit_price", 0),
+        location=i.get("location", ""),
+        notes=i.get("notes", ""),
+        is_low_stock=i["quantity"] <= i.get("min_quantity", 0),
+        created_at=i["created_at"]
+    ) for i in items]
+
+@api_router.get("/stock/items/{item_id}", response_model=StockItemResponse)
+async def get_stock_item(item_id: str, current_user: dict = Depends(get_current_user)):
+    item = await db.stock_items.find_one({"id": item_id, "user_id": current_user["id"]}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    return StockItemResponse(
+        id=item["id"],
+        name=item["name"],
+        code=item.get("code", ""),
+        category=item.get("category", ""),
+        unit=item.get("unit", "un"),
+        quantity=item["quantity"],
+        min_quantity=item.get("min_quantity", 0),
+        unit_price=item.get("unit_price", 0),
+        location=item.get("location", ""),
+        notes=item.get("notes", ""),
+        is_low_stock=item["quantity"] <= item.get("min_quantity", 0),
+        created_at=item["created_at"]
+    )
+
+@api_router.put("/stock/items/{item_id}", response_model=StockItemResponse)
+async def update_stock_item(item_id: str, item: StockItemCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.stock_items.find_one({"id": item_id, "user_id": current_user["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    update_doc = {
+        "name": item.name,
+        "code": item.code or "",
+        "category": item.category or "",
+        "unit": item.unit,
+        "min_quantity": item.min_quantity,
+        "unit_price": item.unit_price or 0,
+        "location": item.location or "",
+        "notes": item.notes or ""
+    }
+    await db.stock_items.update_one({"id": item_id}, {"$set": update_doc})
+    
+    return StockItemResponse(
+        id=item_id,
+        name=item.name,
+        code=item.code or "",
+        category=item.category or "",
+        unit=item.unit,
+        quantity=existing["quantity"],
+        min_quantity=item.min_quantity,
+        unit_price=item.unit_price or 0,
+        location=item.location or "",
+        notes=item.notes or "",
+        is_low_stock=existing["quantity"] <= item.min_quantity,
+        created_at=existing["created_at"]
+    )
+
+@api_router.delete("/stock/items/{item_id}")
+async def delete_stock_item(item_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.stock_items.delete_one({"id": item_id, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    # Delete related movements
+    await db.stock_movements.delete_many({"item_id": item_id})
+    return {"message": "Item removido com sucesso"}
+
+@api_router.post("/stock/movements", response_model=StockMovementResponse)
+async def create_stock_movement(movement: StockMovementCreate, current_user: dict = Depends(get_current_user)):
+    # Check if item exists
+    item = await db.stock_items.find_one({"id": movement.item_id, "user_id": current_user["id"]})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    previous_quantity = item["quantity"]
+    
+    if movement.movement_type == "entrada":
+        new_quantity = previous_quantity + movement.quantity
+    elif movement.movement_type == "saida":
+        if movement.quantity > previous_quantity:
+            raise HTTPException(status_code=400, detail="Quantidade insuficiente em estoque")
+        new_quantity = previous_quantity - movement.quantity
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de movimentação inválido")
+    
+    # Update item quantity
+    await db.stock_items.update_one({"id": movement.item_id}, {"$set": {"quantity": new_quantity}})
+    
+    # Create movement record
+    movement_id = str(uuid.uuid4())
+    movement_doc = {
+        "id": movement_id,
+        "item_id": movement.item_id,
+        "movement_type": movement.movement_type,
+        "quantity": movement.quantity,
+        "previous_quantity": previous_quantity,
+        "new_quantity": new_quantity,
+        "reason": movement.reason or "",
+        "notes": movement.notes or "",
+        "user_id": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.stock_movements.insert_one(movement_doc)
+    
+    return StockMovementResponse(
+        id=movement_id,
+        item_id=movement.item_id,
+        item_name=item["name"],
+        movement_type=movement.movement_type,
+        quantity=movement.quantity,
+        previous_quantity=previous_quantity,
+        new_quantity=new_quantity,
+        reason=movement.reason or "",
+        notes=movement.notes or "",
+        created_at=movement_doc["created_at"]
+    )
+
+@api_router.get("/stock/movements", response_model=List[StockMovementResponse])
+async def get_stock_movements(item_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {"user_id": current_user["id"]}
+    if item_id:
+        query["item_id"] = item_id
+    
+    movements = await db.stock_movements.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Get item names
+    items = await db.stock_items.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    item_map = {i["id"]: i["name"] for i in items}
+    
+    return [StockMovementResponse(
+        id=m["id"],
+        item_id=m["item_id"],
+        item_name=item_map.get(m["item_id"], ""),
+        movement_type=m["movement_type"],
+        quantity=m["quantity"],
+        previous_quantity=m["previous_quantity"],
+        new_quantity=m["new_quantity"],
+        reason=m.get("reason", ""),
+        notes=m.get("notes", ""),
+        created_at=m["created_at"]
+    ) for m in movements]
 
 # ============ ROOT ============
 
