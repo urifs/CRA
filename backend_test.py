@@ -725,6 +725,17 @@ class FleetMaintenanceAPITester:
         print("\n📋 DASHBOARD TESTS")
         self.test_dashboard_stats()
         
+        # Stock Tests
+        print("\n📋 STOCK TESTS")
+        self.test_create_stock_item()
+        self.test_list_stock_items()
+        self.test_get_stock_item_details()
+        self.test_update_stock_item()
+        self.test_create_stock_movement_entry()
+        self.test_create_stock_movement_exit()
+        self.test_list_stock_movements()
+        self.test_filter_low_stock_items()
+        
         # Cleanup
         self.cleanup_test_data()
         
