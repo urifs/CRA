@@ -120,6 +120,55 @@ class DashboardStats(BaseModel):
     corrective_count: int
     total_spent: float
     recent_maintenances: List[MaintenanceResponse]
+    low_stock_count: int = 0
+
+# ============ STOCK MODELS ============
+
+class StockItemCreate(BaseModel):
+    name: str
+    code: Optional[str] = ""
+    category: Optional[str] = ""  # filtro, óleo, correia, etc.
+    unit: str = "un"  # un, L, kg, etc.
+    quantity: float = 0
+    min_quantity: float = 0
+    unit_price: Optional[float] = 0
+    location: Optional[str] = ""
+    notes: Optional[str] = ""
+
+class StockItemResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    code: str
+    category: str
+    unit: str
+    quantity: float
+    min_quantity: float
+    unit_price: float
+    location: str
+    notes: str
+    is_low_stock: bool
+    created_at: str
+
+class StockMovementCreate(BaseModel):
+    item_id: str
+    movement_type: str  # entrada ou saida
+    quantity: float
+    reason: Optional[str] = ""
+    notes: Optional[str] = ""
+
+class StockMovementResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    item_id: str
+    item_name: Optional[str] = ""
+    movement_type: str
+    quantity: float
+    previous_quantity: float
+    new_quantity: float
+    reason: str
+    notes: str
+    created_at: str
 
 # ============ AUTH HELPERS ============
 
