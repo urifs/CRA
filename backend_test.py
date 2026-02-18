@@ -390,10 +390,10 @@ class FleetMaintenanceAPITester:
         
         if response and response.status_code == 200:
             stats = response.json()
-            required_fields = ['total_machines', 'total_maintenances', 'preventive_count', 'corrective_count', 'total_spent', 'recent_maintenances']
+            required_fields = ['total_machines', 'total_maintenances', 'preventive_count', 'corrective_count', 'total_spent', 'recent_maintenances', 'low_stock_count']
             
             if all(field in stats for field in required_fields):
-                self.log_result("Dashboard Stats", True, f"Machines: {stats['total_machines']}, Maintenances: {stats['total_maintenances']}")
+                self.log_result("Dashboard Stats", True, f"Machines: {stats['total_machines']}, Maintenances: {stats['total_maintenances']}, Low Stock: {stats['low_stock_count']}")
                 return True
             else:
                 missing_fields = [field for field in required_fields if field not in stats]
