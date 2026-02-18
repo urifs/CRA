@@ -290,7 +290,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card
           className="stat-card cursor-pointer group"
           onClick={() => navigate("/machines")}
@@ -322,6 +322,24 @@ export default function DashboardPage() {
               <div>
                 <p className="font-bold text-slate-900">Nova Manutenção</p>
                 <p className="text-sm text-slate-500">Registrar ficha de manutenção</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="stat-card cursor-pointer group"
+          onClick={() => navigate("/stock")}
+          data-testid="quick-action-stock"
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
+                <Package className="text-slate-600 group-hover:text-orange-500 transition-colors" size={24} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-900">Estoque</p>
+                <p className="text-sm text-slate-500">Controle de peças</p>
               </div>
             </div>
           </CardContent>
