@@ -435,6 +435,225 @@ class FleetMaintenanceAPITester:
         
         return False
 
+    def test_create_stock_item(self):
+        """Test stock item creation"""
+        data = {
+            "name": "Filtro de Óleo Teste",
+            "code": "FO-TEST-001",
+            "category": "Filtro",
+            "unit": "un",
+            "quantity": 10,
+            "min_quantity": 5,
+            "unit_price": 25.50,
+            "location": "Prateleira A1",
+            "notes": "Item criado para testes automatizados"
+        }
+        
+        response = self.make_request("POST", "stock/items", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data:
+                self.stock_item_id = response_data['id']
+                self.log_result("Create Stock Item", True, f"Stock Item ID: {self.stock_item_id}")
+                return True
+            else:
+                self.log_result("Create Stock Item", False, "", "Missing ID in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Stock Item", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_list_stock_items(self):
+        """Test listing stock items"""
+        response = self.make_request("GET", "stock/items")
+        
+        if response and response.status_code == 200:
+            items = response.json()
+            if isinstance(items, list) and len(items) > 0:
+                found_test_item = any(item['id'] == self.stock_item_id for item in items)
+                if found_test_item:
+                    self.log_result("List Stock Items", True, f"Found {len(items)} stock items")
+                    return True
+                else:
+                    self.log_result("List Stock Items", False, "", "Test stock item not found in list")
+            else:
+                self.log_result("List Stock Items", False, "", "Empty or invalid stock items list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("List Stock Items", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_get_stock_item_details(self):
+        """Test getting stock item details"""
+        if not self.stock_item_id:
+            self.log_result("Get Stock Item Details", False, "", "No stock item ID available")
+            return False
+        
+        response = self.make_request("GET", f"stock/items/{self.stock_item_id}")
+        
+        if response and response.status_code == 200:
+            item = response.json()
+            if 'id' in item and item['id'] == self.stock_item_id:
+                self.log_result("Get Stock Item Details", True, f"Item: {item['name']}, Quantity: {item['quantity']}")
+                return True
+            else:
+                self.log_result("Get Stock Item Details", False, "", "Stock item data mismatch")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Get Stock Item Details", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_update_stock_item(self):
+        """Test stock item update"""
+        if not self.stock_item_id:
+            self.log_result("Update Stock Item", False, "", "No stock item ID available")
+            return False
+        
+        data = {
+            "name": "Filtro de Óleo Teste Atualizado",
+            "code": "FO-TEST-001-UPD",
+            "category": "Filtro",
+            "unit": "un",
+            "min_quantity": 8,
+            "unit_price": 30.00,
+            "location": "Prateleira B2",
+            "notes": "Item atualizado para testes automatizados"
+        }
+        
+        response = self.make_request("PUT", f"stock/items/{self.stock_item_id}", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data['name'] == data['name']:
+                self.log_result("Update Stock Item", True, f"Stock item updated: {response_data['name']}")
+                return True
+            else:
+                self.log_result("Update Stock Item", False, "", "Stock item data not updated correctly")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Update Stock Item", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_create_stock_movement_entry(self):
+        """Test stock movement creation (entry)"""
+        if not self.stock_item_id:
+            self.log_result("Create Stock Movement Entry", False, "", "No stock item ID available")
+            return False
+        
+        data = {
+            "item_id": self.stock_item_id,
+            "movement_type": "entrada",
+            "quantity": 5,
+            "reason": "Compra",
+            "notes": "Entrada de teste automatizado"
+        }
+        
+        response = self.make_request("POST", "stock/movements", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data['movement_type'] == "entrada":
+                self.log_result("Create Stock Movement Entry", True, f"Entry movement created: +{response_data['quantity']}")
+                return True
+            else:
+                self.log_result("Create Stock Movement Entry", False, "", "Missing ID or incorrect movement type in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Stock Movement Entry", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_create_stock_movement_exit(self):
+        """Test stock movement creation (exit)"""
+        if not self.stock_item_id:
+            self.log_result("Create Stock Movement Exit", False, "", "No stock item ID available")
+            return False
+        
+        data = {
+            "item_id": self.stock_item_id,
+            "movement_type": "saida",
+            "quantity": 3,
+            "reason": "Uso em manutenção",
+            "notes": "Saída de teste automatizado"
+        }
+        
+        response = self.make_request("POST", "stock/movements", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data['movement_type'] == "saida":
+                self.log_result("Create Stock Movement Exit", True, f"Exit movement created: -{response_data['quantity']}")
+                return True
+            else:
+                self.log_result("Create Stock Movement Exit", False, "", "Missing ID or incorrect movement type in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Stock Movement Exit", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_list_stock_movements(self):
+        """Test listing stock movements"""
+        response = self.make_request("GET", "stock/movements")
+        
+        if response and response.status_code == 200:
+            movements = response.json()
+            if isinstance(movements, list) and len(movements) > 0:
+                # Check if we have both entry and exit movements for our test item
+                test_movements = [m for m in movements if m['item_id'] == self.stock_item_id]
+                if len(test_movements) >= 2:  # Should have at least entry and exit
+                    self.log_result("List Stock Movements", True, f"Found {len(movements)} total movements, {len(test_movements)} for test item")
+                    return True
+                else:
+                    self.log_result("List Stock Movements", False, "", f"Expected at least 2 movements for test item, found {len(test_movements)}")
+            else:
+                self.log_result("List Stock Movements", False, "", "Empty or invalid stock movements list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("List Stock Movements", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_filter_low_stock_items(self):
+        """Test filtering low stock items"""
+        # First, create a low stock item by reducing quantity below minimum
+        if self.stock_item_id:
+            # Create multiple exit movements to bring stock below minimum
+            for i in range(3):
+                data = {
+                    "item_id": self.stock_item_id,
+                    "movement_type": "saida",
+                    "quantity": 2,
+                    "reason": "Teste estoque baixo",
+                    "notes": f"Redução {i+1} para teste de estoque baixo"
+                }
+                self.make_request("POST", "stock/movements", data)
+        
+        response = self.make_request("GET", "stock/items?low_stock_only=true")
+        
+        if response and response.status_code == 200:
+            low_stock_items = response.json()
+            if isinstance(low_stock_items, list):
+                # Check if all returned items are actually low stock
+                all_low_stock = all(item['is_low_stock'] for item in low_stock_items)
+                if all_low_stock:
+                    self.log_result("Filter Low Stock Items", True, f"Found {len(low_stock_items)} low stock items")
+                    return True
+                else:
+                    self.log_result("Filter Low Stock Items", False, "", "Some items in low stock filter are not actually low stock")
+            else:
+                self.log_result("Filter Low Stock Items", False, "", "Invalid low stock items list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Filter Low Stock Items", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
     def cleanup_test_data(self):
         """Clean up test data"""
         cleanup_results = []
