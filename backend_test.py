@@ -663,6 +663,11 @@ class FleetMaintenanceAPITester:
             response = self.make_request("DELETE", f"maintenances/{self.maintenance_id}")
             cleanup_results.append(f"Maintenance: {response.status_code if response else 'Failed'}")
         
+        # Delete stock item (this will also delete related movements)
+        if self.stock_item_id:
+            response = self.make_request("DELETE", f"stock/items/{self.stock_item_id}")
+            cleanup_results.append(f"Stock Item: {response.status_code if response else 'Failed'}")
+        
         # Delete machine
         if self.machine_id:
             response = self.make_request("DELETE", f"machines/{self.machine_id}")
