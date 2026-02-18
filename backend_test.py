@@ -1,0 +1,528 @@
+import requests
+import sys
+import json
+from datetime import datetime
+import uuid
+import base64
+import io
+
+class FleetMaintenanceAPITester:
+    def __init__(self, base_url="https://farm-fleet-pro.preview.emergentagent.com/api"):
+        self.base_url = base_url
+        self.token = None
+        self.user_id = None
+        self.tests_run = 0
+        self.tests_passed = 0
+        self.test_results = []
+        
+        # Test data storage
+        self.test_user_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+        self.test_user_password = "TestPass123!"
+        self.test_user_name = "Test User"
+        self.category_id = None
+        self.machine_id = None
+        self.maintenance_id = None
+
+    def log_result(self, test_name, success, details="", error_msg=""):
+        """Log test result"""
+        self.tests_run += 1
+        if success:
+            self.tests_passed += 1
+            print(f"✅ {test_name} - PASSED")
+        else:
+            print(f"❌ {test_name} - FAILED: {error_msg}")
+        
+        self.test_results.append({
+            "test": test_name,
+            "success": success,
+            "details": details,
+            "error": error_msg
+        })
+
+    def make_request(self, method, endpoint, data=None, files=None):
+        """Make HTTP request with proper headers"""
+        url = f"{self.base_url}/{endpoint}"
+        headers = {'Content-Type': 'application/json'}
+        
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        if files:
+            # Remove Content-Type for file uploads
+            headers.pop('Content-Type', None)
+        
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers)
+            elif method == 'POST':
+                if files:
+                    response = requests.post(url, files=files, headers=headers)
+                else:
+                    response = requests.post(url, json=data, headers=headers)
+            elif method == 'PUT':
+                response = requests.put(url, json=data, headers=headers)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers)
+            
+            return response
+        except Exception as e:
+            print(f"Request error: {str(e)}")
+            return None
+
+    def test_user_registration(self):
+        """Test user registration"""
+        data = {
+            "name": self.test_user_name,
+            "email": self.test_user_email,
+            "password": self.test_user_password
+        }
+        
+        response = self.make_request("POST", "auth/register", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'token' in response_data and 'user' in response_data:
+                self.token = response_data['token']
+                self.user_id = response_data['user']['id']
+                self.log_result("User Registration", True, f"User ID: {self.user_id}")
+                return True
+            else:
+                self.log_result("User Registration", False, "", "Missing token or user in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("User Registration", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_user_login(self):
+        """Test user login"""
+        data = {
+            "email": self.test_user_email,
+            "password": self.test_user_password
+        }
+        
+        response = self.make_request("POST", "auth/login", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'token' in response_data:
+                self.token = response_data['token']
+                self.log_result("User Login", True, f"Token received")
+                return True
+            else:
+                self.log_result("User Login", False, "", "Missing token in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("User Login", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_auth_verification(self):
+        """Test auth token verification"""
+        response = self.make_request("GET", "auth/me")
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data['email'] == self.test_user_email:
+                self.log_result("Auth Token Verification", True, f"User verified: {response_data['name']}")
+                return True
+            else:
+                self.log_result("Auth Token Verification", False, "", "User data mismatch")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Auth Token Verification", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_create_category(self):
+        """Test category creation"""
+        data = {
+            "name": "Trator de Teste",
+            "description": "Categoria criada para testes automatizados"
+        }
+        
+        response = self.make_request("POST", "categories", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data:
+                self.category_id = response_data['id']
+                self.log_result("Create Category", True, f"Category ID: {self.category_id}")
+                return True
+            else:
+                self.log_result("Create Category", False, "", "Missing ID in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Category", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_list_categories(self):
+        """Test listing categories"""
+        response = self.make_request("GET", "categories")
+        
+        if response and response.status_code == 200:
+            categories = response.json()
+            if isinstance(categories, list) and len(categories) > 0:
+                found_test_category = any(cat['id'] == self.category_id for cat in categories)
+                if found_test_category:
+                    self.log_result("List Categories", True, f"Found {len(categories)} categories")
+                    return True
+                else:
+                    self.log_result("List Categories", False, "", "Test category not found in list")
+            else:
+                self.log_result("List Categories", False, "", "Empty or invalid categories list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("List Categories", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_create_machine(self):
+        """Test machine creation"""
+        if not self.category_id:
+            self.log_result("Create Machine", False, "", "No category ID available")
+            return False
+        
+        data = {
+            "name": "Trator John Deere Teste",
+            "plate": f"TST{uuid.uuid4().hex[:4].upper()}",
+            "category_id": self.category_id,
+            "brand": "John Deere",
+            "model": "6175J",
+            "year": 2020,
+            "notes": "Máquina criada para testes automatizados"
+        }
+        
+        response = self.make_request("POST", "machines", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data:
+                self.machine_id = response_data['id']
+                self.log_result("Create Machine", True, f"Machine ID: {self.machine_id}, Plate: {data['plate']}")
+                return True
+            else:
+                self.log_result("Create Machine", False, "", "Missing ID in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Machine", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_list_machines(self):
+        """Test listing machines"""
+        response = self.make_request("GET", "machines")
+        
+        if response and response.status_code == 200:
+            machines = response.json()
+            if isinstance(machines, list) and len(machines) > 0:
+                found_test_machine = any(m['id'] == self.machine_id for m in machines)
+                if found_test_machine:
+                    self.log_result("List Machines", True, f"Found {len(machines)} machines")
+                    return True
+                else:
+                    self.log_result("List Machines", False, "", "Test machine not found in list")
+            else:
+                self.log_result("List Machines", False, "", "Empty or invalid machines list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("List Machines", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_get_machine_details(self):
+        """Test getting machine details"""
+        if not self.machine_id:
+            self.log_result("Get Machine Details", False, "", "No machine ID available")
+            return False
+        
+        response = self.make_request("GET", f"machines/{self.machine_id}")
+        
+        if response and response.status_code == 200:
+            machine = response.json()
+            if 'id' in machine and machine['id'] == self.machine_id:
+                self.log_result("Get Machine Details", True, f"Machine: {machine['name']}")
+                return True
+            else:
+                self.log_result("Get Machine Details", False, "", "Machine data mismatch")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Get Machine Details", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_create_maintenance(self):
+        """Test maintenance creation"""
+        if not self.machine_id:
+            self.log_result("Create Maintenance", False, "", "No machine ID available")
+            return False
+        
+        data = {
+            "machine_id": self.machine_id,
+            "part_name": "Filtro de óleo teste",
+            "replacement_date": "2024-01-15",
+            "part_value": 150.50,
+            "maintenance_type": "preventiva",
+            "description": "Manutenção criada para testes automatizados"
+        }
+        
+        response = self.make_request("POST", "maintenances", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data:
+                self.maintenance_id = response_data['id']
+                self.log_result("Create Maintenance", True, f"Maintenance ID: {self.maintenance_id}")
+                return True
+            else:
+                self.log_result("Create Maintenance", False, "", "Missing ID in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Maintenance", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_list_maintenances(self):
+        """Test listing maintenances"""
+        response = self.make_request("GET", "maintenances")
+        
+        if response and response.status_code == 200:
+            maintenances = response.json()
+            if isinstance(maintenances, list) and len(maintenances) > 0:
+                found_test_maintenance = any(m['id'] == self.maintenance_id for m in maintenances)
+                if found_test_maintenance:
+                    self.log_result("List Maintenances", True, f"Found {len(maintenances)} maintenances")
+                    return True
+                else:
+                    self.log_result("List Maintenances", False, "", "Test maintenance not found in list")
+            else:
+                self.log_result("List Maintenances", False, "", "Empty or invalid maintenances list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("List Maintenances", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_filter_maintenances_by_machine(self):
+        """Test filtering maintenances by machine"""
+        if not self.machine_id:
+            self.log_result("Filter Maintenances by Machine", False, "", "No machine ID available")
+            return False
+        
+        response = self.make_request("GET", f"maintenances?machine_id={self.machine_id}")
+        
+        if response and response.status_code == 200:
+            maintenances = response.json()
+            if isinstance(maintenances, list):
+                # All maintenances should belong to the specified machine
+                all_match = all(m['machine_id'] == self.machine_id for m in maintenances)
+                if all_match:
+                    self.log_result("Filter Maintenances by Machine", True, f"Found {len(maintenances)} maintenances for machine")
+                    return True
+                else:
+                    self.log_result("Filter Maintenances by Machine", False, "", "Some maintenances don't match machine filter")
+            else:
+                self.log_result("Filter Maintenances by Machine", False, "", "Invalid maintenances list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Filter Maintenances by Machine", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_upload_photo(self):
+        """Test photo upload to maintenance"""
+        if not self.maintenance_id:
+            self.log_result("Upload Photo", False, "", "No maintenance ID available")
+            return False
+        
+        # Create a simple test image (1x1 pixel PNG)
+        test_image_data = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77zgAAAABJRU5ErkJggg=="
+        )
+        
+        files = {
+            'file': ('test.png', io.BytesIO(test_image_data), 'image/png')
+        }
+        
+        response = self.make_request("POST", f"maintenances/{self.maintenance_id}/photos", files=files)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'message' in response_data and 'photo' in response_data:
+                self.log_result("Upload Photo", True, "Photo uploaded successfully")
+                return True
+            else:
+                self.log_result("Upload Photo", False, "", "Missing message or photo in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Upload Photo", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_get_maintenance_details(self):
+        """Test getting maintenance details"""
+        if not self.maintenance_id:
+            self.log_result("Get Maintenance Details", False, "", "No maintenance ID available")
+            return False
+        
+        response = self.make_request("GET", f"maintenances/{self.maintenance_id}")
+        
+        if response and response.status_code == 200:
+            maintenance = response.json()
+            if 'id' in maintenance and maintenance['id'] == self.maintenance_id:
+                # Check if photo was uploaded
+                has_photos = 'photos' in maintenance and len(maintenance['photos']) > 0
+                self.log_result("Get Maintenance Details", True, f"Maintenance: {maintenance['part_name']}, Photos: {len(maintenance.get('photos', []))}")
+                return True
+            else:
+                self.log_result("Get Maintenance Details", False, "", "Maintenance data mismatch")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Get Maintenance Details", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_dashboard_stats(self):
+        """Test dashboard statistics"""
+        response = self.make_request("GET", "dashboard")
+        
+        if response and response.status_code == 200:
+            stats = response.json()
+            required_fields = ['total_machines', 'total_maintenances', 'preventive_count', 'corrective_count', 'total_spent', 'recent_maintenances']
+            
+            if all(field in stats for field in required_fields):
+                self.log_result("Dashboard Stats", True, f"Machines: {stats['total_machines']}, Maintenances: {stats['total_maintenances']}")
+                return True
+            else:
+                missing_fields = [field for field in required_fields if field not in stats]
+                self.log_result("Dashboard Stats", False, "", f"Missing fields: {missing_fields}")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Dashboard Stats", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_update_machine(self):
+        """Test machine update"""
+        if not self.machine_id:
+            self.log_result("Update Machine", False, "", "No machine ID available")
+            return False
+        
+        data = {
+            "name": "Trator John Deere Teste Atualizado",
+            "plate": f"UPD{uuid.uuid4().hex[:4].upper()}",
+            "category_id": self.category_id,
+            "brand": "John Deere",
+            "model": "6175J Updated",
+            "year": 2021,
+            "notes": "Máquina atualizada para testes automatizados"
+        }
+        
+        response = self.make_request("PUT", f"machines/{self.machine_id}", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data['name'] == data['name']:
+                self.log_result("Update Machine", True, f"Machine updated: {response_data['name']}")
+                return True
+            else:
+                self.log_result("Update Machine", False, "", "Machine data not updated correctly")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Update Machine", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def cleanup_test_data(self):
+        """Clean up test data"""
+        cleanup_results = []
+        
+        # Delete maintenance
+        if self.maintenance_id:
+            response = self.make_request("DELETE", f"maintenances/{self.maintenance_id}")
+            cleanup_results.append(f"Maintenance: {response.status_code if response else 'Failed'}")
+        
+        # Delete machine
+        if self.machine_id:
+            response = self.make_request("DELETE", f"machines/{self.machine_id}")
+            cleanup_results.append(f"Machine: {response.status_code if response else 'Failed'}")
+        
+        # Delete category
+        if self.category_id:
+            response = self.make_request("DELETE", f"categories/{self.category_id}")
+            cleanup_results.append(f"Category: {response.status_code if response else 'Failed'}")
+        
+        print(f"\n🧹 Cleanup completed: {', '.join(cleanup_results)}")
+
+    def run_all_tests(self):
+        """Run all API tests"""
+        print(f"🚀 Starting Fleet Maintenance API Tests")
+        print(f"📍 Base URL: {self.base_url}")
+        print(f"👤 Test User: {self.test_user_email}")
+        print("=" * 60)
+        
+        # Authentication Tests
+        print("\n📋 AUTHENTICATION TESTS")
+        if not self.test_user_registration():
+            print("❌ Registration failed - stopping tests")
+            return False
+        
+        if not self.test_user_login():
+            print("❌ Login failed - stopping tests")
+            return False
+        
+        if not self.test_auth_verification():
+            print("❌ Auth verification failed - stopping tests")
+            return False
+        
+        # Category Tests
+        print("\n📋 CATEGORY TESTS")
+        self.test_create_category()
+        self.test_list_categories()
+        
+        # Machine Tests
+        print("\n📋 MACHINE TESTS")
+        self.test_create_machine()
+        self.test_list_machines()
+        self.test_get_machine_details()
+        self.test_update_machine()
+        
+        # Maintenance Tests
+        print("\n📋 MAINTENANCE TESTS")
+        self.test_create_maintenance()
+        self.test_list_maintenances()
+        self.test_filter_maintenances_by_machine()
+        self.test_get_maintenance_details()
+        self.test_upload_photo()
+        
+        # Dashboard Tests
+        print("\n📋 DASHBOARD TESTS")
+        self.test_dashboard_stats()
+        
+        # Cleanup
+        self.cleanup_test_data()
+        
+        # Results
+        print("\n" + "=" * 60)
+        print(f"📊 TEST RESULTS: {self.tests_passed}/{self.tests_run} PASSED")
+        
+        if self.tests_passed == self.tests_run:
+            print("🎉 ALL TESTS PASSED!")
+            return True
+        else:
+            print(f"⚠️  {self.tests_run - self.tests_passed} TESTS FAILED")
+            print("\nFailed tests:")
+            for result in self.test_results:
+                if not result['success']:
+                    print(f"  - {result['test']}: {result['error']}")
+            return False
+
+def main():
+    """Main test function"""
+    tester = FleetMaintenanceAPITester()
+    success = tester.run_all_tests()
+    return 0 if success else 1
+
+if __name__ == "__main__":
+    sys.exit(main())
