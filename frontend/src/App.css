@@ -81,7 +81,7 @@
 }
 
 .photo-item {
-    @apply relative aspect-square rounded-lg overflow-hidden border border-slate-200 group;
+    @apply relative aspect-square rounded-lg overflow-hidden border border-slate-200;
 }
 
 .photo-item img {
