@@ -1,0 +1,220 @@
+{
+  "identity": {
+    "name": "E1",
+    "mission": "Create a 'Tactical Industrial' design system that feels like a precision tool, not a generic SaaS.",
+    "principles": [
+      "Fusion: Industrial Utility x Swiss Precision",
+      "Emotion: Reliability, Robustness, Efficiency",
+      "Content: Data is the hero. Legibility is paramount.",
+      "Contrast: High contrast for field visibility (sunlight safe)."
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "headings": {
+        "family": "Chivo, sans-serif",
+        "weights": ["700", "900"],
+        "usage": "Page titles, Section headers, KPI values"
+      },
+      "body": {
+        "family": "Manrope, sans-serif",
+        "weights": ["400", "500", "600"],
+        "usage": "General text, labels, form inputs"
+      },
+      "mono": {
+        "family": "JetBrains Mono, monospace",
+        "weights": ["400", "500"],
+        "usage": "License plates, VINs, Part Numbers, Dates"
+      }
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-black tracking-tight uppercase",
+      "h2": "text-3xl font-bold tracking-tight",
+      "h3": "text-xl font-bold tracking-normal",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm font-medium text-muted-foreground",
+      "label": "text-xs font-bold uppercase tracking-wider text-muted-foreground"
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "name": "Industrial Slate",
+        "hex": "#0F172A",
+        "tailwind": "bg-slate-900",
+        "usage": "Primary buttons, Sidebar, Strong headers"
+      },
+      "secondary": {
+        "name": "Safety Orange",
+        "hex": "#F97316",
+        "tailwind": "bg-orange-500",
+        "usage": "Call to Actions (CTAs), Alerts, Critical Status"
+      },
+      "background": {
+        "name": "Workshop Grey",
+        "hex": "#F8FAFC",
+        "tailwind": "bg-slate-50",
+        "usage": "App background"
+      },
+      "surface": {
+        "name": "Clean White",
+        "hex": "#FFFFFF",
+        "tailwind": "bg-white",
+        "usage": "Cards, Modals, Panels"
+      },
+      "border": {
+        "name": "Steel Border",
+        "hex": "#E2E8F0",
+        "tailwind": "border-slate-200",
+        "usage": "Card borders, Dividers"
+      },
+      "success": {
+        "name": "Operational Green",
+        "hex": "#16A34A",
+        "tailwind": "text-green-600 bg-green-100",
+        "usage": "Status: Operational, Completed"
+      },
+      "warning": {
+        "name": "Maintenance Yellow",
+        "hex": "#EAB308",
+        "tailwind": "text-yellow-600 bg-yellow-100",
+        "usage": "Status: Maintenance Due, Pending"
+      },
+      "error": {
+        "name": "Critical Red",
+        "hex": "#DC2626",
+        "tailwind": "text-red-600 bg-red-100",
+        "usage": "Status: Broken, Overdue"
+      }
+    },
+    "rules": [
+      "Never use gradients for backgrounds. Use solid, reliable colors.",
+      "Text contrast must be WCAG AA compliant (4.5:1 minimum).",
+      "Use 'Safety Orange' sparingly - only for the most important action on the screen."
+    ]
+  },
+  "layout": {
+    "grid_system": {
+      "dashboard": "Bento Grid Mode B (High Density). grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4.",
+      "forms": "Max-width-2xl mx-auto. Split view on large screens (Form Left, Context Right).",
+      "lists": "Table layout with sticky headers. Dense rows."
+    },
+    "spacing": {
+      "container_padding": "p-4 md:p-8",
+      "element_gap": "gap-4",
+      "section_gap": "gap-8"
+    },
+    "containers": {
+      "card": "bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200",
+      "panel": "bg-slate-50 border-r border-slate-200"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-slate-900 text-white hover:bg-slate-800 rounded-md px-6 py-2.5 font-bold shadow-sm transition-all active:scale-95",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-md px-6 py-2.5 font-medium transition-all",
+      "destructive": "bg-red-600 text-white hover:bg-red-700 rounded-md px-6 py-2.5 font-bold shadow-sm",
+      "ghost": "text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-md px-4 py-2"
+    },
+    "inputs": {
+      "default": "h-11 bg-white border-slate-300 focus:border-orange-500 focus:ring-orange-500 rounded-md text-base",
+      "label": "block text-sm font-bold text-slate-700 mb-1.5"
+    },
+    "status_badge": {
+      "base": "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border",
+      "operational": "bg-green-50 text-green-700 border-green-200",
+      "maintenance": "bg-yellow-50 text-yellow-700 border-yellow-200",
+      "broken": "bg-red-50 text-red-700 border-red-200"
+    },
+    "cards": {
+      "machine_card": "flex flex-col h-full bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-orange-500/50 transition-colors group"
+    }
+  },
+  "visual_enhancers": {
+    "textures": "Subtle noise texture on the sidebar background (opacity 0.02).",
+    "shadows": "Sharp, technical shadows. shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05).",
+    "borders": "1px solid borders are preferred over shadows for separation.",
+    "icons": "Phosphor Icons (Regular weight). Use 'Duotone' for empty states."
+  },
+  "motion": {
+    "duration": "duration-200",
+    "easing": "ease-out",
+    "hover": "transform hover:-translate-y-0.5 transition-transform",
+    "page_transition": "opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-300"
+  },
+  "images": {
+    "strategy": "Use authentic, gritty photography. Avoid polished 'stock' looks.",
+    "categories": {
+      "tractors": [
+        {
+          "url": "https://images.unsplash.com/photo-1682804867179-d165b45af0ab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwyfHx0cmFjdG9yJTIwZmFybSUyMGZpZWxkfGVufDB8fHx8MTc3MTQ1NTI3MXww&ixlib=rb-4.1.0&q=85",
+          "alt": "Tractor plowing field",
+          "usage": "Hero, Machine Card"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1630959979378-552fd21bc681?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHw0fHx0cmFjdG9yJTIwZmFybSUyMGZpZWxkfGVufDB8fHx8MTc3MTQ1NTI3MXww&ixlib=rb-4.1.0&q=85",
+          "alt": "Red tractor detail",
+          "usage": "Machine Detail"
+        }
+      ],
+      "trucks": [
+        {
+          "url": "https://images.unsplash.com/photo-1734903251828-b8d4c0423e56?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwyfHxzZW1pJTIwdHJ1Y2slMjBoaWdod2F5fGVufDB8fHx8MTc3MTQ1NTI3M3ww&ixlib=rb-4.1.0&q=85",
+          "alt": "Semi truck on road",
+          "usage": "Machine Card"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1761133381018-aed5063d22fe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHw0fHxzZW1pJTIwdHJ1Y2slMjBoaWdod2F5fGVufDB8fHx8MTc3MTQ1NTI3M3ww&ixlib=rb-4.1.0&q=85",
+          "alt": "White truck in field",
+          "usage": "Machine Detail"
+        }
+      ],
+      "maintenance": [
+        {
+          "url": "https://images.unsplash.com/photo-1770656505767-32ed52b1a8ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwxfHxtZWNoYW5pYyUyMHJlcGFpcmluZyUyMGVuZ2luZXxlbnwwfHx8fDE3NzE0NTUyNzV8MA&ixlib=rb-4.1.0&q=85",
+          "alt": "Mechanic working",
+          "usage": "Maintenance Log, Empty State"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1577801345759-f1f412165151?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwyfHxtZWNoYW5pYyUyMHJlcGFpcmluZyUyMGVuZ2luZXxlbnwwfHx8fDE3NzE0NTUyNzV8MA&ixlib=rb-4.1.0&q=85",
+          "alt": "Workshop scene",
+          "usage": "Dashboard Widget Background"
+        }
+      ]
+    }
+  },
+  "accessibility": {
+    "rules": [
+      "All interactive elements MUST have a data-testid attribute (e.g., data-testid='submit-button').",
+      "Focus states must be clearly visible (ring-2 ring-orange-500).",
+      "Do not rely on color alone for status (use icons + text)."
+    ]
+  },
+  "instructions_to_main_agent": {
+    "general": "You are building a tool for professionals. It should feel solid, fast, and reliable. Avoid 'cute' UI. Think 'Caterpillar' or 'John Deere' software.",
+    "layout_strategy": "Use the 'Bento Grid Mode B' for the dashboard. It must be dense and data-rich. Don't waste space.",
+    "component_overrides": "Customize Shadcn components to remove the 'default Vercel look'. Make borders slightly thicker (border-slate-200) and shadows sharper.",
+    "charts": "Use Recharts. Style them with the 'Industrial Slate' and 'Safety Orange' palette. No gradients in charts.",
+    "forms": "Forms are the core of this app. Make them beautiful. Use 'Split View' for complex forms (Input on left, Helper/Preview on right)."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) ONLY for overlays/modals.",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use sonner for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
+  ]
+}
