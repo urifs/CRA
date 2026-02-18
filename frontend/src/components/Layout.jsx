@@ -51,7 +51,7 @@ export const Layout = () => {
         <div className="p-6 border-b border-slate-700">
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
             <Truck className="text-orange-500" size={28} />
-            <span>FleetPro</span>
+            <span>CRA Máquinas</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">Sistema de Manutenção</p>
         </div>

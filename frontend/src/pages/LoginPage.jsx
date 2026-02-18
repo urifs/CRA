@@ -47,7 +47,7 @@ export default function LoginPage() {
             <Truck className="text-white" size={32} />
           </div>
           <CardTitle className="font-heading text-3xl font-black tracking-tight text-slate-900">
-            FleetPro
+            CRA Máquinas
           </CardTitle>
           <CardDescription className="text-slate-500">
             Sistema de Gerenciamento de Manutenção
