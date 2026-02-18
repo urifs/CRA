@@ -183,6 +183,34 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Low Stock Alert */}
+      {stats?.low_stock_count > 0 && (
+        <Card className="bg-orange-50 border-orange-200" data-testid="low-stock-alert">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Package className="text-orange-600" size={20} />
+                </div>
+                <div>
+                  <p className="font-bold text-orange-800">Alerta de Estoque</p>
+                  <p className="text-sm text-orange-600">
+                    {stats.low_stock_count} {stats.low_stock_count === 1 ? "item está" : "itens estão"} abaixo do estoque mínimo
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="bg-orange-500 hover:bg-orange-600"
+                onClick={() => navigate("/stock")}
+              >
+                Ver Estoque
+                <ArrowRight size={16} className="ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Maintenances */}
       <Card data-testid="recent-maintenances-card">
         <CardHeader className="border-b border-slate-200">
