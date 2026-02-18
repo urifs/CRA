@@ -9,7 +9,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  Plus
+  Plus,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
