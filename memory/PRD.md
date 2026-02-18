@@ -1,4 +1,4 @@
-# FleetPro - Sistema de Gerenciamento de Manutenção de Máquinas
+# CRA Máquinas - Sistema de Gerenciamento de Manutenção de Máquinas
 
 ## Problema Original
 Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de manutenções com:
@@ -13,12 +13,13 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 3. ✅ Categorias personalizadas de máquinas
 4. ✅ Histórico completo de manutenções por máquina
 5. ✅ Registro manual (sem notificações automáticas)
+6. ✅ Controle de estoque de peças (completo com alertas)
 
 ## Arquitetura
 
 ### Backend (FastAPI + MongoDB)
 - **Auth**: JWT com bcrypt para hash de senhas
-- **Collections**: users, categories, machines, maintenances
+- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements
 - **Upload**: Fotos armazenadas em base64 no MongoDB
 
 ### Frontend (React + Shadcn UI)
@@ -38,6 +39,11 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - [x] Filtros e busca
 - [x] Histórico por máquina
 - [x] Design responsivo
+- [x] **Controle de Estoque** (Fevereiro 2026)
+  - Cadastro de peças com quantidade, estoque mínimo, preço
+  - Entrada/saída de itens com histórico
+  - Alertas de reposição no dashboard
+  - Filtro de itens com estoque baixo
 
 ### Endpoints da API
 - POST /api/auth/register
@@ -47,12 +53,15 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - GET/POST/PUT/DELETE /api/machines
 - GET/POST/DELETE /api/maintenances
 - POST/DELETE /api/maintenances/{id}/photos
+- GET/POST/PUT/DELETE /api/stock/items
+- POST /api/stock/movements
+- GET /api/stock/movements
 - GET /api/dashboard
 
 ## User Personas
-1. **Gestor de Frota**: Visualiza dashboard, acompanha custos
-2. **Mecânico**: Registra manutenções, anexa fotos
-3. **Administrador**: Gerencia máquinas e categorias
+1. **Gestor de Frota**: Visualiza dashboard, acompanha custos e estoque
+2. **Mecânico**: Registra manutenções, anexa fotos, controla peças
+3. **Administrador**: Gerencia máquinas, categorias e estoque
 
 ## Backlog Priorizado
 
@@ -60,20 +69,21 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Autenticação
 - CRUD de máquinas e manutenções
 - Upload de fotos
+- Controle de estoque
 
 ### P1 (Importante) - Próximos Passos
 - [ ] Exportação de relatórios (PDF/Excel)
 - [ ] Notificações de manutenção preventiva
 - [ ] Filtro por período de data
 - [ ] Gráficos de custos por categoria
+- [ ] Integração estoque ↔ manutenção (baixa automática)
 
 ### P2 (Desejável)
 - [ ] App mobile (React Native)
 - [ ] Integração com GPS/telemetria
-- [ ] Controle de estoque de peças
 - [ ] Multi-tenancy para múltiplas empresas
 
 ## Próximas Ações
 1. Implementar exportação de relatórios
 2. Adicionar gráficos de custos no dashboard
-3. Sistema de alertas para manutenções pendentes
+3. Integrar controle de estoque com manutenções (baixa automática)
