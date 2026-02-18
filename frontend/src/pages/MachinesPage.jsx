@@ -1,0 +1,490 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { API } from "@/App";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { 
+  Truck, 
+  Plus, 
+  Search,
+  Edit,
+  Trash2,
+  Eye,
+  Loader2
+} from "lucide-react";
+
+export default function MachinesPage() {
+  const [machines, setMachines] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingMachine, setEditingMachine] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    name: "",
+    plate: "",
+    category_id: "",
+    brand: "",
+    model: "",
+    year: "",
+    notes: ""
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [machinesRes, categoriesRes] = await Promise.all([
+        axios.get(`${API}/machines`),
+        axios.get(`${API}/categories`)
+      ]);
+      setMachines(machinesRes.data);
+      setCategories(categoriesRes.data);
+    } catch (error) {
+      toast.error("Erro ao carregar dados");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+
+    try {
+      const payload = {
+        ...formData,
+        year: formData.year ? parseInt(formData.year) : null
+      };
+
+      if (editingMachine) {
+        await axios.put(`${API}/machines/${editingMachine.id}`, payload);
+        toast.success("Máquina atualizada com sucesso!");
+      } else {
+        await axios.post(`${API}/machines`, payload);
+        toast.success("Máquina cadastrada com sucesso!");
+      }
+      
+      setShowDialog(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao salvar máquina");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    
+    try {
+      await axios.delete(`${API}/machines/${deleteId}`);
+      toast.success("Máquina removida com sucesso!");
+      setDeleteId(null);
+      fetchData();
+    } catch (error) {
+      toast.error("Erro ao remover máquina");
+    }
+  };
+
+  const openEditDialog = (machine) => {
+    setEditingMachine(machine);
+    setFormData({
+      name: machine.name,
+      plate: machine.plate,
+      category_id: machine.category_id,
+      brand: machine.brand || "",
+      model: machine.model || "",
+      year: machine.year?.toString() || "",
+      notes: machine.notes || ""
+    });
+    setShowDialog(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      plate: "",
+      category_id: "",
+      brand: "",
+      model: "",
+      year: "",
+      notes: ""
+    });
+    setEditingMachine(null);
+  };
+
+  const filteredMachines = machines.filter(
+    (m) =>
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      operational: { class: "badge-operational", label: "Operacional" },
+      maintenance: { class: "badge-maintenance", label: "Em Manutenção" },
+      broken: { class: "badge-broken", label: "Quebrado" }
+    };
+    const badge = badges[status] || badges.operational;
+    return (
+      <span className={`status-badge ${badge.class}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="spinner w-12 h-12"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in" data-testid="machines-page">
+      {/* Page header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title font-heading">Máquinas</h1>
+          <p className="text-slate-500 mt-1">Gerencie sua frota de máquinas</p>
+        </div>
+        <Button
+          className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+          onClick={() => {
+            resetForm();
+            setShowDialog(true);
+          }}
+          data-testid="new-machine-btn"
+        >
+          <Plus size={18} className="mr-2" />
+          Nova Máquina
+        </Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <Input
+          placeholder="Buscar por nome, placa ou categoria..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 form-input"
+          data-testid="machines-search-input"
+        />
+      </div>
+
+      {/* Machines Grid */}
+      {filteredMachines.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredMachines.map((machine) => (
+            <Card 
+              key={machine.id} 
+              className="machine-card"
+              data-testid={`machine-card-${machine.id}`}
+            >
+              <CardContent className="p-0">
+                {/* Card Header */}
+                <div className="p-4 border-b border-slate-100">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                        <Truck className="text-slate-600" size={24} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900">{machine.name}</h3>
+                        <p className="font-mono text-sm text-slate-500">{machine.plate}</p>
+                      </div>
+                    </div>
+                    {getStatusBadge(machine.status)}
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Categoria:</span>
+                    <span className="font-medium text-slate-900">{machine.category_name || "-"}</span>
+                  </div>
+                  {machine.brand && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Marca:</span>
+                      <span className="font-medium text-slate-900">{machine.brand}</span>
+                    </div>
+                  )}
+                  {machine.model && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Modelo:</span>
+                      <span className="font-medium text-slate-900">{machine.model}</span>
+                    </div>
+                  )}
+                  {machine.year && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Ano:</span>
+                      <span className="font-mono text-slate-900">{machine.year}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Actions */}
+                <div className="p-4 pt-0 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => navigate(`/machines/${machine.id}`)}
+                    data-testid={`view-machine-${machine.id}`}
+                  >
+                    <Eye size={16} className="mr-1" />
+                    Ver
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => openEditDialog(machine)}
+                    data-testid={`edit-machine-${machine.id}`}
+                  >
+                    <Edit size={16} className="mr-1" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => setDeleteId(machine.id)}
+                    data-testid={`delete-machine-${machine.id}`}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <Truck className="text-slate-300 mb-4" size={64} />
+          <p className="text-lg font-medium text-slate-600">Nenhuma máquina encontrada</p>
+          <p className="text-slate-400 mb-4">
+            {searchTerm ? "Tente uma busca diferente" : "Cadastre sua primeira máquina"}
+          </p>
+          {!searchTerm && (
+            <Button
+              className="bg-orange-500 hover:bg-orange-600"
+              onClick={() => setShowDialog(true)}
+            >
+              <Plus size={18} className="mr-2" />
+              Cadastrar Máquina
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl font-bold">
+              {editingMachine ? "Editar Máquina" : "Nova Máquina"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingMachine 
+                ? "Atualize as informações da máquina"
+                : "Preencha os dados para cadastrar uma nova máquina"
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="form-label">Nome *</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Ex: Trator John Deere"
+                  required
+                  className="form-input"
+                  data-testid="machine-name-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="form-label">Placa *</Label>
+                <Input
+                  value={formData.plate}
+                  onChange={(e) => setFormData({...formData, plate: e.target.value.toUpperCase()})}
+                  placeholder="Ex: ABC-1234"
+                  required
+                  className="form-input font-mono"
+                  data-testid="machine-plate-input"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="form-label">Categoria *</Label>
+              <Select
+                value={formData.category_id}
+                onValueChange={(value) => setFormData({...formData, category_id: value})}
+                required
+              >
+                <SelectTrigger className="form-input" data-testid="machine-category-select">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {categories.length === 0 && (
+                <p className="text-sm text-orange-500">
+                  Nenhuma categoria cadastrada.{" "}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => {
+                      setShowDialog(false);
+                      navigate("/categories");
+                    }}
+                  >
+                    Cadastrar categoria
+                  </button>
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="form-label">Marca</Label>
+                <Input
+                  value={formData.brand}
+                  onChange={(e) => setFormData({...formData, brand: e.target.value})}
+                  placeholder="Ex: John Deere"
+                  className="form-input"
+                  data-testid="machine-brand-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="form-label">Modelo</Label>
+                <Input
+                  value={formData.model}
+                  onChange={(e) => setFormData({...formData, model: e.target.value})}
+                  placeholder="Ex: 6175J"
+                  className="form-input"
+                  data-testid="machine-model-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="form-label">Ano</Label>
+                <Input
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => setFormData({...formData, year: e.target.value})}
+                  placeholder="Ex: 2020"
+                  min="1900"
+                  max={new Date().getFullYear() + 1}
+                  className="form-input font-mono"
+                  data-testid="machine-year-input"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="form-label">Observações</Label>
+              <Input
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                placeholder="Informações adicionais..."
+                className="form-input"
+                data-testid="machine-notes-input"
+              />
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="bg-slate-900 hover:bg-slate-800"
+                disabled={formLoading || !formData.category_id}
+                data-testid="machine-submit-btn"
+              >
+                {formLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : editingMachine ? (
+                  "Atualizar"
+                ) : (
+                  "Cadastrar"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir esta máquina? Esta ação também removerá todas as manutenções associadas e não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDelete}
+              data-testid="confirm-delete-btn"
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
