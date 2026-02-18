@@ -13,7 +13,8 @@ import {
   DollarSign,
   Plus,
   ArrowRight,
-  Calendar
+  Calendar,
+  Package
 } from "lucide-react";
 
 export default function DashboardPage() {
