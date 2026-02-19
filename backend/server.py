@@ -98,6 +98,7 @@ class MaintenanceCreate(BaseModel):
     part_value: float
     maintenance_type: str  # preventiva ou corretiva
     description: Optional[str] = ""
+    is_oil_change: bool = False  # marca se é troca de óleo
 
 class MaintenanceResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -111,6 +112,7 @@ class MaintenanceResponse(BaseModel):
     maintenance_type: str
     description: str
     photos: List[str]
+    is_oil_change: bool = False
     created_at: str
 
 class DashboardStats(BaseModel):
@@ -121,6 +123,49 @@ class DashboardStats(BaseModel):
     total_spent: float
     recent_maintenances: List[MaintenanceResponse]
     low_stock_count: int = 0
+    oil_change_alerts: int = 0
+
+# ============ OIL CHANGE / USAGE MODELS ============
+
+class UsageLogCreate(BaseModel):
+    machine_id: str
+    hours: float
+    notes: Optional[str] = ""
+
+class UsageLogResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    machine_id: str
+    machine_name: Optional[str] = ""
+    machine_plate: Optional[str] = ""
+    hours: float
+    notes: str
+    created_at: str
+
+class OilChangeStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    machine_id: str
+    machine_name: str
+    machine_plate: str
+    last_oil_change_date: Optional[str] = None
+    hours_since_change: float
+    hours_remaining: float
+    days_since_change: int
+    days_remaining: int
+    needs_alert: bool
+    alert_reason: Optional[str] = None
+
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    machine_id: str
+    machine_name: str
+    machine_plate: str
+    notification_type: str
+    message: str
+    hours_remaining: Optional[float] = None
+    days_remaining: Optional[int] = None
+    created_at: str
 
 # ============ STOCK MODELS ============
 
