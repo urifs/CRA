@@ -1024,7 +1024,7 @@ async def get_oil_change_status(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/notifications", response_model=List[NotificationResponse])
 async def get_notifications(current_user: dict = Depends(get_current_user)):
-    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machines = await db.machines.find({}, {"_id": 0}).to_list(1000)
     
     notifications = []
     today = datetime.now(timezone.utc)
