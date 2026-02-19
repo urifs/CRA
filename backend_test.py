@@ -907,10 +907,18 @@ class FleetMaintenanceAPITester:
         # Maintenance Tests
         print("\n📋 MAINTENANCE TESTS")
         self.test_create_maintenance()
+        self.test_create_oil_change_maintenance()
         self.test_list_maintenances()
         self.test_filter_maintenances_by_machine()
         self.test_get_maintenance_details()
         self.test_upload_photo()
+        
+        # Oil Change / Usage Tests
+        print("\n📋 OIL CHANGE & USAGE TESTS")
+        self.test_create_usage_log()
+        self.test_list_usage_logs()
+        self.test_get_oil_change_status()
+        self.test_get_notifications()
         
         # Dashboard Tests
         print("\n📋 DASHBOARD TESTS")
@@ -918,6 +926,8 @@ class FleetMaintenanceAPITester:
         
         # Stock Tests
         print("\n📋 STOCK TESTS")
+        self.test_create_stock_category()
+        self.test_list_stock_categories()
         self.test_create_stock_item()
         self.test_list_stock_items()
         self.test_get_stock_item_details()
@@ -926,6 +936,7 @@ class FleetMaintenanceAPITester:
         self.test_create_stock_movement_exit()
         self.test_list_stock_movements()
         self.test_filter_low_stock_items()
+        self.test_delete_stock_category()
         
         # Cleanup
         self.cleanup_test_data()
