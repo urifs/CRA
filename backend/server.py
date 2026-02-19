@@ -1755,8 +1755,7 @@ async def get_obra(obra_id: str, current_user: dict = Depends(get_current_user))
     
     if machine_ids:
         maintenances_db = await db.maintenances.find({
-            "machine_id": {"$in": machine_ids},
-            "user_id": current_user["id"]
+            "machine_id": {"$in": machine_ids}
         }, {"_id": 0}).sort("created_at", -1).to_list(10000)
         
         for m in maintenances_db:
@@ -1799,7 +1798,7 @@ async def get_obra(obra_id: str, current_user: dict = Depends(get_current_user))
 
 @api_router.put("/obras/{obra_id}", response_model=ObraResponse)
 async def update_obra(obra_id: str, obra: ObraCreate, current_user: dict = Depends(get_current_user)):
-    existing = await db.obras.find_one({"id": obra_id, "user_id": current_user["id"]})
+    existing = await db.obras.find_one({"id": obra_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Obra não encontrada")
     
@@ -1813,17 +1812,25 @@ async def update_obra(obra_id: str, obra: ObraCreate, current_user: dict = Depen
     }
     await db.obras.update_one({"id": obra_id}, {"$set": update_doc})
     
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="obra",
+        entity_id=obra_id,
+        entity_name=obra.name
+    )
+    
     # Count machines
-    machine_count = await db.machines.count_documents({"obra_id": obra_id, "user_id": current_user["id"]})
+    machine_count = await db.machines.count_documents({"obra_id": obra_id})
     
     # Calculate total cost
-    machines = await db.machines.find({"obra_id": obra_id, "user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machines = await db.machines.find({"obra_id": obra_id}, {"_id": 0}).to_list(1000)
     machine_ids = [m["id"] for m in machines]
     total_cost = 0
     if machine_ids:
         maintenances = await db.maintenances.find({
-            "machine_id": {"$in": machine_ids},
-            "user_id": current_user["id"]
+            "machine_id": {"$in": machine_ids}
         }, {"_id": 0}).to_list(10000)
         total_cost = sum(m["part_value"] for m in maintenances)
     
@@ -1842,9 +1849,20 @@ async def update_obra(obra_id: str, obra: ObraCreate, current_user: dict = Depen
 
 @api_router.delete("/obras/{obra_id}")
 async def delete_obra(obra_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.obras.delete_one({"id": obra_id, "user_id": current_user["id"]})
-    if result.deleted_count == 0:
+    existing = await db.obras.find_one({"id": obra_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Obra não encontrada")
+    
+    await db.obras.delete_one({"id": obra_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="obra",
+        entity_id=obra_id,
+        entity_name=existing["name"]
+    )
     
     # Remove obra_id from all machines that were in this obra
     await db.machines.update_many(
