@@ -76,6 +76,7 @@ class MachineCreate(BaseModel):
     model: Optional[str] = ""
     year: Optional[int] = None
     notes: Optional[str] = ""
+    obra_id: Optional[str] = None
 
 class MachineResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -89,6 +90,8 @@ class MachineResponse(BaseModel):
     year: Optional[int] = None
     notes: str
     status: str
+    obra_id: Optional[str] = None
+    obra_name: Optional[str] = ""
     created_at: str
 
 class MaintenanceCreate(BaseModel):
