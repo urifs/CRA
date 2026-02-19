@@ -313,6 +313,32 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
+# ============ AUDIT LOG HELPER ============
+
+async def create_audit_log(
+    user: dict,
+    action: str,
+    entity_type: str,
+    entity_id: str,
+    entity_name: str,
+    details: str = ""
+):
+    """Create an audit log entry for tracking user actions."""
+    audit_id = str(uuid.uuid4())
+    audit_doc = {
+        "id": audit_id,
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "user_email": user["email"],
+        "action": action,
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "entity_name": entity_name,
+        "details": details,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.audit_logs.insert_one(audit_doc)
+
 # ============ AUTH ROUTES ============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
