@@ -108,6 +108,7 @@ export const Layout = () => {
         className={`sidebar transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {/* Logo */}
         <div className="p-6 border-b border-slate-700">
