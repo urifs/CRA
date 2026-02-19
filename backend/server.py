@@ -224,6 +224,48 @@ class StockMovementResponse(BaseModel):
     notes: str
     created_at: str
 
+# ============ OBRA (PROJECT) MODELS ============
+
+class ObraCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    location: Optional[str] = ""
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    status: str = "em_andamento"  # em_andamento, concluida, pausada
+
+class ObraResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    description: str
+    location: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    status: str
+    machine_count: int = 0
+    total_maintenance_cost: float = 0
+    created_at: str
+
+class ObraDetailResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    description: str
+    location: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    status: str
+    machines: List[MachineResponse] = []
+    maintenances: List[MaintenanceResponse] = []
+    total_maintenance_cost: float = 0
+    preventive_cost: float = 0
+    corrective_cost: float = 0
+    created_at: str
+
+class MachineObraUpdate(BaseModel):
+    obra_id: Optional[str] = None  # None to remove from obra
+
 # ============ AUTH HELPERS ============
 
 def hash_password(password: str) -> str:
