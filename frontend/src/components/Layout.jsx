@@ -93,7 +93,15 @@ export const Layout = () => {
               data-testid={`nav-${item.path.slice(1)}`}
             >
               <item.icon size={20} />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {item.badge > 0 && (
+                <span 
+                  className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center"
+                  data-testid="notification-badge"
+                >
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
