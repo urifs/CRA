@@ -15,7 +15,8 @@ import {
   Clock,
   Bell,
   Construction,
-  DollarSign
+  DollarSign,
+  HardHat
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
