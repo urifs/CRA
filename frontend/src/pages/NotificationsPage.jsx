@@ -260,7 +260,7 @@ export default function NotificationsPage() {
                 <li><strong>Troca de Óleo:</strong> Faltam 2 meses ou menos para completar 1 ano</li>
                 <li><strong>Estoque:</strong> Quantidade de um item está abaixo de 5 unidades</li>
                 <li><strong>Estoque:</strong> Item com estoque zerado</li>
-                <li>O limite de 500h ou 1 ano foi <strong>atingido ou ultrapassado</strong></li>
+                <li><strong>Estoque:</strong> Item com estoque zerado</li>
               </ul>
             </div>
           </div>
