@@ -315,6 +315,14 @@ button:active:not(:disabled) {
 
 /* Touch feedback */
 .touch-feedback {
+
+
+/* Hide Emergent badge on mobile to avoid interfering with bottom navigation */
+@media (max-width: 768px) {
+    #emergent-badge {
+        display: none !important;
+    }
+}
     transition: background-color 0.1s, transform 0.1s;
 }
 
