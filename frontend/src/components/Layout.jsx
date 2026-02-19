@@ -10,7 +10,9 @@ import {
   Menu, 
   X,
   Plus,
-  Package
+  Package,
+  Clock,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
