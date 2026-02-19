@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +18,9 @@ import {
   Tags, 
   Plus, 
   Trash2,
+  Edit,
   Loader2,
-  Truck
+  Construction
 } from "lucide-react";
 
 export default function CategoriesPage() {
@@ -28,6 +29,7 @@ export default function CategoriesPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     description: ""
@@ -53,13 +55,18 @@ export default function CategoriesPage() {
     setFormLoading(true);
 
     try {
-      await axios.post(`${API}/categories`, formData);
-      toast.success("Categoria criada com sucesso!");
+      if (editingCategory) {
+        await axios.put(`${API}/categories/${editingCategory.id}`, formData);
+        toast.success("Categoria atualizada com sucesso!");
+      } else {
+        await axios.post(`${API}/categories`, formData);
+        toast.success("Categoria criada com sucesso!");
+      }
       setShowDialog(false);
-      setFormData({ name: "", description: "" });
+      resetForm();
       fetchCategories();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao criar categoria");
+      toast.error(error.response?.data?.detail || "Erro ao salvar categoria");
     } finally {
       setFormLoading(false);
     }
@@ -78,11 +85,26 @@ export default function CategoriesPage() {
     }
   };
 
+  const openEditDialog = (category) => {
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      description: category.description || ""
+    });
+    setShowDialog(true);
+  };
+
+  const resetForm = () => {
+    setFormData({ name: "", description: "" });
+    setEditingCategory(null);
+  };
+
   const defaultCategories = [
-    { name: "Trator", description: "Tratores agrícolas e industriais" },
-    { name: "Caminhão", description: "Caminhões de carga e transporte" },
-    { name: "Colheitadeira", description: "Máquinas de colheita" },
-    { name: "Retroescavadeira", description: "Retroescavadeiras e escavadeiras" }
+    { name: "Escavadeira", description: "Escavadeiras hidráulicas" },
+    { name: "Retroescavadeira", description: "Retroescavadeiras e pás carregadeiras" },
+    { name: "Trator", description: "Tratores agrícolas e de esteira" },
+    { name: "Caminhão", description: "Caminhões de carga e basculantes" },
+    { name: "Rolo Compactador", description: "Rolos compactadores" }
   ];
 
   const createDefaultCategory = async (cat) => {
@@ -113,7 +135,10 @@ export default function CategoriesPage() {
         </div>
         <Button
           className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
-          onClick={() => setShowDialog(true)}
+          onClick={() => {
+            resetForm();
+            setShowDialog(true);
+          }}
           data-testid="new-category-btn"
         >
           <Plus size={18} className="mr-2" />
@@ -132,24 +157,35 @@ export default function CategoriesPage() {
             >
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
                       <Tags className="text-slate-600 group-hover:text-orange-500 transition-colors" size={24} />
                     </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900">{category.name}</h3>
-                      <p className="text-sm text-slate-500">{category.description || "Sem descrição"}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-900 truncate">{category.name}</h3>
+                      <p className="text-sm text-slate-500 truncate">{category.description || "Sem descrição"}</p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-slate-400 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => setDeleteId(category.id)}
-                    data-testid={`delete-category-${category.id}`}
-                  >
-                    <Trash2 size={18} />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                      onClick={() => openEditDialog(category)}
+                      data-testid={`edit-category-${category.id}`}
+                    >
+                      <Edit size={18} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => setDeleteId(category.id)}
+                      data-testid={`delete-category-${category.id}`}
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -176,7 +212,7 @@ export default function CategoriesPage() {
                       size="sm"
                       onClick={() => createDefaultCategory(cat)}
                       className="hover:bg-orange-50 hover:border-orange-500"
-                      data-testid={`quick-add-${cat.name.toLowerCase()}`}
+                      data-testid={`quick-add-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       <Plus size={14} className="mr-1" />
                       {cat.name}
@@ -194,29 +230,32 @@ export default function CategoriesPage() {
         <CardContent className="py-6">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Truck className="text-orange-600" size={20} />
+              <Construction className="text-orange-600" size={20} />
             </div>
             <div>
               <h3 className="font-bold text-slate-900">Sobre Categorias</h3>
               <p className="text-sm text-slate-600 mt-1">
                 As categorias ajudam a organizar sua frota por tipo de máquina. 
-                Você pode criar categorias personalizadas como "Trator", "Caminhão", 
-                "Colheitadeira", ou qualquer outro tipo de equipamento.
+                Você pode criar categorias personalizadas como "Escavadeira", "Retroescavadeira", 
+                "Caminhão", ou qualquer outro tipo de equipamento.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Create Dialog */}
+      {/* Create/Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-heading text-xl font-bold">
-              Nova Categoria
+              {editingCategory ? "Editar Categoria" : "Nova Categoria"}
             </DialogTitle>
             <DialogDescription>
-              Crie uma nova categoria para organizar suas máquinas
+              {editingCategory 
+                ? "Atualize as informações da categoria"
+                : "Crie uma nova categoria para organizar suas máquinas"
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -226,7 +265,7 @@ export default function CategoriesPage() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Ex: Trator, Caminhão, Colheitadeira..."
+                placeholder="Ex: Escavadeira, Retroescavadeira..."
                 required
                 className="form-input"
                 data-testid="category-name-input"
@@ -261,8 +300,10 @@ export default function CategoriesPage() {
                 {formLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando...
+                    {editingCategory ? "Atualizando..." : "Criando..."}
                   </>
+                ) : editingCategory ? (
+                  "Atualizar"
                 ) : (
                   "Criar Categoria"
                 )}
