@@ -181,7 +181,8 @@ export const Layout = () => {
       {/* Backdrop for mobile sidebar */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 md:hidden"
+          style={{ zIndex: 55 }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
