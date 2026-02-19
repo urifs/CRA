@@ -15,12 +15,13 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 5. ✅ Registro manual (sem notificações automáticas)
 6. ✅ Controle de estoque de peças (completo com alertas)
 7. ✅ Sistema de troca de óleo com controle de tempo de uso
+8. ✅ **Plano de Obras** - Gestão de obras com vinculação de máquinas
 
 ## Arquitetura
 
 ### Backend (FastAPI + MongoDB)
 - **Auth**: JWT com bcrypt para hash de senhas
-- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs
+- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, **obras**
 - **Upload**: Fotos armazenadas em base64 no MongoDB
 
 ### Frontend (React + Shadcn UI)
@@ -28,7 +29,7 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Fonts**: Chivo (headings), Manrope (body), JetBrains Mono (data)
 - **Components**: Shadcn UI customizado
 
-## O Que Foi Implementado (Janeiro 2026)
+## O Que Foi Implementado (Fevereiro 2026)
 
 ### Funcionalidades Completas
 - [x] Sistema de autenticação (login/registro)
@@ -46,20 +47,28 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
   - Alertas de reposição no dashboard
   - Filtro de itens com estoque baixo
   - Gerenciamento de categorias de estoque
-- [x] **Sistema de Troca de Óleo** (Novo!)
+  - **Alerta quando estoque < 5 unidades** ✅
+- [x] **Sistema de Troca de Óleo**
   - Campo "Troca de Óleo" na ficha de manutenção
   - Página "Tempo de Uso" para registrar horas de uso das máquinas
   - Status visual com barras de progresso (horas e dias)
-  - Alertas automáticos:
-    - Faltam 50h para 500h de uso
-    - Faltam 2 meses para 1 ano
-    - Limite atingido (urgente)
+  - Alertas automáticos (50h para 500h, 2 meses para 1 ano)
   - Página de Notificações centralizada
+- [x] **Plano de Obras** (Novo! - Fev 2026)
+  - CRUD completo de obras (criar, listar, editar, excluir)
+  - Vincular máquinas a obras (tag)
+  - Visualizar custos de manutenção por obra
+  - Separação de custos preventivos vs corretivos
+  - Página de listagem de obras com cards
+  - Página de detalhes com máquinas e manutenções
+  - Adicionar/remover máquinas de obras
+  - Cálculo automático de custos
 
 ### Endpoints da API
 - POST /api/auth/register, /api/auth/login, GET /api/auth/me
-- GET/POST/DELETE /api/categories
+- GET/POST/PUT/DELETE /api/categories
 - GET/POST/PUT/DELETE /api/machines
+- **PATCH /api/machines/{id}/obra** - Vincular/desvincular máquina de obra
 - GET/POST/DELETE /api/maintenances (com is_oil_change)
 - POST/DELETE /api/maintenances/{id}/photos
 - GET/POST/PUT/DELETE /api/stock/items
@@ -69,11 +78,13 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - GET /api/oil-change-status
 - GET /api/notifications
 - GET /api/dashboard
+- GET /api/balance
+- **GET/POST/PUT/DELETE /api/obras** - CRUD de obras
 
 ## User Personas
-1. **Gestor de Frota**: Visualiza dashboard, acompanha custos, monitora alertas
+1. **Gestor de Frota**: Visualiza dashboard, acompanha custos, monitora alertas, gerencia obras
 2. **Mecânico**: Registra manutenções, anexa fotos, controla peças, registra horas
-3. **Administrador**: Gerencia máquinas, categorias e estoque
+3. **Administrador**: Gerencia máquinas, categorias, estoque e obras
 
 ## Backlog Priorizado
 
@@ -81,13 +92,14 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Autenticação
 - CRUD de máquinas e manutenções
 - Upload de fotos
-- Controle de estoque
+- Controle de estoque com alertas
 - Sistema de troca de óleo com alertas
+- **Plano de Obras com vinculação de máquinas**
 
 ### P1 (Importante) - Próximos Passos
+- [ ] **Integração estoque ↔ manutenção** (baixa automática de peças)
 - [ ] Exportação de relatórios (PDF/Excel)
 - [ ] Gráficos de custos por categoria
-- [ ] Integração estoque ↔ manutenção (baixa automática)
 - [ ] Notificações por email/WhatsApp
 
 ### P2 (Desejável)
@@ -96,6 +108,6 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - [ ] Multi-tenancy para múltiplas empresas
 
 ## Próximas Ações
-1. Implementar exportação de relatórios
+1. **Integrar estoque com manutenções** - Deduzir automaticamente peças do estoque ao registrar manutenção
 2. Adicionar gráficos de custos no dashboard
-3. Integrar controle de estoque com manutenções (baixa automática)
+3. Implementar exportação de relatórios
