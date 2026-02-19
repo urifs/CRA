@@ -482,7 +482,7 @@ async def update_category(category_id: str, category: CategoryCreate, current_us
 @api_router.post("/machines", response_model=MachineResponse)
 async def create_machine(machine: MachineCreate, current_user: dict = Depends(get_current_user)):
     # Check if plate already exists
-    existing = await db.machines.find_one({"plate": machine.plate.upper(), "user_id": current_user["id"]})
+    existing = await db.machines.find_one({"plate": machine.plate.upper()})
     if existing:
         raise HTTPException(status_code=400, detail="Placa já cadastrada")
     
@@ -508,10 +508,19 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         "notes": machine.notes or "",
         "obra_id": machine.obra_id,
         "status": "operational",
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.machines.insert_one(machine_doc)
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="máquina",
+        entity_id=machine_id,
+        entity_name=f"{machine.name} ({machine.plate.upper()})"
+    )
     
     return MachineResponse(
         id=machine_id,
@@ -531,18 +540,18 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
 
 @api_router.get("/machines", response_model=List[MachineResponse])
 async def get_machines(obra_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["id"]}
+    query = {}
     if obra_id:
         query["obra_id"] = obra_id
     
     machines = await db.machines.find(query, {"_id": 0}).to_list(1000)
     
     # Get all categories
-    categories = await db.categories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
     category_map = {c["id"]: c["name"] for c in categories}
     
     # Get all obras
-    obras = await db.obras.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    obras = await db.obras.find({}, {"_id": 0}).to_list(100)
     obra_map = {o["id"]: o["name"] for o in obras}
     
     return [MachineResponse(
@@ -563,7 +572,7 @@ async def get_machines(obra_id: Optional[str] = None, current_user: dict = Depen
 
 @api_router.get("/machines/{machine_id}", response_model=MachineResponse)
 async def get_machine(machine_id: str, current_user: dict = Depends(get_current_user)):
-    machine = await db.machines.find_one({"id": machine_id, "user_id": current_user["id"]}, {"_id": 0})
+    machine = await db.machines.find_one({"id": machine_id}, {"_id": 0})
     if not machine:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
     
@@ -593,7 +602,7 @@ async def get_machine(machine_id: str, current_user: dict = Depends(get_current_
 
 @api_router.put("/machines/{machine_id}", response_model=MachineResponse)
 async def update_machine(machine_id: str, machine: MachineCreate, current_user: dict = Depends(get_current_user)):
-    existing = await db.machines.find_one({"id": machine_id, "user_id": current_user["id"]})
+    existing = await db.machines.find_one({"id": machine_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
     
@@ -619,6 +628,16 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
     }
     await db.machines.update_one({"id": machine_id}, {"$set": update_doc})
     
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="máquina",
+        entity_id=machine_id,
+        entity_name=f"{machine.name} ({machine.plate.upper()})",
+        details=f"Dados anteriores: {existing['name']} ({existing['plate']})"
+    )
+    
     return MachineResponse(
         id=machine_id,
         name=machine.name,
@@ -639,19 +658,35 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
 
 @api_router.patch("/machines/{machine_id}/obra", response_model=MachineResponse)
 async def update_machine_obra(machine_id: str, update: MachineObraUpdate, current_user: dict = Depends(get_current_user)):
-    existing = await db.machines.find_one({"id": machine_id, "user_id": current_user["id"]})
+    existing = await db.machines.find_one({"id": machine_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
     
     # Validate obra if specified
     obra_name = ""
     if update.obra_id:
-        obra = await db.obras.find_one({"id": update.obra_id, "user_id": current_user["id"]}, {"_id": 0})
+        obra = await db.obras.find_one({"id": update.obra_id}, {"_id": 0})
         if not obra:
             raise HTTPException(status_code=404, detail="Obra não encontrada")
         obra_name = obra["name"]
     
     await db.machines.update_one({"id": machine_id}, {"$set": {"obra_id": update.obra_id}})
+    
+    # Audit log
+    old_obra = existing.get("obra_id")
+    if update.obra_id:
+        action_detail = f"Vinculada à obra: {obra_name}"
+    else:
+        action_detail = "Removida da obra"
+    
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="máquina",
+        entity_id=machine_id,
+        entity_name=f"{existing['name']} ({existing['plate']})",
+        details=action_detail
+    )
     
     category = await db.categories.find_one({"id": existing["category_id"]}, {"_id": 0})
     category_name = category["name"] if category else ""
@@ -674,9 +709,11 @@ async def update_machine_obra(machine_id: str, update: MachineObraUpdate, curren
 
 @api_router.delete("/machines/{machine_id}")
 async def delete_machine(machine_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.machines.delete_one({"id": machine_id, "user_id": current_user["id"]})
-    if result.deleted_count == 0:
+    existing = await db.machines.find_one({"id": machine_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    await db.machines.delete_one({"id": machine_id})
     # Delete related maintenances
     await db.maintenances.delete_many({"machine_id": machine_id})
     return {"message": "Máquina removida com sucesso"}
