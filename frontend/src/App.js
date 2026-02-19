@@ -171,6 +171,7 @@ function App() {
             <Route path="stock" element={<StockPage />} />
             <Route path="usage" element={<UsagePage />} />
             <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="audit" element={<AuditPage />} />
           </Route>
           
           {/* Catch all */}
