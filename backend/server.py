@@ -399,10 +399,20 @@ async def create_category(category: CategoryCreate, current_user: dict = Depends
         "id": category_id,
         "name": category.name,
         "description": category.description or "",
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.categories.insert_one(category_doc)
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="categoria",
+        entity_id=category_id,
+        entity_name=category.name
+    )
+    
     return CategoryResponse(
         id=category_id,
         name=category.name,
@@ -412,7 +422,7 @@ async def create_category(category: CategoryCreate, current_user: dict = Depends
 
 @api_router.get("/categories", response_model=List[CategoryResponse])
 async def get_categories(current_user: dict = Depends(get_current_user)):
-    categories = await db.categories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
     return [CategoryResponse(
         id=c["id"],
         name=c["name"],
@@ -422,20 +432,42 @@ async def get_categories(current_user: dict = Depends(get_current_user)):
 
 @api_router.delete("/categories/{category_id}")
 async def delete_category(category_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.categories.delete_one({"id": category_id, "user_id": current_user["id"]})
-    if result.deleted_count == 0:
+    existing = await db.categories.find_one({"id": category_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    
+    await db.categories.delete_one({"id": category_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="categoria",
+        entity_id=category_id,
+        entity_name=existing["name"]
+    )
+    
     return {"message": "Categoria removida com sucesso"}
 
 @api_router.put("/categories/{category_id}", response_model=CategoryResponse)
 async def update_category(category_id: str, category: CategoryCreate, current_user: dict = Depends(get_current_user)):
-    existing = await db.categories.find_one({"id": category_id, "user_id": current_user["id"]})
+    existing = await db.categories.find_one({"id": category_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
     
     await db.categories.update_one(
         {"id": category_id},
         {"$set": {"name": category.name, "description": category.description or ""}}
+    )
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="categoria",
+        entity_id=category_id,
+        entity_name=category.name,
+        details=f"Nome anterior: {existing['name']}"
     )
     
     return CategoryResponse(
