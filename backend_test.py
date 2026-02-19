@@ -23,6 +23,7 @@ class FleetMaintenanceAPITester:
         self.machine_id = None
         self.maintenance_id = None
         self.stock_item_id = None
+        self.stock_category_id = None
 
     def log_result(self, test_name, success, details="", error_msg=""):
         """Log test result"""
