@@ -228,7 +228,7 @@ export default function NotificationsPage() {
               </div>
               <p className="text-lg font-medium text-slate-900">Tudo em dia!</p>
               <p className="text-slate-500 mt-1">
-                Não há alertas de troca de óleo no momento
+                Não há alertas no momento
               </p>
               <Button
                 variant="outline"
@@ -248,7 +248,7 @@ export default function NotificationsPage() {
         <CardContent className="py-6">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Droplet className="text-slate-600" size={20} />
+              <Bell className="text-slate-600" size={20} />
             </div>
             <div>
               <h3 className="font-bold text-slate-900">Sobre as Notificações</h3>
@@ -256,8 +256,10 @@ export default function NotificationsPage() {
                 O sistema alerta automaticamente quando:
               </p>
               <ul className="text-sm text-slate-600 mt-2 space-y-1 list-disc list-inside">
-                <li>Restam <strong>50 horas</strong> ou menos para atingir 500h de uso</li>
-                <li>Faltam <strong>2 meses</strong> ou menos para completar 1 ano desde a última troca</li>
+                <li><strong>Troca de Óleo:</strong> Restam 50 horas ou menos para atingir 500h de uso</li>
+                <li><strong>Troca de Óleo:</strong> Faltam 2 meses ou menos para completar 1 ano</li>
+                <li><strong>Estoque:</strong> Quantidade de um item está abaixo de 5 unidades</li>
+                <li><strong>Estoque:</strong> Item com estoque zerado</li>
                 <li>O limite de 500h ou 1 ano foi <strong>atingido ou ultrapassado</strong></li>
               </ul>
             </div>
