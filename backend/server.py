@@ -1275,20 +1275,20 @@ async def get_balance(current_user: dict = Depends(get_current_user)):
 @api_router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard(current_user: dict = Depends(get_current_user)):
     # Count machines
-    total_machines = await db.machines.count_documents({"user_id": current_user["id"]})
+    total_machines = await db.machines.count_documents({})
     
     # Count and sum maintenances
-    maintenances = await db.maintenances.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    maintenances = await db.maintenances.find({}, {"_id": 0}).to_list(1000)
     total_maintenances = len(maintenances)
     preventive_count = len([m for m in maintenances if m["maintenance_type"] == "preventiva"])
     corrective_count = len([m for m in maintenances if m["maintenance_type"] == "corretiva"])
     total_spent = sum(m["part_value"] for m in maintenances)
     
     # Get recent maintenances
-    recent = await db.maintenances.find({"user_id": current_user["id"]}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    recent = await db.maintenances.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     
     # Get machines for recent maintenances
-    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machines = await db.machines.find({}, {"_id": 0}).to_list(1000)
     machine_map = {m["id"]: {"name": m["name"], "plate": m["plate"]} for m in machines}
     
     recent_maintenances = [MaintenanceResponse(
@@ -1336,7 +1336,6 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
         total_spent=total_spent,
         recent_maintenances=recent_maintenances,
         low_stock_count=await db.stock_items.count_documents({
-            "user_id": current_user["id"],
             "$expr": {"$lte": ["$quantity", "$min_quantity"]}
         }),
         oil_change_alerts=oil_change_alerts
