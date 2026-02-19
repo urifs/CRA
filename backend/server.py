@@ -855,9 +855,32 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
         part_value=m["part_value"],
         maintenance_type=m["maintenance_type"],
         description=m.get("description", ""),
+        is_oil_change=m.get("is_oil_change", False),
         photos=m.get("photos", []),
         created_at=m["created_at"]
     ) for m in recent]
+    
+    # Count oil change alerts
+    oil_change_alerts = 0
+    today = datetime.now(timezone.utc)
+    for machine in machines:
+        hours_since_change = machine.get("hours_since_oil_change", 0)
+        hours_remaining = 500 - hours_since_change
+        
+        last_oil_change_date = machine.get("last_oil_change_date")
+        if last_oil_change_date:
+            try:
+                last_change = datetime.fromisoformat(last_oil_change_date.replace('Z', '+00:00'))
+                if last_change.tzinfo is None:
+                    last_change = last_change.replace(tzinfo=timezone.utc)
+            except:
+                last_change = datetime.strptime(last_oil_change_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            days_remaining = 365 - (today - last_change).days
+        else:
+            days_remaining = 365
+        
+        if hours_remaining <= 50 or days_remaining <= 60:
+            oil_change_alerts += 1
     
     return DashboardStats(
         total_machines=total_machines,
@@ -869,7 +892,8 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
         low_stock_count=await db.stock_items.count_documents({
             "user_id": current_user["id"],
             "$expr": {"$lte": ["$quantity", "$min_quantity"]}
-        })
+        }),
+        oil_change_alerts=oil_change_alerts
     )
 
 # ============ STOCK ROUTES ============
