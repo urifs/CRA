@@ -165,6 +165,8 @@ function App() {
             <Route path="maintenances/new" element={<NewMaintenancePage />} />
             <Route path="maintenances/:id" element={<MaintenanceDetailPage />} />
             <Route path="balance" element={<BalancePage />} />
+            <Route path="obras" element={<ObrasPage />} />
+            <Route path="obras/:id" element={<ObraDetailPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="usage" element={<UsagePage />} />
             <Route path="notifications" element={<NotificationsPage />} />
