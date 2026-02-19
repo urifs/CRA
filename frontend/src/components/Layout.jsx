@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth, API } from "@/App";
 import axios from "axios";
 import { 
@@ -17,21 +17,32 @@ import {
   Construction,
   DollarSign,
   HardHat,
-  ClipboardList
+  ClipboardList,
+  MoreHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Layout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     fetchNotificationCount();
-    // Refresh count every 60 seconds
     const interval = setInterval(fetchNotificationCount, 60000);
-    return () => clearInterval(interval);
+    
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const fetchNotificationCount = async () => {
@@ -61,18 +72,35 @@ export const Layout = () => {
     { path: "/audit", icon: ClipboardList, label: "Auditoria" },
   ];
 
+  // Mobile bottom navigation items
+  const mobileNavItems = [
+    { path: "/dashboard", icon: LayoutDashboard, label: "Início" },
+    { path: "/obras", icon: HardHat, label: "Obras" },
+    { path: "/machines", icon: Truck, label: "Máquinas" },
+    { path: "/maintenances", icon: Wrench, label: "Manutenções" },
+    { path: "/more", icon: MoreHorizontal, label: "Mais" },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Mobile menu button */}
-      <button
-        data-testid="mobile-menu-btn"
-        className="fixed top-4 left-4 z-50 md:hidden bg-slate-900 text-white p-2 rounded-md"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+      {/* Mobile header */}
+      <header className="fixed top-0 left-0 right-0 z-40 md:hidden bg-slate-900 text-white safe-area-padding">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Construction className="text-orange-500" size={24} />
+            <span className="font-heading font-bold">CRA Construtora</span>
+          </div>
+          <button
+            data-testid="mobile-menu-btn"
+            className="p-2 hover:bg-slate-800 rounded-lg"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </header>
 
-      {/* Sidebar */}
+      {/* Sidebar - Hidden on mobile, always visible on desktop */}
       <aside
         className={`sidebar transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -88,7 +116,7 @@ export const Layout = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="py-4">
+        <nav className="py-4 overflow-y-auto flex-1">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -129,7 +157,7 @@ export const Layout = () => {
         </div>
 
         {/* User info */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
+        <div className="p-4 border-t border-slate-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate" data-testid="user-name">
@@ -149,7 +177,7 @@ export const Layout = () => {
         </div>
       </aside>
 
-      {/* Backdrop for mobile */}
+      {/* Backdrop for mobile sidebar */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -158,11 +186,43 @@ export const Layout = () => {
       )}
 
       {/* Main content */}
-      <main className="main-content">
-        <div className="p-4 md:p-8">
+      <main className="main-content pt-14 md:pt-0">
+        <div className="p-4 md:p-8 pb-24 md:pb-8">
           <Outlet />
         </div>
       </main>
+
+      {/* Mobile bottom navigation */}
+      <nav className="mobile-nav" data-testid="mobile-bottom-nav">
+        {mobileNavItems.map((item) => {
+          const isActive = location.pathname === item.path || 
+            (item.path === "/more" && ["/balance", "/usage", "/notifications", "/stock", "/categories", "/audit"].includes(location.pathname));
+          
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={`mobile-nav-item no-select ${isActive ? "active" : ""}`}
+              data-testid={`mobile-nav-${item.path.replace("/", "")}`}
+            >
+              <item.icon size={22} />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      {/* Floating action button for mobile */}
+      {isMobile && location.pathname !== "/maintenances/new" && (
+        <button
+          onClick={() => navigate("/maintenances/new")}
+          className="fab bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg"
+          data-testid="fab-new-maintenance"
+          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+        >
+          <Plus size={28} />
+        </button>
+      )}
     </div>
   );
 };
