@@ -13,7 +13,9 @@ import {
   Plus,
   Package,
   Clock,
-  Bell
+  Bell,
+  Construction,
+  DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -48,6 +50,7 @@ export const Layout = () => {
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/machines", icon: Truck, label: "Máquinas" },
     { path: "/maintenances", icon: Wrench, label: "Manutenções" },
+    { path: "/balance", icon: DollarSign, label: "Balanço" },
     { path: "/usage", icon: Clock, label: "Tempo de Uso" },
     { path: "/notifications", icon: Bell, label: "Notificações", badge: notificationCount },
     { path: "/stock", icon: Package, label: "Estoque" },
@@ -74,7 +77,7 @@ export const Layout = () => {
         {/* Logo */}
         <div className="p-6 border-b border-slate-700">
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <Truck className="text-orange-500" size={28} />
+            <Construction className="text-orange-500" size={28} />
             <span>CRA Construtora</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">Sistema de Manutenção</p>
