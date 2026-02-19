@@ -497,6 +497,11 @@ async def get_machine(machine_id: str, current_user: dict = Depends(get_current_
     category = await db.categories.find_one({"id": machine["category_id"]}, {"_id": 0})
     category_name = category["name"] if category else ""
     
+    obra_name = ""
+    if machine.get("obra_id"):
+        obra = await db.obras.find_one({"id": machine["obra_id"]}, {"_id": 0})
+        obra_name = obra["name"] if obra else ""
+    
     return MachineResponse(
         id=machine["id"],
         name=machine["name"],
@@ -508,6 +513,8 @@ async def get_machine(machine_id: str, current_user: dict = Depends(get_current_
         year=machine.get("year"),
         notes=machine.get("notes", ""),
         status=machine.get("status", "operational"),
+        obra_id=machine.get("obra_id"),
+        obra_name=obra_name,
         created_at=machine["created_at"]
     )
 
@@ -521,6 +528,12 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
     category = await db.categories.find_one({"id": machine.category_id}, {"_id": 0})
     category_name = category["name"] if category else ""
     
+    # Get obra name if specified
+    obra_name = ""
+    if machine.obra_id:
+        obra = await db.obras.find_one({"id": machine.obra_id}, {"_id": 0})
+        obra_name = obra["name"] if obra else ""
+    
     update_doc = {
         "name": machine.name,
         "plate": machine.plate.upper(),
@@ -528,7 +541,8 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
         "brand": machine.brand or "",
         "model": machine.model or "",
         "year": machine.year,
-        "notes": machine.notes or ""
+        "notes": machine.notes or "",
+        "obra_id": machine.obra_id
     }
     await db.machines.update_one({"id": machine_id}, {"$set": update_doc})
     
@@ -543,6 +557,45 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
         year=machine.year,
         notes=machine.notes or "",
         status=existing.get("status", "operational"),
+        obra_id=machine.obra_id,
+        obra_name=obra_name,
+        created_at=existing["created_at"]
+    )
+
+# ============ UPDATE MACHINE OBRA (TAG) ============
+
+@api_router.patch("/machines/{machine_id}/obra", response_model=MachineResponse)
+async def update_machine_obra(machine_id: str, update: MachineObraUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.machines.find_one({"id": machine_id, "user_id": current_user["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    # Validate obra if specified
+    obra_name = ""
+    if update.obra_id:
+        obra = await db.obras.find_one({"id": update.obra_id, "user_id": current_user["id"]}, {"_id": 0})
+        if not obra:
+            raise HTTPException(status_code=404, detail="Obra não encontrada")
+        obra_name = obra["name"]
+    
+    await db.machines.update_one({"id": machine_id}, {"$set": {"obra_id": update.obra_id}})
+    
+    category = await db.categories.find_one({"id": existing["category_id"]}, {"_id": 0})
+    category_name = category["name"] if category else ""
+    
+    return MachineResponse(
+        id=machine_id,
+        name=existing["name"],
+        plate=existing["plate"],
+        category_id=existing["category_id"],
+        category_name=category_name,
+        brand=existing.get("brand", ""),
+        model=existing.get("model", ""),
+        year=existing.get("year"),
+        notes=existing.get("notes", ""),
+        status=existing.get("status", "operational"),
+        obra_id=update.obra_id,
+        obra_name=obra_name,
         created_at=existing["created_at"]
     )
 
