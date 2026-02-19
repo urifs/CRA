@@ -124,12 +124,6 @@
 
 /* Responsive sidebar */
 @media (max-width: 768px) {
-    .sidebar {
-        @apply -translate-x-full;
-    }
-    .sidebar.open {
-        @apply translate-x-0;
-    }
     .main-content {
         @apply ml-0;
     }
