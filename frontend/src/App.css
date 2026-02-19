@@ -2,7 +2,8 @@
 
 /* Sidebar styles */
 .sidebar {
-    @apply fixed left-0 top-0 h-full w-64 bg-slate-900 text-white z-50;
+    @apply fixed left-0 top-0 h-full w-64 bg-slate-900 text-white;
+    z-index: 60;
 }
 
 .sidebar-link {
