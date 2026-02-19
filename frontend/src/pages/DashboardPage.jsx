@@ -10,7 +10,6 @@ import {
   Wrench, 
   Shield, 
   AlertTriangle, 
-  DollarSign,
   Plus,
   ArrowRight,
   Calendar,
