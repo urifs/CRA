@@ -18,12 +18,13 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 8. ✅ **Plano de Obras** - Gestão de obras com vinculação de máquinas
 9. ✅ **Sistema Compartilhado** - Todos os funcionários veem os mesmos dados
 10. ✅ **Sistema de Auditoria** - Histórico de alterações por funcionário
+11. ✅ **PWA Mobile** - Versão instalável no celular
 
 ## Arquitetura
 
 ### Backend (FastAPI + MongoDB)
 - **Auth**: JWT com bcrypt para hash de senhas
-- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, **audit_logs**
+- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, audit_logs
 - **Upload**: Fotos armazenadas em base64 no MongoDB
 - **Sistema Compartilhado**: Dados são globais (sem filtro por user_id nas queries)
 - **Auditoria**: Todas as operações CRUD geram logs com nome do funcionário
@@ -32,6 +33,14 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Design**: "Tactical Industrial" - Slate 900 + Safety Orange
 - **Fonts**: Chivo (headings), Manrope (body), JetBrains Mono (data)
 - **Components**: Shadcn UI customizado
+- **PWA**: Service Worker, Manifest, ícones para instalação
+
+### Mobile (PWA)
+- **Instalável**: Pode ser adicionado à tela inicial em iOS e Android
+- **Navegação inferior**: 5 itens principais (Início, Obras, Máquinas, Manutenções, Mais)
+- **Botão flutuante**: Ação rápida para nova manutenção
+- **Responsivo**: Layout otimizado para telas pequenas
+- **Safe areas**: Suporte para dispositivos com notch
 
 ## O Que Foi Implementado (Fevereiro 2026)
 
@@ -51,7 +60,7 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
   - Alertas de reposição no dashboard
   - Filtro de itens com estoque baixo
   - Gerenciamento de categorias de estoque
-  - **Alerta quando estoque < 5 unidades**
+  - Alerta quando estoque < 5 unidades
 - [x] **Sistema de Troca de Óleo**
   - Campo "Troca de Óleo" na ficha de manutenção
   - Página "Tempo de Uso" para registrar horas de uso das máquinas
@@ -67,23 +76,33 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
   - Página de detalhes com máquinas e manutenções
   - Adicionar/remover máquinas de obras
   - Cálculo automático de custos
-- [x] **Sistema Compartilhado** (Fev 2026)
+- [x] **Sistema Compartilhado**
   - Todos os funcionários veem os mesmos dados
   - Dados são globais, não mais filtrados por user_id
   - Registro de quem criou cada item (created_by)
-- [x] **Sistema de Auditoria** (Fev 2026)
+- [x] **Sistema de Auditoria**
   - Registro automático de todas as alterações (criar, editar, excluir)
   - Nome e email do funcionário em cada registro
   - Detalhes da alteração (dados anteriores, etc.)
   - Página /audit com filtros por tipo e ação
   - Busca por funcionário, item ou detalhes
+- [x] **PWA Mobile** (Fev 2026)
+  - Manifest.json para instalação
+  - Service Worker para cache e funcionamento offline
+  - Ícones em múltiplos tamanhos (72x72 a 512x512)
+  - Banner de instalação no mobile
+  - Navegação inferior otimizada para mobile
+  - Página "Mais" com acesso às funcionalidades secundárias
+  - Botão flutuante (FAB) para nova manutenção
+  - Suporte para safe areas (notch)
+  - Layout responsivo otimizado
 
 ### Endpoints da API
 - POST /api/auth/register, /api/auth/login, GET /api/auth/me
 - GET/POST/PUT/DELETE /api/categories
 - GET/POST/PUT/DELETE /api/machines
-- PATCH /api/machines/{id}/obra - Vincular/desvincular máquina de obra
-- GET/POST/DELETE /api/maintenances (com is_oil_change)
+- PATCH /api/machines/{id}/obra
+- GET/POST/DELETE /api/maintenances
 - POST/DELETE /api/maintenances/{id}/photos
 - GET/POST/PUT/DELETE /api/stock/items
 - GET/POST/DELETE /api/stock/categories
@@ -94,12 +113,28 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - GET /api/dashboard
 - GET /api/balance
 - GET/POST/PUT/DELETE /api/obras
-- **GET /api/audit-logs** - Logs de auditoria com filtros
+- GET /api/audit-logs
+
+## Como Instalar no Celular
+
+### Android
+1. Abra o Chrome e acesse a URL do sistema
+2. Faça login com suas credenciais
+3. O banner "Instalar CRA Construtora" aparecerá automaticamente
+4. Clique em "Instalar"
+5. O app será adicionado à sua tela inicial
+
+### iPhone/iPad
+1. Abra o Safari e acesse a URL do sistema
+2. Faça login com suas credenciais
+3. Toque no botão de compartilhar (quadrado com seta)
+4. Role para baixo e toque em "Adicionar à Tela de Início"
+5. Confirme tocando em "Adicionar"
 
 ## User Personas
-1. **Gestor de Frota**: Visualiza dashboard, acompanha custos, monitora alertas, gerencia obras, **audita alterações**
+1. **Gestor de Frota**: Visualiza dashboard, acompanha custos, monitora alertas, gerencia obras, audita alterações
 2. **Mecânico**: Registra manutenções, anexa fotos, controla peças, registra horas
-3. **Administrador**: Gerencia máquinas, categorias, estoque, obras e **verifica auditoria**
+3. **Administrador**: Gerencia máquinas, categorias, estoque, obras e verifica auditoria
 
 ## Backlog Priorizado
 
@@ -110,20 +145,22 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Controle de estoque com alertas
 - Sistema de troca de óleo com alertas
 - Plano de Obras com vinculação de máquinas
-- **Sistema compartilhado para todos os funcionários**
-- **Sistema de auditoria com nome do funcionário**
+- Sistema compartilhado para todos os funcionários
+- Sistema de auditoria com nome do funcionário
+- **PWA Mobile instalável**
 
 ### P1 (Importante) - Próximos Passos
 - [ ] **Integração estoque ↔ manutenção** (baixa automática de peças)
 - [ ] Exportação de relatórios (PDF/Excel)
 - [ ] Gráficos de custos por categoria
-- [ ] Notificações por email/WhatsApp
+- [ ] Notificações push (Web Push API)
 
 ### P2 (Desejável)
-- [ ] App mobile (React Native)
+- [ ] Notificações por email/WhatsApp
 - [ ] Integração com GPS/telemetria
 - [ ] Multi-tenancy para múltiplas empresas
 - [ ] Níveis de permissão (admin vs operador)
+- [ ] Modo offline completo (sincronização)
 
 ## Credenciais de Teste
 - **Email**: test@test.com
@@ -133,3 +170,4 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 1. **Integrar estoque com manutenções** - Deduzir automaticamente peças do estoque ao registrar manutenção
 2. Adicionar gráficos de custos no dashboard
 3. Implementar exportação de relatórios
+4. Implementar notificações push
