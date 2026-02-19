@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "@/App";
+import { useAuth, API } from "@/App";
+import axios from "axios";
 import { 
   LayoutDashboard, 
   Truck, 
@@ -20,6 +21,23 @@ export const Layout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  useEffect(() => {
+    fetchNotificationCount();
+    // Refresh count every 60 seconds
+    const interval = setInterval(fetchNotificationCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotificationCount = async () => {
+    try {
+      const response = await axios.get(`${API}/notifications`);
+      setNotificationCount(response.data.length);
+    } catch (error) {
+      // Silently fail
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -31,7 +49,7 @@ export const Layout = () => {
     { path: "/machines", icon: Truck, label: "Máquinas" },
     { path: "/maintenances", icon: Wrench, label: "Manutenções" },
     { path: "/usage", icon: Clock, label: "Tempo de Uso" },
-    { path: "/notifications", icon: Bell, label: "Notificações" },
+    { path: "/notifications", icon: Bell, label: "Notificações", badge: notificationCount },
     { path: "/stock", icon: Package, label: "Estoque" },
     { path: "/categories", icon: Tags, label: "Categorias" },
   ];
