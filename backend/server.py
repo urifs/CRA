@@ -1652,10 +1652,19 @@ async def create_obra(obra: ObraCreate, current_user: dict = Depends(get_current
         "start_date": obra.start_date,
         "end_date": obra.end_date,
         "status": obra.status,
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.obras.insert_one(obra_doc)
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="obra",
+        entity_id=obra_id,
+        entity_name=obra.name
+    )
     
     return ObraResponse(
         id=obra_id,
@@ -1672,23 +1681,22 @@ async def create_obra(obra: ObraCreate, current_user: dict = Depends(get_current
 
 @api_router.get("/obras", response_model=List[ObraResponse])
 async def get_obras(current_user: dict = Depends(get_current_user)):
-    obras = await db.obras.find({"user_id": current_user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    obras = await db.obras.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     
     result = []
     for obra in obras:
         # Count machines in this obra
-        machine_count = await db.machines.count_documents({"obra_id": obra["id"], "user_id": current_user["id"]})
+        machine_count = await db.machines.count_documents({"obra_id": obra["id"]})
         
         # Get machines to calculate maintenance costs
-        machines = await db.machines.find({"obra_id": obra["id"], "user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+        machines = await db.machines.find({"obra_id": obra["id"]}, {"_id": 0}).to_list(1000)
         machine_ids = [m["id"] for m in machines]
         
         # Calculate total maintenance cost
         total_cost = 0
         if machine_ids:
             maintenances = await db.maintenances.find({
-                "machine_id": {"$in": machine_ids},
-                "user_id": current_user["id"]
+                "machine_id": {"$in": machine_ids}
             }, {"_id": 0}).to_list(10000)
             total_cost = sum(m["part_value"] for m in maintenances)
         
@@ -1709,15 +1717,15 @@ async def get_obras(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/obras/{obra_id}", response_model=ObraDetailResponse)
 async def get_obra(obra_id: str, current_user: dict = Depends(get_current_user)):
-    obra = await db.obras.find_one({"id": obra_id, "user_id": current_user["id"]}, {"_id": 0})
+    obra = await db.obras.find_one({"id": obra_id}, {"_id": 0})
     if not obra:
         raise HTTPException(status_code=404, detail="Obra não encontrada")
     
     # Get machines in this obra
-    machines_db = await db.machines.find({"obra_id": obra_id, "user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machines_db = await db.machines.find({"obra_id": obra_id}, {"_id": 0}).to_list(1000)
     
     # Get categories for machines
-    categories = await db.categories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
     category_map = {c["id"]: c["name"] for c in categories}
     
     machines = [MachineResponse(
