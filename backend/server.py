@@ -27,7 +27,7 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'fleet-maintenance-secret-key-2024')
 JWT_ALGORITHM = "HS256"
 
 # Create the main app
-app = FastAPI(title="CRA Máquinas")
+app = FastAPI(title="CRA Construtora")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -808,7 +808,7 @@ async def get_stock_movements(item_id: Optional[str] = None, current_user: dict 
 
 @api_router.get("/")
 async def root():
-    return {"message": "CRA Máquinas API"}
+    return {"message": "CRA Construtora API"}
 
 # Include the router in the main app
 app.include_router(api_router)
