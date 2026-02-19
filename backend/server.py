@@ -1586,10 +1586,20 @@ async def create_stock_movement(movement: StockMovementCreate, current_user: dic
         "new_quantity": new_quantity,
         "reason": movement.reason or "",
         "notes": movement.notes or "",
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.stock_movements.insert_one(movement_doc)
+    
+    # Audit log
+    action_type = "entrada" if movement.movement_type == "entrada" else "saída"
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type=f"movimentação de estoque ({action_type})",
+        entity_id=movement_id,
+        entity_name=f"{item['name']} - {movement.quantity} {item.get('unit', 'un')}"
+    )
     
     return StockMovementResponse(
         id=movement_id,
@@ -1606,14 +1616,14 @@ async def create_stock_movement(movement: StockMovementCreate, current_user: dic
 
 @api_router.get("/stock/movements", response_model=List[StockMovementResponse])
 async def get_stock_movements(item_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["id"]}
+    query = {}
     if item_id:
         query["item_id"] = item_id
     
     movements = await db.stock_movements.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
     # Get item names
-    items = await db.stock_items.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
     item_map = {i["id"]: i["name"] for i in items}
     
     return [StockMovementResponse(
