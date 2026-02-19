@@ -38,22 +38,28 @@ import {
   ArrowDownCircle,
   Loader2,
   History,
-  Filter
+  Filter,
+  Tags,
+  Settings
 } from "lucide-react";
 
 export default function StockPage() {
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [showMovementDialog, setShowMovementDialog] = useState(false);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [deleteCategoryId, setDeleteCategoryId] = useState(null);
   const [activeTab, setActiveTab] = useState("items");
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const [itemForm, setItemForm] = useState({
     name: "",
@@ -75,18 +81,6 @@ export default function StockPage() {
     notes: ""
   });
 
-  const categories = [
-    "Filtro",
-    "Óleo",
-    "Correia",
-    "Rolamento",
-    "Parafuso",
-    "Pneu",
-    "Bateria",
-    "Lâmpada",
-    "Outros"
-  ];
-
   const units = [
     { value: "un", label: "Unidade (un)" },
     { value: "L", label: "Litro (L)" },
@@ -102,12 +96,14 @@ export default function StockPage() {
 
   const fetchData = async () => {
     try {
-      const [itemsRes, movementsRes] = await Promise.all([
+      const [itemsRes, movementsRes, categoriesRes] = await Promise.all([
         axios.get(`${API}/stock/items?low_stock_only=${showLowStockOnly}`),
-        axios.get(`${API}/stock/movements`)
+        axios.get(`${API}/stock/movements`),
+        axios.get(`${API}/stock/categories`)
       ]);
       setItems(itemsRes.data);
       setMovements(movementsRes.data);
+      setCategories(categoriesRes.data);
     } catch (error) {
       toast.error("Erro ao carregar dados do estoque");
     } finally {
@@ -165,6 +161,36 @@ export default function StockPage() {
       toast.error(error.response?.data?.detail || "Erro ao registrar movimentação");
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    
+    setFormLoading(true);
+    try {
+      await axios.post(`${API}/stock/categories`, { name: newCategoryName.trim() });
+      toast.success("Categoria criada com sucesso!");
+      setNewCategoryName("");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao criar categoria");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!deleteCategoryId) return;
+    
+    try {
+      await axios.delete(`${API}/stock/categories/${deleteCategoryId}`);
+      toast.success("Categoria removida com sucesso!");
+      setDeleteCategoryId(null);
+      fetchData();
+    } catch (error) {
+      toast.error("Erro ao remover categoria");
     }
   };
 
@@ -271,17 +297,27 @@ export default function StockPage() {
           <h1 className="page-title font-heading">Controle de Estoque</h1>
           <p className="text-slate-500 mt-1">Gerencie peças e materiais de reposição</p>
         </div>
-        <Button
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
-          onClick={() => {
-            resetItemForm();
-            setShowItemDialog(true);
-          }}
-          data-testid="new-item-btn"
-        >
-          <Plus size={18} className="mr-2" />
-          Novo Item
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowCategoryDialog(true)}
+            data-testid="manage-categories-btn"
+          >
+            <Settings size={18} className="mr-2" />
+            Categorias
+          </Button>
+          <Button
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+            onClick={() => {
+              resetItemForm();
+              setShowItemDialog(true);
+            }}
+            data-testid="new-item-btn"
+          >
+            <Plus size={18} className="mr-2" />
+            Novo Item
+          </Button>
+        </div>
       </div>
 
       {/* Low stock alert */}
@@ -531,6 +567,78 @@ export default function StockPage() {
         </TabsContent>
       </Tabs>
 
+      {/* Manage Categories Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl font-bold flex items-center gap-2">
+              <Tags className="text-orange-500" size={24} />
+              Gerenciar Categorias
+            </DialogTitle>
+            <DialogDescription>
+              Crie e gerencie as categorias de itens do estoque
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Create new category */}
+          <form onSubmit={handleCreateCategory} className="flex gap-2">
+            <Input
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="Nome da nova categoria..."
+              className="form-input flex-1"
+              data-testid="new-category-input"
+            />
+            <Button
+              type="submit"
+              className="bg-orange-500 hover:bg-orange-600"
+              disabled={formLoading || !newCategoryName.trim()}
+              data-testid="create-category-btn"
+            >
+              {formLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus size={18} />}
+            </Button>
+          </form>
+
+          {/* Categories list */}
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {categories.length > 0 ? (
+              categories.map((cat) => (
+                <div
+                  key={cat.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  data-testid={`category-item-${cat.id}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Tags className="text-slate-400" size={16} />
+                    <span className="font-medium text-slate-900">{cat.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:bg-red-50"
+                    onClick={() => setDeleteCategoryId(cat.id)}
+                    data-testid={`delete-category-${cat.id}`}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <Tags className="mx-auto mb-2" size={32} />
+                <p>Nenhuma categoria cadastrada</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create/Edit Item Dialog */}
       <Dialog open={showItemDialog} onOpenChange={setShowItemDialog}>
         <DialogContent className="max-w-lg">
@@ -583,10 +691,25 @@ export default function StockPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {categories.length === 0 && (
+                  <p className="text-xs text-orange-500">
+                    Nenhuma categoria.{" "}
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => {
+                        setShowItemDialog(false);
+                        setShowCategoryDialog(true);
+                      }}
+                    >
+                      Criar categoria
+                    </button>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="form-label">Unidade</Label>
@@ -833,7 +956,7 @@ export default function StockPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Item Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>
@@ -850,6 +973,30 @@ export default function StockPage() {
               className="bg-red-600 hover:bg-red-700"
               onClick={handleDelete}
               data-testid="confirm-delete-item-btn"
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Category Confirmation Dialog */}
+      <Dialog open={!!deleteCategoryId} onOpenChange={() => setDeleteCategoryId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Excluir Categoria</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir esta categoria? Os itens que usam esta categoria não serão afetados.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteCategoryId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDeleteCategory}
+              data-testid="confirm-delete-category-btn"
             >
               Excluir
             </Button>
