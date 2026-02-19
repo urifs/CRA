@@ -269,6 +269,21 @@ class ObraDetailResponse(BaseModel):
 class MachineObraUpdate(BaseModel):
     obra_id: Optional[str] = None  # None to remove from obra
 
+# ============ AUDIT LOG MODELS ============
+
+class AuditLogResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    user_name: str
+    user_email: str
+    action: str  # criar, editar, excluir
+    entity_type: str  # maquina, manutencao, obra, estoque, categoria, etc
+    entity_id: str
+    entity_name: str
+    details: Optional[str] = ""
+    created_at: str
+
 # ============ AUTH HELPERS ============
 
 def hash_password(password: str) -> str:
