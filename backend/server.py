@@ -124,6 +124,15 @@ class DashboardStats(BaseModel):
 
 # ============ STOCK MODELS ============
 
+class StockCategoryCreate(BaseModel):
+    name: str
+
+class StockCategoryResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    created_at: str
+
 class StockItemCreate(BaseModel):
     name: str
     code: Optional[str] = ""
