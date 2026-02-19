@@ -824,6 +824,137 @@ async def get_notifications(current_user: dict = Depends(get_current_user)):
     
     return notifications
 
+# ============ BALANCE / FINANCIAL REPORTS ============
+
+class MachineExpenseResponse(BaseModel):
+    machine_id: str
+    machine_name: str
+    machine_plate: str
+    category_name: str
+    total_maintenances: int
+    total_spent: float
+    preventive_spent: float
+    corrective_spent: float
+    last_maintenance_date: Optional[str] = None
+
+class MonthlyExpenseResponse(BaseModel):
+    month: str
+    year: int
+    total_spent: float
+    maintenance_count: int
+
+class BalanceResponse(BaseModel):
+    total_spent: float
+    total_maintenances: int
+    preventive_total: float
+    corrective_total: float
+    preventive_count: int
+    corrective_count: int
+    average_per_maintenance: float
+    expenses_by_machine: List[MachineExpenseResponse]
+    expenses_by_month: List[MonthlyExpenseResponse]
+
+@api_router.get("/balance", response_model=BalanceResponse)
+async def get_balance(current_user: dict = Depends(get_current_user)):
+    # Get all maintenances
+    maintenances = await db.maintenances.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(10000)
+    
+    # Get all machines with categories
+    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    categories = await db.categories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    category_map = {c["id"]: c["name"] for c in categories}
+    machine_map = {m["id"]: {
+        "name": m["name"], 
+        "plate": m["plate"],
+        "category_name": category_map.get(m.get("category_id", ""), "")
+    } for m in machines}
+    
+    # Calculate totals
+    total_spent = sum(m["part_value"] for m in maintenances)
+    total_maintenances = len(maintenances)
+    preventive = [m for m in maintenances if m["maintenance_type"] == "preventiva"]
+    corrective = [m for m in maintenances if m["maintenance_type"] == "corretiva"]
+    preventive_total = sum(m["part_value"] for m in preventive)
+    corrective_total = sum(m["part_value"] for m in corrective)
+    average_per_maintenance = total_spent / total_maintenances if total_maintenances > 0 else 0
+    
+    # Expenses by machine
+    machine_expenses = {}
+    for m in maintenances:
+        mid = m["machine_id"]
+        if mid not in machine_expenses:
+            machine_expenses[mid] = {
+                "total_maintenances": 0,
+                "total_spent": 0,
+                "preventive_spent": 0,
+                "corrective_spent": 0,
+                "last_maintenance_date": None
+            }
+        machine_expenses[mid]["total_maintenances"] += 1
+        machine_expenses[mid]["total_spent"] += m["part_value"]
+        if m["maintenance_type"] == "preventiva":
+            machine_expenses[mid]["preventive_spent"] += m["part_value"]
+        else:
+            machine_expenses[mid]["corrective_spent"] += m["part_value"]
+        
+        # Track last maintenance
+        if machine_expenses[mid]["last_maintenance_date"] is None or m["replacement_date"] > machine_expenses[mid]["last_maintenance_date"]:
+            machine_expenses[mid]["last_maintenance_date"] = m["replacement_date"]
+    
+    expenses_by_machine = [
+        MachineExpenseResponse(
+            machine_id=mid,
+            machine_name=machine_map.get(mid, {}).get("name", "Máquina Removida"),
+            machine_plate=machine_map.get(mid, {}).get("plate", "-"),
+            category_name=machine_map.get(mid, {}).get("category_name", ""),
+            total_maintenances=data["total_maintenances"],
+            total_spent=data["total_spent"],
+            preventive_spent=data["preventive_spent"],
+            corrective_spent=data["corrective_spent"],
+            last_maintenance_date=data["last_maintenance_date"]
+        )
+        for mid, data in machine_expenses.items()
+    ]
+    expenses_by_machine.sort(key=lambda x: x.total_spent, reverse=True)
+    
+    # Expenses by month
+    month_expenses = {}
+    for m in maintenances:
+        try:
+            date = datetime.fromisoformat(m["replacement_date"].replace('Z', '+00:00'))
+        except:
+            date = datetime.strptime(m["replacement_date"], "%Y-%m-%d")
+        key = f"{date.year}-{date.month:02d}"
+        if key not in month_expenses:
+            month_expenses[key] = {"total_spent": 0, "count": 0, "year": date.year, "month": date.month}
+        month_expenses[key]["total_spent"] += m["part_value"]
+        month_expenses[key]["count"] += 1
+    
+    month_names = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+                   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    
+    expenses_by_month = [
+        MonthlyExpenseResponse(
+            month=month_names[data["month"]],
+            year=data["year"],
+            total_spent=data["total_spent"],
+            maintenance_count=data["count"]
+        )
+        for key, data in sorted(month_expenses.items(), reverse=True)
+    ]
+    
+    return BalanceResponse(
+        total_spent=total_spent,
+        total_maintenances=total_maintenances,
+        preventive_total=preventive_total,
+        corrective_total=corrective_total,
+        preventive_count=len(preventive),
+        corrective_count=len(corrective),
+        average_per_maintenance=average_per_maintenance,
+        expenses_by_machine=expenses_by_machine,
+        expenses_by_month=expenses_by_month[:12]  # Last 12 months
+    )
+
 # ============ DASHBOARD ============
 
 @api_router.get("/dashboard", response_model=DashboardStats)
