@@ -283,6 +283,27 @@ export default function NewMaintenancePage() {
                 </div>
               </div>
 
+              {/* Oil Change Checkbox */}
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="oil_change"
+                    checked={formData.is_oil_change}
+                    onCheckedChange={(checked) => setFormData({...formData, is_oil_change: checked})}
+                    data-testid="oil-change-checkbox"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Droplet className="text-amber-600" size={20} />
+                    <Label htmlFor="oil_change" className="text-sm font-bold text-amber-800 cursor-pointer">
+                      Esta manutenção é uma TROCA DE ÓLEO
+                    </Label>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-600 mt-2 ml-7">
+                  Marque esta opção para reiniciar o contador de horas e tempo para esta máquina
+                </p>
+              </div>
+
               {/* Description */}
               <div className="space-y-2">
                 <Label className="form-label">Descrição / Observações</Label>
