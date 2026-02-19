@@ -733,7 +733,7 @@ async def delete_machine(machine_id: str, current_user: dict = Depends(get_curre
 @api_router.post("/maintenances", response_model=MaintenanceResponse)
 async def create_maintenance(maintenance: MaintenanceCreate, current_user: dict = Depends(get_current_user)):
     # Check if machine exists
-    machine = await db.machines.find_one({"id": maintenance.machine_id, "user_id": current_user["id"]}, {"_id": 0})
+    machine = await db.machines.find_one({"id": maintenance.machine_id}, {"_id": 0})
     if not machine:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
     
@@ -748,7 +748,7 @@ async def create_maintenance(maintenance: MaintenanceCreate, current_user: dict 
         "description": maintenance.description or "",
         "is_oil_change": maintenance.is_oil_change,
         "photos": [],
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.maintenances.insert_one(maintenance_doc)
@@ -763,6 +763,16 @@ async def create_maintenance(maintenance: MaintenanceCreate, current_user: dict 
             {"id": maintenance.machine_id}, 
             {"$set": {"last_oil_change_date": maintenance.replacement_date, "hours_since_oil_change": 0}}
         )
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="manutenção",
+        entity_id=maintenance_id,
+        entity_name=f"{maintenance.part_name} - {machine['name']}",
+        details=f"Valor: R$ {maintenance.part_value:.2f}, Tipo: {maintenance.maintenance_type}"
+    )
     
     return MaintenanceResponse(
         id=maintenance_id,
@@ -781,7 +791,7 @@ async def create_maintenance(maintenance: MaintenanceCreate, current_user: dict 
 
 @api_router.get("/maintenances", response_model=List[MaintenanceResponse])
 async def get_maintenances(machine_id: Optional[str] = None, oil_changes_only: bool = False, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["id"]}
+    query = {}
     if machine_id:
         query["machine_id"] = machine_id
     if oil_changes_only:
@@ -790,7 +800,7 @@ async def get_maintenances(machine_id: Optional[str] = None, oil_changes_only: b
     maintenances = await db.maintenances.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
     # Get all machines
-    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machines = await db.machines.find({}, {"_id": 0}).to_list(1000)
     machine_map = {m["id"]: {"name": m["name"], "plate": m["plate"]} for m in machines}
     
     return [MaintenanceResponse(
@@ -810,7 +820,7 @@ async def get_maintenances(machine_id: Optional[str] = None, oil_changes_only: b
 
 @api_router.get("/maintenances/{maintenance_id}", response_model=MaintenanceResponse)
 async def get_maintenance(maintenance_id: str, current_user: dict = Depends(get_current_user)):
-    maintenance = await db.maintenances.find_one({"id": maintenance_id, "user_id": current_user["id"]}, {"_id": 0})
+    maintenance = await db.maintenances.find_one({"id": maintenance_id}, {"_id": 0})
     if not maintenance:
         raise HTTPException(status_code=404, detail="Manutenção não encontrada")
     
@@ -833,9 +843,21 @@ async def get_maintenance(maintenance_id: str, current_user: dict = Depends(get_
 
 @api_router.delete("/maintenances/{maintenance_id}")
 async def delete_maintenance(maintenance_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.maintenances.delete_one({"id": maintenance_id, "user_id": current_user["id"]})
-    if result.deleted_count == 0:
+    existing = await db.maintenances.find_one({"id": maintenance_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Manutenção não encontrada")
+    
+    await db.maintenances.delete_one({"id": maintenance_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="manutenção",
+        entity_id=maintenance_id,
+        entity_name=existing["part_name"]
+    )
+    
     return {"message": "Manutenção removida com sucesso"}
 
 # ============ PHOTO UPLOAD ============
@@ -846,7 +868,7 @@ async def upload_photo(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    maintenance = await db.maintenances.find_one({"id": maintenance_id, "user_id": current_user["id"]})
+    maintenance = await db.maintenances.find_one({"id": maintenance_id})
     if not maintenance:
         raise HTTPException(status_code=404, detail="Manutenção não encontrada")
     
@@ -868,7 +890,7 @@ async def delete_photo(
     photo_index: int,
     current_user: dict = Depends(get_current_user)
 ):
-    maintenance = await db.maintenances.find_one({"id": maintenance_id, "user_id": current_user["id"]})
+    maintenance = await db.maintenances.find_one({"id": maintenance_id})
     if not maintenance:
         raise HTTPException(status_code=404, detail="Manutenção não encontrada")
     
