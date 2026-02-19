@@ -341,6 +341,24 @@ async def delete_category(category_id: str, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
     return {"message": "Categoria removida com sucesso"}
 
+@api_router.put("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(category_id: str, category: CategoryCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.categories.find_one({"id": category_id, "user_id": current_user["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    
+    await db.categories.update_one(
+        {"id": category_id},
+        {"$set": {"name": category.name, "description": category.description or ""}}
+    )
+    
+    return CategoryResponse(
+        id=category_id,
+        name=category.name,
+        description=category.description or "",
+        created_at=existing["created_at"]
+    )
+
 # ============ MACHINE ROUTES ============
 
 @api_router.post("/machines", response_model=MachineResponse)
