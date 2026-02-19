@@ -1428,6 +1428,213 @@ async def get_stock_movements(item_id: Optional[str] = None, current_user: dict 
         created_at=m["created_at"]
     ) for m in movements]
 
+# ============ OBRAS (PROJECTS) ROUTES ============
+
+@api_router.post("/obras", response_model=ObraResponse)
+async def create_obra(obra: ObraCreate, current_user: dict = Depends(get_current_user)):
+    obra_id = str(uuid.uuid4())
+    obra_doc = {
+        "id": obra_id,
+        "name": obra.name,
+        "description": obra.description or "",
+        "location": obra.location or "",
+        "start_date": obra.start_date,
+        "end_date": obra.end_date,
+        "status": obra.status,
+        "user_id": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.obras.insert_one(obra_doc)
+    
+    return ObraResponse(
+        id=obra_id,
+        name=obra.name,
+        description=obra.description or "",
+        location=obra.location or "",
+        start_date=obra.start_date,
+        end_date=obra.end_date,
+        status=obra.status,
+        machine_count=0,
+        total_maintenance_cost=0,
+        created_at=obra_doc["created_at"]
+    )
+
+@api_router.get("/obras", response_model=List[ObraResponse])
+async def get_obras(current_user: dict = Depends(get_current_user)):
+    obras = await db.obras.find({"user_id": current_user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    result = []
+    for obra in obras:
+        # Count machines in this obra
+        machine_count = await db.machines.count_documents({"obra_id": obra["id"], "user_id": current_user["id"]})
+        
+        # Get machines to calculate maintenance costs
+        machines = await db.machines.find({"obra_id": obra["id"], "user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+        machine_ids = [m["id"] for m in machines]
+        
+        # Calculate total maintenance cost
+        total_cost = 0
+        if machine_ids:
+            maintenances = await db.maintenances.find({
+                "machine_id": {"$in": machine_ids},
+                "user_id": current_user["id"]
+            }, {"_id": 0}).to_list(10000)
+            total_cost = sum(m["part_value"] for m in maintenances)
+        
+        result.append(ObraResponse(
+            id=obra["id"],
+            name=obra["name"],
+            description=obra.get("description", ""),
+            location=obra.get("location", ""),
+            start_date=obra.get("start_date"),
+            end_date=obra.get("end_date"),
+            status=obra.get("status", "em_andamento"),
+            machine_count=machine_count,
+            total_maintenance_cost=total_cost,
+            created_at=obra["created_at"]
+        ))
+    
+    return result
+
+@api_router.get("/obras/{obra_id}", response_model=ObraDetailResponse)
+async def get_obra(obra_id: str, current_user: dict = Depends(get_current_user)):
+    obra = await db.obras.find_one({"id": obra_id, "user_id": current_user["id"]}, {"_id": 0})
+    if not obra:
+        raise HTTPException(status_code=404, detail="Obra não encontrada")
+    
+    # Get machines in this obra
+    machines_db = await db.machines.find({"obra_id": obra_id, "user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    
+    # Get categories for machines
+    categories = await db.categories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    category_map = {c["id"]: c["name"] for c in categories}
+    
+    machines = [MachineResponse(
+        id=m["id"],
+        name=m["name"],
+        plate=m["plate"],
+        category_id=m["category_id"],
+        category_name=category_map.get(m["category_id"], ""),
+        brand=m.get("brand", ""),
+        model=m.get("model", ""),
+        year=m.get("year"),
+        notes=m.get("notes", ""),
+        status=m.get("status", "operational"),
+        obra_id=m.get("obra_id"),
+        obra_name=obra["name"],
+        created_at=m["created_at"]
+    ) for m in machines_db]
+    
+    # Get all maintenances for machines in this obra
+    machine_ids = [m["id"] for m in machines_db]
+    machine_map = {m["id"]: {"name": m["name"], "plate": m["plate"]} for m in machines_db}
+    
+    maintenances = []
+    total_cost = 0
+    preventive_cost = 0
+    corrective_cost = 0
+    
+    if machine_ids:
+        maintenances_db = await db.maintenances.find({
+            "machine_id": {"$in": machine_ids},
+            "user_id": current_user["id"]
+        }, {"_id": 0}).sort("created_at", -1).to_list(10000)
+        
+        for m in maintenances_db:
+            total_cost += m["part_value"]
+            if m["maintenance_type"] == "preventiva":
+                preventive_cost += m["part_value"]
+            else:
+                corrective_cost += m["part_value"]
+            
+            maintenances.append(MaintenanceResponse(
+                id=m["id"],
+                machine_id=m["machine_id"],
+                machine_name=machine_map.get(m["machine_id"], {}).get("name", ""),
+                machine_plate=machine_map.get(m["machine_id"], {}).get("plate", ""),
+                part_name=m["part_name"],
+                replacement_date=m["replacement_date"],
+                part_value=m["part_value"],
+                maintenance_type=m["maintenance_type"],
+                description=m.get("description", ""),
+                is_oil_change=m.get("is_oil_change", False),
+                photos=m.get("photos", []),
+                created_at=m["created_at"]
+            ))
+    
+    return ObraDetailResponse(
+        id=obra["id"],
+        name=obra["name"],
+        description=obra.get("description", ""),
+        location=obra.get("location", ""),
+        start_date=obra.get("start_date"),
+        end_date=obra.get("end_date"),
+        status=obra.get("status", "em_andamento"),
+        machines=machines,
+        maintenances=maintenances,
+        total_maintenance_cost=total_cost,
+        preventive_cost=preventive_cost,
+        corrective_cost=corrective_cost,
+        created_at=obra["created_at"]
+    )
+
+@api_router.put("/obras/{obra_id}", response_model=ObraResponse)
+async def update_obra(obra_id: str, obra: ObraCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.obras.find_one({"id": obra_id, "user_id": current_user["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Obra não encontrada")
+    
+    update_doc = {
+        "name": obra.name,
+        "description": obra.description or "",
+        "location": obra.location or "",
+        "start_date": obra.start_date,
+        "end_date": obra.end_date,
+        "status": obra.status
+    }
+    await db.obras.update_one({"id": obra_id}, {"$set": update_doc})
+    
+    # Count machines
+    machine_count = await db.machines.count_documents({"obra_id": obra_id, "user_id": current_user["id"]})
+    
+    # Calculate total cost
+    machines = await db.machines.find({"obra_id": obra_id, "user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machine_ids = [m["id"] for m in machines]
+    total_cost = 0
+    if machine_ids:
+        maintenances = await db.maintenances.find({
+            "machine_id": {"$in": machine_ids},
+            "user_id": current_user["id"]
+        }, {"_id": 0}).to_list(10000)
+        total_cost = sum(m["part_value"] for m in maintenances)
+    
+    return ObraResponse(
+        id=obra_id,
+        name=obra.name,
+        description=obra.description or "",
+        location=obra.location or "",
+        start_date=obra.start_date,
+        end_date=obra.end_date,
+        status=obra.status,
+        machine_count=machine_count,
+        total_maintenance_cost=total_cost,
+        created_at=existing["created_at"]
+    )
+
+@api_router.delete("/obras/{obra_id}")
+async def delete_obra(obra_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.obras.delete_one({"id": obra_id, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Obra não encontrada")
+    
+    # Remove obra_id from all machines that were in this obra
+    await db.machines.update_many(
+        {"obra_id": obra_id, "user_id": current_user["id"]},
+        {"$set": {"obra_id": None}}
+    )
+    
+    return {"message": "Obra removida com sucesso"}
+
 # ============ ROOT ============
 
 @api_router.get("/")
