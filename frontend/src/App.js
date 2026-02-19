@@ -173,6 +173,7 @@ function App() {
             <Route path="usage" element={<UsagePage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="audit" element={<AuditPage />} />
+            <Route path="more" element={<MorePage />} />
           </Route>
           
           {/* Catch all */}
