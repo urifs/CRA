@@ -417,6 +417,12 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
     category = await db.categories.find_one({"id": machine.category_id}, {"_id": 0})
     category_name = category["name"] if category else ""
     
+    # Get obra name if specified
+    obra_name = ""
+    if machine.obra_id:
+        obra = await db.obras.find_one({"id": machine.obra_id}, {"_id": 0})
+        obra_name = obra["name"] if obra else ""
+    
     machine_id = str(uuid.uuid4())
     machine_doc = {
         "id": machine_id,
@@ -427,6 +433,7 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         "model": machine.model or "",
         "year": machine.year,
         "notes": machine.notes or "",
+        "obra_id": machine.obra_id,
         "status": "operational",
         "user_id": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -443,6 +450,8 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         model=machine.model or "",
         year=machine.year,
         notes=machine.notes or "",
+        obra_id=machine.obra_id,
+        obra_name=obra_name,
         status="operational",
         created_at=machine_doc["created_at"]
     )
