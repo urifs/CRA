@@ -102,9 +102,10 @@ export const Layout = () => {
 
       {/* Sidebar - Hidden on mobile, always visible on desktop */}
       <aside
-        className={`sidebar transition-transform duration-300 ${
+        className={`sidebar transition-transform duration-300 z-50 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
+        style={{ zIndex: 60 }}
       >
         {/* Logo */}
         <div className="p-6 border-b border-slate-700">
