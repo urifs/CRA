@@ -153,36 +153,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Total Spent Card */}
-      <Card className="bg-slate-900 text-white" data-testid="stat-total-spent">
-        <CardContent className="py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-orange-500 rounded-xl flex items-center justify-center">
-                <DollarSign className="text-white" size={32} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">
-                  Total Investido em Manutenções
-                </p>
-                <p className="text-4xl font-black mt-1 font-heading">
-                  {formatCurrency(stats?.total_spent || 0)}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              className="border-slate-600 text-white hover:bg-slate-800"
-              onClick={() => navigate("/maintenances")}
-              data-testid="view-all-maintenances-btn"
-            >
-              Ver Todas
-              <ArrowRight size={16} className="ml-2" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Low Stock Alert */}
       {stats?.low_stock_count > 0 && (
         <Card className="bg-orange-50 border-orange-200" data-testid="low-stock-alert">
