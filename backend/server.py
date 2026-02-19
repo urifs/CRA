@@ -1347,7 +1347,7 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
 @api_router.post("/stock/categories", response_model=StockCategoryResponse)
 async def create_stock_category(category: StockCategoryCreate, current_user: dict = Depends(get_current_user)):
     # Check if category already exists
-    existing = await db.stock_categories.find_one({"name": category.name, "user_id": current_user["id"]})
+    existing = await db.stock_categories.find_one({"name": category.name})
     if existing:
         raise HTTPException(status_code=400, detail="Categoria já existe")
     
@@ -1355,10 +1355,19 @@ async def create_stock_category(category: StockCategoryCreate, current_user: dic
     category_doc = {
         "id": category_id,
         "name": category.name,
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.stock_categories.insert_one(category_doc)
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="categoria de estoque",
+        entity_id=category_id,
+        entity_name=category.name
+    )
     
     return StockCategoryResponse(
         id=category_id,
@@ -1368,7 +1377,7 @@ async def create_stock_category(category: StockCategoryCreate, current_user: dic
 
 @api_router.get("/stock/categories", response_model=List[StockCategoryResponse])
 async def get_stock_categories(current_user: dict = Depends(get_current_user)):
-    categories = await db.stock_categories.find({"user_id": current_user["id"]}, {"_id": 0}).sort("name", 1).to_list(100)
+    categories = await db.stock_categories.find({}, {"_id": 0}).sort("name", 1).to_list(100)
     return [StockCategoryResponse(
         id=c["id"],
         name=c["name"],
@@ -1377,9 +1386,21 @@ async def get_stock_categories(current_user: dict = Depends(get_current_user)):
 
 @api_router.delete("/stock/categories/{category_id}")
 async def delete_stock_category(category_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.stock_categories.delete_one({"id": category_id, "user_id": current_user["id"]})
-    if result.deleted_count == 0:
+    existing = await db.stock_categories.find_one({"id": category_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    
+    await db.stock_categories.delete_one({"id": category_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="categoria de estoque",
+        entity_id=category_id,
+        entity_name=existing["name"]
+    )
+    
     return {"message": "Categoria removida com sucesso"}
 
 # Stock Items
@@ -1397,10 +1418,19 @@ async def create_stock_item(item: StockItemCreate, current_user: dict = Depends(
         "unit_price": item.unit_price or 0,
         "location": item.location or "",
         "notes": item.notes or "",
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.stock_items.insert_one(item_doc)
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="item de estoque",
+        entity_id=item_id,
+        entity_name=item.name
+    )
     
     return StockItemResponse(
         id=item_id,
@@ -1419,7 +1449,7 @@ async def create_stock_item(item: StockItemCreate, current_user: dict = Depends(
 
 @api_router.get("/stock/items", response_model=List[StockItemResponse])
 async def get_stock_items(low_stock_only: bool = False, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["id"]}
+    query = {}
     if low_stock_only:
         query["$expr"] = {"$lte": ["$quantity", "$min_quantity"]}
     
