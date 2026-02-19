@@ -84,7 +84,10 @@ export const Layout = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Mobile header */}
-      <header className="fixed top-0 left-0 right-0 z-40 md:hidden bg-slate-900 text-white safe-area-padding">
+      <header 
+        className="fixed top-0 left-0 right-0 z-40 md:hidden bg-slate-900 text-white"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <Construction className="text-orange-500" size={24} />
