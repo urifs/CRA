@@ -190,7 +190,10 @@ export const Layout = () => {
       )}
 
       {/* Main content */}
-      <main className="main-content pt-14 md:pt-0">
+      <main 
+        className="main-content md:pt-0"
+        style={{ paddingTop: 'calc(56px + env(safe-area-inset-top))' }}
+      >
         <div className="p-4 md:p-8 pb-24 md:pb-8">
           <Outlet />
         </div>
