@@ -49,6 +49,7 @@ export const Layout = () => {
 
   const navItems = [
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/obras", icon: HardHat, label: "Plano de Obras" },
     { path: "/machines", icon: Truck, label: "Máquinas" },
     { path: "/maintenances", icon: Wrench, label: "Manutenções" },
     { path: "/balance", icon: DollarSign, label: "Balanço" },
