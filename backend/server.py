@@ -832,9 +832,38 @@ async def get_notifications(current_user: dict = Depends(get_current_user)):
                     created_at=today.isoformat()
                 ))
     
+    # Add low stock alerts (quantity < 5)
+    stock_items = await db.stock_items.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    for item in stock_items:
+        if item["quantity"] < 5:
+            if item["quantity"] <= 0:
+                notifications.append(NotificationResponse(
+                    id=f"stock-empty-{item['id']}",
+                    machine_id="",
+                    machine_name=item["name"],
+                    machine_plate=item.get("code", ""),
+                    notification_type="stock_empty",
+                    message=f"🚨 ESTOQUE ZERADO: {item['name']} está sem estoque! Reponha imediatamente.",
+                    hours_remaining=None,
+                    days_remaining=None,
+                    created_at=today.isoformat()
+                ))
+            else:
+                notifications.append(NotificationResponse(
+                    id=f"stock-low-{item['id']}",
+                    machine_id="",
+                    machine_name=item["name"],
+                    machine_plate=item.get("code", ""),
+                    notification_type="stock_low",
+                    message=f"⚠️ Estoque baixo: {item['name']} tem apenas {item['quantity']:.0f} {item.get('unit', 'un')} restantes.",
+                    hours_remaining=None,
+                    days_remaining=None,
+                    created_at=today.isoformat()
+                ))
+    
     # Sort by urgency
     def sort_key(n):
-        if "urgent" in n.notification_type:
+        if "urgent" in n.notification_type or "empty" in n.notification_type:
             return 0
         return 1
     
