@@ -491,6 +491,7 @@ async def create_maintenance(maintenance: MaintenanceCreate, current_user: dict 
         "part_value": maintenance.part_value,
         "maintenance_type": maintenance.maintenance_type,
         "description": maintenance.description or "",
+        "is_oil_change": maintenance.is_oil_change,
         "photos": [],
         "user_id": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -500,6 +501,13 @@ async def create_maintenance(maintenance: MaintenanceCreate, current_user: dict 
     # Update machine status to maintenance if corrective
     if maintenance.maintenance_type == "corretiva":
         await db.machines.update_one({"id": maintenance.machine_id}, {"$set": {"status": "maintenance"}})
+    
+    # If oil change, reset hours counter for this machine
+    if maintenance.is_oil_change:
+        await db.machines.update_one(
+            {"id": maintenance.machine_id}, 
+            {"$set": {"last_oil_change_date": maintenance.replacement_date, "hours_since_oil_change": 0}}
+        )
     
     return MaintenanceResponse(
         id=maintenance_id,
@@ -511,15 +519,18 @@ async def create_maintenance(maintenance: MaintenanceCreate, current_user: dict 
         part_value=maintenance.part_value,
         maintenance_type=maintenance.maintenance_type,
         description=maintenance.description or "",
+        is_oil_change=maintenance.is_oil_change,
         photos=[],
         created_at=maintenance_doc["created_at"]
     )
 
 @api_router.get("/maintenances", response_model=List[MaintenanceResponse])
-async def get_maintenances(machine_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+async def get_maintenances(machine_id: Optional[str] = None, oil_changes_only: bool = False, current_user: dict = Depends(get_current_user)):
     query = {"user_id": current_user["id"]}
     if machine_id:
         query["machine_id"] = machine_id
+    if oil_changes_only:
+        query["is_oil_change"] = True
     
     maintenances = await db.maintenances.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
@@ -537,6 +548,7 @@ async def get_maintenances(machine_id: Optional[str] = None, current_user: dict 
         part_value=m["part_value"],
         maintenance_type=m["maintenance_type"],
         description=m.get("description", ""),
+        is_oil_change=m.get("is_oil_change", False),
         photos=m.get("photos", []),
         created_at=m["created_at"]
     ) for m in maintenances]
