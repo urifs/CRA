@@ -265,7 +265,8 @@ class FleetMaintenanceAPITester:
             "replacement_date": "2024-01-15",
             "part_value": 150.50,
             "maintenance_type": "preventiva",
-            "description": "Manutenção criada para testes automatizados"
+            "description": "Manutenção criada para testes automatizados",
+            "is_oil_change": False
         }
         
         response = self.make_request("POST", "maintenances", data)
@@ -281,6 +282,37 @@ class FleetMaintenanceAPITester:
         else:
             error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
             self.log_result("Create Maintenance", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_create_oil_change_maintenance(self):
+        """Test oil change maintenance creation"""
+        if not self.machine_id:
+            self.log_result("Create Oil Change Maintenance", False, "", "No machine ID available")
+            return False
+        
+        data = {
+            "machine_id": self.machine_id,
+            "part_name": "Troca de óleo completa",
+            "replacement_date": "2024-01-20",
+            "part_value": 250.00,
+            "maintenance_type": "preventiva",
+            "description": "Troca de óleo para teste automatizado",
+            "is_oil_change": True
+        }
+        
+        response = self.make_request("POST", "maintenances", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data.get('is_oil_change') == True:
+                self.log_result("Create Oil Change Maintenance", True, f"Oil Change Maintenance ID: {response_data['id']}")
+                return True
+            else:
+                self.log_result("Create Oil Change Maintenance", False, "", "Missing ID or is_oil_change not set correctly")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Oil Change Maintenance", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
         
         return False
 
