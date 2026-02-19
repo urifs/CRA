@@ -16,13 +16,17 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 6. ✅ Controle de estoque de peças (completo com alertas)
 7. ✅ Sistema de troca de óleo com controle de tempo de uso
 8. ✅ **Plano de Obras** - Gestão de obras com vinculação de máquinas
+9. ✅ **Sistema Compartilhado** - Todos os funcionários veem os mesmos dados
+10. ✅ **Sistema de Auditoria** - Histórico de alterações por funcionário
 
 ## Arquitetura
 
 ### Backend (FastAPI + MongoDB)
 - **Auth**: JWT com bcrypt para hash de senhas
-- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, **obras**
+- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, **audit_logs**
 - **Upload**: Fotos armazenadas em base64 no MongoDB
+- **Sistema Compartilhado**: Dados são globais (sem filtro por user_id nas queries)
+- **Auditoria**: Todas as operações CRUD geram logs com nome do funcionário
 
 ### Frontend (React + Shadcn UI)
 - **Design**: "Tactical Industrial" - Slate 900 + Safety Orange
@@ -32,7 +36,7 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 ## O Que Foi Implementado (Fevereiro 2026)
 
 ### Funcionalidades Completas
-- [x] Sistema de autenticação (login/registro)
+- [x] Sistema de autenticação (login/registro com nome)
 - [x] Dashboard com estatísticas (total máquinas, manutenções, gastos)
 - [x] CRUD completo de categorias
 - [x] CRUD completo de máquinas
@@ -47,14 +51,14 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
   - Alertas de reposição no dashboard
   - Filtro de itens com estoque baixo
   - Gerenciamento de categorias de estoque
-  - **Alerta quando estoque < 5 unidades** ✅
+  - **Alerta quando estoque < 5 unidades**
 - [x] **Sistema de Troca de Óleo**
   - Campo "Troca de Óleo" na ficha de manutenção
   - Página "Tempo de Uso" para registrar horas de uso das máquinas
   - Status visual com barras de progresso (horas e dias)
   - Alertas automáticos (50h para 500h, 2 meses para 1 ano)
   - Página de Notificações centralizada
-- [x] **Plano de Obras** (Novo! - Fev 2026)
+- [x] **Plano de Obras**
   - CRUD completo de obras (criar, listar, editar, excluir)
   - Vincular máquinas a obras (tag)
   - Visualizar custos de manutenção por obra
@@ -63,12 +67,22 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
   - Página de detalhes com máquinas e manutenções
   - Adicionar/remover máquinas de obras
   - Cálculo automático de custos
+- [x] **Sistema Compartilhado** (Fev 2026)
+  - Todos os funcionários veem os mesmos dados
+  - Dados são globais, não mais filtrados por user_id
+  - Registro de quem criou cada item (created_by)
+- [x] **Sistema de Auditoria** (Fev 2026)
+  - Registro automático de todas as alterações (criar, editar, excluir)
+  - Nome e email do funcionário em cada registro
+  - Detalhes da alteração (dados anteriores, etc.)
+  - Página /audit com filtros por tipo e ação
+  - Busca por funcionário, item ou detalhes
 
 ### Endpoints da API
 - POST /api/auth/register, /api/auth/login, GET /api/auth/me
 - GET/POST/PUT/DELETE /api/categories
 - GET/POST/PUT/DELETE /api/machines
-- **PATCH /api/machines/{id}/obra** - Vincular/desvincular máquina de obra
+- PATCH /api/machines/{id}/obra - Vincular/desvincular máquina de obra
 - GET/POST/DELETE /api/maintenances (com is_oil_change)
 - POST/DELETE /api/maintenances/{id}/photos
 - GET/POST/PUT/DELETE /api/stock/items
@@ -79,12 +93,13 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - GET /api/notifications
 - GET /api/dashboard
 - GET /api/balance
-- **GET/POST/PUT/DELETE /api/obras** - CRUD de obras
+- GET/POST/PUT/DELETE /api/obras
+- **GET /api/audit-logs** - Logs de auditoria com filtros
 
 ## User Personas
-1. **Gestor de Frota**: Visualiza dashboard, acompanha custos, monitora alertas, gerencia obras
+1. **Gestor de Frota**: Visualiza dashboard, acompanha custos, monitora alertas, gerencia obras, **audita alterações**
 2. **Mecânico**: Registra manutenções, anexa fotos, controla peças, registra horas
-3. **Administrador**: Gerencia máquinas, categorias, estoque e obras
+3. **Administrador**: Gerencia máquinas, categorias, estoque, obras e **verifica auditoria**
 
 ## Backlog Priorizado
 
@@ -94,7 +109,9 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Upload de fotos
 - Controle de estoque com alertas
 - Sistema de troca de óleo com alertas
-- **Plano de Obras com vinculação de máquinas**
+- Plano de Obras com vinculação de máquinas
+- **Sistema compartilhado para todos os funcionários**
+- **Sistema de auditoria com nome do funcionário**
 
 ### P1 (Importante) - Próximos Passos
 - [ ] **Integração estoque ↔ manutenção** (baixa automática de peças)
@@ -106,6 +123,11 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - [ ] App mobile (React Native)
 - [ ] Integração com GPS/telemetria
 - [ ] Multi-tenancy para múltiplas empresas
+- [ ] Níveis de permissão (admin vs operador)
+
+## Credenciais de Teste
+- **Email**: test@test.com
+- **Senha**: password
 
 ## Próximas Ações
 1. **Integrar estoque com manutenções** - Deduzir automaticamente peças do estoque ao registrar manutenção
