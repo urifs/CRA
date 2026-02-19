@@ -19,6 +19,8 @@ import StockPage from "@/pages/StockPage";
 import UsagePage from "@/pages/UsagePage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import BalancePage from "@/pages/BalancePage";
+import ObrasPage from "@/pages/ObrasPage";
+import ObraDetailPage from "@/pages/ObraDetailPage";
 import Layout from "@/components/Layout";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
