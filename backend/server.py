@@ -1472,7 +1472,7 @@ async def get_stock_items(low_stock_only: bool = False, current_user: dict = Dep
 
 @api_router.get("/stock/items/{item_id}", response_model=StockItemResponse)
 async def get_stock_item(item_id: str, current_user: dict = Depends(get_current_user)):
-    item = await db.stock_items.find_one({"id": item_id, "user_id": current_user["id"]}, {"_id": 0})
+    item = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
@@ -1493,7 +1493,7 @@ async def get_stock_item(item_id: str, current_user: dict = Depends(get_current_
 
 @api_router.put("/stock/items/{item_id}", response_model=StockItemResponse)
 async def update_stock_item(item_id: str, item: StockItemCreate, current_user: dict = Depends(get_current_user)):
-    existing = await db.stock_items.find_one({"id": item_id, "user_id": current_user["id"]})
+    existing = await db.stock_items.find_one({"id": item_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
@@ -1508,6 +1508,15 @@ async def update_stock_item(item_id: str, item: StockItemCreate, current_user: d
         "notes": item.notes or ""
     }
     await db.stock_items.update_one({"id": item_id}, {"$set": update_doc})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="item de estoque",
+        entity_id=item_id,
+        entity_name=item.name
+    )
     
     return StockItemResponse(
         id=item_id,
@@ -1526,17 +1535,29 @@ async def update_stock_item(item_id: str, item: StockItemCreate, current_user: d
 
 @api_router.delete("/stock/items/{item_id}")
 async def delete_stock_item(item_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.stock_items.delete_one({"id": item_id, "user_id": current_user["id"]})
-    if result.deleted_count == 0:
+    existing = await db.stock_items.find_one({"id": item_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    await db.stock_items.delete_one({"id": item_id})
     # Delete related movements
     await db.stock_movements.delete_many({"item_id": item_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="item de estoque",
+        entity_id=item_id,
+        entity_name=existing["name"]
+    )
+    
     return {"message": "Item removido com sucesso"}
 
 @api_router.post("/stock/movements", response_model=StockMovementResponse)
 async def create_stock_movement(movement: StockMovementCreate, current_user: dict = Depends(get_current_user)):
     # Check if item exists
-    item = await db.stock_items.find_one({"id": movement.item_id, "user_id": current_user["id"]})
+    item = await db.stock_items.find_one({"id": movement.item_id})
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
