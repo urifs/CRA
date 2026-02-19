@@ -27,10 +27,12 @@ import {
   Loader2,
   Shield,
   AlertTriangle,
-  Truck
+  Truck,
+  Droplet
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function NewMaintenancePage() {
   const [searchParams] = useSearchParams();
@@ -47,7 +49,8 @@ export default function NewMaintenancePage() {
     part_name: "",
     part_value: "",
     maintenance_type: "",
-    description: ""
+    description: "",
+    is_oil_change: false
   });
 
   useEffect(() => {
