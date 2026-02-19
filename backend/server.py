@@ -716,6 +716,16 @@ async def delete_machine(machine_id: str, current_user: dict = Depends(get_curre
     await db.machines.delete_one({"id": machine_id})
     # Delete related maintenances
     await db.maintenances.delete_many({"machine_id": machine_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="máquina",
+        entity_id=machine_id,
+        entity_name=f"{existing['name']} ({existing['plate']})"
+    )
+    
     return {"message": "Máquina removida com sucesso"}
 
 # ============ MAINTENANCE ROUTES ============
