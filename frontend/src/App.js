@@ -18,6 +18,7 @@ import MaintenanceDetailPage from "@/pages/MaintenanceDetailPage";
 import StockPage from "@/pages/StockPage";
 import UsagePage from "@/pages/UsagePage";
 import NotificationsPage from "@/pages/NotificationsPage";
+import BalancePage from "@/pages/BalancePage";
 import Layout from "@/components/Layout";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
