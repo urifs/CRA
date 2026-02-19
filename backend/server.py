@@ -908,7 +908,7 @@ async def delete_photo(
 @api_router.post("/usage-logs", response_model=UsageLogResponse)
 async def create_usage_log(log: UsageLogCreate, current_user: dict = Depends(get_current_user)):
     # Check if machine exists
-    machine = await db.machines.find_one({"id": log.machine_id, "user_id": current_user["id"]}, {"_id": 0})
+    machine = await db.machines.find_one({"id": log.machine_id}, {"_id": 0})
     if not machine:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
     
@@ -918,7 +918,7 @@ async def create_usage_log(log: UsageLogCreate, current_user: dict = Depends(get
         "machine_id": log.machine_id,
         "hours": log.hours,
         "notes": log.notes or "",
-        "user_id": current_user["id"],
+        "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.usage_logs.insert_one(log_doc)
@@ -928,6 +928,15 @@ async def create_usage_log(log: UsageLogCreate, current_user: dict = Depends(get
     await db.machines.update_one(
         {"id": log.machine_id},
         {"$set": {"hours_since_oil_change": current_hours + log.hours}}
+    )
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="registro de uso",
+        entity_id=log_id,
+        entity_name=f"{machine['name']} - {log.hours}h"
     )
     
     return UsageLogResponse(
@@ -942,14 +951,14 @@ async def create_usage_log(log: UsageLogCreate, current_user: dict = Depends(get
 
 @api_router.get("/usage-logs", response_model=List[UsageLogResponse])
 async def get_usage_logs(machine_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["id"]}
+    query = {}
     if machine_id:
         query["machine_id"] = machine_id
     
     logs = await db.usage_logs.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
     # Get machines
-    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machines = await db.machines.find({}, {"_id": 0}).to_list(1000)
     machine_map = {m["id"]: {"name": m["name"], "plate": m["plate"]} for m in machines}
     
     return [UsageLogResponse(
@@ -964,7 +973,7 @@ async def get_usage_logs(machine_id: Optional[str] = None, current_user: dict = 
 
 @api_router.get("/oil-change-status", response_model=List[OilChangeStatusResponse])
 async def get_oil_change_status(current_user: dict = Depends(get_current_user)):
-    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machines = await db.machines.find({}, {"_id": 0}).to_list(1000)
     
     result = []
     today = datetime.now(timezone.utc)
