@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Truck, Loader2 } from "lucide-react";
+import { Construction, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -44,7 +44,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md relative z-10 border-slate-200 shadow-2xl animate-fade-in">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto w-16 h-16 bg-orange-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-            <Truck className="text-white" size={32} />
+            <Construction className="text-white" size={32} />
           </div>
           <CardTitle className="font-heading text-3xl font-black tracking-tight text-slate-900">
             CRA Construtora
