@@ -1172,11 +1172,11 @@ class BalanceResponse(BaseModel):
 @api_router.get("/balance", response_model=BalanceResponse)
 async def get_balance(current_user: dict = Depends(get_current_user)):
     # Get all maintenances
-    maintenances = await db.maintenances.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(10000)
+    maintenances = await db.maintenances.find({}, {"_id": 0}).to_list(10000)
     
     # Get all machines with categories
-    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
-    categories = await db.categories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    machines = await db.machines.find({}, {"_id": 0}).to_list(1000)
+    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
     category_map = {c["id"]: c["name"] for c in categories}
     machine_map = {m["id"]: {
         "name": m["name"], 
