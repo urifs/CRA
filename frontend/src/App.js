@@ -22,6 +22,7 @@ import BalancePage from "@/pages/BalancePage";
 import ObrasPage from "@/pages/ObrasPage";
 import ObraDetailPage from "@/pages/ObraDetailPage";
 import AuditPage from "@/pages/AuditPage";
+import MorePage from "@/pages/MorePage";
 import Layout from "@/components/Layout";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
