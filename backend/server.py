@@ -626,6 +626,204 @@ async def delete_photo(
     
     return {"message": "Foto removida com sucesso"}
 
+# ============ USAGE LOG / OIL CHANGE ROUTES ============
+
+@api_router.post("/usage-logs", response_model=UsageLogResponse)
+async def create_usage_log(log: UsageLogCreate, current_user: dict = Depends(get_current_user)):
+    # Check if machine exists
+    machine = await db.machines.find_one({"id": log.machine_id, "user_id": current_user["id"]}, {"_id": 0})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    log_id = str(uuid.uuid4())
+    log_doc = {
+        "id": log_id,
+        "machine_id": log.machine_id,
+        "hours": log.hours,
+        "notes": log.notes or "",
+        "user_id": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.usage_logs.insert_one(log_doc)
+    
+    # Update machine's hours since oil change
+    current_hours = machine.get("hours_since_oil_change", 0)
+    await db.machines.update_one(
+        {"id": log.machine_id},
+        {"$set": {"hours_since_oil_change": current_hours + log.hours}}
+    )
+    
+    return UsageLogResponse(
+        id=log_id,
+        machine_id=log.machine_id,
+        machine_name=machine["name"],
+        machine_plate=machine["plate"],
+        hours=log.hours,
+        notes=log.notes or "",
+        created_at=log_doc["created_at"]
+    )
+
+@api_router.get("/usage-logs", response_model=List[UsageLogResponse])
+async def get_usage_logs(machine_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {"user_id": current_user["id"]}
+    if machine_id:
+        query["machine_id"] = machine_id
+    
+    logs = await db.usage_logs.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Get machines
+    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    machine_map = {m["id"]: {"name": m["name"], "plate": m["plate"]} for m in machines}
+    
+    return [UsageLogResponse(
+        id=l["id"],
+        machine_id=l["machine_id"],
+        machine_name=machine_map.get(l["machine_id"], {}).get("name", ""),
+        machine_plate=machine_map.get(l["machine_id"], {}).get("plate", ""),
+        hours=l["hours"],
+        notes=l.get("notes", ""),
+        created_at=l["created_at"]
+    ) for l in logs]
+
+@api_router.get("/oil-change-status", response_model=List[OilChangeStatusResponse])
+async def get_oil_change_status(current_user: dict = Depends(get_current_user)):
+    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    
+    result = []
+    today = datetime.now(timezone.utc)
+    
+    for machine in machines:
+        hours_since_change = machine.get("hours_since_oil_change", 0)
+        hours_remaining = 500 - hours_since_change
+        
+        last_oil_change_date = machine.get("last_oil_change_date")
+        if last_oil_change_date:
+            try:
+                last_change = datetime.fromisoformat(last_oil_change_date.replace('Z', '+00:00'))
+                if last_change.tzinfo is None:
+                    last_change = last_change.replace(tzinfo=timezone.utc)
+            except:
+                last_change = datetime.strptime(last_oil_change_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            days_since_change = (today - last_change).days
+            days_remaining = 365 - days_since_change
+        else:
+            days_since_change = 0
+            days_remaining = 365
+        
+        # Check if needs alert
+        needs_alert = False
+        alert_reason = None
+        
+        if hours_remaining <= 50:
+            needs_alert = True
+            alert_reason = f"Faltam apenas {hours_remaining:.0f} horas para atingir 500h de uso"
+        elif days_remaining <= 60 and hours_remaining > 50:
+            needs_alert = True
+            alert_reason = f"Faltam {days_remaining} dias para completar 1 ano desde a última troca"
+        
+        result.append(OilChangeStatusResponse(
+            machine_id=machine["id"],
+            machine_name=machine["name"],
+            machine_plate=machine["plate"],
+            last_oil_change_date=last_oil_change_date,
+            hours_since_change=hours_since_change,
+            hours_remaining=max(0, hours_remaining),
+            days_since_change=days_since_change,
+            days_remaining=max(0, days_remaining),
+            needs_alert=needs_alert,
+            alert_reason=alert_reason
+        ))
+    
+    return result
+
+@api_router.get("/notifications", response_model=List[NotificationResponse])
+async def get_notifications(current_user: dict = Depends(get_current_user)):
+    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    
+    notifications = []
+    today = datetime.now(timezone.utc)
+    
+    for machine in machines:
+        hours_since_change = machine.get("hours_since_oil_change", 0)
+        hours_remaining = 500 - hours_since_change
+        
+        last_oil_change_date = machine.get("last_oil_change_date")
+        if last_oil_change_date:
+            try:
+                last_change = datetime.fromisoformat(last_oil_change_date.replace('Z', '+00:00'))
+                if last_change.tzinfo is None:
+                    last_change = last_change.replace(tzinfo=timezone.utc)
+            except:
+                last_change = datetime.strptime(last_oil_change_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            days_since_change = (today - last_change).days
+            days_remaining = 365 - days_since_change
+        else:
+            days_since_change = 0
+            days_remaining = 365
+        
+        # Alert for hours
+        if hours_remaining <= 50 and hours_remaining > 0:
+            notifications.append(NotificationResponse(
+                id=f"oil-hours-{machine['id']}",
+                machine_id=machine["id"],
+                machine_name=machine["name"],
+                machine_plate=machine["plate"],
+                notification_type="oil_change_hours",
+                message=f"⚠️ Troca de óleo necessária em breve! Restam apenas {hours_remaining:.0f} horas de uso.",
+                hours_remaining=hours_remaining,
+                days_remaining=None,
+                created_at=today.isoformat()
+            ))
+        elif hours_remaining <= 0:
+            notifications.append(NotificationResponse(
+                id=f"oil-hours-urgent-{machine['id']}",
+                machine_id=machine["id"],
+                machine_name=machine["name"],
+                machine_plate=machine["plate"],
+                notification_type="oil_change_urgent",
+                message=f"🚨 URGENTE: Limite de 500 horas atingido! Troque o óleo imediatamente.",
+                hours_remaining=0,
+                days_remaining=None,
+                created_at=today.isoformat()
+            ))
+        
+        # Alert for time (only if hours haven't triggered yet)
+        if hours_remaining > 50:
+            if days_remaining <= 0:
+                notifications.append(NotificationResponse(
+                    id=f"oil-time-urgent-{machine['id']}",
+                    machine_id=machine["id"],
+                    machine_name=machine["name"],
+                    machine_plate=machine["plate"],
+                    notification_type="oil_change_time_urgent",
+                    message=f"🚨 URGENTE: Completou 1 ano desde a última troca de óleo! Troque imediatamente.",
+                    hours_remaining=hours_remaining,
+                    days_remaining=0,
+                    created_at=today.isoformat()
+                ))
+            elif days_remaining <= 60:
+                notifications.append(NotificationResponse(
+                    id=f"oil-time-{machine['id']}",
+                    machine_id=machine["id"],
+                    machine_name=machine["name"],
+                    machine_plate=machine["plate"],
+                    notification_type="oil_change_time",
+                    message=f"⚠️ Faltam {days_remaining} dias para completar 1 ano desde a última troca de óleo.",
+                    hours_remaining=hours_remaining,
+                    days_remaining=days_remaining,
+                    created_at=today.isoformat()
+                ))
+    
+    # Sort by urgency
+    def sort_key(n):
+        if "urgent" in n.notification_type:
+            return 0
+        return 1
+    
+    notifications.sort(key=sort_key)
+    
+    return notifications
+
 # ============ DASHBOARD ============
 
 @api_router.get("/dashboard", response_model=DashboardStats)
