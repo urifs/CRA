@@ -30,6 +30,8 @@ export const Layout = () => {
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/machines", icon: Truck, label: "Máquinas" },
     { path: "/maintenances", icon: Wrench, label: "Manutenções" },
+    { path: "/usage", icon: Clock, label: "Tempo de Uso" },
+    { path: "/notifications", icon: Bell, label: "Notificações" },
     { path: "/stock", icon: Package, label: "Estoque" },
     { path: "/categories", icon: Tags, label: "Categorias" },
   ];
