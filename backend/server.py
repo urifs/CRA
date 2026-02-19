@@ -571,6 +571,7 @@ async def get_maintenance(maintenance_id: str, current_user: dict = Depends(get_
         part_value=maintenance["part_value"],
         maintenance_type=maintenance["maintenance_type"],
         description=maintenance.get("description", ""),
+        is_oil_change=maintenance.get("is_oil_change", False),
         photos=maintenance.get("photos", []),
         created_at=maintenance["created_at"]
     )
