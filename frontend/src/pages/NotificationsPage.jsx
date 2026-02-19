@@ -155,17 +155,24 @@ export default function NotificationsPage() {
                           ? "bg-red-200 text-red-800" 
                           : "bg-orange-200 text-orange-800"
                       }`}>
-                        {notification.notification_type.includes("urgent") ? "URGENTE" : "AVISO"}
+                        {notification.notification_type.includes("urgent") || notification.notification_type.includes("empty") ? "URGENTE" : "AVISO"}
                       </span>
                       <span className="text-sm text-slate-500">
-                        {notification.notification_type.includes("time") ? "Tempo" : "Horas de Uso"}
+                        {notification.notification_type.includes("stock") ? "Estoque" : 
+                         notification.notification_type.includes("time") ? "Tempo" : "Horas de Uso"}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-2 mb-2">
-                      <Truck className="text-slate-400" size={16} />
+                      {notification.notification_type.includes("stock") ? (
+                        <Package className="text-slate-400" size={16} />
+                      ) : (
+                        <Truck className="text-slate-400" size={16} />
+                      )}
                       <span className="font-bold text-slate-900">{notification.machine_name}</span>
-                      <span className="font-mono text-sm text-slate-500">({notification.machine_plate})</span>
+                      {notification.machine_plate && (
+                        <span className="font-mono text-sm text-slate-500">({notification.machine_plate})</span>
+                      )}
                     </div>
                     
                     <p className="text-slate-700">{notification.message}</p>
@@ -186,15 +193,27 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => navigate(`/machines/${notification.machine_id}`)}
-                  >
-                    Ver Máquina
-                    <ArrowRight size={14} className="ml-1" />
-                  </Button>
+                  {notification.notification_type.includes("stock") ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => navigate("/stock")}
+                    >
+                      Ver Estoque
+                      <ArrowRight size={14} className="ml-1" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => navigate(`/machines/${notification.machine_id}`)}
+                    >
+                      Ver Máquina
+                      <ArrowRight size={14} className="ml-1" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
