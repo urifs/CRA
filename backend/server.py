@@ -1866,11 +1866,41 @@ async def delete_obra(obra_id: str, current_user: dict = Depends(get_current_use
     
     # Remove obra_id from all machines that were in this obra
     await db.machines.update_many(
-        {"obra_id": obra_id, "user_id": current_user["id"]},
+        {"obra_id": obra_id},
         {"$set": {"obra_id": None}}
     )
     
     return {"message": "Obra removida com sucesso"}
+
+# ============ AUDIT LOG ROUTES ============
+
+@api_router.get("/audit-logs", response_model=List[AuditLogResponse])
+async def get_audit_logs(
+    entity_type: Optional[str] = None,
+    user_id: Optional[str] = None,
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if entity_type:
+        query["entity_type"] = entity_type
+    if user_id:
+        query["user_id"] = user_id
+    
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return [AuditLogResponse(
+        id=l["id"],
+        user_id=l["user_id"],
+        user_name=l["user_name"],
+        user_email=l["user_email"],
+        action=l["action"],
+        entity_type=l["entity_type"],
+        entity_id=l["entity_id"],
+        entity_name=l["entity_name"],
+        details=l.get("details", ""),
+        created_at=l["created_at"]
+    ) for l in logs]
 
 # ============ ROOT ============
 
