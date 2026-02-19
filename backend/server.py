@@ -618,6 +618,46 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
 
 # ============ STOCK ROUTES ============
 
+# Stock Categories
+@api_router.post("/stock/categories", response_model=StockCategoryResponse)
+async def create_stock_category(category: StockCategoryCreate, current_user: dict = Depends(get_current_user)):
+    # Check if category already exists
+    existing = await db.stock_categories.find_one({"name": category.name, "user_id": current_user["id"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="Categoria já existe")
+    
+    category_id = str(uuid.uuid4())
+    category_doc = {
+        "id": category_id,
+        "name": category.name,
+        "user_id": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.stock_categories.insert_one(category_doc)
+    
+    return StockCategoryResponse(
+        id=category_id,
+        name=category.name,
+        created_at=category_doc["created_at"]
+    )
+
+@api_router.get("/stock/categories", response_model=List[StockCategoryResponse])
+async def get_stock_categories(current_user: dict = Depends(get_current_user)):
+    categories = await db.stock_categories.find({"user_id": current_user["id"]}, {"_id": 0}).sort("name", 1).to_list(100)
+    return [StockCategoryResponse(
+        id=c["id"],
+        name=c["name"],
+        created_at=c["created_at"]
+    ) for c in categories]
+
+@api_router.delete("/stock/categories/{category_id}")
+async def delete_stock_category(category_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.stock_categories.delete_one({"id": category_id, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    return {"message": "Categoria removida com sucesso"}
+
+# Stock Items
 @api_router.post("/stock/items", response_model=StockItemResponse)
 async def create_stock_item(item: StockItemCreate, current_user: dict = Depends(get_current_user)):
     item_id = str(uuid.uuid4())
