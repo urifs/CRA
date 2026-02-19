@@ -685,6 +685,164 @@ class FleetMaintenanceAPITester:
             self.log_result("Filter Low Stock Items", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
         
         return False
+    def test_create_usage_log(self):
+        """Test usage log creation"""
+        if not self.machine_id:
+            self.log_result("Create Usage Log", False, "", "No machine ID available")
+            return False
+        
+        data = {
+            "machine_id": self.machine_id,
+            "hours": 8.5,
+            "notes": "Teste de registro de horas de uso"
+        }
+        
+        response = self.make_request("POST", "usage-logs", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data.get('hours') == 8.5:
+                self.log_result("Create Usage Log", True, f"Usage Log ID: {response_data['id']}, Hours: {response_data['hours']}")
+                return True
+            else:
+                self.log_result("Create Usage Log", False, "", "Missing ID or incorrect hours in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Usage Log", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_list_usage_logs(self):
+        """Test listing usage logs"""
+        response = self.make_request("GET", "usage-logs")
+        
+        if response and response.status_code == 200:
+            logs = response.json()
+            if isinstance(logs, list) and len(logs) > 0:
+                # Check if we have logs for our test machine
+                test_logs = [log for log in logs if log['machine_id'] == self.machine_id]
+                if len(test_logs) > 0:
+                    self.log_result("List Usage Logs", True, f"Found {len(logs)} total logs, {len(test_logs)} for test machine")
+                    return True
+                else:
+                    self.log_result("List Usage Logs", False, "", "No usage logs found for test machine")
+            else:
+                self.log_result("List Usage Logs", False, "", "Empty or invalid usage logs list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("List Usage Logs", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_get_oil_change_status(self):
+        """Test oil change status endpoint"""
+        response = self.make_request("GET", "oil-change-status")
+        
+        if response and response.status_code == 200:
+            status_list = response.json()
+            if isinstance(status_list, list) and len(status_list) > 0:
+                # Check if we have status for our test machine
+                test_status = [status for status in status_list if status['machine_id'] == self.machine_id]
+                if len(test_status) > 0:
+                    status = test_status[0]
+                    required_fields = ['machine_id', 'machine_name', 'machine_plate', 'hours_since_change', 'hours_remaining', 'days_since_change', 'days_remaining', 'needs_alert']
+                    if all(field in status for field in required_fields):
+                        self.log_result("Get Oil Change Status", True, f"Status for machine: Hours since change: {status['hours_since_change']}, Needs alert: {status['needs_alert']}")
+                        return True
+                    else:
+                        missing_fields = [field for field in required_fields if field not in status]
+                        self.log_result("Get Oil Change Status", False, "", f"Missing fields in status: {missing_fields}")
+                else:
+                    self.log_result("Get Oil Change Status", False, "", "No oil change status found for test machine")
+            else:
+                self.log_result("Get Oil Change Status", False, "", "Empty or invalid oil change status list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Get Oil Change Status", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_get_notifications(self):
+        """Test notifications endpoint"""
+        response = self.make_request("GET", "notifications")
+        
+        if response and response.status_code == 200:
+            notifications = response.json()
+            if isinstance(notifications, list):
+                # Notifications might be empty, which is fine
+                self.log_result("Get Notifications", True, f"Found {len(notifications)} notifications")
+                return True
+            else:
+                self.log_result("Get Notifications", False, "", "Invalid notifications response format")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Get Notifications", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_create_stock_category(self):
+        """Test stock category creation"""
+        data = {
+            "name": "Categoria Teste"
+        }
+        
+        response = self.make_request("POST", "stock/categories", data)
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'id' in response_data and response_data.get('name') == data['name']:
+                self.stock_category_id = response_data['id']
+                self.log_result("Create Stock Category", True, f"Stock Category ID: {self.stock_category_id}")
+                return True
+            else:
+                self.log_result("Create Stock Category", False, "", "Missing ID or incorrect name in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Create Stock Category", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_list_stock_categories(self):
+        """Test listing stock categories"""
+        response = self.make_request("GET", "stock/categories")
+        
+        if response and response.status_code == 200:
+            categories = response.json()
+            if isinstance(categories, list) and len(categories) > 0:
+                found_test_category = any(cat['id'] == getattr(self, 'stock_category_id', None) for cat in categories)
+                if found_test_category:
+                    self.log_result("List Stock Categories", True, f"Found {len(categories)} stock categories")
+                    return True
+                else:
+                    self.log_result("List Stock Categories", False, "", "Test stock category not found in list")
+            else:
+                self.log_result("List Stock Categories", False, "", "Empty or invalid stock categories list")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("List Stock Categories", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+
+    def test_delete_stock_category(self):
+        """Test stock category deletion"""
+        if not hasattr(self, 'stock_category_id') or not self.stock_category_id:
+            self.log_result("Delete Stock Category", False, "", "No stock category ID available")
+            return False
+        
+        response = self.make_request("DELETE", f"stock/categories/{self.stock_category_id}")
+        
+        if response and response.status_code == 200:
+            response_data = response.json()
+            if 'message' in response_data:
+                self.log_result("Delete Stock Category", True, "Stock category deleted successfully")
+                return True
+            else:
+                self.log_result("Delete Stock Category", False, "", "Missing message in response")
+        else:
+            error_msg = response.json().get('detail', 'Unknown error') if response else "No response"
+            self.log_result("Delete Stock Category", False, "", f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
 
     def cleanup_test_data(self):
         """Clean up test data"""
