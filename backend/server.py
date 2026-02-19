@@ -1101,7 +1101,7 @@ async def get_notifications(current_user: dict = Depends(get_current_user)):
                 ))
     
     # Add low stock alerts (quantity < 5)
-    stock_items = await db.stock_items.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(1000)
     for item in stock_items:
         if item["quantity"] < 5:
             if item["quantity"] <= 0:
