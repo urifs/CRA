@@ -457,12 +457,20 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
     )
 
 @api_router.get("/machines", response_model=List[MachineResponse])
-async def get_machines(current_user: dict = Depends(get_current_user)):
-    machines = await db.machines.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+async def get_machines(obra_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {"user_id": current_user["id"]}
+    if obra_id:
+        query["obra_id"] = obra_id
+    
+    machines = await db.machines.find(query, {"_id": 0}).to_list(1000)
     
     # Get all categories
     categories = await db.categories.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
     category_map = {c["id"]: c["name"] for c in categories}
+    
+    # Get all obras
+    obras = await db.obras.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(100)
+    obra_map = {o["id"]: o["name"] for o in obras}
     
     return [MachineResponse(
         id=m["id"],
@@ -475,6 +483,8 @@ async def get_machines(current_user: dict = Depends(get_current_user)):
         year=m.get("year"),
         notes=m.get("notes", ""),
         status=m.get("status", "operational"),
+        obra_id=m.get("obra_id"),
+        obra_name=obra_map.get(m.get("obra_id", ""), ""),
         created_at=m["created_at"]
     ) for m in machines]
 
