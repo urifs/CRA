@@ -105,13 +105,13 @@ export const Layout = () => {
 
       {/* Sidebar - Hidden on mobile, always visible on desktop */}
       <aside
-        className={`sidebar transition-transform duration-300 ${
+        className={`sidebar transition-transform duration-300 flex flex-col ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        {/* Logo */}
-        <div className="p-6 border-b border-slate-700">
+        {/* Logo - Fixed at top */}
+        <div className="p-6 border-b border-slate-700 flex-shrink-0">
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
             <Construction className="text-orange-500" size={28} />
             <span>CRA Construtora</span>
@@ -119,8 +119,8 @@ export const Layout = () => {
           <p className="text-xs text-slate-400 mt-1">Sistema de Manutenção</p>
         </div>
 
-        {/* Navigation */}
-        <nav className="py-4 overflow-y-auto flex-1">
+        {/* Navigation - Scrollable */}
+        <nav className="py-4 overflow-y-auto flex-1 min-h-0">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -145,8 +145,8 @@ export const Layout = () => {
           ))}
         </nav>
 
-        {/* Quick action */}
-        <div className="px-4 py-4 border-t border-slate-700">
+        {/* Quick action - Fixed at bottom */}
+        <div className="px-4 py-3 border-t border-slate-700 flex-shrink-0">
           <Button
             data-testid="new-maintenance-btn"
             className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold"
@@ -160,8 +160,8 @@ export const Layout = () => {
           </Button>
         </div>
 
-        {/* User info */}
-        <div className="p-4 border-t border-slate-700">
+        {/* User info - Fixed at bottom */}
+        <div className="p-4 border-t border-slate-700 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate" data-testid="user-name">
