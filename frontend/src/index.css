@@ -320,10 +320,6 @@ button:active:not(:disabled) {
     backdrop-filter: blur(8px);
 }
 
-/* Touch feedback */
-.touch-feedback {
-
-
 /* Hide Emergent badge completely */
 #emergent-badge,
 [id*="emergent"],
