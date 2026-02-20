@@ -324,12 +324,18 @@ button:active:not(:disabled) {
 .touch-feedback {
 
 
-/* Hide Emergent badge on mobile to avoid interfering with bottom navigation */
-@media (max-width: 768px) {
-    #emergent-badge {
-        display: none !important;
-    }
+/* Hide Emergent badge completely */
+#emergent-badge,
+[id*="emergent"],
+a[href*="emergent.sh"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
+
+/* Touch feedback */
+.touch-feedback {
     transition: background-color 0.1s, transform 0.1s;
 }
 
