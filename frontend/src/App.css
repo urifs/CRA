@@ -2,15 +2,28 @@
 
 /* Sidebar styles */
 .sidebar {
-    @apply fixed left-0 top-0 h-full w-64 bg-slate-900 text-white;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 16rem;
+    height: 100vh;
+    height: 100dvh;
+    background-color: #0f172a;
+    color: white;
     z-index: 60;
     display: flex;
     flex-direction: column;
-    max-height: 100vh;
-    max-height: 100dvh;
+    overflow: hidden;
 }
 
 /* Custom scrollbar for sidebar */
+.sidebar nav {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
 .sidebar nav::-webkit-scrollbar {
     width: 4px;
 }
