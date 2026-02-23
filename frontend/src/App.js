@@ -54,8 +54,9 @@ export const useAuth = () => {
 
 // Axios interceptor for auth - use a flag to prevent multiple interceptors
 let interceptorId = null;
+let logoutCallback = null;
 
-const setupAxiosInterceptors = (token, logout) => {
+const setupAxiosInterceptors = (token) => {
   axios.defaults.headers.common["Authorization"] = token ? `Bearer ${token}` : "";
   
   // Remove existing interceptor if any
@@ -66,9 +67,8 @@ const setupAxiosInterceptors = (token, logout) => {
   interceptorId = axios.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
-        logout();
-        toast.error("Sessão expirada. Faça login novamente.");
+      if (error.response?.status === 401 && logoutCallback) {
+        logoutCallback();
       }
       return Promise.reject(error);
     }
@@ -77,8 +77,9 @@ const setupAxiosInterceptors = (token, logout) => {
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   const logout = () => {
     setUser(null);
@@ -88,7 +89,14 @@ const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common["Authorization"];
   };
 
+  // Set the logout callback for interceptor
   useEffect(() => {
+    logoutCallback = logout;
+  }, []);
+
+  useEffect(() => {
+    if (initialized) return;
+    
     const initAuth = async () => {
       const savedToken = localStorage.getItem("token");
       const savedUser = localStorage.getItem("user");
@@ -96,7 +104,7 @@ const AuthProvider = ({ children }) => {
       if (savedToken && savedUser) {
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
-        setupAxiosInterceptors(savedToken, logout);
+        setupAxiosInterceptors(savedToken);
         
         // Verify token
         try {
@@ -107,17 +115,18 @@ const AuthProvider = ({ children }) => {
         }
       }
       setLoading(false);
+      setInitialized(true);
     };
     
     initAuth();
-  }, []);
+  }, [initialized]);
 
   const login = (newToken, userData) => {
     setToken(newToken);
     setUser(userData);
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(userData));
-    setupAxiosInterceptors(newToken, logout);
+    setupAxiosInterceptors(newToken);
   };
 
   return (
