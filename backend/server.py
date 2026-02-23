@@ -3272,6 +3272,319 @@ async def delete_forma_pagamento(id: str, current_user: dict = Depends(get_curre
     await create_audit_log(current_user, "delete", "forma_pagamento", id, forma["nome"])
     return {"message": "Forma de pagamento excluída"}
 
+# --- Aluguéis de Máquinas ---
+@api_router.get("/admin/alugueis")
+async def get_alugueis(
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if status:
+        query["status"] = status
+    
+    alugueis = await db.alugueis.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return alugueis
+
+@api_router.get("/admin/alugueis/{id}")
+async def get_aluguel(id: str, current_user: dict = Depends(get_current_user)):
+    aluguel = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    if not aluguel:
+        raise HTTPException(status_code=404, detail="Aluguel não encontrado")
+    return aluguel
+
+@api_router.post("/admin/alugueis")
+async def create_aluguel(data: AluguelCreate, current_user: dict = Depends(get_current_user)):
+    numero = await get_next_sequence("alugueis")
+    
+    aluguel = {
+        "id": str(uuid.uuid4()),
+        "numero": numero,
+        **data.model_dump(exclude={"gerar_conta_receber"}),
+        "conta_receber_id": None,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Gerar conta a receber automaticamente se solicitado
+    if data.gerar_conta_receber:
+        periodo_label = {
+            "diaria": "Diária", "semanal": "Semanal", "quinzenal": "Quinzenal",
+            "mensal": "Mensal", "semestral": "Semestral", "anual": "Anual",
+            "hora": "Por Hora", "outro": data.periodo_especificado or "Outro"
+        }.get(data.tipo_periodo, data.tipo_periodo)
+        
+        conta_receber = {
+            "id": str(uuid.uuid4()),
+            "numero": await get_next_sequence("contas_receber"),
+            "cliente_nome": data.cliente_nome,
+            "documento": data.cliente_documento,
+            "descricao": f"Aluguel #{numero} - {data.maquina_nome or 'Máquina'} ({periodo_label})",
+            "valor": data.valor,
+            "valor_final": data.valor,
+            "data_emissao": data.data_entrega,
+            "data_vencimento": data.data_vencimento,
+            "status": "em_aberto",
+            "forma_pagamento": "boleto",
+            "observacoes": f"Gerado automaticamente do aluguel #{numero}",
+            "aluguel_id": aluguel["id"],
+            "created_by": current_user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.contas_receber.insert_one(conta_receber)
+        aluguel["conta_receber_id"] = conta_receber["id"]
+        del conta_receber["_id"]
+    
+    await db.alugueis.insert_one(aluguel)
+    await create_audit_log(current_user, "create", "aluguel", aluguel["id"], f"Aluguel #{numero}")
+    del aluguel["_id"]
+    return aluguel
+
+@api_router.put("/admin/alugueis/{id}")
+async def update_aluguel(id: str, data: AluguelCreate, current_user: dict = Depends(get_current_user)):
+    aluguel = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    if not aluguel:
+        raise HTTPException(status_code=404, detail="Aluguel não encontrado")
+    
+    update_data = data.model_dump(exclude={"gerar_conta_receber"})
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.alugueis.update_one({"id": id}, {"$set": update_data})
+    
+    # Atualizar conta a receber se existir
+    if aluguel.get("conta_receber_id"):
+        await db.contas_receber.update_one(
+            {"id": aluguel["conta_receber_id"]},
+            {"$set": {
+                "cliente_nome": data.cliente_nome,
+                "valor": data.valor,
+                "valor_final": data.valor,
+                "data_vencimento": data.data_vencimento
+            }}
+        )
+    
+    await create_audit_log(current_user, "update", "aluguel", id, f"Aluguel #{aluguel['numero']}")
+    
+    updated = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.patch("/admin/alugueis/{id}/status")
+async def update_aluguel_status(id: str, status_data: dict, current_user: dict = Depends(get_current_user)):
+    aluguel = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    if not aluguel:
+        raise HTTPException(status_code=404, detail="Aluguel não encontrado")
+    
+    new_status = status_data.get("status")
+    update_data = {"status": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if new_status == "finalizado" and status_data.get("data_devolucao"):
+        update_data["data_devolucao"] = status_data.get("data_devolucao")
+    
+    await db.alugueis.update_one({"id": id}, {"$set": update_data})
+    
+    # Se finalizado, marcar conta a receber como quitada
+    if new_status == "finalizado" and aluguel.get("conta_receber_id"):
+        await db.contas_receber.update_one(
+            {"id": aluguel["conta_receber_id"]},
+            {"$set": {"status": "quitada", "data_recebimento": datetime.now(timezone.utc).strftime("%Y-%m-%d")}}
+        )
+    
+    await create_audit_log(current_user, "update", "aluguel", id, f"Status: {new_status}")
+    
+    updated = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/alugueis/{id}")
+async def delete_aluguel(id: str, current_user: dict = Depends(get_current_user)):
+    aluguel = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    if not aluguel:
+        raise HTTPException(status_code=404, detail="Aluguel não encontrado")
+    
+    # Excluir conta a receber associada
+    if aluguel.get("conta_receber_id"):
+        await db.contas_receber.delete_one({"id": aluguel["conta_receber_id"]})
+    
+    await db.alugueis.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "aluguel", id, f"Aluguel #{aluguel['numero']}")
+    return {"message": "Aluguel excluído"}
+
+# --- Buscar máquinas do sistema de gerenciamento ---
+@api_router.get("/admin/maquinas-disponiveis")
+async def get_maquinas_disponiveis(current_user: dict = Depends(get_current_user)):
+    """Retorna lista de máquinas cadastradas no sistema de gerenciamento"""
+    maquinas = await db.machines.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return maquinas
+
+# --- Notificações ---
+@api_router.get("/admin/notificacoes")
+async def get_notificacoes(
+    prazo_dias: int = 7,
+    current_user: dict = Depends(get_current_user)
+):
+    """Retorna itens com vencimento próximo"""
+    from datetime import timedelta
+    hoje = datetime.now(timezone.utc)
+    hoje_str = hoje.strftime("%Y-%m-%d")
+    limite = (hoje + timedelta(days=prazo_dias)).strftime("%Y-%m-%d")
+    
+    notificacoes = []
+    
+    # Contas a Pagar próximas do vencimento
+    contas_pagar = await db.contas_pagar.find({
+        "status": "em_aberto",
+        "data_vencimento": {"$lte": limite}
+    }, {"_id": 0}).to_list(100)
+    
+    for c in contas_pagar:
+        vencida = c.get("data_vencimento", "") < hoje_str
+        notificacoes.append({
+            "tipo": "conta_pagar",
+            "id": c.get("id"),
+            "titulo": c.get("descricao") or f"Conta #{c.get('numero')}",
+            "subtitulo": c.get("fornecedor_nome"),
+            "valor": c.get("valor_final") or c.get("valor"),
+            "data": c.get("data_vencimento"),
+            "vencida": vencida,
+            "urgencia": "alta" if vencida else ("media" if c.get("data_vencimento", "") <= (hoje + timedelta(days=3)).strftime("%Y-%m-%d") else "baixa"),
+            "link": "/administrativo/a-pagar"
+        })
+    
+    # Contas a Receber próximas do vencimento
+    contas_receber = await db.contas_receber.find({
+        "status": "em_aberto",
+        "data_vencimento": {"$lte": limite}
+    }, {"_id": 0}).to_list(100)
+    
+    for c in contas_receber:
+        vencida = c.get("data_vencimento", "") < hoje_str
+        notificacoes.append({
+            "tipo": "conta_receber",
+            "id": c.get("id"),
+            "titulo": c.get("descricao") or f"Conta #{c.get('numero')}",
+            "subtitulo": c.get("cliente_nome"),
+            "valor": c.get("valor_final") or c.get("valor"),
+            "data": c.get("data_vencimento"),
+            "vencida": vencida,
+            "urgencia": "alta" if vencida else ("media" if c.get("data_vencimento", "") <= (hoje + timedelta(days=3)).strftime("%Y-%m-%d") else "baixa"),
+            "link": "/administrativo/a-receber"
+        })
+    
+    # Ordens de Serviço com previsão de entrega próxima
+    ordens = await db.ordens_servico.find({
+        "status": {"$in": ["em_aberto", "em_andamento"]},
+        "data_previsao_entrega": {"$lte": limite, "$ne": None, "$ne": ""}
+    }, {"_id": 0}).to_list(100)
+    
+    for o in ordens:
+        vencida = o.get("data_previsao_entrega", "") < hoje_str
+        notificacoes.append({
+            "tipo": "ordem_servico",
+            "id": o.get("id"),
+            "titulo": f"OS #{o.get('numero')} - {o.get('descricao', 'Sem descrição')[:50]}",
+            "subtitulo": o.get("cliente_nome") or o.get("cliente_fantasia"),
+            "valor": o.get("valor_total"),
+            "data": o.get("data_previsao_entrega"),
+            "vencida": vencida,
+            "urgencia": "alta" if vencida else ("media" if o.get("data_previsao_entrega", "") <= (hoje + timedelta(days=3)).strftime("%Y-%m-%d") else "baixa"),
+            "link": "/administrativo/ordens-servico"
+        })
+    
+    # Aluguéis com vencimento próximo
+    alugueis = await db.alugueis.find({
+        "status": "ativo",
+        "data_vencimento": {"$lte": limite}
+    }, {"_id": 0}).to_list(100)
+    
+    for a in alugueis:
+        vencida = a.get("data_vencimento", "") < hoje_str
+        notificacoes.append({
+            "tipo": "aluguel",
+            "id": a.get("id"),
+            "titulo": f"Aluguel #{a.get('numero')} - {a.get('maquina_nome', 'Máquina')}",
+            "subtitulo": a.get("cliente_nome"),
+            "valor": a.get("valor"),
+            "data": a.get("data_vencimento"),
+            "vencida": vencida,
+            "urgencia": "alta" if vencida else ("media" if a.get("data_vencimento", "") <= (hoje + timedelta(days=3)).strftime("%Y-%m-%d") else "baixa"),
+            "link": "/administrativo/alugueis"
+        })
+    
+    # Ordenar por data e urgência
+    notificacoes.sort(key=lambda x: (
+        0 if x["urgencia"] == "alta" else (1 if x["urgencia"] == "media" else 2),
+        x.get("data", "9999-99-99")
+    ))
+    
+    # Resumo
+    resumo = {
+        "total": len(notificacoes),
+        "vencidas": len([n for n in notificacoes if n["vencida"]]),
+        "alta": len([n for n in notificacoes if n["urgencia"] == "alta"]),
+        "media": len([n for n in notificacoes if n["urgencia"] == "media"]),
+        "baixa": len([n for n in notificacoes if n["urgencia"] == "baixa"]),
+        "por_tipo": {
+            "conta_pagar": len([n for n in notificacoes if n["tipo"] == "conta_pagar"]),
+            "conta_receber": len([n for n in notificacoes if n["tipo"] == "conta_receber"]),
+            "ordem_servico": len([n for n in notificacoes if n["tipo"] == "ordem_servico"]),
+            "aluguel": len([n for n in notificacoes if n["tipo"] == "aluguel"])
+        }
+    }
+    
+    return {
+        "resumo": resumo,
+        "notificacoes": notificacoes,
+        "prazo_dias": prazo_dias
+    }
+
+@api_router.get("/admin/notificacoes/contagem")
+async def get_notificacoes_contagem(
+    prazo_dias: int = 7,
+    current_user: dict = Depends(get_current_user)
+):
+    """Retorna apenas a contagem de notificações (para o badge)"""
+    from datetime import timedelta
+    hoje = datetime.now(timezone.utc)
+    hoje_str = hoje.strftime("%Y-%m-%d")
+    limite = (hoje + timedelta(days=prazo_dias)).strftime("%Y-%m-%d")
+    
+    count_pagar = await db.contas_pagar.count_documents({
+        "status": "em_aberto",
+        "data_vencimento": {"$lte": limite}
+    })
+    
+    count_receber = await db.contas_receber.count_documents({
+        "status": "em_aberto",
+        "data_vencimento": {"$lte": limite}
+    })
+    
+    count_os = await db.ordens_servico.count_documents({
+        "status": {"$in": ["em_aberto", "em_andamento"]},
+        "data_previsao_entrega": {"$lte": limite, "$ne": None, "$ne": ""}
+    })
+    
+    count_alugueis = await db.alugueis.count_documents({
+        "status": "ativo",
+        "data_vencimento": {"$lte": limite}
+    })
+    
+    # Contar vencidas
+    count_vencidas = await db.contas_pagar.count_documents({
+        "status": "em_aberto",
+        "data_vencimento": {"$lt": hoje_str}
+    }) + await db.contas_receber.count_documents({
+        "status": "em_aberto",
+        "data_vencimento": {"$lt": hoje_str}
+    }) + await db.alugueis.count_documents({
+        "status": "ativo",
+        "data_vencimento": {"$lt": hoje_str}
+    })
+    
+    total = count_pagar + count_receber + count_os + count_alugueis
+    
+    return {
+        "total": total,
+        "vencidas": count_vencidas,
+        "prazo_dias": prazo_dias
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
