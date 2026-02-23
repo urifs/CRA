@@ -10,19 +10,19 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Sistema de troca de óleo com notificações
 - Plano de Obras
 - Sistema Compartilhado com Auditoria
-- **Módulo Administrativo** (financeiro, fornecedores, produtos, OS, NF-e)
+- **Módulo Administrativo** (financeiro, fornecedores, produtos, OS, NF-e, aluguéis, notificações)
 
 ## Arquitetura Atual
 
 ### Backend (FastAPI + MongoDB)
 - **Auth**: JWT com bcrypt
-- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, audit_logs, contas_pagar, contas_receber, cadastros, produtos_admin, ordens_servico, plano_contas, centros_custo, formas_pagamento
+- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, audit_logs, contas_pagar, contas_receber, cadastros, produtos_admin, ordens_servico, plano_contas, centros_custo, formas_pagamento, **alugueis**
 - **Sistema Compartilhado**: Dados globais com auditoria
 
 ### Frontend (React + Shadcn UI)
 - **Dois Módulos**:
   1. **Gerenciamento Geral** (laranja): Máquinas, Manutenções, Estoque, Obras
-  2. **Administrativo** (azul): Financeiro, Fornecedores, Produtos, OS, NF-e
+  2. **Administrativo** (azul): Financeiro, Fornecedores, Produtos, OS, NF-e, Aluguéis, Notificações
 - **PWA**: Instalável em dispositivos móveis (Service Worker desativado para debug)
 - **Design Responsivo**: Navegação inferior no mobile
 
@@ -56,6 +56,26 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - [x] NF-e (placeholder)
 - [x] Navegação mobile
 
+### **NOVO - Aluguéis de Máquinas** ✅ (Fevereiro 2026)
+- [x] CRUD completo de aluguéis
+- [x] **Seleção de máquinas** do sistema de Gerenciamento Geral
+- [x] **Tipos de período**: hora, diária, semanal, quinzenal, mensal, semestral, anual, outro (especificar)
+- [x] Campos: cliente (nome, telefone, documento), datas de entrega/vencimento, valores, local, observações
+- [x] **Geração automática de conta a receber**
+- [x] **Finalizar aluguel** marca conta como quitada
+- [x] Filtros: todos, ativos, finalizados, cancelados
+- [x] Indicador visual de aluguéis vencidos
+
+### **NOVO - Central de Notificações** ✅ (Fevereiro 2026)
+- [x] **Página dedicada** com visão consolidada de vencimentos
+- [x] **Ícone de sino** no header com badge de contagem
+- [x] **Prazo configurável** pelo usuário (padrão 7 dias)
+- [x] Mostra: contas a pagar, contas a receber, ordens de serviço, aluguéis
+- [x] **Classificação por urgência**: Urgente (vencida), Atenção (≤3 dias), Em breve (>3 dias)
+- [x] Filtros por tipo e urgência
+- [x] Resumo com totais por categoria
+- [x] Navegação direta para o item clicado
+
 ### Endpoints da API Admin
 - GET/POST/PUT/PATCH/DELETE `/api/admin/contas-pagar`
 - GET/POST/PUT/PATCH/DELETE `/api/admin/contas-receber`
@@ -65,7 +85,11 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - GET/POST/PUT/DELETE `/api/admin/plano-contas`
 - GET/POST/PUT/DELETE `/api/admin/centros-custo`
 - GET/POST/PUT/DELETE `/api/admin/formas-pagamento`
-- GET `/api/admin/dashboard` (retorna stats, aPagar, aReceber, quitados, contasProximas)
+- **GET/POST/PUT/PATCH/DELETE `/api/admin/alugueis`** (novo)
+- **GET `/api/admin/maquinas-disponiveis`** (novo - busca máquinas do outro sistema)
+- **GET `/api/admin/notificacoes?prazo_dias=7`** (novo)
+- **GET `/api/admin/notificacoes/contagem`** (novo - para badge)
+- GET `/api/admin/dashboard`
 
 ## Backlog Priorizado
 
@@ -77,11 +101,13 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Plano de Obras
 - Sistema de Auditoria
 - PWA Mobile
-- **Módulo Administrativo completo**
-- **Dashboard com abas e badges**
-- **Centro de Custo CRUD**
-- **Formas de Pagamento CRUD**
-- **OS com tipo financeiro**
+- Módulo Administrativo completo
+- Dashboard com abas e badges
+- Centro de Custo CRUD
+- Formas de Pagamento CRUD
+- OS com tipo financeiro
+- **Aluguéis de Máquinas**
+- **Central de Notificações**
 
 ### P1 (Importante) - Próximos Passos
 - [ ] **Integração estoque ↔ manutenção** (baixa automática de peças)
@@ -101,35 +127,28 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Senha**: password
 
 ## Últimos Testes (Fevereiro 2026)
-- Backend: 100% (27/27 testes)
+- Backend: 100% (16/16 testes - aluguéis e notificações)
 - Frontend: 100% (todos os fluxos)
-- Bug de scroll do sidebar: ✅ Corrigido
-- Bug de login loop: ✅ Corrigido (Service Worker desativado)
-- Módulo Administrativo: ✅ Funcionando
+- Funcionalidades testadas: Aluguéis CRUD, seleção de máquinas, geração de conta a receber, finalização, notificações com prazo configurável, filtros, badge no header
 
-## Notas Técnicas
-
-### Service Worker
-O Service Worker foi desativado em `index.html` para resolver um bug de loop na tela de login. Isso significa que a funcionalidade PWA offline não está ativa. Para reativar no futuro, será necessário:
-1. Reativar o registro do SW em `index.html`
-2. Garantir que o cache seja invalidado corretamente em novas versões
-
-### Estrutura de Arquivos
+## Estrutura de Arquivos
 ```
 /app/
 ├── backend/
-│   └── server.py      # Monólito FastAPI (~3400 linhas)
+│   └── server.py      # Monólito FastAPI (~3700 linhas)
 └── frontend/
     └── src/
-        ├── App.js           # Rotas e autenticação
+        ├── App.js
         ├── components/
-        │   ├── AdminLayout.jsx
+        │   ├── AdminLayout.jsx    # Com ícone de sino e badge
         │   └── Layout.jsx
         └── pages/
             └── admin/
-                ├── AdminDashboardPage.jsx  # Dashboard com tabs
-                ├── CentroCustoPage.jsx     # NOVO
-                ├── FormasPagamentoPage.jsx # NOVO
-                ├── OrdensServicoPage.jsx   # Atualizado com tipo_financeiro
-                └── ProdutosPage.jsx        # Atualizado com busca Google
+                ├── AdminDashboardPage.jsx
+                ├── AlugueisPage.jsx        # NOVO
+                ├── NotificacoesPage.jsx    # NOVO
+                ├── CentroCustoPage.jsx
+                ├── FormasPagamentoPage.jsx
+                ├── OrdensServicoPage.jsx
+                └── ...
 ```
