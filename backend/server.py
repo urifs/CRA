@@ -2217,6 +2217,9 @@ class OrdemServicoCreate(BaseModel):
     status: str = "em_aberto"  # em_aberto, em_andamento, concluida, cancelada
     confirmada: bool = False
     
+    # Tipo Financeiro (novo campo para refletir no dashboard)
+    tipo_financeiro: Optional[str] = None  # a_pagar, a_receber, nenhum
+    
     # Descrição
     descricao: Optional[str] = None
     observacoes: Optional[str] = None
