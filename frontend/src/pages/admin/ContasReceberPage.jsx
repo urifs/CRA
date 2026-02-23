@@ -305,9 +305,12 @@ export default function ContasReceberPage() {
               </div>
               <div>
                 <label className="form-label">Forma de Pagamento</label>
-                <select className="form-select" value={formData.forma_pagamento} onChange={(e) => setFormData({...formData, forma_pagamento: e.target.value})}>
-                  {formasPagamento.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select>
+                <Select value={formData.forma_pagamento} onValueChange={(value) => setFormData({...formData, forma_pagamento: value})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {formasPagamento.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-4 gap-4">
