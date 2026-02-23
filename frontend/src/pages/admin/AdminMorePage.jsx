@@ -8,7 +8,10 @@ import {
   ClipboardList,
   ArrowLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Building2,
+  CreditCard,
+  FolderTree
 } from "lucide-react";
 
 export default function AdminMorePage() {
@@ -18,15 +21,27 @@ export default function AdminMorePage() {
   const menuItems = [
     { 
       path: "/administrativo/plano-contas", 
-      icon: DollarSign, 
+      icon: FolderTree, 
       label: "Plano de Contas",
       description: "Categorias financeiras"
     },
     { 
-      path: "/administrativo/fornecedores", 
+      path: "/administrativo/centro-custo", 
+      icon: Building2, 
+      label: "Centro de Custo",
+      description: "Gerenciar centros de custo"
+    },
+    { 
+      path: "/administrativo/formas-pagamento", 
+      icon: CreditCard, 
+      label: "Formas de Pagamento",
+      description: "Configurar formas de pagamento"
+    },
+    { 
+      path: "/administrativo/cadastros", 
       icon: Users, 
-      label: "Fornecedores",
-      description: "Cadastro de fornecedores"
+      label: "Cadastros",
+      description: "Clientes e fornecedores"
     },
     { 
       path: "/administrativo/produtos", 
