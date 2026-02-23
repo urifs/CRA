@@ -185,20 +185,18 @@
             <button id="pwa-close-btn" class="pwa-install-close">&times;</button>
         </div>
         
-        <!-- Service Worker Registration & Install Prompt -->
+        <!-- Service Worker Registration DISABLED -->
         <script>
-            // Register Service Worker
+            // Unregister any existing service workers to fix caching issues
             if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js')
-                        .then(function(registration) {
-                            console.log('ServiceWorker registered:', registration.scope);
-                        })
-                        .catch(function(error) {
-                            console.log('ServiceWorker registration failed:', error);
-                        });
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                        console.log('ServiceWorker unregistered');
+                    }
                 });
             }
+        </script>
             
             // PWA Install Prompt
             let deferredPrompt;
