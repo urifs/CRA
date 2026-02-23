@@ -58,7 +58,11 @@ export default function AlugueisPage() {
       const response = await axios.get(`${API}/admin/alugueis`);
       setAlugueis(response.data);
     } catch (error) {
-      toast.error("Erro ao carregar aluguéis");
+      if (error.response?.status === 403) {
+        toast.error("Sessão expirada. Faça login novamente.");
+      } else {
+        toast.error("Erro ao carregar aluguéis");
+      }
     } finally {
       setLoading(false);
     }
