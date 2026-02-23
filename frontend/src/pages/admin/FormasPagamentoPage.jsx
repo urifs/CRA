@@ -5,6 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
   Plus, Search, Edit, Trash2, CreditCard, CheckCircle2, XCircle, Percent, Clock
 } from "lucide-react";
 import { toast } from "sonner";
@@ -240,9 +247,16 @@ export default function FormasPagamentoPage() {
               </div>
               <div>
                 <label className="form-label">Tipo</label>
-                <select className="form-select" value={formData.tipo} onChange={(e) => setFormData({...formData, tipo: e.target.value})}>
-                  {tiposForma.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+                <Select value={formData.tipo} onValueChange={(value) => setFormData({...formData, tipo: value})}>
+                  <SelectTrigger className="w-full h-11">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {tiposForma.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
