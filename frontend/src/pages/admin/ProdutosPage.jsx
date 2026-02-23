@@ -297,9 +297,13 @@ export default function ProdutosPage() {
               <div><label className="form-label">Código Fabricante</label><Input value={formData.codigo_fabricante} onChange={(e) => setFormData({...formData, codigo_fabricante: e.target.value})} /></div>
               <div><label className="form-label">Código de Barras</label><Input value={formData.codigo_barras} onChange={(e) => setFormData({...formData, codigo_barras: e.target.value})} /></div>
               <div><label className="form-label">Status</label>
-                <select className="form-select" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                  <option value="ativo">Ativo</option><option value="inativo">Inativo</option>
-                </select>
+                <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div><label className="form-label">Descrição *</label><Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} required /></div>
@@ -317,9 +321,12 @@ export default function ProdutosPage() {
             <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-slate-700">Unidades e Preços</h3></div>
             <div className="grid grid-cols-6 gap-4">
               <div><label className="form-label">Un. Comercial</label>
-                <select className="form-select" value={formData.unidade_comercial} onChange={(e) => setFormData({...formData, unidade_comercial: e.target.value})}>
-                  {unidades.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-                </select>
+                <Select value={formData.unidade_comercial} onValueChange={(v) => setFormData({...formData, unidade_comercial: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {unidades.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div><label className="form-label">Un. Tributada</label><Input value={formData.unidade_tributada} onChange={(e) => setFormData({...formData, unidade_tributada: e.target.value})} /></div>
               <div><label className="form-label">Múltiplo</label><Input type="number" step="0.01" value={formData.multiplo} onChange={(e) => setFormData({...formData, multiplo: e.target.value})} /></div>
