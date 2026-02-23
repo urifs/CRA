@@ -24,7 +24,7 @@ export default function LoginPage() {
       const response = await axios.post(`${API}/auth/login`, { email, password });
       login(response.data.token, response.data.user);
       toast.success("Login realizado com sucesso!");
-      navigate("/dashboard");
+      navigate("/select-system");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao fazer login");
     } finally {
