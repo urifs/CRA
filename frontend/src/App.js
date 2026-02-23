@@ -52,11 +52,18 @@ export const useAuth = () => {
   return context;
 };
 
-// Axios interceptor for auth
+// Axios interceptor for auth - use a flag to prevent multiple interceptors
+let interceptorId = null;
+
 const setupAxiosInterceptors = (token, logout) => {
   axios.defaults.headers.common["Authorization"] = token ? `Bearer ${token}` : "";
   
-  axios.interceptors.response.use(
+  // Remove existing interceptor if any
+  if (interceptorId !== null) {
+    axios.interceptors.response.eject(interceptorId);
+  }
+  
+  interceptorId = axios.interceptors.response.use(
     (response) => response,
     (error) => {
       if (error.response?.status === 401) {
