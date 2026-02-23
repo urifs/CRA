@@ -181,7 +181,7 @@ function App() {
           
           {/* Gerenciamento Geral routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<Navigate to="/select-system" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="machines" element={<MachinesPage />} />
             <Route path="machines/:id" element={<MachineDetailPage />} />
