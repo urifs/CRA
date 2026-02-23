@@ -414,15 +414,16 @@ export default function OrdensServicoPage() {
               </div>
               <div>
                 <label className="form-label">Tipo Financeiro *</label>
-                <select 
-                  className="form-select" 
-                  value={formData.tipo_financeiro} 
-                  onChange={(e) => setFormData({...formData, tipo_financeiro: e.target.value})}
-                >
-                  <option value="nenhum">Nenhum</option>
-                  <option value="a_pagar">A Pagar (Despesa)</option>
-                  <option value="a_receber">A Receber (Receita)</option>
-                </select>
+                <Select value={formData.tipo_financeiro} onValueChange={(value) => setFormData({...formData, tipo_financeiro: value})}>
+                  <SelectTrigger className="w-full h-11">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="nenhum">Nenhum</SelectItem>
+                    <SelectItem value="a_pagar">A Pagar (Despesa)</SelectItem>
+                    <SelectItem value="a_receber">A Receber (Receita)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
