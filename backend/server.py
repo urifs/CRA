@@ -2338,26 +2338,55 @@ async def get_next_sequence(collection_name: str) -> int:
 # --- Dashboard Admin ---
 @api_router.get("/admin/dashboard")
 async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
-    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    from datetime import timedelta
+    hoje = datetime.now(timezone.utc)
+    hoje_str = hoje.strftime("%Y-%m-%d")
+    inicio_mes = hoje.replace(day=1).strftime("%Y-%m-%d")
+    inicio_ano = hoje.replace(month=1, day=1).strftime("%Y-%m-%d")
+    proxima_semana = (hoje + timedelta(days=7)).strftime("%Y-%m-%d")
     
-    # Totals Contas a Pagar
-    contas_pagar = await db.contas_pagar.find({"status": "em_aberto"}, {"_id": 0}).to_list(1000)
-    total_pagar = sum(c.get("valor", 0) for c in contas_pagar)
-    contas_vencidas = len([c for c in contas_pagar if c.get("data_vencimento", "") < hoje])
+    # ===== CONTAS A PAGAR =====
+    # Em aberto
+    contas_pagar_abertas = await db.contas_pagar.find({"status": "em_aberto"}, {"_id": 0}).to_list(5000)
+    total_pagar_aberto = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas)
+    total_pagar_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas if c.get("data_vencimento", "") >= inicio_mes)
+    total_pagar_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas if c.get("data_vencimento", "") >= inicio_ano)
+    contas_pagar_vencidas = len([c for c in contas_pagar_abertas if c.get("data_vencimento", "") < hoje_str])
     
-    # Totals Contas a Receber
-    contas_receber = await db.contas_receber.find({"status": "em_aberto"}, {"_id": 0}).to_list(1000)
-    total_receber = sum(c.get("valor", 0) for c in contas_receber)
+    # Quitadas
+    contas_pagar_quitadas = await db.contas_pagar.find({"status": "quitada"}, {"_id": 0}).to_list(5000)
+    total_pagar_quitado = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas)
+    total_pagar_quitado_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas if c.get("data_pagamento", c.get("data_vencimento", "")) >= inicio_mes)
+    total_pagar_quitado_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas if c.get("data_pagamento", c.get("data_vencimento", "")) >= inicio_ano)
     
-    # Counts
+    # ===== CONTAS A RECEBER =====
+    # Em aberto
+    contas_receber_abertas = await db.contas_receber.find({"status": "em_aberto"}, {"_id": 0}).to_list(5000)
+    total_receber_aberto = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas)
+    total_receber_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas if c.get("data_vencimento", "") >= inicio_mes)
+    total_receber_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas if c.get("data_vencimento", "") >= inicio_ano)
+    contas_receber_vencidas = len([c for c in contas_receber_abertas if c.get("data_vencimento", "") < hoje_str])
+    
+    # Quitadas/Recebidas
+    contas_receber_quitadas = await db.contas_receber.find({"status": "quitada"}, {"_id": 0}).to_list(5000)
+    total_receber_quitado = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas)
+    total_receber_quitado_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas if c.get("data_recebimento", c.get("data_vencimento", "")) >= inicio_mes)
+    total_receber_quitado_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas if c.get("data_recebimento", c.get("data_vencimento", "")) >= inicio_ano)
+    
+    # ===== ORDENS DE SERVIÇO COM TIPO FINANCEIRO =====
+    os_a_pagar = await db.ordens_servico.find({"tipo_financeiro": "a_pagar", "status": {"$ne": "cancelada"}}, {"_id": 0}).to_list(1000)
+    os_a_receber = await db.ordens_servico.find({"tipo_financeiro": "a_receber", "status": {"$ne": "cancelada"}}, {"_id": 0}).to_list(1000)
+    total_os_pagar = sum(o.get("valor_total", 0) for o in os_a_pagar)
+    total_os_receber = sum(o.get("valor_total", 0) for o in os_a_receber)
+    
+    # ===== COUNTS =====
     cadastros = await db.cadastros.count_documents({})
+    fornecedores = await db.cadastros.count_documents({"tipo_cadastro": {"$in": ["fornecedor", "ambos"]}})
     produtos = await db.produtos_admin.count_documents({})
     ordens_abertas = await db.ordens_servico.count_documents({"status": {"$in": ["em_aberto", "em_andamento"]}})
+    notas_emitidas = await db.notas_fiscais.count_documents({}) if await db.list_collection_names() else 0
     
-    # Próximos vencimentos (7 dias)
-    from datetime import timedelta
-    proxima_semana = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d")
-    
+    # ===== PRÓXIMOS VENCIMENTOS =====
     proximas_pagar = await db.contas_pagar.find({
         "status": "em_aberto",
         "data_vencimento": {"$lte": proxima_semana}
@@ -2373,28 +2402,61 @@ async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
         contas_proximas.append({
             "tipo": "pagar",
             "descricao": c.get("descricao"),
-            "valor": c.get("valor"),
+            "valor": c.get("valor_final") or c.get("valor"),
             "vencimento": c.get("data_vencimento")
         })
     for c in proximas_receber:
         contas_proximas.append({
             "tipo": "receber",
             "descricao": c.get("descricao"),
-            "valor": c.get("valor"),
+            "valor": c.get("valor_final") or c.get("valor"),
             "vencimento": c.get("data_vencimento")
         })
     
     contas_proximas.sort(key=lambda x: x.get("vencimento", ""))
     
+    # Saldo previsto = (receber aberto + OS receber) - (pagar aberto + OS pagar)
+    saldo_previsto = (total_receber_aberto + total_os_receber) - (total_pagar_aberto + total_os_pagar)
+    
     return {
         "stats": {
-            "totalPagar": total_pagar,
-            "totalReceber": total_receber,
-            "saldoPrevisto": total_receber - total_pagar,
-            "contasVencidas": contas_vencidas,
+            "totalPagar": total_pagar_aberto,
+            "totalReceber": total_receber_aberto,
+            "saldoPrevisto": saldo_previsto,
+            "contasVencidas": contas_pagar_vencidas + contas_receber_vencidas,
+            "contasPagarVencidas": contas_pagar_vencidas,
+            "contasReceberVencidas": contas_receber_vencidas,
+            "notasEmitidas": 0,
+            "fornecedores": fornecedores,
             "cadastros": cadastros,
             "produtos": produtos,
             "ordensAbertas": ordens_abertas
+        },
+        "aPagar": {
+            "total": total_pagar_aberto,
+            "mes": total_pagar_mes,
+            "ano": total_pagar_ano,
+            "vencidas": contas_pagar_vencidas,
+            "osValor": total_os_pagar
+        },
+        "aReceber": {
+            "total": total_receber_aberto,
+            "mes": total_receber_mes,
+            "ano": total_receber_ano,
+            "vencidas": contas_receber_vencidas,
+            "osValor": total_os_receber
+        },
+        "quitados": {
+            "pagar": {
+                "total": total_pagar_quitado,
+                "mes": total_pagar_quitado_mes,
+                "ano": total_pagar_quitado_ano
+            },
+            "receber": {
+                "total": total_receber_quitado,
+                "mes": total_receber_quitado_mes,
+                "ano": total_receber_quitado_ano
+            }
         },
         "contasProximas": contas_proximas[:10]
     }
