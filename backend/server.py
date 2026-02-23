@@ -2696,118 +2696,379 @@ async def delete_conta_receber(id: str, current_user: dict = Depends(get_current
     await db.contas_receber.delete_one({"id": id})
     await create_audit_log(current_user, "delete", "conta_receber", id, conta["descricao"])
     return {"message": "Conta excluída"}
-        "categoria": data.categoria,
-        "observacoes": data.observacoes,
-        "pago": False,
-        "data_pagamento": None,
+
+# --- Produtos (Completo com dados fiscais) ---
+@api_router.get("/admin/produtos")
+async def get_produtos(
+    grupo: Optional[str] = None,
+    subgrupo: Optional[str] = None,
+    fabricante: Optional[str] = None,
+    status: Optional[str] = None,
+    estoque_baixo: Optional[bool] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if grupo:
+        query["grupo"] = grupo
+    if subgrupo:
+        query["subgrupo"] = subgrupo
+    if fabricante:
+        query["fabricante"] = fabricante
+    if status:
+        query["status"] = status
+    if estoque_baixo:
+        query["$expr"] = {"$lte": ["$estoque_atual", "$estoque_minimo"]}
+    if search:
+        query["$or"] = [
+            {"descricao": {"$regex": search, "$options": "i"}},
+            {"codigo_interno": {"$regex": search, "$options": "i"}},
+            {"codigo_fabricante": {"$regex": search, "$options": "i"}},
+            {"fabricante": {"$regex": search, "$options": "i"}},
+            {"aplicacao": {"$regex": search, "$options": "i"}}
+        ]
+    
+    produtos = await db.produtos_admin.find(query, {"_id": 0}).sort("descricao", 1).to_list(1000)
+    return produtos
+
+@api_router.post("/admin/produtos")
+async def create_produto(data: ProdutoCreate, current_user: dict = Depends(get_current_user)):
+    # Gerar código interno se não fornecido
+    codigo_interno = data.codigo_interno
+    if not codigo_interno:
+        seq = await get_next_sequence("produtos")
+        codigo_interno = f"P{seq:06d}"
+    
+    # Calcular margem de lucro
+    margem = 0
+    if data.preco_custo and data.preco_custo > 0 and data.preco_venda:
+        margem = ((data.preco_venda - data.preco_custo) / data.preco_custo) * 100
+    
+    produto = {
+        "id": str(uuid.uuid4()),
+        "codigo_interno": codigo_interno,
+        **data.model_dump(exclude={"codigo_interno", "margem_lucro"}),
+        "margem_lucro": round(margem, 2),
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.contas_pagar.insert_one(conta)
-    await create_audit_log(current_user, "create", "conta_pagar", conta["id"], data.descricao)
-    return conta
+    await db.produtos_admin.insert_one(produto)
+    await create_audit_log(current_user, "create", "produto", produto["id"], data.descricao)
+    del produto["_id"]
+    return produto
 
-@api_router.put("/admin/contas-pagar/{id}", response_model=ContaPagarResponse)
-async def update_conta_pagar(id: str, data: ContaPagarCreate, current_user: dict = Depends(get_current_user)):
-    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
-    if not conta:
-        raise HTTPException(status_code=404, detail="Conta não encontrada")
+@api_router.get("/admin/produtos/{id}")
+async def get_produto(id: str, current_user: dict = Depends(get_current_user)):
+    produto = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    return produto
+
+@api_router.put("/admin/produtos/{id}")
+async def update_produto(id: str, data: ProdutoCreate, current_user: dict = Depends(get_current_user)):
+    produto = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
     
-    update_data = {
-        "descricao": data.descricao,
-        "valor": data.valor,
-        "vencimento": data.vencimento,
-        "fornecedor": data.fornecedor,
-        "categoria": data.categoria,
-        "observacoes": data.observacoes
-    }
-    await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "conta_pagar", id, data.descricao)
+    # Calcular margem de lucro
+    margem = 0
+    if data.preco_custo and data.preco_custo > 0 and data.preco_venda:
+        margem = ((data.preco_venda - data.preco_custo) / data.preco_custo) * 100
     
-    updated = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    update_data = data.model_dump()
+    update_data["margem_lucro"] = round(margem, 2)
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.produtos_admin.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "produto", id, data.descricao)
+    
+    updated = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
     return updated
 
-@api_router.patch("/admin/contas-pagar/{id}/pagar")
-async def marcar_conta_paga(id: str, current_user: dict = Depends(get_current_user)):
-    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
-    if not conta:
-        raise HTTPException(status_code=404, detail="Conta não encontrada")
+@api_router.delete("/admin/produtos/{id}")
+async def delete_produto(id: str, current_user: dict = Depends(get_current_user)):
+    produto = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
     
-    await db.contas_pagar.update_one({"id": id}, {
-        "$set": {
-            "pago": True,
-            "data_pagamento": datetime.now(timezone.utc).isoformat()
-        }
-    })
-    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - PAGO")
-    return {"message": "Conta marcada como paga"}
+    await db.produtos_admin.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "produto", id, produto["descricao"])
+    return {"message": "Produto excluído"}
 
-@api_router.delete("/admin/contas-pagar/{id}")
-async def delete_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
-    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
-    if not conta:
-        raise HTTPException(status_code=404, detail="Conta não encontrada")
+# --- Ordens de Serviço (Completo) ---
+@api_router.get("/admin/ordens-servico")
+async def get_ordens_servico(
+    status: Optional[str] = None,
+    cliente_id: Optional[str] = None,
+    obra: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    confirmada: Optional[bool] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if status:
+        query["status"] = status
+    if cliente_id:
+        query["cliente_id"] = cliente_id
+    if obra:
+        query["obra"] = {"$regex": obra, "$options": "i"}
+    if confirmada is not None:
+        query["confirmada"] = confirmada
+    if data_inicio and data_fim:
+        query["data_abertura"] = {"$gte": data_inicio, "$lte": data_fim}
+    if search:
+        query["$or"] = [
+            {"cliente_nome": {"$regex": search, "$options": "i"}},
+            {"cliente_fantasia": {"$regex": search, "$options": "i"}},
+            {"obra": {"$regex": search, "$options": "i"}},
+            {"descricao": {"$regex": search, "$options": "i"}},
+            {"numero_contrato": {"$regex": search, "$options": "i"}}
+        ]
     
-    await db.contas_pagar.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "conta_pagar", id, conta["descricao"])
-    return {"message": "Conta excluída"}
+    ordens = await db.ordens_servico.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Calcular valor restante
+    for ordem in ordens:
+        valor_total = ordem.get("valor_total", 0) or 0
+        valor_antecipado = ordem.get("valor_antecipado", 0) or 0
+        ordem["valor_restante"] = valor_total - valor_antecipado
+    
+    return ordens
 
-# --- Contas a Receber ---
-@api_router.get("/admin/contas-receber", response_model=List[ContaReceberResponse])
-async def get_contas_receber(current_user: dict = Depends(get_current_user)):
-    contas = await db.contas_receber.find({}, {"_id": 0}).sort("vencimento", 1).to_list(1000)
+@api_router.post("/admin/ordens-servico")
+async def create_ordem_servico(data: OrdemServicoCreate, current_user: dict = Depends(get_current_user)):
+    numero = await get_next_sequence("ordens_servico")
+    
+    ordem = {
+        "id": str(uuid.uuid4()),
+        "numero": numero,
+        **data.model_dump(),
+        "data_abertura": data.data_abertura or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "valor_restante": (data.valor_total or 0) - (data.valor_antecipado or 0),
+        "itens": [],
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.ordens_servico.insert_one(ordem)
+    await create_audit_log(current_user, "create", "ordem_servico", ordem["id"], f"OS-{numero}")
+    del ordem["_id"]
+    return ordem
+
+@api_router.get("/admin/ordens-servico/{id}")
+async def get_ordem_servico(id: str, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    valor_total = ordem.get("valor_total", 0) or 0
+    valor_antecipado = ordem.get("valor_antecipado", 0) or 0
+    ordem["valor_restante"] = valor_total - valor_antecipado
+    
+    return ordem
+
+@api_router.put("/admin/ordens-servico/{id}")
+async def update_ordem_servico(id: str, data: OrdemServicoCreate, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    update_data = data.model_dump()
+    update_data["valor_restante"] = (data.valor_total or 0) - (data.valor_antecipado or 0)
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.ordens_servico.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']}")
+    
+    updated = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.post("/admin/ordens-servico/{id}/itens")
+async def add_item_ordem_servico(id: str, data: OrdemServicoItemCreate, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    valor_total = data.quantidade * data.valor_unitario
+    if data.desconto_percent:
+        valor_total = valor_total * (1 - data.desconto_percent / 100)
+    
+    item = {
+        "id": str(uuid.uuid4()),
+        **data.model_dump(),
+        "valor_total": round(valor_total, 2)
+    }
+    
+    await db.ordens_servico.update_one({"id": id}, {"$push": {"itens": item}})
+    
+    # Recalcular valor total da OS
+    ordem_atualizada = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    novo_total = sum(i.get("valor_total", 0) for i in ordem_atualizada.get("itens", []))
+    await db.ordens_servico.update_one({"id": id}, {"$set": {"valor_total": novo_total}})
+    
+    return {"message": "Item adicionado", "item": item}
+
+@api_router.delete("/admin/ordens-servico/{id}/itens/{item_id}")
+async def remove_item_ordem_servico(id: str, item_id: str, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    await db.ordens_servico.update_one({"id": id}, {"$pull": {"itens": {"id": item_id}}})
+    
+    # Recalcular valor total da OS
+    ordem_atualizada = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    novo_total = sum(i.get("valor_total", 0) for i in ordem_atualizada.get("itens", []))
+    await db.ordens_servico.update_one({"id": id}, {"$set": {"valor_total": novo_total}})
+    
+    return {"message": "Item removido"}
+
+class StatusOSUpdate(BaseModel):
+    status: str
+
+@api_router.patch("/admin/ordens-servico/{id}/status")
+async def update_ordem_status(id: str, data: StatusOSUpdate, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    update_fields = {"status": data.status}
+    if data.status == "concluida":
+        update_fields["data_conclusao"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    await db.ordens_servico.update_one({"id": id}, {"$set": update_fields})
+    await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']} - Status: {data.status}")
+    return {"message": "Status atualizado"}
+
+@api_router.patch("/admin/ordens-servico/{id}/confirmar")
+async def confirmar_ordem_servico(id: str, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    await db.ordens_servico.update_one({"id": id}, {"$set": {"confirmada": True}})
+    await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']} - CONFIRMADA")
+    return {"message": "Ordem confirmada"}
+
+@api_router.delete("/admin/ordens-servico/{id}")
+async def delete_ordem_servico(id: str, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    await db.ordens_servico.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "ordem_servico", id, f"OS-{ordem['numero']}")
+    return {"message": "Ordem de serviço excluída"}
+
+# --- Plano de Contas (2 níveis) ---
+@api_router.get("/admin/plano-contas")
+async def get_plano_contas(
+    tipo: Optional[str] = None,
+    nivel: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if tipo:
+        query["tipo"] = tipo
+    if nivel:
+        query["nivel"] = nivel
+    
+    contas = await db.plano_contas.find(query, {"_id": 0}).sort([("tipo", 1), ("codigo", 1)]).to_list(1000)
+    
+    # Adicionar nome do pai se for nível 2
+    for conta in contas:
+        if conta.get("pai_id"):
+            pai = await db.plano_contas.find_one({"id": conta["pai_id"]}, {"_id": 0})
+            if pai:
+                conta["pai_nome"] = pai.get("nome")
+    
     return contas
 
-@api_router.post("/admin/contas-receber", response_model=ContaReceberResponse)
-async def create_conta_receber(data: ContaReceberCreate, current_user: dict = Depends(get_current_user)):
+@api_router.post("/admin/plano-contas")
+async def create_plano_conta(data: PlanoContaCreate, current_user: dict = Depends(get_current_user)):
     conta = {
         "id": str(uuid.uuid4()),
-        "descricao": data.descricao,
-        "valor": data.valor,
-        "vencimento": data.vencimento,
-        "cliente": data.cliente,
-        "categoria": data.categoria,
-        "observacoes": data.observacoes,
-        "recebido": False,
-        "data_recebimento": None,
+        **data.model_dump(),
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.contas_receber.insert_one(conta)
-    await create_audit_log(current_user, "create", "conta_receber", conta["id"], data.descricao)
+    await db.plano_contas.insert_one(conta)
+    await create_audit_log(current_user, "create", "plano_conta", conta["id"], data.nome)
+    del conta["_id"]
     return conta
 
-@api_router.put("/admin/contas-receber/{id}", response_model=ContaReceberResponse)
-async def update_conta_receber(id: str, data: ContaReceberCreate, current_user: dict = Depends(get_current_user)):
-    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+@api_router.put("/admin/plano-contas/{id}")
+async def update_plano_conta(id: str, data: PlanoContaCreate, current_user: dict = Depends(get_current_user)):
+    conta = await db.plano_contas.find_one({"id": id}, {"_id": 0})
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
     
-    update_data = {
-        "descricao": data.descricao,
-        "valor": data.valor,
-        "vencimento": data.vencimento,
-        "cliente": data.cliente,
-        "categoria": data.categoria,
-        "observacoes": data.observacoes
-    }
-    await db.contas_receber.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "conta_receber", id, data.descricao)
+    update_data = data.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    updated = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    await db.plano_contas.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "plano_conta", id, data.nome)
+    
+    updated = await db.plano_contas.find_one({"id": id}, {"_id": 0})
     return updated
 
-@api_router.patch("/admin/contas-receber/{id}/receber")
-async def marcar_conta_recebida(id: str, current_user: dict = Depends(get_current_user)):
-    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+@api_router.delete("/admin/plano-contas/{id}")
+async def delete_plano_conta(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.plano_contas.find_one({"id": id}, {"_id": 0})
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
     
-    await db.contas_receber.update_one({"id": id}, {
-        "$set": {
-            "recebido": True,
-            "data_recebimento": datetime.now(timezone.utc).isoformat()
-        }
+    # Verificar se tem filhos
+    filhos = await db.plano_contas.count_documents({"pai_id": id})
+    if filhos > 0:
+        raise HTTPException(status_code=400, detail="Não é possível excluir conta com subcategorias")
+    
+    await db.plano_contas.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "plano_conta", id, conta["nome"])
+    return {"message": "Conta excluída"}
+
+# --- Centro de Custo ---
+@api_router.get("/admin/centros-custo")
+async def get_centros_custo(current_user: dict = Depends(get_current_user)):
+    centros = await db.centros_custo.find({}, {"_id": 0}).sort("nome", 1).to_list(1000)
+    return centros
+
+@api_router.post("/admin/centros-custo")
+async def create_centro_custo(data: CentroCustoCreate, current_user: dict = Depends(get_current_user)):
+    centro = {
+        "id": str(uuid.uuid4()),
+        **data.model_dump(),
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.centros_custo.insert_one(centro)
+    await create_audit_log(current_user, "create", "centro_custo", centro["id"], data.nome)
+    del centro["_id"]
+    return centro
+
+@api_router.put("/admin/centros-custo/{id}")
+async def update_centro_custo(id: str, data: CentroCustoCreate, current_user: dict = Depends(get_current_user)):
+    centro = await db.centros_custo.find_one({"id": id}, {"_id": 0})
+    if not centro:
+        raise HTTPException(status_code=404, detail="Centro de custo não encontrado")
+    
+    update_data = data.model_dump()
+    await db.centros_custo.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "centro_custo", id, data.nome)
+    
+    updated = await db.centros_custo.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/centros-custo/{id}")
+async def delete_centro_custo(id: str, current_user: dict = Depends(get_current_user)):
+    centro = await db.centros_custo.find_one({"id": id}, {"_id": 0})
+    if not centro:
+        raise HTTPException(status_code=404, detail="Centro de custo não encontrado")
+    
+    await db.centros_custo.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "centro_custo", id, centro["nome"])
+    return {"message": "Centro de custo excluído"}
     })
     await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - RECEBIDO")
     return {"message": "Conta marcada como recebida"}
