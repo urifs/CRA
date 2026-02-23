@@ -259,12 +259,14 @@ export default function PlanoContasPage() {
             <FileText className="text-slate-500" size={24} />
             <div className="flex-1">
               <label className="form-label">Exportar Relatório</label>
-              <select className="form-select" value={selectedForReport} onChange={(e) => setSelectedForReport(e.target.value)}>
-                <option value="">Selecione uma conta...</option>
-                {contasNivel1.map(c => (
-                  <option key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome} ({c.tipo})</option>
-                ))}
-              </select>
+              <Select value={selectedForReport} onValueChange={setSelectedForReport}>
+                <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione uma conta..." /></SelectTrigger>
+                <SelectContent className="z-[9999]">
+                  {contasNivel1.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome} ({c.tipo})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button onClick={exportToPDF} disabled={!selectedForReport} className="bg-green-600 hover:bg-green-700">
               <Download size={18} className="mr-2" />Exportar PDF
