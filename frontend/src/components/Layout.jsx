@@ -120,7 +120,7 @@ export const Layout = () => {
         </div>
 
         {/* Navigation - Scrollable */}
-        <nav className="py-2" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div className="sidebar-nav py-2">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -143,7 +143,7 @@ export const Layout = () => {
               )}
             </NavLink>
           ))}
-        </nav>
+        </div>
 
         {/* Quick action - Fixed at bottom */}
         <div className="px-4 py-3 border-t border-slate-700" style={{ flexShrink: 0 }}>

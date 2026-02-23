@@ -16,7 +16,34 @@
     overflow: hidden;
 }
 
+/* Sidebar navigation - MUST be scrollable */
+.sidebar-nav {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
 /* Custom scrollbar for sidebar */
+.sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Legacy support */
 .sidebar nav {
     overflow-y: auto;
     overflow-x: hidden;
