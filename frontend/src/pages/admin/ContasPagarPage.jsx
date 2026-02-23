@@ -266,7 +266,7 @@ export default function ContasPagarPage() {
                     <td className="p-3">{c.data_emissao ? new Date(c.data_emissao).toLocaleDateString('pt-BR') : "-"}</td>
                     <td className="p-3">{new Date(c.data_vencimento).toLocaleDateString('pt-BR')}</td>
                     <td className="p-3 text-right font-medium text-red-600">{formatCurrency(c.valor_final || c.valor)}</td>
-                    <td className="p-3 text-xs">{formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
+                    <td className="p-3 text-xs">{formasPagamentoDB.find(f => f.nome?.toLowerCase() === c.forma_pagamento?.toLowerCase())?.nome || formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
                     <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${status.color}`}><StatusIcon className="inline mr-1" size={12} />{status.label}</span></td>
                     <td className="p-3 text-center">
                       <div className="flex justify-center gap-1">
