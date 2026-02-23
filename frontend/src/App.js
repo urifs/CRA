@@ -153,6 +153,8 @@ function App() {
             <Route path="a-pagar" element={<ContasPagarPage />} />
             <Route path="a-receber" element={<ContasReceberPage />} />
             <Route path="plano-contas" element={<PlanoContasPage />} />
+            <Route path="centro-custo" element={<CentroCustoPage />} />
+            <Route path="formas-pagamento" element={<FormasPagamentoPage />} />
             <Route path="nfe" element={<NFEPage />} />
             <Route path="cadastros" element={<CadastrosPage />} />
             <Route path="produtos" element={<ProdutosPage />} />
