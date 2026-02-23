@@ -297,7 +297,11 @@ export default function ContasPagarPage() {
               <div>
                 <label className="form-label">Forma de Pagamento</label>
                 <select className="form-select" value={formData.forma_pagamento} onChange={(e) => setFormData({...formData, forma_pagamento: e.target.value})}>
-                  {formasPagamento.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  {formasPagamentoDB.length > 0 ? (
+                    formasPagamentoDB.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)
+                  ) : (
+                    formasPagamento.map(f => <option key={f.value} value={f.value}>{f.label}</option>)
+                  )}
                 </select>
               </div>
             </div>
