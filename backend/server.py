@@ -1908,116 +1908,392 @@ async def get_audit_logs(
 async def root():
     return {"message": "CRA Construtora API"}
 
-# ============ ADMIN MODELS ============
+# ============ ADMIN MODELS - COMPLETOS ============
 
+# --- Cadastro Unificado de Clientes/Fornecedores ---
+class CadastroCreate(BaseModel):
+    # Tipo de cadastro
+    tipo_cadastro: str = "cliente"  # cliente, fornecedor, cli_forn, transportador, funcionario
+    tipo_pessoa: str = "PF"  # PF ou PJ
+    status: str = "ativo"  # ativo, inativo
+    
+    # Dados principais
+    nome_razao: str
+    apelido_fantasia: Optional[str] = None
+    cpf_cnpj: Optional[str] = None
+    rg_ie: Optional[str] = None  # RG ou Inscrição Estadual
+    
+    # Contato
+    telefone: Optional[str] = None
+    celular: Optional[str] = None
+    email: Optional[str] = None
+    
+    # Endereço
+    cep: Optional[str] = None
+    endereco: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    uf: Optional[str] = None
+    
+    # Dados adicionais
+    grupo: Optional[str] = None
+    rota: Optional[str] = None
+    vendedor: Optional[str] = None
+    limite_credito: Optional[float] = None
+    observacoes: Optional[str] = None
+
+class CadastroResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    codigo: int
+    tipo_cadastro: str
+    tipo_pessoa: str
+    status: str
+    nome_razao: str
+    apelido_fantasia: Optional[str] = None
+    cpf_cnpj: Optional[str] = None
+    rg_ie: Optional[str] = None
+    telefone: Optional[str] = None
+    celular: Optional[str] = None
+    email: Optional[str] = None
+    cep: Optional[str] = None
+    endereco: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    uf: Optional[str] = None
+    grupo: Optional[str] = None
+    rota: Optional[str] = None
+    vendedor: Optional[str] = None
+    limite_credito: Optional[float] = None
+    observacoes: Optional[str] = None
+    created_at: str
+
+# --- Contas a Pagar (Completo) ---
 class ContaPagarCreate(BaseModel):
+    # Dados principais
+    fornecedor_id: Optional[str] = None
+    fornecedor_nome: Optional[str] = None
+    documento: Optional[str] = None  # NF/NFS
+    numero_doc: Optional[str] = None
     descricao: str
     valor: float
-    vencimento: str
-    fornecedor: Optional[str] = None
-    categoria: Optional[str] = None
+    valor_desconto: Optional[float] = 0
+    valor_juros: Optional[float] = 0
+    valor_multa: Optional[float] = 0
+    
+    # Datas
+    data_emissao: Optional[str] = None
+    data_vencimento: str
+    data_pagamento: Optional[str] = None
+    data_cancelamento: Optional[str] = None
+    
+    # Classificação
+    plano_conta_id: Optional[str] = None
+    plano_conta_nome: Optional[str] = None
+    centro_custo: Optional[str] = None
+    
+    # Pagamento
+    forma_pagamento: str = "dinheiro"  # dinheiro, pix, cartao_debito, cartao_credito, boleto, cheque, transferencia
+    conta_movimento: Optional[str] = None
+    
+    # Status
+    status: str = "em_aberto"  # em_aberto, quitada, cancelada, perdida
+    
     observacoes: Optional[str] = None
 
 class ContaPagarResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
+    numero: int
+    fornecedor_id: Optional[str] = None
+    fornecedor_nome: Optional[str] = None
+    documento: Optional[str] = None
+    numero_doc: Optional[str] = None
     descricao: str
     valor: float
-    vencimento: str
-    fornecedor: Optional[str] = None
-    categoria: Optional[str] = None
-    observacoes: Optional[str] = None
-    pago: bool = False
+    valor_desconto: Optional[float] = 0
+    valor_juros: Optional[float] = 0
+    valor_multa: Optional[float] = 0
+    valor_final: Optional[float] = None
+    data_emissao: Optional[str] = None
+    data_vencimento: str
     data_pagamento: Optional[str] = None
+    data_cancelamento: Optional[str] = None
+    plano_conta_id: Optional[str] = None
+    plano_conta_nome: Optional[str] = None
+    centro_custo: Optional[str] = None
+    forma_pagamento: str
+    conta_movimento: Optional[str] = None
+    status: str
+    observacoes: Optional[str] = None
     created_at: str
 
+# --- Contas a Receber (Completo) ---
 class ContaReceberCreate(BaseModel):
+    # Dados principais
+    cliente_id: Optional[str] = None
+    cliente_nome: Optional[str] = None
+    documento: Optional[str] = None  # NF/NFS
+    numero_doc: Optional[str] = None
     descricao: str
     valor: float
-    vencimento: str
-    cliente: Optional[str] = None
-    categoria: Optional[str] = None
+    valor_desconto: Optional[float] = 0
+    valor_juros: Optional[float] = 0
+    valor_multa: Optional[float] = 0
+    
+    # Datas
+    data_emissao: Optional[str] = None
+    data_vencimento: str
+    data_recebimento: Optional[str] = None
+    data_cancelamento: Optional[str] = None
+    
+    # Classificação
+    plano_conta_id: Optional[str] = None
+    plano_conta_nome: Optional[str] = None
+    centro_custo: Optional[str] = None
+    
+    # Pagamento
+    forma_pagamento: str = "dinheiro"
+    conta_movimento: Optional[str] = None
+    
+    # Status
+    status: str = "em_aberto"  # em_aberto, quitada, cancelada, perdida
+    
+    # Faturamento
+    faturamento: Optional[str] = None
+    
     observacoes: Optional[str] = None
 
 class ContaReceberResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
+    numero: int
+    cliente_id: Optional[str] = None
+    cliente_nome: Optional[str] = None
+    documento: Optional[str] = None
+    numero_doc: Optional[str] = None
     descricao: str
     valor: float
-    vencimento: str
-    cliente: Optional[str] = None
-    categoria: Optional[str] = None
-    observacoes: Optional[str] = None
-    recebido: bool = False
+    valor_desconto: Optional[float] = 0
+    valor_juros: Optional[float] = 0
+    valor_multa: Optional[float] = 0
+    valor_final: Optional[float] = None
+    data_emissao: Optional[str] = None
+    data_vencimento: str
     data_recebimento: Optional[str] = None
-    created_at: str
-
-class FornecedorCreate(BaseModel):
-    nome: str
-    cnpj: Optional[str] = None
-    email: Optional[str] = None
-    telefone: Optional[str] = None
-    endereco: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
-    observacoes: Optional[str] = None
-
-class FornecedorResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str
-    nome: str
-    cnpj: Optional[str] = None
-    email: Optional[str] = None
-    telefone: Optional[str] = None
-    endereco: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
+    data_cancelamento: Optional[str] = None
+    plano_conta_id: Optional[str] = None
+    plano_conta_nome: Optional[str] = None
+    centro_custo: Optional[str] = None
+    forma_pagamento: str
+    conta_movimento: Optional[str] = None
+    status: str
+    faturamento: Optional[str] = None
     observacoes: Optional[str] = None
     created_at: str
 
+# --- Produtos (Completo com dados fiscais) ---
 class ProdutoCreate(BaseModel):
-    nome: str
-    codigo: Optional[str] = None
-    descricao: Optional[str] = None
-    unidade: str = "UN"
-    preco_custo: Optional[float] = None
-    preco_venda: Optional[float] = None
-    categoria: Optional[str] = None
+    # Identificação
+    codigo_interno: Optional[str] = None
+    codigo_fabricante: Optional[str] = None
+    codigo_barras: Optional[str] = None
+    descricao: str
+    
+    # Classificação
+    fabricante: Optional[str] = None
+    aplicacao: Optional[str] = None
+    grupo: Optional[str] = None
+    subgrupo: Optional[str] = None
+    
+    # Unidades
+    unidade_comercial: str = "UN"
+    unidade_tributada: Optional[str] = None
+    multiplo: Optional[float] = 1
+    
+    # Preços
+    preco_custo: Optional[float] = 0
+    preco_custo_final: Optional[float] = 0
+    preco_venda: Optional[float] = 0
+    margem_lucro: Optional[float] = 0
+    
+    # Estoque
+    estoque_atual: Optional[float] = 0
+    estoque_minimo: Optional[float] = 0
+    estoque_maximo: Optional[float] = 0
+    localizacao: Optional[str] = None  # Prateleira
+    
+    # Dados fiscais
     ncm: Optional[str] = None
+    cst: Optional[str] = None
+    cest: Optional[str] = None
+    origem: Optional[str] = "0"  # 0 = Nacional
+    ipi: Optional[float] = 0
+    icms: Optional[float] = 0
+    pis: Optional[float] = 0
+    cofins: Optional[float] = 0
+    
+    # Tipo do item (NF-e)
+    tipo_item: Optional[str] = "00"  # 00=Mercadoria, 01=Matéria-prima, etc
+    
+    # Status
+    status: str = "ativo"
+    em_promocao: bool = False
+    preco_promocao: Optional[float] = None
+    
+    observacoes: Optional[str] = None
 
 class ProdutoResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    nome: str
-    codigo: Optional[str] = None
-    descricao: Optional[str] = None
-    unidade: str
-    preco_custo: Optional[float] = None
-    preco_venda: Optional[float] = None
-    categoria: Optional[str] = None
+    codigo_interno: Optional[str] = None
+    codigo_fabricante: Optional[str] = None
+    codigo_barras: Optional[str] = None
+    descricao: str
+    fabricante: Optional[str] = None
+    aplicacao: Optional[str] = None
+    grupo: Optional[str] = None
+    subgrupo: Optional[str] = None
+    unidade_comercial: str
+    unidade_tributada: Optional[str] = None
+    multiplo: Optional[float] = 1
+    preco_custo: Optional[float] = 0
+    preco_custo_final: Optional[float] = 0
+    preco_venda: Optional[float] = 0
+    margem_lucro: Optional[float] = 0
+    estoque_atual: Optional[float] = 0
+    estoque_minimo: Optional[float] = 0
+    estoque_maximo: Optional[float] = 0
+    localizacao: Optional[str] = None
     ncm: Optional[str] = None
-    created_at: str
-
-class OrdemServicoCreate(BaseModel):
-    numero: str
-    cliente: Optional[str] = None
-    descricao: Optional[str] = None
-    data_abertura: Optional[str] = None
-    data_previsao: Optional[str] = None
-    valor_total: Optional[float] = None
+    cst: Optional[str] = None
+    cest: Optional[str] = None
+    origem: Optional[str] = "0"
+    ipi: Optional[float] = 0
+    icms: Optional[float] = 0
+    pis: Optional[float] = 0
+    cofins: Optional[float] = 0
+    tipo_item: Optional[str] = "00"
+    status: str
+    em_promocao: bool = False
+    preco_promocao: Optional[float] = None
     observacoes: Optional[str] = None
+    created_at: str
+    updated_at: Optional[str] = None
+
+# --- Ordem de Serviço (Completo) ---
+class OrdemServicoCreate(BaseModel):
+    # Identificação
+    numero_contrato: Optional[str] = None
+    
+    # Cliente
+    cliente_id: Optional[str] = None
+    cliente_nome: Optional[str] = None
+    cliente_fantasia: Optional[str] = None
+    
+    # Obra/Projeto
+    obra: Optional[str] = None
+    prisma: Optional[str] = None
+    
+    # Datas
+    data_abertura: Optional[str] = None
+    data_previsao_entrega: Optional[str] = None
+    data_conclusao: Optional[str] = None
+    
+    # Atendimento
+    tipo_atendimento: Optional[str] = None
+    atendente: Optional[str] = None
+    empresa: Optional[str] = None
+    
+    # Valores
+    valor_total: Optional[float] = 0
+    valor_antecipado: Optional[float] = 0
+    
+    # Status
+    status: str = "em_aberto"  # em_aberto, em_andamento, concluida, cancelada
+    confirmada: bool = False
+    
+    # Descrição
+    descricao: Optional[str] = None
+    observacoes: Optional[str] = None
+
+class OrdemServicoItemCreate(BaseModel):
+    produto_id: Optional[str] = None
+    codigo_interno: Optional[str] = None
+    descricao: str
+    fabricante: Optional[str] = None
+    unidade: str = "UN"
+    quantidade: float = 1
+    valor_unitario: float = 0
+    desconto_percent: Optional[float] = 0
+    valor_total: Optional[float] = 0
 
 class OrdemServicoResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    numero: str
-    cliente: Optional[str] = None
-    descricao: Optional[str] = None
+    numero: int
+    numero_contrato: Optional[str] = None
+    cliente_id: Optional[str] = None
+    cliente_nome: Optional[str] = None
+    cliente_fantasia: Optional[str] = None
+    obra: Optional[str] = None
+    prisma: Optional[str] = None
     data_abertura: str
-    data_previsao: Optional[str] = None
-    valor_total: Optional[float] = None
+    data_previsao_entrega: Optional[str] = None
+    data_conclusao: Optional[str] = None
+    tipo_atendimento: Optional[str] = None
+    atendente: Optional[str] = None
+    empresa: Optional[str] = None
+    valor_total: Optional[float] = 0
+    valor_antecipado: Optional[float] = 0
+    valor_restante: Optional[float] = 0
+    status: str
+    confirmada: bool = False
+    descricao: Optional[str] = None
     observacoes: Optional[str] = None
-    status: str = "aberta"
+    itens: Optional[List[dict]] = []
+    created_at: str
+
+# --- Plano de Contas (2 níveis) ---
+class PlanoContaCreate(BaseModel):
+    codigo: Optional[str] = None
+    nome: str
+    tipo: str  # receita ou despesa
+    nivel: int = 1  # 1 = categoria pai, 2 = subcategoria
+    pai_id: Optional[str] = None  # ID da categoria pai se for nível 2
+    descricao: Optional[str] = None
+
+class PlanoContaResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    codigo: Optional[str] = None
+    nome: str
+    tipo: str
+    nivel: int
+    pai_id: Optional[str] = None
+    pai_nome: Optional[str] = None
+    descricao: Optional[str] = None
+    created_at: str
+
+# --- Centro de Custo ---
+class CentroCustoCreate(BaseModel):
+    codigo: Optional[str] = None
+    nome: str
+    descricao: Optional[str] = None
+    status: str = "ativo"
+
+class CentroCustoResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    codigo: Optional[str] = None
+    nome: str
+    descricao: Optional[str] = None
+    status: str
+    created_at: str
     created_at: str
 
 class PlanoContaCreate(BaseModel):
