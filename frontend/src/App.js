@@ -37,6 +37,8 @@ import CadastrosPage from "@/pages/admin/CadastrosPage";
 import ProdutosPage from "@/pages/admin/ProdutosPage";
 import OrdensServicoPage from "@/pages/admin/OrdensServicoPage";
 import AdminMorePage from "@/pages/admin/AdminMorePage";
+import CentroCustoPage from "@/pages/admin/CentroCustoPage";
+import FormasPagamentoPage from "@/pages/admin/FormasPagamentoPage";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
