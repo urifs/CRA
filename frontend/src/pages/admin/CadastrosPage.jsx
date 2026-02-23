@@ -212,25 +212,23 @@ export default function CadastrosPage() {
             className="pl-10"
           />
         </div>
-        <select
-          className="form-select"
-          value={filterTipo}
-          onChange={(e) => setFilterTipo(e.target.value)}
-        >
-          <option value="">Todos os tipos</option>
-          {tiposCadastro.map(t => (
-            <option key={t.value} value={t.value}>{t.label}</option>
-          ))}
-        </select>
-        <select
-          className="form-select"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="">Todos os status</option>
-          <option value="ativo">Ativo</option>
-          <option value="inativo">Inativo</option>
-        </select>
+        <Select value={filterTipo || "all"} onValueChange={(v) => setFilterTipo(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Todos os tipos" /></SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="all">Todos os tipos</SelectItem>
+            {tiposCadastro.map(t => (
+              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus || "all"} onValueChange={(v) => setFilterStatus(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Todos os status" /></SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="ativo">Ativo</SelectItem>
+            <SelectItem value="inativo">Inativo</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Lista */}
