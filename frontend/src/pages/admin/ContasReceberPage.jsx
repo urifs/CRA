@@ -170,11 +170,22 @@ export default function ContasReceberPage() {
     return { label: "Em Aberto", color: "bg-blue-100 text-blue-700", icon: Calendar };
   };
 
-  const filteredContas = contas.filter(c =>
-    c.descricao?.toLowerCase().includes(search.toLowerCase()) ||
-    c.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ||
-    c.documento?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredContas = contas.filter(c => {
+    const matchSearch = c.descricao?.toLowerCase().includes(search.toLowerCase()) ||
+      c.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ||
+      c.documento?.toLowerCase().includes(search.toLowerCase());
+    
+    if (!matchSearch) return false;
+    if (filterStatus && filterStatus !== "all" && c.status !== filterStatus) return false;
+    if (filterFormaPag && filterFormaPag !== "all" && c.forma_pagamento !== filterFormaPag) return false;
+    
+    const hoje = new Date().toISOString().split("T")[0];
+    if (filterVencimento === "vencidas" && (c.status !== "em_aberto" || c.data_vencimento >= hoje)) return false;
+    if (filterVencimento === "hoje" && c.data_vencimento !== hoje) return false;
+    if (filterVencimento === "a_vencer" && (c.status !== "em_aberto" || c.data_vencimento <= hoje)) return false;
+    
+    return true;
+  });
 
   // Totais
   const totalEmAberto = filteredContas.filter(c => c.status === "em_aberto").reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
