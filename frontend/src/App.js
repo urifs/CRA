@@ -152,7 +152,7 @@ function App() {
             <Route path="a-receber" element={<ContasReceberPage />} />
             <Route path="plano-contas" element={<PlanoContasPage />} />
             <Route path="nfe" element={<NFEPage />} />
-            <Route path="fornecedores" element={<FornecedoresPage />} />
+            <Route path="cadastros" element={<CadastrosPage />} />
             <Route path="produtos" element={<ProdutosPage />} />
             <Route path="ordens-servico" element={<OrdensServicoPage />} />
             <Route path="more" element={<AdminMorePage />} />
