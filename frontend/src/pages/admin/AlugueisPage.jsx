@@ -413,19 +413,26 @@ export default function AlugueisPage() {
             {/* Máquina */}
             <div>
               <label className="form-label">Máquina *</label>
-              <select 
-                className="form-select" 
+              <Select 
                 value={formData.maquina_id} 
-                onChange={(e) => handleMaquinaChange(e.target.value)}
+                onValueChange={(value) => handleMaquinaChange(value)}
                 required
               >
-                <option value="">Selecione uma máquina</option>
-                {maquinas.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} {m.plate ? `(${m.plate})` : ''} - {m.category_name || 'Sem categoria'}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-11" data-testid="select-maquina">
+                  <SelectValue placeholder="Selecione uma máquina" />
+                </SelectTrigger>
+                <SelectContent className="z-[9999] max-h-[300px]">
+                  {maquinas.length === 0 ? (
+                    <SelectItem value="none" disabled>Nenhuma máquina disponível</SelectItem>
+                  ) : (
+                    maquinas.map(m => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name} {m.plate ? `(${m.plate})` : ''} - {m.category_name || 'Sem categoria'}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
               {maquinas.length === 0 && (
                 <p className="text-xs text-orange-600 mt-1">
                   Nenhuma máquina cadastrada. Cadastre máquinas no módulo de Gerenciamento Geral.
