@@ -23,7 +23,20 @@ import ObrasPage from "@/pages/ObrasPage";
 import ObraDetailPage from "@/pages/ObraDetailPage";
 import AuditPage from "@/pages/AuditPage";
 import MorePage from "@/pages/MorePage";
+import SystemSelectPage from "@/pages/SystemSelectPage";
 import Layout from "@/components/Layout";
+import AdminLayout from "@/components/AdminLayout";
+
+// Admin Pages
+import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
+import ContasPagarPage from "@/pages/admin/ContasPagarPage";
+import ContasReceberPage from "@/pages/admin/ContasReceberPage";
+import PlanoContasPage from "@/pages/admin/PlanoContasPage";
+import NFEPage from "@/pages/admin/NFEPage";
+import FornecedoresPage from "@/pages/admin/FornecedoresPage";
+import ProdutosPage from "@/pages/admin/ProdutosPage";
+import OrdensServicoPage from "@/pages/admin/OrdensServicoPage";
+import AdminMorePage from "@/pages/admin/AdminMorePage";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
