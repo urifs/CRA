@@ -2295,6 +2295,30 @@ class CentroCustoResponse(BaseModel):
     status: str
     created_at: str
 
+# --- Formas de Pagamento ---
+class FormaPagamentoCreate(BaseModel):
+    codigo: Optional[str] = None
+    nome: str
+    tipo: str = "outros"  # dinheiro, pix, cartao_debito, cartao_credito, boleto, cheque, transferencia, outros
+    taxa: Optional[float] = 0
+    prazo_recebimento: Optional[int] = 0  # dias
+    conta_bancaria: Optional[str] = None
+    ativo: bool = True
+    observacoes: Optional[str] = None
+
+class FormaPagamentoResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    codigo: Optional[str] = None
+    nome: str
+    tipo: str
+    taxa: Optional[float] = 0
+    prazo_recebimento: Optional[int] = 0
+    conta_bancaria: Optional[str] = None
+    ativo: bool
+    observacoes: Optional[str] = None
+    created_at: str
+
 # ============ ADMIN ENDPOINTS ============
 
 # --- Funções auxiliares para auto-incremento ---
