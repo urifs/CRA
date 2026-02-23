@@ -26,7 +26,7 @@ export default function SystemSelectPage() {
       icon: Construction,
       color: "bg-orange-500",
       hoverColor: "hover:border-orange-500",
-      path: "/gerenciamento/dashboard",
+      path: "/dashboard",
       features: [
         { icon: Truck, label: "Máquinas" },
         { icon: Wrench, label: "Manutenções" },
