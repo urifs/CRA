@@ -68,8 +68,14 @@ export default function AlugueisPage() {
     try {
       const response = await axios.get(`${API}/admin/maquinas-disponiveis`);
       setMaquinas(response.data);
+      if (response.data.length === 0) {
+        console.warn("Nenhuma máquina cadastrada no sistema de Gerenciamento Geral");
+      }
     } catch (error) {
       console.error("Erro ao carregar máquinas:", error);
+      if (error.response?.status === 403) {
+        toast.error("Sessão expirada. Faça login novamente.");
+      }
     }
   };
 
