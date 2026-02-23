@@ -11,7 +11,9 @@ import {
   LogOut,
   Building2,
   CreditCard,
-  FolderTree
+  FolderTree,
+  Truck,
+  Bell
 } from "lucide-react";
 
 export default function AdminMorePage() {
@@ -19,6 +21,18 @@ export default function AdminMorePage() {
   const { user, logout } = useAuth();
 
   const menuItems = [
+    { 
+      path: "/administrativo/alugueis", 
+      icon: Truck, 
+      label: "Aluguéis",
+      description: "Locação de máquinas"
+    },
+    { 
+      path: "/administrativo/notificacoes", 
+      icon: Bell, 
+      label: "Notificações",
+      description: "Alertas e vencimentos"
+    },
     { 
       path: "/administrativo/plano-contas", 
       icon: FolderTree, 
