@@ -32,6 +32,7 @@ export default function ContasPagarPage() {
   const [editingConta, setEditingConta] = useState(null);
   const [planoContas, setPlanoContas] = useState([]);
   const [centrosCusto, setCentrosCusto] = useState([]);
+  const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
   
   const [formData, setFormData] = useState({
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
@@ -41,7 +42,7 @@ export default function ContasPagarPage() {
     forma_pagamento: "boleto", conta_movimento: "", observacoes: ""
   });
 
-  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); }, [filterStatus, filterVencimento, filterFormaPag]);
+  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); }, [filterStatus, filterVencimento, filterFormaPag]);
 
   const fetchContas = async () => {
     try {
