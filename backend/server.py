@@ -1908,6 +1908,578 @@ async def get_audit_logs(
 async def root():
     return {"message": "CRA Construtora API"}
 
+# ============ ADMIN MODELS ============
+
+class ContaPagarCreate(BaseModel):
+    descricao: str
+    valor: float
+    vencimento: str
+    fornecedor: Optional[str] = None
+    categoria: Optional[str] = None
+    observacoes: Optional[str] = None
+
+class ContaPagarResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    descricao: str
+    valor: float
+    vencimento: str
+    fornecedor: Optional[str] = None
+    categoria: Optional[str] = None
+    observacoes: Optional[str] = None
+    pago: bool = False
+    data_pagamento: Optional[str] = None
+    created_at: str
+
+class ContaReceberCreate(BaseModel):
+    descricao: str
+    valor: float
+    vencimento: str
+    cliente: Optional[str] = None
+    categoria: Optional[str] = None
+    observacoes: Optional[str] = None
+
+class ContaReceberResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    descricao: str
+    valor: float
+    vencimento: str
+    cliente: Optional[str] = None
+    categoria: Optional[str] = None
+    observacoes: Optional[str] = None
+    recebido: bool = False
+    data_recebimento: Optional[str] = None
+    created_at: str
+
+class FornecedorCreate(BaseModel):
+    nome: str
+    cnpj: Optional[str] = None
+    email: Optional[str] = None
+    telefone: Optional[str] = None
+    endereco: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    observacoes: Optional[str] = None
+
+class FornecedorResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    nome: str
+    cnpj: Optional[str] = None
+    email: Optional[str] = None
+    telefone: Optional[str] = None
+    endereco: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    observacoes: Optional[str] = None
+    created_at: str
+
+class ProdutoCreate(BaseModel):
+    nome: str
+    codigo: Optional[str] = None
+    descricao: Optional[str] = None
+    unidade: str = "UN"
+    preco_custo: Optional[float] = None
+    preco_venda: Optional[float] = None
+    categoria: Optional[str] = None
+    ncm: Optional[str] = None
+
+class ProdutoResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    nome: str
+    codigo: Optional[str] = None
+    descricao: Optional[str] = None
+    unidade: str
+    preco_custo: Optional[float] = None
+    preco_venda: Optional[float] = None
+    categoria: Optional[str] = None
+    ncm: Optional[str] = None
+    created_at: str
+
+class OrdemServicoCreate(BaseModel):
+    numero: str
+    cliente: Optional[str] = None
+    descricao: Optional[str] = None
+    data_abertura: Optional[str] = None
+    data_previsao: Optional[str] = None
+    valor_total: Optional[float] = None
+    observacoes: Optional[str] = None
+
+class OrdemServicoResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    numero: str
+    cliente: Optional[str] = None
+    descricao: Optional[str] = None
+    data_abertura: str
+    data_previsao: Optional[str] = None
+    valor_total: Optional[float] = None
+    observacoes: Optional[str] = None
+    status: str = "aberta"
+    created_at: str
+
+class PlanoContaCreate(BaseModel):
+    codigo: Optional[str] = None
+    nome: str
+    tipo: str  # receita ou despesa
+    grupo: Optional[str] = None
+    descricao: Optional[str] = None
+
+class PlanoContaResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    codigo: Optional[str] = None
+    nome: str
+    tipo: str
+    grupo: Optional[str] = None
+    descricao: Optional[str] = None
+    created_at: str
+
+# ============ ADMIN ENDPOINTS ============
+
+# --- Dashboard Admin ---
+@api_router.get("/admin/dashboard")
+async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
+    hoje = datetime.now(timezone.utc).isoformat()
+    
+    # Totals
+    contas_pagar = await db.contas_pagar.find({"pago": False}, {"_id": 0}).to_list(1000)
+    contas_receber = await db.contas_receber.find({"recebido": False}, {"_id": 0}).to_list(1000)
+    
+    total_pagar = sum(c.get("valor", 0) for c in contas_pagar)
+    total_receber = sum(c.get("valor", 0) for c in contas_receber)
+    
+    # Vencidas
+    contas_vencidas = len([c for c in contas_pagar if c.get("vencimento", "") < hoje])
+    
+    # Counts
+    fornecedores = await db.fornecedores.count_documents({})
+    produtos = await db.produtos.count_documents({})
+    ordens_abertas = await db.ordens_servico.count_documents({"status": {"$in": ["aberta", "em_andamento"]}})
+    notas_emitidas = await db.nfe.count_documents({})
+    
+    # Próximos vencimentos (7 dias)
+    from datetime import timedelta
+    proxima_semana = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    
+    proximas_pagar = await db.contas_pagar.find({
+        "pago": False,
+        "vencimento": {"$lte": proxima_semana}
+    }, {"_id": 0}).sort("vencimento", 1).limit(5).to_list(5)
+    
+    proximas_receber = await db.contas_receber.find({
+        "recebido": False,
+        "vencimento": {"$lte": proxima_semana}
+    }, {"_id": 0}).sort("vencimento", 1).limit(5).to_list(5)
+    
+    contas_proximas = []
+    for c in proximas_pagar:
+        contas_proximas.append({
+            "tipo": "pagar",
+            "descricao": c.get("descricao"),
+            "valor": c.get("valor"),
+            "vencimento": c.get("vencimento")
+        })
+    for c in proximas_receber:
+        contas_proximas.append({
+            "tipo": "receber",
+            "descricao": c.get("descricao"),
+            "valor": c.get("valor"),
+            "vencimento": c.get("vencimento")
+        })
+    
+    contas_proximas.sort(key=lambda x: x.get("vencimento", ""))
+    
+    return {
+        "stats": {
+            "totalPagar": total_pagar,
+            "totalReceber": total_receber,
+            "saldoPrevisto": total_receber - total_pagar,
+            "contasVencidas": contas_vencidas,
+            "notasEmitidas": notas_emitidas,
+            "fornecedores": fornecedores,
+            "produtos": produtos,
+            "ordensAbertas": ordens_abertas
+        },
+        "contasProximas": contas_proximas[:10]
+    }
+
+# --- Contas a Pagar ---
+@api_router.get("/admin/contas-pagar", response_model=List[ContaPagarResponse])
+async def get_contas_pagar(current_user: dict = Depends(get_current_user)):
+    contas = await db.contas_pagar.find({}, {"_id": 0}).sort("vencimento", 1).to_list(1000)
+    return contas
+
+@api_router.post("/admin/contas-pagar", response_model=ContaPagarResponse)
+async def create_conta_pagar(data: ContaPagarCreate, current_user: dict = Depends(get_current_user)):
+    conta = {
+        "id": str(uuid.uuid4()),
+        "descricao": data.descricao,
+        "valor": data.valor,
+        "vencimento": data.vencimento,
+        "fornecedor": data.fornecedor,
+        "categoria": data.categoria,
+        "observacoes": data.observacoes,
+        "pago": False,
+        "data_pagamento": None,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.contas_pagar.insert_one(conta)
+    await create_audit_log(current_user, "create", "conta_pagar", conta["id"], data.descricao)
+    return conta
+
+@api_router.put("/admin/contas-pagar/{id}", response_model=ContaPagarResponse)
+async def update_conta_pagar(id: str, data: ContaPagarCreate, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    update_data = {
+        "descricao": data.descricao,
+        "valor": data.valor,
+        "vencimento": data.vencimento,
+        "fornecedor": data.fornecedor,
+        "categoria": data.categoria,
+        "observacoes": data.observacoes
+    }
+    await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "conta_pagar", id, data.descricao)
+    
+    updated = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.patch("/admin/contas-pagar/{id}/pagar")
+async def marcar_conta_paga(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_pagar.update_one({"id": id}, {
+        "$set": {
+            "pago": True,
+            "data_pagamento": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - PAGO")
+    return {"message": "Conta marcada como paga"}
+
+@api_router.delete("/admin/contas-pagar/{id}")
+async def delete_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_pagar.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "conta_pagar", id, conta["descricao"])
+    return {"message": "Conta excluída"}
+
+# --- Contas a Receber ---
+@api_router.get("/admin/contas-receber", response_model=List[ContaReceberResponse])
+async def get_contas_receber(current_user: dict = Depends(get_current_user)):
+    contas = await db.contas_receber.find({}, {"_id": 0}).sort("vencimento", 1).to_list(1000)
+    return contas
+
+@api_router.post("/admin/contas-receber", response_model=ContaReceberResponse)
+async def create_conta_receber(data: ContaReceberCreate, current_user: dict = Depends(get_current_user)):
+    conta = {
+        "id": str(uuid.uuid4()),
+        "descricao": data.descricao,
+        "valor": data.valor,
+        "vencimento": data.vencimento,
+        "cliente": data.cliente,
+        "categoria": data.categoria,
+        "observacoes": data.observacoes,
+        "recebido": False,
+        "data_recebimento": None,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.contas_receber.insert_one(conta)
+    await create_audit_log(current_user, "create", "conta_receber", conta["id"], data.descricao)
+    return conta
+
+@api_router.put("/admin/contas-receber/{id}", response_model=ContaReceberResponse)
+async def update_conta_receber(id: str, data: ContaReceberCreate, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    update_data = {
+        "descricao": data.descricao,
+        "valor": data.valor,
+        "vencimento": data.vencimento,
+        "cliente": data.cliente,
+        "categoria": data.categoria,
+        "observacoes": data.observacoes
+    }
+    await db.contas_receber.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "conta_receber", id, data.descricao)
+    
+    updated = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.patch("/admin/contas-receber/{id}/receber")
+async def marcar_conta_recebida(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_receber.update_one({"id": id}, {
+        "$set": {
+            "recebido": True,
+            "data_recebimento": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - RECEBIDO")
+    return {"message": "Conta marcada como recebida"}
+
+@api_router.delete("/admin/contas-receber/{id}")
+async def delete_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_receber.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "conta_receber", id, conta["descricao"])
+    return {"message": "Conta excluída"}
+
+# --- Fornecedores ---
+@api_router.get("/admin/fornecedores", response_model=List[FornecedorResponse])
+async def get_fornecedores(current_user: dict = Depends(get_current_user)):
+    fornecedores = await db.fornecedores.find({}, {"_id": 0}).sort("nome", 1).to_list(1000)
+    return fornecedores
+
+@api_router.post("/admin/fornecedores", response_model=FornecedorResponse)
+async def create_fornecedor(data: FornecedorCreate, current_user: dict = Depends(get_current_user)):
+    fornecedor = {
+        "id": str(uuid.uuid4()),
+        "nome": data.nome,
+        "cnpj": data.cnpj,
+        "email": data.email,
+        "telefone": data.telefone,
+        "endereco": data.endereco,
+        "cidade": data.cidade,
+        "estado": data.estado,
+        "observacoes": data.observacoes,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.fornecedores.insert_one(fornecedor)
+    await create_audit_log(current_user, "create", "fornecedor", fornecedor["id"], data.nome)
+    return fornecedor
+
+@api_router.put("/admin/fornecedores/{id}", response_model=FornecedorResponse)
+async def update_fornecedor(id: str, data: FornecedorCreate, current_user: dict = Depends(get_current_user)):
+    fornecedor = await db.fornecedores.find_one({"id": id}, {"_id": 0})
+    if not fornecedor:
+        raise HTTPException(status_code=404, detail="Fornecedor não encontrado")
+    
+    update_data = {
+        "nome": data.nome,
+        "cnpj": data.cnpj,
+        "email": data.email,
+        "telefone": data.telefone,
+        "endereco": data.endereco,
+        "cidade": data.cidade,
+        "estado": data.estado,
+        "observacoes": data.observacoes
+    }
+    await db.fornecedores.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "fornecedor", id, data.nome)
+    
+    updated = await db.fornecedores.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/fornecedores/{id}")
+async def delete_fornecedor(id: str, current_user: dict = Depends(get_current_user)):
+    fornecedor = await db.fornecedores.find_one({"id": id}, {"_id": 0})
+    if not fornecedor:
+        raise HTTPException(status_code=404, detail="Fornecedor não encontrado")
+    
+    await db.fornecedores.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "fornecedor", id, fornecedor["nome"])
+    return {"message": "Fornecedor excluído"}
+
+# --- Produtos ---
+@api_router.get("/admin/produtos", response_model=List[ProdutoResponse])
+async def get_produtos(current_user: dict = Depends(get_current_user)):
+    produtos = await db.produtos.find({}, {"_id": 0}).sort("nome", 1).to_list(1000)
+    return produtos
+
+@api_router.post("/admin/produtos", response_model=ProdutoResponse)
+async def create_produto(data: ProdutoCreate, current_user: dict = Depends(get_current_user)):
+    produto = {
+        "id": str(uuid.uuid4()),
+        "nome": data.nome,
+        "codigo": data.codigo,
+        "descricao": data.descricao,
+        "unidade": data.unidade,
+        "preco_custo": float(data.preco_custo) if data.preco_custo else None,
+        "preco_venda": float(data.preco_venda) if data.preco_venda else None,
+        "categoria": data.categoria,
+        "ncm": data.ncm,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.produtos.insert_one(produto)
+    await create_audit_log(current_user, "create", "produto", produto["id"], data.nome)
+    return produto
+
+@api_router.put("/admin/produtos/{id}", response_model=ProdutoResponse)
+async def update_produto(id: str, data: ProdutoCreate, current_user: dict = Depends(get_current_user)):
+    produto = await db.produtos.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    
+    update_data = {
+        "nome": data.nome,
+        "codigo": data.codigo,
+        "descricao": data.descricao,
+        "unidade": data.unidade,
+        "preco_custo": float(data.preco_custo) if data.preco_custo else None,
+        "preco_venda": float(data.preco_venda) if data.preco_venda else None,
+        "categoria": data.categoria,
+        "ncm": data.ncm
+    }
+    await db.produtos.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "produto", id, data.nome)
+    
+    updated = await db.produtos.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/produtos/{id}")
+async def delete_produto(id: str, current_user: dict = Depends(get_current_user)):
+    produto = await db.produtos.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    
+    await db.produtos.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "produto", id, produto["nome"])
+    return {"message": "Produto excluído"}
+
+# --- Ordens de Serviço ---
+@api_router.get("/admin/ordens-servico", response_model=List[OrdemServicoResponse])
+async def get_ordens_servico(current_user: dict = Depends(get_current_user)):
+    ordens = await db.ordens_servico.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return ordens
+
+@api_router.post("/admin/ordens-servico", response_model=OrdemServicoResponse)
+async def create_ordem_servico(data: OrdemServicoCreate, current_user: dict = Depends(get_current_user)):
+    ordem = {
+        "id": str(uuid.uuid4()),
+        "numero": data.numero,
+        "cliente": data.cliente,
+        "descricao": data.descricao,
+        "data_abertura": data.data_abertura or datetime.now(timezone.utc).isoformat().split("T")[0],
+        "data_previsao": data.data_previsao,
+        "valor_total": float(data.valor_total) if data.valor_total else None,
+        "observacoes": data.observacoes,
+        "status": "aberta",
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.ordens_servico.insert_one(ordem)
+    await create_audit_log(current_user, "create", "ordem_servico", ordem["id"], data.numero)
+    return ordem
+
+@api_router.put("/admin/ordens-servico/{id}", response_model=OrdemServicoResponse)
+async def update_ordem_servico(id: str, data: OrdemServicoCreate, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    update_data = {
+        "numero": data.numero,
+        "cliente": data.cliente,
+        "descricao": data.descricao,
+        "data_abertura": data.data_abertura,
+        "data_previsao": data.data_previsao,
+        "valor_total": float(data.valor_total) if data.valor_total else None,
+        "observacoes": data.observacoes
+    }
+    await db.ordens_servico.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "ordem_servico", id, data.numero)
+    
+    updated = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    return updated
+
+class StatusUpdate(BaseModel):
+    status: str
+
+@api_router.patch("/admin/ordens-servico/{id}/status")
+async def update_ordem_status(id: str, data: StatusUpdate, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    await db.ordens_servico.update_one({"id": id}, {"$set": {"status": data.status}})
+    await create_audit_log(current_user, "update", "ordem_servico", id, f"{ordem['numero']} - Status: {data.status}")
+    return {"message": "Status atualizado"}
+
+@api_router.delete("/admin/ordens-servico/{id}")
+async def delete_ordem_servico(id: str, current_user: dict = Depends(get_current_user)):
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    
+    await db.ordens_servico.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "ordem_servico", id, ordem["numero"])
+    return {"message": "Ordem de serviço excluída"}
+
+# --- Plano de Contas ---
+@api_router.get("/admin/plano-contas", response_model=List[PlanoContaResponse])
+async def get_plano_contas(current_user: dict = Depends(get_current_user)):
+    contas = await db.plano_contas.find({}, {"_id": 0}).sort("codigo", 1).to_list(1000)
+    return contas
+
+@api_router.post("/admin/plano-contas", response_model=PlanoContaResponse)
+async def create_plano_conta(data: PlanoContaCreate, current_user: dict = Depends(get_current_user)):
+    conta = {
+        "id": str(uuid.uuid4()),
+        "codigo": data.codigo,
+        "nome": data.nome,
+        "tipo": data.tipo,
+        "grupo": data.grupo,
+        "descricao": data.descricao,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.plano_contas.insert_one(conta)
+    await create_audit_log(current_user, "create", "plano_conta", conta["id"], data.nome)
+    return conta
+
+@api_router.put("/admin/plano-contas/{id}", response_model=PlanoContaResponse)
+async def update_plano_conta(id: str, data: PlanoContaCreate, current_user: dict = Depends(get_current_user)):
+    conta = await db.plano_contas.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    update_data = {
+        "codigo": data.codigo,
+        "nome": data.nome,
+        "tipo": data.tipo,
+        "grupo": data.grupo,
+        "descricao": data.descricao
+    }
+    await db.plano_contas.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "plano_conta", id, data.nome)
+    
+    updated = await db.plano_contas.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/plano-contas/{id}")
+async def delete_plano_conta(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.plano_contas.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.plano_contas.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "plano_conta", id, conta["nome"])
+    return {"message": "Conta excluída"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
