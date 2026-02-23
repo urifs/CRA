@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -11,22 +13,23 @@ import {
   Package,
   ClipboardList,
   AlertCircle,
-  Calendar
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Wallet,
+  BadgeDollarSign
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState({
-    totalPagar: 0,
-    totalReceber: 0,
-    saldoPrevisto: 0,
-    contasVencidas: 0,
-    notasEmitidas: 0,
-    fornecedores: 0,
-    produtos: 0,
-    ordensAbertas: 0
+  const [data, setData] = useState({
+    stats: { totalPagar: 0, totalReceber: 0, saldoPrevisto: 0, contasVencidas: 0 },
+    aPagar: { total: 0, mes: 0, ano: 0, vencidas: 0, osValor: 0 },
+    aReceber: { total: 0, mes: 0, ano: 0, vencidas: 0, osValor: 0 },
+    quitados: { pagar: { total: 0, mes: 0, ano: 0 }, receber: { total: 0, mes: 0, ano: 0 } },
+    contasProximas: []
   });
-  const [contasProximas, setContasProximas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("resumo");
 
   useEffect(() => {
     fetchDashboardData();
@@ -35,8 +38,7 @@ export default function AdminDashboardPage() {
   const fetchDashboardData = async () => {
     try {
       const response = await axios.get(`${API}/admin/dashboard`);
-      setStats(response.data.stats);
-      setContasProximas(response.data.contasProximas || []);
+      setData(response.data);
     } catch (error) {
       console.error("Erro ao carregar dashboard:", error);
     } finally {
@@ -59,181 +61,401 @@ export default function AdminDashboardPage() {
     );
   }
 
+  const { stats, aPagar, aReceber, quitados, contasProximas } = data;
+
   return (
     <div data-testid="admin-dashboard">
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Dashboard Administrativo</h1>
+          <h1 className="page-title">Dashboard Financeiro</h1>
           <p className="text-slate-500 mt-1">Visão geral financeira e operacional</p>
         </div>
       </div>
 
-      {/* Financial Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card className="stat-card border-l-4 border-l-red-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">
-                  Total a Pagar
-                </p>
-                <p className="text-2xl font-bold text-red-600 mt-1">
-                  {formatCurrency(stats.totalPagar)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <TrendingDown className="text-red-600" size={24} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs principais */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+          <TabsTrigger value="resumo" className="flex items-center gap-2">
+            <Wallet size={16} />
+            Resumo
+          </TabsTrigger>
+          <TabsTrigger value="pagar" className="flex items-center gap-2">
+            <TrendingDown size={16} />
+            A Pagar
+            {aPagar.vencidas > 0 && (
+              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{aPagar.vencidas}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="receber" className="flex items-center gap-2">
+            <TrendingUp size={16} />
+            A Receber
+            {aReceber.vencidas > 0 && (
+              <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">{aReceber.vencidas}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="quitados" className="flex items-center gap-2">
+            <CheckCircle2 size={16} />
+            Quitados
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className="stat-card border-l-4 border-l-green-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">
-                  Total a Receber
-                </p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(stats.totalReceber)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="text-green-600" size={24} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="stat-card border-l-4 border-l-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">
-                  Saldo Previsto
-                </p>
-                <p className={`text-2xl font-bold mt-1 ${stats.saldoPrevisto >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  {formatCurrency(stats.saldoPrevisto)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-blue-600" size={24} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="stat-card border-l-4 border-l-orange-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">
-                  Contas Vencidas
-                </p>
-                <p className="text-2xl font-bold text-orange-600 mt-1">
-                  {stats.contasVencidas}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <AlertCircle className="text-orange-600" size={24} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card className="stat-card">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-              <FileText className="text-slate-600" size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">NF-e Emitidas</p>
-              <p className="text-lg font-bold text-slate-900">{stats.notasEmitidas}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="stat-card">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-              <Users className="text-slate-600" size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Fornecedores</p>
-              <p className="text-lg font-bold text-slate-900">{stats.fornecedores}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="stat-card">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-              <Package className="text-slate-600" size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Produtos</p>
-              <p className="text-lg font-bold text-slate-900">{stats.produtos}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="stat-card">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-              <ClipboardList className="text-slate-600" size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">OS Abertas</p>
-              <p className="text-lg font-bold text-slate-900">{stats.ordensAbertas}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Upcoming bills */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar size={20} />
-            <span>Próximos Vencimentos</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {contasProximas.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
-              <Calendar className="mx-auto mb-2" size={32} />
-              <p>Nenhuma conta próxima ao vencimento</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {contasProximas.map((conta, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${conta.tipo === 'pagar' ? 'bg-red-500' : 'bg-green-500'}`} />
-                    <div>
-                      <p className="font-medium text-slate-900">{conta.descricao}</p>
-                      <p className="text-xs text-slate-500">
-                        Vencimento: {new Date(conta.vencimento).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
+        {/* Tab: Resumo */}
+        <TabsContent value="resumo" className="mt-6">
+          {/* Financial Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <Card className="stat-card border-l-4 border-l-red-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Total a Pagar</p>
+                    <p className="text-2xl font-bold text-red-600 mt-1">{formatCurrency(stats.totalPagar)}</p>
+                    <p className="text-xs text-slate-400 mt-1">+ {formatCurrency(aPagar.osValor)} em OS</p>
                   </div>
-                  <span className={`font-bold ${conta.tipo === 'pagar' ? 'text-red-600' : 'text-green-600'}`}>
-                    {formatCurrency(conta.valor)}
-                  </span>
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <TrendingDown className="text-red-600" size={24} />
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card border-l-4 border-l-green-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Total a Receber</p>
+                    <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalReceber)}</p>
+                    <p className="text-xs text-slate-400 mt-1">+ {formatCurrency(aReceber.osValor)} em OS</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="text-green-600" size={24} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card border-l-4 border-l-blue-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Saldo Previsto</p>
+                    <p className={`text-2xl font-bold mt-1 ${stats.saldoPrevisto >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                      {formatCurrency(stats.saldoPrevisto)}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="text-blue-600" size={24} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card border-l-4 border-l-orange-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Contas Vencidas</p>
+                    <p className="text-2xl font-bold text-orange-600 mt-1">{stats.contasVencidas}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <AlertCircle className="text-orange-600" size={24} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Secondary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <Card className="stat-card">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <FileText className="text-slate-600" size={20} />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">NF-e Emitidas</p>
+                  <p className="text-lg font-bold text-slate-900">{stats.notasEmitidas || 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <Users className="text-slate-600" size={20} />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Fornecedores</p>
+                  <p className="text-lg font-bold text-slate-900">{stats.fornecedores || 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <Package className="text-slate-600" size={20} />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Produtos</p>
+                  <p className="text-lg font-bold text-slate-900">{stats.produtos || 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="stat-card">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                  <ClipboardList className="text-slate-600" size={20} />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">OS Abertas</p>
+                  <p className="text-lg font-bold text-slate-900">{stats.ordensAbertas || 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Upcoming bills */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar size={20} />
+                <span>Próximos Vencimentos</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {contasProximas.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <Calendar className="mx-auto mb-2" size={32} />
+                  <p>Nenhuma conta próxima ao vencimento</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {contasProximas.map((conta, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${conta.tipo === 'pagar' ? 'bg-red-500' : 'bg-green-500'}`} />
+                        <div>
+                          <p className="font-medium text-slate-900">{conta.descricao}</p>
+                          <p className="text-xs text-slate-500">
+                            Vencimento: {new Date(conta.vencimento).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`font-bold ${conta.tipo === 'pagar' ? 'text-red-600' : 'text-green-600'}`}>
+                        {formatCurrency(conta.valor)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: A Pagar */}
+        <TabsContent value="pagar" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="border-l-4 border-l-red-400">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-slate-500">Este Mês</p>
+                    <p className="text-2xl font-bold text-red-600">{formatCurrency(aPagar.mes)}</p>
+                  </div>
+                  <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-1 rounded">MÊS</span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-red-500">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-slate-500">Este Ano</p>
+                    <p className="text-2xl font-bold text-red-600">{formatCurrency(aPagar.ano)}</p>
+                  </div>
+                  <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-1 rounded">ANO</span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-red-600">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-slate-500">Total Geral</p>
+                    <p className="text-2xl font-bold text-red-600">{formatCurrency(aPagar.total)}</p>
+                  </div>
+                  <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-1 rounded">GERAL</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="text-orange-500" size={24} />
+                  <div>
+                    <p className="text-sm text-slate-500">Contas Vencidas</p>
+                    <p className="text-xl font-bold text-orange-600">{aPagar.vencidas}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="text-blue-500" size={24} />
+                  <div>
+                    <p className="text-sm text-slate-500">Valor em OS (a pagar)</p>
+                    <p className="text-xl font-bold text-blue-600">{formatCurrency(aPagar.osValor)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Tab: A Receber */}
+        <TabsContent value="receber" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="border-l-4 border-l-green-400">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-slate-500">Este Mês</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(aReceber.mes)}</p>
+                  </div>
+                  <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">MÊS</span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-slate-500">Este Ano</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(aReceber.ano)}</p>
+                  </div>
+                  <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">ANO</span>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-green-600">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-slate-500">Total Geral</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(aReceber.total)}</p>
+                  </div>
+                  <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">GERAL</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="text-orange-500" size={24} />
+                  <div>
+                    <p className="text-sm text-slate-500">Contas Vencidas</p>
+                    <p className="text-xl font-bold text-orange-600">{aReceber.vencidas}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="text-blue-500" size={24} />
+                  <div>
+                    <p className="text-sm text-slate-500">Valor em OS (a receber)</p>
+                    <p className="text-xl font-bold text-blue-600">{formatCurrency(aReceber.osValor)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Tab: Quitados */}
+        <TabsContent value="quitados" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Pagos */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <TrendingDown size={20} />
+                  Pagos (Despesas)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                    <span className="text-slate-600">Este Mês</span>
+                    <span className="font-bold text-red-600">{formatCurrency(quitados.pagar?.mes)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                    <span className="text-slate-600">Este Ano</span>
+                    <span className="font-bold text-red-600">{formatCurrency(quitados.pagar?.ano)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-red-100 rounded-lg">
+                    <span className="font-medium text-slate-700">Total Geral</span>
+                    <span className="font-bold text-red-700">{formatCurrency(quitados.pagar?.total)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recebidos */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-600">
+                  <TrendingUp size={20} />
+                  Recebidos (Receitas)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-slate-600">Este Mês</span>
+                    <span className="font-bold text-green-600">{formatCurrency(quitados.receber?.mes)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-slate-600">Este Ano</span>
+                    <span className="font-bold text-green-600">{formatCurrency(quitados.receber?.ano)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-green-100 rounded-lg">
+                    <span className="font-medium text-slate-700">Total Geral</span>
+                    <span className="font-bold text-green-700">{formatCurrency(quitados.receber?.total)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Saldo Líquido */}
+          <Card className="mt-6">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <BadgeDollarSign className="text-blue-600" size={32} />
+                  <div>
+                    <p className="text-sm text-slate-500">Saldo Líquido (Recebido - Pago)</p>
+                    <p className={`text-3xl font-bold ${(quitados.receber?.total - quitados.pagar?.total) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency((quitados.receber?.total || 0) - (quitados.pagar?.total || 0))}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
