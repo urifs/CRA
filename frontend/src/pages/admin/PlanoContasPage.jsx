@@ -323,21 +323,26 @@ export default function PlanoContasPage() {
               </div>
               <div>
                 <label className="form-label">Tipo *</label>
-                <select className="form-select" value={formData.tipo} onChange={(e) => setFormData({...formData, tipo: e.target.value})} disabled={formData.nivel === 2}>
-                  <option value="receita">Receita</option>
-                  <option value="despesa">Despesa</option>
-                </select>
+                <Select value={formData.tipo} onValueChange={(v) => setFormData({...formData, tipo: v})} disabled={formData.nivel === 2}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="receita">Receita</SelectItem>
+                    <SelectItem value="despesa">Despesa</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {formData.nivel === 2 && (
               <div>
                 <label className="form-label">Conta Pai</label>
-                <select className="form-select" value={formData.pai_id} onChange={(e) => setFormData({...formData, pai_id: e.target.value})} required>
-                  <option value="">Selecione...</option>
-                  {contasNivel1.filter(c => c.tipo === formData.tipo).map(c => (
-                    <option key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome}</option>
-                  ))}
-                </select>
+                <Select value={formData.pai_id} onValueChange={(v) => setFormData({...formData, pai_id: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {contasNivel1.filter(c => c.tipo === formData.tipo).map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <div>
