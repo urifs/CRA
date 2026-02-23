@@ -215,22 +215,31 @@ export default function ContasReceberPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
           <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <select className="form-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">Todos Status</option>
-          <option value="em_aberto">Em Aberto</option>
-          <option value="quitada">Quitadas</option>
-          <option value="cancelada">Canceladas</option>
-        </select>
-        <select className="form-select" value={filterVencimento} onChange={(e) => setFilterVencimento(e.target.value)}>
-          <option value="">Vencimento</option>
-          <option value="vencidas">Vencidas</option>
-          <option value="hoje">Hoje</option>
-          <option value="a_vencer">A Vencer</option>
-        </select>
-        <select className="form-select" value={filterFormaPag} onChange={(e) => setFilterFormaPag(e.target.value)}>
-          <option value="">Forma Pagamento</option>
-          {formasPagamento.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Todos Status" /></SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="em_aberto">Em Aberto</SelectItem>
+            <SelectItem value="quitada">Quitadas</SelectItem>
+            <SelectItem value="cancelada">Canceladas</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterVencimento} onValueChange={setFilterVencimento}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Vencimento" /></SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="vencidas">Vencidas</SelectItem>
+            <SelectItem value="hoje">Hoje</SelectItem>
+            <SelectItem value="a_vencer">A Vencer</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterFormaPag} onValueChange={setFilterFormaPag}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Forma Pagamento" /></SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="all">Todas Formas</SelectItem>
+            {formasPagamento.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Tabela */}
