@@ -2297,40 +2297,48 @@ class CentroCustoResponse(BaseModel):
 
 # ============ ADMIN ENDPOINTS ============
 
+# --- Funções auxiliares para auto-incremento ---
+async def get_next_sequence(collection_name: str) -> int:
+    result = await db.counters.find_one_and_update(
+        {"_id": collection_name},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+    return result["seq"]
+
 # --- Dashboard Admin ---
 @api_router.get("/admin/dashboard")
 async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
-    hoje = datetime.now(timezone.utc).isoformat()
+    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
-    # Totals
-    contas_pagar = await db.contas_pagar.find({"pago": False}, {"_id": 0}).to_list(1000)
-    contas_receber = await db.contas_receber.find({"recebido": False}, {"_id": 0}).to_list(1000)
-    
+    # Totals Contas a Pagar
+    contas_pagar = await db.contas_pagar.find({"status": "em_aberto"}, {"_id": 0}).to_list(1000)
     total_pagar = sum(c.get("valor", 0) for c in contas_pagar)
+    contas_vencidas = len([c for c in contas_pagar if c.get("data_vencimento", "") < hoje])
+    
+    # Totals Contas a Receber
+    contas_receber = await db.contas_receber.find({"status": "em_aberto"}, {"_id": 0}).to_list(1000)
     total_receber = sum(c.get("valor", 0) for c in contas_receber)
     
-    # Vencidas
-    contas_vencidas = len([c for c in contas_pagar if c.get("vencimento", "") < hoje])
-    
     # Counts
-    fornecedores = await db.fornecedores.count_documents({})
-    produtos = await db.produtos.count_documents({})
-    ordens_abertas = await db.ordens_servico.count_documents({"status": {"$in": ["aberta", "em_andamento"]}})
-    notas_emitidas = await db.nfe.count_documents({})
+    cadastros = await db.cadastros.count_documents({})
+    produtos = await db.produtos_admin.count_documents({})
+    ordens_abertas = await db.ordens_servico.count_documents({"status": {"$in": ["em_aberto", "em_andamento"]}})
     
     # Próximos vencimentos (7 dias)
     from datetime import timedelta
-    proxima_semana = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    proxima_semana = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d")
     
     proximas_pagar = await db.contas_pagar.find({
-        "pago": False,
-        "vencimento": {"$lte": proxima_semana}
-    }, {"_id": 0}).sort("vencimento", 1).limit(5).to_list(5)
+        "status": "em_aberto",
+        "data_vencimento": {"$lte": proxima_semana}
+    }, {"_id": 0}).sort("data_vencimento", 1).limit(5).to_list(5)
     
     proximas_receber = await db.contas_receber.find({
-        "recebido": False,
-        "vencimento": {"$lte": proxima_semana}
-    }, {"_id": 0}).sort("vencimento", 1).limit(5).to_list(5)
+        "status": "em_aberto",
+        "data_vencimento": {"$lte": proxima_semana}
+    }, {"_id": 0}).sort("data_vencimento", 1).limit(5).to_list(5)
     
     contas_proximas = []
     for c in proximas_pagar:
@@ -2338,14 +2346,14 @@ async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
             "tipo": "pagar",
             "descricao": c.get("descricao"),
             "valor": c.get("valor"),
-            "vencimento": c.get("vencimento")
+            "vencimento": c.get("data_vencimento")
         })
     for c in proximas_receber:
         contas_proximas.append({
             "tipo": "receber",
             "descricao": c.get("descricao"),
             "valor": c.get("valor"),
-            "vencimento": c.get("vencimento")
+            "vencimento": c.get("data_vencimento")
         })
     
     contas_proximas.sort(key=lambda x: x.get("vencimento", ""))
@@ -2356,28 +2364,338 @@ async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
             "totalReceber": total_receber,
             "saldoPrevisto": total_receber - total_pagar,
             "contasVencidas": contas_vencidas,
-            "notasEmitidas": notas_emitidas,
-            "fornecedores": fornecedores,
+            "cadastros": cadastros,
             "produtos": produtos,
             "ordensAbertas": ordens_abertas
         },
         "contasProximas": contas_proximas[:10]
     }
 
-# --- Contas a Pagar ---
-@api_router.get("/admin/contas-pagar", response_model=List[ContaPagarResponse])
-async def get_contas_pagar(current_user: dict = Depends(get_current_user)):
-    contas = await db.contas_pagar.find({}, {"_id": 0}).sort("vencimento", 1).to_list(1000)
+# --- Cadastro de Clientes/Fornecedores ---
+@api_router.get("/admin/cadastros")
+async def get_cadastros(
+    tipo: Optional[str] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if tipo:
+        query["tipo_cadastro"] = tipo
+    if status:
+        query["status"] = status
+    if search:
+        query["$or"] = [
+            {"nome_razao": {"$regex": search, "$options": "i"}},
+            {"apelido_fantasia": {"$regex": search, "$options": "i"}},
+            {"cpf_cnpj": {"$regex": search, "$options": "i"}},
+            {"cidade": {"$regex": search, "$options": "i"}}
+        ]
+    
+    cadastros = await db.cadastros.find(query, {"_id": 0}).sort("nome_razao", 1).to_list(1000)
+    return cadastros
+
+@api_router.post("/admin/cadastros")
+async def create_cadastro(data: CadastroCreate, current_user: dict = Depends(get_current_user)):
+    codigo = await get_next_sequence("cadastros")
+    cadastro = {
+        "id": str(uuid.uuid4()),
+        "codigo": codigo,
+        **data.model_dump(),
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.cadastros.insert_one(cadastro)
+    await create_audit_log(current_user, "create", "cadastro", cadastro["id"], data.nome_razao)
+    del cadastro["_id"]
+    return cadastro
+
+@api_router.get("/admin/cadastros/{id}")
+async def get_cadastro(id: str, current_user: dict = Depends(get_current_user)):
+    cadastro = await db.cadastros.find_one({"id": id}, {"_id": 0})
+    if not cadastro:
+        raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+    return cadastro
+
+@api_router.put("/admin/cadastros/{id}")
+async def update_cadastro(id: str, data: CadastroCreate, current_user: dict = Depends(get_current_user)):
+    cadastro = await db.cadastros.find_one({"id": id}, {"_id": 0})
+    if not cadastro:
+        raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+    
+    update_data = data.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.cadastros.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "cadastro", id, data.nome_razao)
+    
+    updated = await db.cadastros.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/cadastros/{id}")
+async def delete_cadastro(id: str, current_user: dict = Depends(get_current_user)):
+    cadastro = await db.cadastros.find_one({"id": id}, {"_id": 0})
+    if not cadastro:
+        raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+    
+    await db.cadastros.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "cadastro", id, cadastro["nome_razao"])
+    return {"message": "Cadastro excluído"}
+
+# --- Contas a Pagar (Completo) ---
+@api_router.get("/admin/contas-pagar")
+async def get_contas_pagar(
+    status: Optional[str] = None,
+    vencimento: Optional[str] = None,
+    forma_pagamento: Optional[str] = None,
+    plano_conta_id: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if status:
+        query["status"] = status
+    if forma_pagamento:
+        query["forma_pagamento"] = forma_pagamento
+    if plano_conta_id:
+        query["plano_conta_id"] = plano_conta_id
+    if search:
+        query["$or"] = [
+            {"descricao": {"$regex": search, "$options": "i"}},
+            {"fornecedor_nome": {"$regex": search, "$options": "i"}},
+            {"documento": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Filtro de vencimento
+    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if vencimento == "vencidas":
+        query["data_vencimento"] = {"$lt": hoje}
+        query["status"] = "em_aberto"
+    elif vencimento == "hoje":
+        query["data_vencimento"] = hoje
+    elif vencimento == "a_vencer":
+        query["data_vencimento"] = {"$gt": hoje}
+        query["status"] = "em_aberto"
+    
+    # Filtro de período
+    if data_inicio and data_fim:
+        query["data_vencimento"] = {"$gte": data_inicio, "$lte": data_fim}
+    
+    contas = await db.contas_pagar.find(query, {"_id": 0}).sort("data_vencimento", 1).to_list(1000)
+    
+    # Calcular valor final
+    for conta in contas:
+        valor = conta.get("valor", 0)
+        desconto = conta.get("valor_desconto", 0)
+        juros = conta.get("valor_juros", 0)
+        multa = conta.get("valor_multa", 0)
+        conta["valor_final"] = valor - desconto + juros + multa
+    
     return contas
 
-@api_router.post("/admin/contas-pagar", response_model=ContaPagarResponse)
+@api_router.post("/admin/contas-pagar")
 async def create_conta_pagar(data: ContaPagarCreate, current_user: dict = Depends(get_current_user)):
+    numero = await get_next_sequence("contas_pagar")
+    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    
     conta = {
         "id": str(uuid.uuid4()),
-        "descricao": data.descricao,
-        "valor": data.valor,
-        "vencimento": data.vencimento,
-        "fornecedor": data.fornecedor,
+        "numero": numero,
+        **data.model_dump(),
+        "valor_final": valor_final,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.contas_pagar.insert_one(conta)
+    await create_audit_log(current_user, "create", "conta_pagar", conta["id"], data.descricao)
+    del conta["_id"]
+    return conta
+
+@api_router.put("/admin/contas-pagar/{id}")
+async def update_conta_pagar(id: str, data: ContaPagarCreate, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    update_data = data.model_dump()
+    update_data["valor_final"] = valor_final
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "conta_pagar", id, data.descricao)
+    
+    updated = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.patch("/admin/contas-pagar/{id}/quitar")
+async def quitar_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_pagar.update_one({"id": id}, {
+        "$set": {
+            "status": "quitada",
+            "data_pagamento": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        }
+    })
+    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - QUITADA")
+    return {"message": "Conta quitada com sucesso"}
+
+@api_router.patch("/admin/contas-pagar/{id}/cancelar")
+async def cancelar_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_pagar.update_one({"id": id}, {
+        "$set": {
+            "status": "cancelada",
+            "data_cancelamento": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        }
+    })
+    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - CANCELADA")
+    return {"message": "Conta cancelada"}
+
+@api_router.delete("/admin/contas-pagar/{id}")
+async def delete_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_pagar.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "conta_pagar", id, conta["descricao"])
+    return {"message": "Conta excluída"}
+
+# --- Contas a Receber (Completo) ---
+@api_router.get("/admin/contas-receber")
+async def get_contas_receber(
+    status: Optional[str] = None,
+    vencimento: Optional[str] = None,
+    forma_pagamento: Optional[str] = None,
+    plano_conta_id: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if status:
+        query["status"] = status
+    if forma_pagamento:
+        query["forma_pagamento"] = forma_pagamento
+    if plano_conta_id:
+        query["plano_conta_id"] = plano_conta_id
+    if search:
+        query["$or"] = [
+            {"descricao": {"$regex": search, "$options": "i"}},
+            {"cliente_nome": {"$regex": search, "$options": "i"}},
+            {"documento": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Filtro de vencimento
+    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if vencimento == "vencidas":
+        query["data_vencimento"] = {"$lt": hoje}
+        query["status"] = "em_aberto"
+    elif vencimento == "hoje":
+        query["data_vencimento"] = hoje
+    elif vencimento == "a_vencer":
+        query["data_vencimento"] = {"$gt": hoje}
+        query["status"] = "em_aberto"
+    
+    # Filtro de período
+    if data_inicio and data_fim:
+        query["data_vencimento"] = {"$gte": data_inicio, "$lte": data_fim}
+    
+    contas = await db.contas_receber.find(query, {"_id": 0}).sort("data_vencimento", 1).to_list(1000)
+    
+    # Calcular valor final
+    for conta in contas:
+        valor = conta.get("valor", 0)
+        desconto = conta.get("valor_desconto", 0)
+        juros = conta.get("valor_juros", 0)
+        multa = conta.get("valor_multa", 0)
+        conta["valor_final"] = valor - desconto + juros + multa
+    
+    return contas
+
+@api_router.post("/admin/contas-receber")
+async def create_conta_receber(data: ContaReceberCreate, current_user: dict = Depends(get_current_user)):
+    numero = await get_next_sequence("contas_receber")
+    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    
+    conta = {
+        "id": str(uuid.uuid4()),
+        "numero": numero,
+        **data.model_dump(),
+        "valor_final": valor_final,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.contas_receber.insert_one(conta)
+    await create_audit_log(current_user, "create", "conta_receber", conta["id"], data.descricao)
+    del conta["_id"]
+    return conta
+
+@api_router.put("/admin/contas-receber/{id}")
+async def update_conta_receber(id: str, data: ContaReceberCreate, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    update_data = data.model_dump()
+    update_data["valor_final"] = valor_final
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.contas_receber.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "conta_receber", id, data.descricao)
+    
+    updated = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.patch("/admin/contas-receber/{id}/quitar")
+async def quitar_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_receber.update_one({"id": id}, {
+        "$set": {
+            "status": "quitada",
+            "data_recebimento": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        }
+    })
+    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - QUITADA")
+    return {"message": "Conta quitada com sucesso"}
+
+@api_router.patch("/admin/contas-receber/{id}/cancelar")
+async def cancelar_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_receber.update_one({"id": id}, {
+        "$set": {
+            "status": "cancelada",
+            "data_cancelamento": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        }
+    })
+    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - CANCELADA")
+    return {"message": "Conta cancelada"}
+
+@api_router.delete("/admin/contas-receber/{id}")
+async def delete_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    await db.contas_receber.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "conta_receber", id, conta["descricao"])
+    return {"message": "Conta excluída"}
         "categoria": data.categoria,
         "observacoes": data.observacoes,
         "pago": False,
