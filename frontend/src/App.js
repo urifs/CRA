@@ -52,82 +52,36 @@ export const useAuth = () => {
   return context;
 };
 
-// Axios interceptor for auth - use a flag to prevent multiple interceptors
-let interceptorId = null;
-let logoutCallback = null;
-
-const setupAxiosInterceptors = (token) => {
-  axios.defaults.headers.common["Authorization"] = token ? `Bearer ${token}` : "";
-  
-  // Remove existing interceptor if any
-  if (interceptorId !== null) {
-    axios.interceptors.response.eject(interceptorId);
-  }
-  
-  interceptorId = axios.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401 && logoutCallback) {
-        logoutCallback();
-      }
-      return Promise.reject(error);
-    }
-  );
-};
-
 const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [token, setToken] = useState(() => localStorage.getItem("token"));
+  const [loading, setLoading] = useState(false);
 
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    delete axios.defaults.headers.common["Authorization"];
   };
-
-  // Set the logout callback for interceptor
-  useEffect(() => {
-    logoutCallback = logout;
-  }, []);
-
-  useEffect(() => {
-    if (initialized) return;
-    
-    const initAuth = async () => {
-      const savedToken = localStorage.getItem("token");
-      const savedUser = localStorage.getItem("user");
-      
-      if (savedToken && savedUser) {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-        setupAxiosInterceptors(savedToken);
-        
-        // Verify token
-        try {
-          const response = await axios.get(`${API}/auth/me`);
-          setUser(response.data);
-        } catch (error) {
-          logout();
-        }
-      }
-      setLoading(false);
-      setInitialized(true);
-    };
-    
-    initAuth();
-  }, [initialized]);
 
   const login = (newToken, userData) => {
     setToken(newToken);
     setUser(userData);
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(userData));
-    setupAxiosInterceptors(newToken);
   };
+
+  // Set axios header when token changes
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+    }
+  }, [token]);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, loading }}>
