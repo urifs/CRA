@@ -3098,6 +3098,56 @@ async def delete_centro_custo(id: str, current_user: dict = Depends(get_current_
     await create_audit_log(current_user, "delete", "centro_custo", id, centro["nome"])
     return {"message": "Centro de custo excluído"}
 
+# --- Formas de Pagamento ---
+@api_router.get("/admin/formas-pagamento")
+async def get_formas_pagamento(
+    ativo: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if ativo is not None:
+        query["ativo"] = ativo
+    
+    formas = await db.formas_pagamento.find(query, {"_id": 0}).sort("nome", 1).to_list(1000)
+    return formas
+
+@api_router.post("/admin/formas-pagamento")
+async def create_forma_pagamento(data: FormaPagamentoCreate, current_user: dict = Depends(get_current_user)):
+    forma = {
+        "id": str(uuid.uuid4()),
+        **data.model_dump(),
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.formas_pagamento.insert_one(forma)
+    await create_audit_log(current_user, "create", "forma_pagamento", forma["id"], data.nome)
+    del forma["_id"]
+    return forma
+
+@api_router.put("/admin/formas-pagamento/{id}")
+async def update_forma_pagamento(id: str, data: FormaPagamentoCreate, current_user: dict = Depends(get_current_user)):
+    forma = await db.formas_pagamento.find_one({"id": id}, {"_id": 0})
+    if not forma:
+        raise HTTPException(status_code=404, detail="Forma de pagamento não encontrada")
+    
+    update_data = data.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.formas_pagamento.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "forma_pagamento", id, data.nome)
+    
+    updated = await db.formas_pagamento.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/formas-pagamento/{id}")
+async def delete_forma_pagamento(id: str, current_user: dict = Depends(get_current_user)):
+    forma = await db.formas_pagamento.find_one({"id": id}, {"_id": 0})
+    if not forma:
+        raise HTTPException(status_code=404, detail="Forma de pagamento não encontrada")
+    
+    await db.formas_pagamento.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "forma_pagamento", id, forma["nome"])
+    return {"message": "Forma de pagamento excluída"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
