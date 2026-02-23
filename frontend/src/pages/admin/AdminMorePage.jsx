@@ -17,25 +17,25 @@ export default function AdminMorePage() {
 
   const menuItems = [
     { 
-      path: "/admin/plano-contas", 
+      path: "/administrativo/plano-contas", 
       icon: DollarSign, 
       label: "Plano de Contas",
       description: "Categorias financeiras"
     },
     { 
-      path: "/admin/fornecedores", 
+      path: "/administrativo/fornecedores", 
       icon: Users, 
       label: "Fornecedores",
       description: "Cadastro de fornecedores"
     },
     { 
-      path: "/admin/produtos", 
+      path: "/administrativo/produtos", 
       icon: Package, 
       label: "Produtos",
       description: "Cadastro de produtos"
     },
     { 
-      path: "/admin/ordens-servico", 
+      path: "/administrativo/ordens-servico", 
       icon: ClipboardList, 
       label: "Ordens de Serviço",
       description: "Gerenciar OS"
