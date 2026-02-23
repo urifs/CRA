@@ -146,8 +146,8 @@ const PublicRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="spinner w-12 h-12"></div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="spinner w-12 h-12 border-t-orange-500"></div>
       </div>
     );
   }
