@@ -200,10 +200,15 @@ export default function CentroCustoPage() {
               </div>
               <div>
                 <label className="form-label">Status</label>
-                <select className="form-select" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </select>
+                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                  <SelectTrigger className="w-full h-11">
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
