@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug - Limpar Cache</title>
+    <style>
+        body { font-family: Arial; padding: 40px; background: #1e293b; color: white; }
+        button { padding: 15px 30px; font-size: 16px; margin: 10px; cursor: pointer; background: #f97316; border: none; color: white; border-radius: 8px; }
+        button:hover { background: #ea580c; }
+        .status { margin: 20px 0; padding: 15px; background: #334155; border-radius: 8px; }
+        a { color: #f97316; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Página de Debug - CRA Construtora</h1>
+    
+    <div class="status" id="status">Clique nos botões abaixo para limpar o cache</div>
+    
+    <button onclick="clearAll()">🗑️ Limpar Tudo (Cache + Storage + SW)</button>
+    <button onclick="clearSW()">🔄 Desregistrar Service Workers</button>
+    <button onclick="clearStorage()">💾 Limpar LocalStorage</button>
+    <button onclick="goToLogin()">➡️ Ir para Login</button>
+    
+    <script>
+        function log(msg) {
+            document.getElementById('status').innerHTML += '<br>' + msg;
+            console.log(msg);
+        }
+        
+        async function clearSW() {
+            log('Removendo Service Workers...');
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let reg of registrations) {
+                    await reg.unregister();
+                    log('✅ SW removido: ' + reg.scope);
+                }
+                if (registrations.length === 0) {
+                    log('ℹ️ Nenhum Service Worker encontrado');
+                }
+            } else {
+                log('ℹ️ Service Worker não suportado');
+            }
+        }
+        
+        function clearStorage() {
+            log('Limpando LocalStorage...');
+            localStorage.clear();
+            sessionStorage.clear();
+            log('✅ Storage limpo');
+        }
+        
+        async function clearAll() {
+            log('Iniciando limpeza completa...');
+            await clearSW();
+            clearStorage();
+            
+            if ('caches' in window) {
+                log('Limpando caches...');
+                const names = await caches.keys();
+                for (let name of names) {
+                    await caches.delete(name);
+                    log('✅ Cache removido: ' + name);
+                }
+            }
+            
+            log('🎉 Limpeza completa! Agora clique em "Ir para Login"');
+        }
+        
+        function goToLogin() {
+            window.location.href = '/login';
+        }
+        
+        // Auto-check status
+        (async function() {
+            log('Verificando status...');
+            
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                log('Service Workers ativos: ' + regs.length);
+            }
+            
+            log('Token no localStorage: ' + (localStorage.getItem('token') ? 'SIM' : 'NÃO'));
+            
+            if ('caches' in window) {
+                const names = await caches.keys();
+                log('Caches: ' + (names.length > 0 ? names.join(', ') : 'Nenhum'));
+            }
+        })();
+    </script>
+</body>
+</html>
