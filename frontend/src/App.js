@@ -147,7 +147,7 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Public Route (redirect to dashboard if logged in)
+// Public Route (redirect to system select if logged in)
 const PublicRoute = ({ children }) => {
   const { token, loading } = useAuth();
 
@@ -160,7 +160,7 @@ const PublicRoute = ({ children }) => {
   }
 
   if (token) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/select-system" replace />;
   }
 
   return children;
