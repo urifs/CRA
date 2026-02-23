@@ -474,13 +474,19 @@ export default function AlugueisPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Tipo de Período *</label>
-                <select 
-                  className="form-select" 
+                <Select 
                   value={formData.tipo_periodo} 
-                  onChange={(e) => setFormData({...formData, tipo_periodo: e.target.value})}
+                  onValueChange={(value) => setFormData({...formData, tipo_periodo: value})}
                 >
-                  {tiposPeriodo.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+                  <SelectTrigger className="w-full h-11">
+                    <SelectValue placeholder="Selecione o período" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {tiposPeriodo.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {formData.tipo_periodo === "outro" && (
                 <div>
