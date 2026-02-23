@@ -33,7 +33,7 @@ import ContasPagarPage from "@/pages/admin/ContasPagarPage";
 import ContasReceberPage from "@/pages/admin/ContasReceberPage";
 import PlanoContasPage from "@/pages/admin/PlanoContasPage";
 import NFEPage from "@/pages/admin/NFEPage";
-import FornecedoresPage from "@/pages/admin/FornecedoresPage";
+import CadastrosPage from "@/pages/admin/CadastrosPage";
 import ProdutosPage from "@/pages/admin/ProdutosPage";
 import OrdensServicoPage from "@/pages/admin/OrdensServicoPage";
 import AdminMorePage from "@/pages/admin/AdminMorePage";
