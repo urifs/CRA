@@ -346,20 +346,24 @@ export default function ContasPagarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Plano de Contas</label>
-                <select className="form-select" value={formData.plano_conta_id} onChange={(e) => {
-                  const pc = planoContas.find(p => p.id === e.target.value);
-                  setFormData({...formData, plano_conta_id: e.target.value, plano_conta_nome: pc?.nome || ""});
+                <Select value={formData.plano_conta_id} onValueChange={(value) => {
+                  const pc = planoContas.find(p => p.id === value);
+                  setFormData({...formData, plano_conta_id: value, plano_conta_nome: pc?.nome || ""});
                 }}>
-                  <option value="">Selecione...</option>
-                  {planoContas.map(p => <option key={p.id} value={p.id}>{p.codigo ? `${p.codigo} - ` : ""}{p.nome}</option>)}
-                </select>
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {planoContas.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo ? `${p.codigo} - ` : ""}{p.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="form-label">Centro de Custo</label>
-                <select className="form-select" value={formData.centro_custo} onChange={(e) => setFormData({...formData, centro_custo: e.target.value})}>
-                  <option value="">Selecione...</option>
-                  {centrosCusto.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-                </select>
+                <Select value={formData.centro_custo} onValueChange={(value) => setFormData({...formData, centro_custo: value})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {centrosCusto.map(c => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
