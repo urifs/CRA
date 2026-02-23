@@ -169,7 +169,10 @@ function App() {
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
           
-          {/* Protected routes */}
+          {/* System selection */}
+          <Route path="/select-system" element={<ProtectedRoute><SystemSelectPage /></ProtectedRoute>} />
+          
+          {/* Gerenciamento Geral routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
@@ -187,6 +190,20 @@ function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="more" element={<MorePage />} />
+          </Route>
+
+          {/* Administrativo routes */}
+          <Route path="/administrativo" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/administrativo/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboardPage />} />
+            <Route path="a-pagar" element={<ContasPagarPage />} />
+            <Route path="a-receber" element={<ContasReceberPage />} />
+            <Route path="plano-contas" element={<PlanoContasPage />} />
+            <Route path="nfe" element={<NFEPage />} />
+            <Route path="fornecedores" element={<FornecedoresPage />} />
+            <Route path="produtos" element={<ProdutosPage />} />
+            <Route path="ordens-servico" element={<OrdensServicoPage />} />
+            <Route path="more" element={<AdminMorePage />} />
           </Route>
           
           {/* Catch all */}
