@@ -2256,6 +2256,7 @@ class OrdemServicoResponse(BaseModel):
     valor_restante: Optional[float] = 0
     status: str
     confirmada: bool = False
+    tipo_financeiro: Optional[str] = None  # a_pagar, a_receber, nenhum
     descricao: Optional[str] = None
     observacoes: Optional[str] = None
     itens: Optional[List[dict]] = []
