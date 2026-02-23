@@ -298,23 +298,32 @@ export default function CadastrosPage() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="form-label">Tipo de Cadastro *</label>
-                <select className="form-select" value={formData.tipo_cadastro} onChange={(e) => setFormData({...formData, tipo_cadastro: e.target.value})} required>
-                  {tiposCadastro.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+                <Select value={formData.tipo_cadastro} onValueChange={(v) => setFormData({...formData, tipo_cadastro: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {tiposCadastro.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="form-label">Pessoa *</label>
-                <select className="form-select" value={formData.tipo_pessoa} onChange={(e) => setFormData({...formData, tipo_pessoa: e.target.value})}>
-                  <option value="PF">Pessoa Física</option>
-                  <option value="PJ">Pessoa Jurídica</option>
-                </select>
+                <Select value={formData.tipo_pessoa} onValueChange={(v) => setFormData({...formData, tipo_pessoa: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="PF">Pessoa Física</SelectItem>
+                    <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="form-label">Status *</label>
-                <select className="form-select" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </select>
+                <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
