@@ -2323,6 +2323,68 @@ class FormaPagamentoResponse(BaseModel):
     observacoes: Optional[str] = None
     created_at: str
 
+# --- Aluguéis de Máquinas ---
+class AluguelCreate(BaseModel):
+    # Máquina
+    maquina_id: str
+    maquina_nome: Optional[str] = None
+    maquina_placa: Optional[str] = None
+    
+    # Cliente/Locatário
+    cliente_nome: str
+    cliente_telefone: Optional[str] = None
+    cliente_documento: Optional[str] = None  # CPF/CNPJ
+    
+    # Período
+    tipo_periodo: str  # diaria, semanal, quinzenal, mensal, semestral, anual, hora, outro
+    periodo_especificado: Optional[str] = None  # quando tipo_periodo = outro
+    
+    # Datas
+    data_entrega: str  # data que a máquina foi entregue
+    data_vencimento: str  # data que deve ser devolvida/paga
+    data_devolucao: Optional[str] = None  # data real de devolução
+    
+    # Valores
+    valor: float
+    valor_caucao: Optional[float] = 0  # valor de caução/garantia
+    
+    # Local
+    local_entrega: Optional[str] = None
+    
+    # Status e observações
+    status: str = "ativo"  # ativo, finalizado, cancelado
+    observacoes: Optional[str] = None
+    
+    # Gerar conta a receber
+    gerar_conta_receber: bool = True
+
+class AluguelResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    numero: int
+    maquina_id: str
+    maquina_nome: Optional[str] = None
+    maquina_placa: Optional[str] = None
+    cliente_nome: str
+    cliente_telefone: Optional[str] = None
+    cliente_documento: Optional[str] = None
+    tipo_periodo: str
+    periodo_especificado: Optional[str] = None
+    data_entrega: str
+    data_vencimento: str
+    data_devolucao: Optional[str] = None
+    valor: float
+    valor_caucao: Optional[float] = 0
+    local_entrega: Optional[str] = None
+    status: str
+    observacoes: Optional[str] = None
+    conta_receber_id: Optional[str] = None
+    created_at: str
+
+# --- Configurações do Sistema ---
+class ConfiguracaoNotificacao(BaseModel):
+    prazo_dias: int = 7  # dias antes do vencimento para notificar
+
 # ============ ADMIN ENDPOINTS ============
 
 # --- Funções auxiliares para auto-incremento ---
