@@ -72,6 +72,13 @@ export default function ContasPagarPage() {
     } catch (error) { console.error(error); }
   };
 
+  const fetchFormasPagamento = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/formas-pagamento?ativo=true`);
+      setFormasPagamentoDB(response.data);
+    } catch (error) { console.error(error); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
