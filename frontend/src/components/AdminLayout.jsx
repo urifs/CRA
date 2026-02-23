@@ -112,8 +112,8 @@ export const AdminLayout = () => {
           <p className="text-xs text-blue-400 mt-1">Sistema Financeiro</p>
         </div>
 
-        {/* Navigation */}
-        <nav className="py-2" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+        {/* Navigation - Scrollable */}
+        <div className="sidebar-nav py-2">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -128,7 +128,7 @@ export const AdminLayout = () => {
               <span className="flex-1">{item.label}</span>
             </NavLink>
           ))}
-        </nav>
+        </div>
 
         {/* User info */}
         <div className="p-3 border-t border-blue-800" style={{ flexShrink: 0 }}>
