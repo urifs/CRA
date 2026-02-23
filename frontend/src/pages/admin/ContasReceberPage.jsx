@@ -5,358 +5,338 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
-  Plus, 
-  Search, 
-  Wallet,
-  Calendar,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Edit,
-  Trash2
+  Plus, Search, Wallet, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const formasPagamento = [
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "pix", label: "PIX" },
+  { value: "cartao_debito", label: "Cartão Débito" },
+  { value: "cartao_credito", label: "Cartão Crédito" },
+  { value: "boleto", label: "Boleto" },
+  { value: "cheque", label: "Cheque" },
+  { value: "transferencia", label: "Transferência" },
+  { value: "deposito", label: "Depósito" },
+];
 
 export default function ContasReceberPage() {
   const [contas, setContas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("todas");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterVencimento, setFilterVencimento] = useState("");
+  const [filterFormaPag, setFilterFormaPag] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
+  const [planoContas, setPlanoContas] = useState([]);
+  const [centrosCusto, setCentrosCusto] = useState([]);
+  
   const [formData, setFormData] = useState({
-    descricao: "",
-    valor: "",
-    vencimento: "",
-    cliente: "",
-    categoria: "",
-    observacoes: ""
+    cliente_nome: "", documento: "", numero_doc: "", descricao: "",
+    valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
+    data_emissao: "", data_vencimento: "",
+    plano_conta_id: "", plano_conta_nome: "", centro_custo: "",
+    forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: ""
   });
 
-  useEffect(() => {
-    fetchContas();
-  }, []);
+  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); }, [filterStatus, filterVencimento, filterFormaPag]);
 
   const fetchContas = async () => {
     try {
-      const response = await axios.get(`${API}/admin/contas-receber`);
+      let url = `${API}/admin/contas-receber`;
+      const params = new URLSearchParams();
+      if (filterStatus) params.append("status", filterStatus);
+      if (filterVencimento) params.append("vencimento", filterVencimento);
+      if (filterFormaPag) params.append("forma_pagamento", filterFormaPag);
+      if (params.toString()) url += `?${params.toString()}`;
+      const response = await axios.get(url);
       setContas(response.data);
-    } catch (error) {
-      console.error("Erro ao carregar contas:", error);
-      toast.error("Erro ao carregar contas a receber");
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { toast.error("Erro ao carregar contas"); }
+    finally { setLoading(false); }
+  };
+
+  const fetchPlanoContas = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/plano-contas?tipo=receita`);
+      setPlanoContas(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const fetchCentrosCusto = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/centros-custo`);
+      setCentrosCusto(response.data);
+    } catch (error) { console.error(error); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const dataToSend = {
+        ...formData,
+        valor: parseFloat(formData.valor) || 0,
+        valor_desconto: parseFloat(formData.valor_desconto) || 0,
+        valor_juros: parseFloat(formData.valor_juros) || 0,
+        valor_multa: parseFloat(formData.valor_multa) || 0,
+      };
       if (editingConta) {
-        await axios.put(`${API}/admin/contas-receber/${editingConta.id}`, formData);
-        toast.success("Conta atualizada com sucesso!");
+        await axios.put(`${API}/admin/contas-receber/${editingConta.id}`, dataToSend);
+        toast.success("Conta atualizada!");
       } else {
-        await axios.post(`${API}/admin/contas-receber`, formData);
-        toast.success("Conta cadastrada com sucesso!");
+        await axios.post(`${API}/admin/contas-receber`, dataToSend);
+        toast.success("Conta cadastrada!");
       }
-      fetchContas();
-      closeModal();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao salvar conta");
-    }
+      fetchContas(); closeModal();
+    } catch (error) { toast.error(error.response?.data?.detail || "Erro ao salvar"); }
   };
 
-  const handleReceber = async (id) => {
+  const handleQuitar = async (id) => {
     try {
-      await axios.patch(`${API}/admin/contas-receber/${id}/receber`);
-      toast.success("Conta marcada como recebida!");
-      fetchContas();
-    } catch (error) {
-      toast.error("Erro ao marcar conta como recebida");
-    }
+      await axios.patch(`${API}/admin/contas-receber/${id}/quitar`);
+      toast.success("Conta quitada!"); fetchContas();
+    } catch (error) { toast.error("Erro ao quitar"); }
+  };
+
+  const handleCancelar = async (id) => {
+    if (!window.confirm("Cancelar esta conta?")) return;
+    try {
+      await axios.patch(`${API}/admin/contas-receber/${id}/cancelar`);
+      toast.success("Conta cancelada!"); fetchContas();
+    } catch (error) { toast.error("Erro ao cancelar"); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Deseja realmente excluir esta conta?")) return;
+    if (!window.confirm("Excluir esta conta?")) return;
     try {
       await axios.delete(`${API}/admin/contas-receber/${id}`);
-      toast.success("Conta excluída com sucesso!");
-      fetchContas();
-    } catch (error) {
-      toast.error("Erro ao excluir conta");
-    }
+      toast.success("Conta excluída!"); fetchContas();
+    } catch (error) { toast.error("Erro ao excluir"); }
   };
 
   const openModal = (conta = null) => {
     if (conta) {
       setEditingConta(conta);
       setFormData({
-        descricao: conta.descricao,
-        valor: conta.valor.toString(),
-        vencimento: conta.vencimento.split("T")[0],
-        cliente: conta.cliente || "",
-        categoria: conta.categoria || "",
+        cliente_nome: conta.cliente_nome || "",
+        documento: conta.documento || "",
+        numero_doc: conta.numero_doc || "",
+        descricao: conta.descricao || "",
+        valor: conta.valor?.toString() || "",
+        valor_desconto: conta.valor_desconto?.toString() || "0",
+        valor_juros: conta.valor_juros?.toString() || "0",
+        valor_multa: conta.valor_multa?.toString() || "0",
+        data_emissao: conta.data_emissao || "",
+        data_vencimento: conta.data_vencimento || "",
+        plano_conta_id: conta.plano_conta_id || "",
+        plano_conta_nome: conta.plano_conta_nome || "",
+        centro_custo: conta.centro_custo || "",
+        forma_pagamento: conta.forma_pagamento || "boleto",
+        conta_movimento: conta.conta_movimento || "",
+        faturamento: conta.faturamento || "",
         observacoes: conta.observacoes || ""
       });
     } else {
       setEditingConta(null);
       setFormData({
-        descricao: "",
-        valor: "",
-        vencimento: "",
-        cliente: "",
-        categoria: "",
-        observacoes: ""
+        cliente_nome: "", documento: "", numero_doc: "", descricao: "",
+        valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
+        data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "",
+        plano_conta_id: "", plano_conta_nome: "", centro_custo: "",
+        forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: ""
       });
     }
     setIsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingConta(null);
+  const closeModal = () => { setIsModalOpen(false); setEditingConta(null); };
+
+  const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+  const getStatusInfo = (conta) => {
+    if (conta.status === "quitada") return { label: "Quitada", color: "bg-green-100 text-green-700", icon: CheckCircle2 };
+    if (conta.status === "cancelada") return { label: "Cancelada", color: "bg-slate-100 text-slate-700", icon: X };
+    const hoje = new Date().toISOString().split("T")[0];
+    if (conta.data_vencimento < hoje) return { label: "Vencida", color: "bg-red-100 text-red-700", icon: AlertCircle };
+    if (conta.data_vencimento === hoje) return { label: "Vence Hoje", color: "bg-orange-100 text-orange-700", icon: Clock };
+    return { label: "Em Aberto", color: "bg-blue-100 text-blue-700", icon: Calendar };
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value || 0);
-  };
+  const filteredContas = contas.filter(c =>
+    c.descricao?.toLowerCase().includes(search.toLowerCase()) ||
+    c.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ||
+    c.documento?.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const getStatus = (conta) => {
-    if (conta.recebido) return { label: "Recebido", color: "bg-green-100 text-green-700", icon: CheckCircle2 };
-    const hoje = new Date();
-    const vencimento = new Date(conta.vencimento);
-    if (vencimento < hoje) return { label: "Atrasada", color: "bg-red-100 text-red-700", icon: AlertCircle };
-    const diffDays = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 7) return { label: "Próxima", color: "bg-orange-100 text-orange-700", icon: Clock };
-    return { label: "A vencer", color: "bg-blue-100 text-blue-700", icon: Calendar };
-  };
+  // Totais
+  const totalEmAberto = filteredContas.filter(c => c.status === "em_aberto").reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
+  const totalVencidas = filteredContas.filter(c => c.status === "em_aberto" && c.data_vencimento < new Date().toISOString().split("T")[0]).reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
+  const totalRegistros = filteredContas.length;
 
-  const filteredContas = contas.filter(conta => {
-    const matchSearch = conta.descricao.toLowerCase().includes(search.toLowerCase()) ||
-                       (conta.cliente && conta.cliente.toLowerCase().includes(search.toLowerCase()));
-    
-    if (filter === "todas") return matchSearch;
-    if (filter === "pendentes") return matchSearch && !conta.recebido;
-    if (filter === "recebidas") return matchSearch && conta.recebido;
-    if (filter === "atrasadas") return matchSearch && !conta.recebido && new Date(conta.vencimento) < new Date();
-    return matchSearch;
-  });
-
-  const totalPendente = filteredContas.filter(c => !c.recebido).reduce((sum, c) => sum + c.valor, 0);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="spinner w-12 h-12"></div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center min-h-[400px]"><div className="spinner w-12 h-12"></div></div>;
 
   return (
     <div data-testid="contas-receber-page">
-      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Contas a Receber</h1>
-          <p className="text-slate-500 mt-1">Gerenciamento de receitas</p>
+          <p className="text-slate-500 mt-1">Gestão de receitas e recebimentos</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-green-600 hover:bg-green-700" data-testid="new-conta-receber-btn">
-          <Plus size={18} className="mr-2" />
-          Nova Conta
-        </Button>
+        <Button onClick={() => openModal()} className="bg-green-600 hover:bg-green-700"><Plus size={18} className="mr-2" />Nova Conta</Button>
       </div>
 
-      {/* Summary */}
-      <Card className="mb-6 border-l-4 border-l-green-500">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Total a Receber</p>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPendente)}</p>
-            </div>
-            <Wallet className="text-green-500" size={32} />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Resumo */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card className="border-l-4 border-l-blue-500"><CardContent className="p-4">
+          <p className="text-sm text-slate-500">Total Em Aberto</p>
+          <p className="text-xl font-bold text-blue-600">{formatCurrency(totalEmAberto)}</p>
+        </CardContent></Card>
+        <Card className="border-l-4 border-l-red-500"><CardContent className="p-4">
+          <p className="text-sm text-slate-500">Total Vencidas</p>
+          <p className="text-xl font-bold text-red-600">{formatCurrency(totalVencidas)}</p>
+        </CardContent></Card>
+        <Card className="border-l-4 border-l-slate-500"><CardContent className="p-4">
+          <p className="text-sm text-slate-500">Registros</p>
+          <p className="text-xl font-bold text-slate-600">{totalRegistros}</p>
+        </CardContent></Card>
+      </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
+      {/* Filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div className="relative md:col-span-2">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-          <Input
-            placeholder="Buscar por descrição ou cliente..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-            data-testid="search-contas-receber"
-          />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
-          {["todas", "pendentes", "atrasadas", "recebidas"].map((f) => (
-            <Button
-              key={f}
-              variant={filter === f ? "default" : "outline"}
-              onClick={() => setFilter(f)}
-              className={filter === f ? "bg-green-600" : ""}
-              size="sm"
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Button>
-          ))}
-        </div>
+        <select className="form-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+          <option value="">Todos Status</option>
+          <option value="em_aberto">Em Aberto</option>
+          <option value="quitada">Quitadas</option>
+          <option value="cancelada">Canceladas</option>
+        </select>
+        <select className="form-select" value={filterVencimento} onChange={(e) => setFilterVencimento(e.target.value)}>
+          <option value="">Vencimento</option>
+          <option value="vencidas">Vencidas</option>
+          <option value="hoje">Hoje</option>
+          <option value="a_vencer">A Vencer</option>
+        </select>
+        <select className="form-select" value={filterFormaPag} onChange={(e) => setFilterFormaPag(e.target.value)}>
+          <option value="">Forma Pagamento</option>
+          {formasPagamento.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
       </div>
 
-      {/* Lista */}
+      {/* Tabela */}
       {filteredContas.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-slate-400">
-            <Wallet className="mx-auto mb-4" size={48} />
-            <p className="font-medium">Nenhuma conta encontrada</p>
-            <p className="text-sm">Cadastre uma nova conta a receber</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="py-12 text-center text-slate-400"><Wallet className="mx-auto mb-4" size={48} /><p>Nenhuma conta encontrada</p></CardContent></Card>
       ) : (
-        <div className="space-y-3">
-          {filteredContas.map((conta) => {
-            const status = getStatus(conta);
-            const StatusIcon = status.icon;
-            return (
-              <Card key={conta.id} className="hover:shadow-md transition-shadow" data-testid={`conta-receber-${conta.id}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-slate-900 truncate">{conta.descricao}</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                          <StatusIcon className="inline mr-1" size={12} />
-                          {status.label}
-                        </span>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow text-sm">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="text-left p-3 font-medium text-slate-600">Núm.</th>
+                <th className="text-left p-3 font-medium text-slate-600">Cliente</th>
+                <th className="text-left p-3 font-medium text-slate-600">Descrição</th>
+                <th className="text-left p-3 font-medium text-slate-600">Documento</th>
+                <th className="text-left p-3 font-medium text-slate-600">Emissão</th>
+                <th className="text-left p-3 font-medium text-slate-600">Vencimento</th>
+                <th className="text-right p-3 font-medium text-slate-600">Valor R$</th>
+                <th className="text-left p-3 font-medium text-slate-600">Forma Pag.</th>
+                <th className="text-left p-3 font-medium text-slate-600">Status</th>
+                <th className="text-center p-3 font-medium text-slate-600">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredContas.map((c) => {
+                const status = getStatusInfo(c);
+                const StatusIcon = status.icon;
+                return (
+                  <tr key={c.id} className="border-t hover:bg-slate-50">
+                    <td className="p-3 font-mono">{c.numero}</td>
+                    <td className="p-3">{c.cliente_nome || "-"}</td>
+                    <td className="p-3 max-w-[200px] truncate">{c.descricao}</td>
+                    <td className="p-3">{c.documento || "-"}</td>
+                    <td className="p-3">{c.data_emissao ? new Date(c.data_emissao).toLocaleDateString('pt-BR') : "-"}</td>
+                    <td className="p-3">{new Date(c.data_vencimento).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3 text-right font-medium text-green-600">{formatCurrency(c.valor_final || c.valor)}</td>
+                    <td className="p-3 text-xs">{formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
+                    <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${status.color}`}><StatusIcon className="inline mr-1" size={12} />{status.label}</span></td>
+                    <td className="p-3 text-center">
+                      <div className="flex justify-center gap-1">
+                        {c.status === "em_aberto" && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleQuitar(c.id)} title="Quitar"><CheckCircle2 size={14} /></Button>}
+                        <Button size="sm" variant="outline" onClick={() => openModal(c)}><Edit size={14} /></Button>
+                        {c.status === "em_aberto" && <Button size="sm" variant="outline" className="text-orange-600" onClick={() => handleCancelar(c.id)} title="Cancelar"><X size={14} /></Button>}
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></Button>
                       </div>
-                      {conta.cliente && (
-                        <p className="text-sm text-slate-500">Cliente: {conta.cliente}</p>
-                      )}
-                      <p className="text-sm text-slate-500">
-                        Vencimento: {new Date(conta.vencimento).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">{formatCurrency(conta.valor)}</p>
-                      <div className="flex gap-1 mt-2">
-                        {!conta.recebido && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-green-600 hover:bg-green-50"
-                            onClick={() => handleReceber(conta.id)}
-                          >
-                            <CheckCircle2 size={16} />
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" onClick={() => openModal(conta)}>
-                          <Edit size={16} />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="text-red-600 hover:bg-red-50"
-                          onClick={() => handleDelete(conta.id)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingConta ? "Editar Conta" : "Nova Conta a Receber"}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{editingConta ? "Editar Conta a Receber" : "Nova Conta a Receber"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2">
+                <label className="form-label">Cliente</label>
+                <Input value={formData.cliente_nome} onChange={(e) => setFormData({...formData, cliente_nome: e.target.value})} />
+              </div>
+              <div>
+                <label className="form-label">Forma de Pagamento</label>
+                <select className="form-select" value={formData.forma_pagamento} onChange={(e) => setFormData({...formData, forma_pagamento: e.target.value})}>
+                  {formasPagamento.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <div><label className="form-label">Documento (NF)</label><Input value={formData.documento} onChange={(e) => setFormData({...formData, documento: e.target.value})} /></div>
+              <div><label className="form-label">Nº Doc.</label><Input value={formData.numero_doc} onChange={(e) => setFormData({...formData, numero_doc: e.target.value})} /></div>
+              <div><label className="form-label">Conta Movimento</label><Input value={formData.conta_movimento} onChange={(e) => setFormData({...formData, conta_movimento: e.target.value})} /></div>
+              <div><label className="form-label">Faturamento</label><Input value={formData.faturamento} onChange={(e) => setFormData({...formData, faturamento: e.target.value})} /></div>
+            </div>
             <div>
               <label className="form-label">Descrição *</label>
-              <Input
-                value={formData.descricao}
-                onChange={(e) => setFormData({...formData, descricao: e.target.value})}
-                placeholder="Ex: Serviço, Venda, Aluguel..."
-                required
-                data-testid="input-descricao-receber"
-              />
+              <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} required />
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              <div><label className="form-label">Valor *</label><Input type="number" step="0.01" value={formData.valor} onChange={(e) => setFormData({...formData, valor: e.target.value})} required /></div>
+              <div><label className="form-label">Desconto</label><Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: e.target.value})} /></div>
+              <div><label className="form-label">Juros</label><Input type="number" step="0.01" value={formData.valor_juros} onChange={(e) => setFormData({...formData, valor_juros: e.target.value})} /></div>
+              <div><label className="form-label">Multa</label><Input type="number" step="0.01" value={formData.valor_multa} onChange={(e) => setFormData({...formData, valor_multa: e.target.value})} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="form-label">Data Emissão</label><Input type="date" value={formData.data_emissao} onChange={(e) => setFormData({...formData, data_emissao: e.target.value})} /></div>
+              <div><label className="form-label">Data Vencimento *</label><Input type="date" value={formData.data_vencimento} onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})} required /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="form-label">Valor *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.valor}
-                  onChange={(e) => setFormData({...formData, valor: e.target.value})}
-                  placeholder="0,00"
-                  required
-                  data-testid="input-valor-receber"
-                />
+                <label className="form-label">Plano de Contas</label>
+                <select className="form-select" value={formData.plano_conta_id} onChange={(e) => {
+                  const pc = planoContas.find(p => p.id === e.target.value);
+                  setFormData({...formData, plano_conta_id: e.target.value, plano_conta_nome: pc?.nome || ""});
+                }}>
+                  <option value="">Selecione...</option>
+                  {planoContas.map(p => <option key={p.id} value={p.id}>{p.codigo ? `${p.codigo} - ` : ""}{p.nome}</option>)}
+                </select>
               </div>
               <div>
-                <label className="form-label">Vencimento *</label>
-                <Input
-                  type="date"
-                  value={formData.vencimento}
-                  onChange={(e) => setFormData({...formData, vencimento: e.target.value})}
-                  required
-                  data-testid="input-vencimento-receber"
-                />
+                <label className="form-label">Centro de Custo</label>
+                <select className="form-select" value={formData.centro_custo} onChange={(e) => setFormData({...formData, centro_custo: e.target.value})}>
+                  <option value="">Selecione...</option>
+                  {centrosCusto.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                </select>
               </div>
             </div>
-            <div>
-              <label className="form-label">Cliente</label>
-              <Input
-                value={formData.cliente}
-                onChange={(e) => setFormData({...formData, cliente: e.target.value})}
-                placeholder="Nome do cliente"
-                data-testid="input-cliente"
-              />
-            </div>
-            <div>
-              <label className="form-label">Categoria</label>
-              <Input
-                value={formData.categoria}
-                onChange={(e) => setFormData({...formData, categoria: e.target.value})}
-                placeholder="Ex: Serviços, Vendas..."
-                data-testid="input-categoria-receber"
-              />
-            </div>
-            <div>
-              <label className="form-label">Observações</label>
-              <Input
-                value={formData.observacoes}
-                onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
-                placeholder="Observações adicionais"
-                data-testid="input-observacoes-receber"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={closeModal} className="flex-1">
-                Cancelar
-              </Button>
-              <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700" data-testid="submit-conta-receber">
-                {editingConta ? "Atualizar" : "Cadastrar"}
-              </Button>
+            <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
+            <div className="flex gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
+              <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">{editingConta ? "Atualizar" : "Cadastrar"}</Button>
             </div>
           </form>
         </DialogContent>
