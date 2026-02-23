@@ -2294,24 +2294,6 @@ class CentroCustoResponse(BaseModel):
     descricao: Optional[str] = None
     status: str
     created_at: str
-    created_at: str
-
-class PlanoContaCreate(BaseModel):
-    codigo: Optional[str] = None
-    nome: str
-    tipo: str  # receita ou despesa
-    grupo: Optional[str] = None
-    descricao: Optional[str] = None
-
-class PlanoContaResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str
-    codigo: Optional[str] = None
-    nome: str
-    tipo: str
-    grupo: Optional[str] = None
-    descricao: Optional[str] = None
-    created_at: str
 
 # ============ ADMIN ENDPOINTS ============
 
