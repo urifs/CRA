@@ -201,15 +201,21 @@ export default function ProdutosPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
           <Input placeholder="Buscar por descrição, código, fabricante..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
-        <select className="form-select" value={filterGrupo} onChange={(e) => setFilterGrupo(e.target.value)}>
-          <option value="">Todos os Grupos</option>
-          {grupos.map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
-        <select className="form-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">Todos Status</option>
-          <option value="ativo">Ativos</option>
-          <option value="inativo">Inativos</option>
-        </select>
+        <Select value={filterGrupo || "all"} onValueChange={(v) => setFilterGrupo(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Todos os Grupos" /></SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="all">Todos os Grupos</SelectItem>
+            {grupos.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus || "all"} onValueChange={(v) => setFilterStatus(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Todos Status" /></SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="ativo">Ativos</SelectItem>
+            <SelectItem value="inativo">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={filterEstoqueBaixo} onChange={(e) => setFilterEstoqueBaixo(e.target.checked)} className="rounded" />
           <span className="text-sm">Estoque Baixo</span>
