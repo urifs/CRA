@@ -3069,35 +3069,9 @@ async def delete_centro_custo(id: str, current_user: dict = Depends(get_current_
     await db.centros_custo.delete_one({"id": id})
     await create_audit_log(current_user, "delete", "centro_custo", id, centro["nome"])
     return {"message": "Centro de custo excluído"}
-    })
-    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - RECEBIDO")
-    return {"message": "Conta marcada como recebida"}
 
-@api_router.delete("/admin/contas-receber/{id}")
-async def delete_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
-    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
-    if not conta:
-        raise HTTPException(status_code=404, detail="Conta não encontrada")
-    
-    await db.contas_receber.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "conta_receber", id, conta["descricao"])
-    return {"message": "Conta excluída"}
-
-# --- Fornecedores ---
-@api_router.get("/admin/fornecedores", response_model=List[FornecedorResponse])
-async def get_fornecedores(current_user: dict = Depends(get_current_user)):
-    fornecedores = await db.fornecedores.find({}, {"_id": 0}).sort("nome", 1).to_list(1000)
-    return fornecedores
-
-@api_router.post("/admin/fornecedores", response_model=FornecedorResponse)
-async def create_fornecedor(data: FornecedorCreate, current_user: dict = Depends(get_current_user)):
-    fornecedor = {
-        "id": str(uuid.uuid4()),
-        "nome": data.nome,
-        "cnpj": data.cnpj,
-        "email": data.email,
-        "telefone": data.telefone,
-        "endereco": data.endereco,
+# Include the router in the main app
+app.include_router(api_router)
         "cidade": data.cidade,
         "estado": data.estado,
         "observacoes": data.observacoes,
