@@ -351,9 +351,12 @@ export default function ProdutosPage() {
               <div><label className="form-label">CEST</label><Input value={formData.cest} onChange={(e) => setFormData({...formData, cest: e.target.value})} /></div>
               <div><label className="form-label">Origem</label><Input value={formData.origem} onChange={(e) => setFormData({...formData, origem: e.target.value})} placeholder="0 = Nacional" /></div>
               <div className="col-span-2"><label className="form-label">Tipo do Item (NF-e)</label>
-                <select className="form-select" value={formData.tipo_item} onChange={(e) => setFormData({...formData, tipo_item: e.target.value})}>
-                  {tiposItem.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+                <Select value={formData.tipo_item} onValueChange={(v) => setFormData({...formData, tipo_item: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    {tiposItem.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-4 gap-4">
