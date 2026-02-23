@@ -161,6 +161,11 @@ export default function ProdutosPage() {
 
   const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
+  const handleGoogleSearch = (produto) => {
+    const query = encodeURIComponent(produto.descricao || produto.codigo_fabricante || produto.codigo_interno);
+    window.open(`https://www.google.com/search?q=${query}`, '_blank');
+  };
+
   const filteredProdutos = produtos.filter(p =>
     p.descricao?.toLowerCase().includes(search.toLowerCase()) ||
     p.codigo_interno?.toLowerCase().includes(search.toLowerCase()) ||
