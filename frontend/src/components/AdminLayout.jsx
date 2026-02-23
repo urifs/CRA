@@ -51,7 +51,7 @@ export const AdminLayout = () => {
     { path: "/administrativo/a-receber", icon: TrendingUp, label: "A Receber" },
     { path: "/administrativo/plano-contas", icon: DollarSign, label: "Plano de Contas" },
     { path: "/administrativo/nfe", icon: FileText, label: "NF-e" },
-    { path: "/administrativo/fornecedores", icon: Users, label: "Fornecedores" },
+    { path: "/administrativo/cadastros", icon: Users, label: "Cadastros" },
     { path: "/administrativo/produtos", icon: Package, label: "Produtos" },
     { path: "/administrativo/ordens-servico", icon: ClipboardList, label: "Ordens de Serviço" },
   ];
