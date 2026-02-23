@@ -1,7 +1,5 @@
-const CACHE_NAME = 'cra-construtora-v1';
+const CACHE_NAME = 'cra-construtora-v2';
 const urlsToCache = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
