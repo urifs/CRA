@@ -14,10 +14,11 @@ import {
   LogOut, 
   Menu, 
   X,
-  Plus,
   Building2,
   ArrowLeft,
-  MoreHorizontal
+  MoreHorizontal,
+  Bell,
+  Truck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +28,7 @@ export const AdminLayout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [notifCount, setNotifCount] = useState({ total: 0, vencidas: 0 });
 
   useEffect(() => {
     const handleResize = () => {
@@ -35,6 +37,22 @@ export const AdminLayout = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    fetchNotifCount();
+    // Atualizar a cada 5 minutos
+    const interval = setInterval(fetchNotifCount, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotifCount = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/notificacoes/contagem?prazo_dias=7`);
+      setNotifCount(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar contagem de notificações:", error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -49,6 +67,7 @@ export const AdminLayout = () => {
     { path: "/administrativo/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/administrativo/a-pagar", icon: TrendingDown, label: "A Pagar" },
     { path: "/administrativo/a-receber", icon: TrendingUp, label: "A Receber" },
+    { path: "/administrativo/alugueis", icon: Truck, label: "Aluguéis" },
     { path: "/administrativo/plano-contas", icon: DollarSign, label: "Plano de Contas" },
     { path: "/administrativo/nfe", icon: FileText, label: "NF-e" },
     { path: "/administrativo/cadastros", icon: Users, label: "Cadastros" },
@@ -60,7 +79,7 @@ export const AdminLayout = () => {
     { path: "/administrativo/dashboard", icon: LayoutDashboard, label: "Início" },
     { path: "/administrativo/a-pagar", icon: TrendingDown, label: "A Pagar" },
     { path: "/administrativo/a-receber", icon: TrendingUp, label: "A Receber" },
-    { path: "/administrativo/nfe", icon: FileText, label: "NF-e" },
+    { path: "/administrativo/notificacoes", icon: Bell, label: "Alertas", badge: notifCount.total },
     { path: "/administrativo/more", icon: MoreHorizontal, label: "Mais" },
   ];
 
@@ -76,13 +95,28 @@ export const AdminLayout = () => {
             <Building2 className="text-blue-300" size={24} />
             <span className="font-heading font-bold">Administrativo</span>
           </div>
-          <button
-            data-testid="admin-mobile-menu-btn"
-            className="p-2 hover:bg-blue-800 rounded-lg"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Notification bell for mobile header */}
+            <button
+              data-testid="admin-mobile-notif-btn"
+              className="p-2 hover:bg-blue-800 rounded-lg relative"
+              onClick={() => navigate("/administrativo/notificacoes")}
+            >
+              <Bell size={22} />
+              {notifCount.total > 0 && (
+                <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-xs font-bold rounded-full ${notifCount.vencidas > 0 ? 'bg-red-500' : 'bg-orange-500'} text-white`}>
+                  {notifCount.total > 99 ? '99+' : notifCount.total}
+                </span>
+              )}
+            </button>
+            <button
+              data-testid="admin-mobile-menu-btn"
+              className="p-2 hover:bg-blue-800 rounded-lg"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -114,6 +148,26 @@ export const AdminLayout = () => {
 
         {/* Navigation - Scrollable */}
         <div className="sidebar-nav py-2">
+          {/* Notification link at top of sidebar */}
+          <NavLink
+            to="/administrativo/notificacoes"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) =>
+              `admin-sidebar-link ${isActive ? "active" : ""} ${notifCount.vencidas > 0 ? "text-orange-300" : ""}`
+            }
+            data-testid="admin-nav-notificacoes"
+          >
+            <Bell size={20} />
+            <span className="flex-1">Notificações</span>
+            {notifCount.total > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${notifCount.vencidas > 0 ? 'bg-red-500' : 'bg-orange-500'} text-white`}>
+                {notifCount.total}
+              </span>
+            )}
+          </NavLink>
+
+          <div className="border-b border-blue-800 my-2" />
+
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -174,7 +228,7 @@ export const AdminLayout = () => {
       <nav className="admin-mobile-nav" data-testid="admin-mobile-bottom-nav">
         {mobileNavItems.map((item) => {
           const isActive = location.pathname === item.path || 
-            (item.path === "/administrativo/more" && ["/administrativo/plano-contas", "/administrativo/fornecedores", "/administrativo/produtos", "/administrativo/ordens-servico"].includes(location.pathname));
+            (item.path === "/administrativo/more" && ["/administrativo/plano-contas", "/administrativo/cadastros", "/administrativo/produtos", "/administrativo/ordens-servico", "/administrativo/alugueis", "/administrativo/centro-custo", "/administrativo/formas-pagamento"].includes(location.pathname));
           
           return (
             <NavLink
@@ -183,7 +237,14 @@ export const AdminLayout = () => {
               className={`mobile-nav-item no-select ${isActive ? "active" : ""}`}
               data-testid={`admin-mobile-nav-${item.path.split('/').pop()}`}
             >
-              <item.icon size={22} />
+              <div className="relative">
+                <item.icon size={22} />
+                {item.badge > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[10px] font-bold rounded-full bg-red-500 text-white">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
+              </div>
               <span>{item.label}</span>
             </NavLink>
           );
