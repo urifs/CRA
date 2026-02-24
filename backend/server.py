@@ -4688,39 +4688,109 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
 
 @api_router.get("/export/pdf/{category}")
 async def export_pdf(category: str, current_user: dict = Depends(get_current_user)):
-    """Exporta dados de uma categoria em PDF"""
+    """Exporta dados de uma categoria em PDF com filtros"""
     
-    # Mapear categoria para coleção e título
-    category_map = {
-        "machines": ("machines", "Máquinas"),
-        "maintenances": ("maintenances", "Manutenções"),
-        "categories": ("categories", "Categorias de Máquinas"),
-        "stock_items": ("stock_items", "Itens de Estoque"),
-        "stock_movements": ("stock_movements", "Movimentações de Estoque"),
-        "obras": ("obras", "Obras e Projetos"),
-        "usage_logs": ("usage_logs", "Registros de Uso"),
-        "contas_pagar": ("contas_pagar", "Contas a Pagar"),
-        "contas_receber": ("contas_receber", "Contas a Receber"),
-        "cadastros": ("cadastros", "Cadastros"),
-        "produtos_admin": ("produtos_admin", "Produtos"),
-        "ordens_servico": ("ordens_servico", "Ordens de Serviço"),
-        "alugueis": ("alugueis", "Aluguéis de Máquinas"),
-        "plano_contas": ("plano_contas", "Plano de Contas"),
-        "centros_custo": ("centros_custo", "Centros de Custo"),
-        "formas_pagamento": ("formas_pagamento", "Formas de Pagamento"),
+    # Mapear categoria para coleção, título e filtro
+    category_configs = {
+        # Máquinas
+        "machines": {"collection": "machines", "title": "Máquinas", "filter": {}},
+        "machines_operational": {"collection": "machines", "title": "Máquinas Operacionais", "filter": {"status": "operational"}},
+        "machines_maintenance": {"collection": "machines", "title": "Máquinas em Manutenção", "filter": {"status": "maintenance"}},
+        "categories": {"collection": "categories", "title": "Categorias de Máquinas", "filter": {}},
+        
+        # Manutenções
+        "maintenances": {"collection": "maintenances", "title": "Manutenções", "filter": {}},
+        "maintenances_preventiva": {"collection": "maintenances", "title": "Manutenções Preventivas", "filter": {"maintenance_type": "preventiva"}},
+        "maintenances_corretiva": {"collection": "maintenances", "title": "Manutenções Corretivas", "filter": {"maintenance_type": "corretiva"}},
+        "maintenances_oil": {"collection": "maintenances", "title": "Trocas de Óleo", "filter": {"is_oil_change": True}},
+        
+        # Estoque
+        "stock_items": {"collection": "stock_items", "title": "Itens de Estoque", "filter": {}},
+        "stock_low": {"collection": "stock_items", "title": "Estoque Baixo", "filter": {"$expr": {"$lte": ["$quantity", "$min_quantity"]}}},
+        "stock_categories": {"collection": "stock_categories", "title": "Categorias de Estoque", "filter": {}},
+        "stock_movements": {"collection": "stock_movements", "title": "Movimentações de Estoque", "filter": {}},
+        "stock_movements_entrada": {"collection": "stock_movements", "title": "Entradas de Estoque", "filter": {"movement_type": "entrada"}},
+        "stock_movements_saida": {"collection": "stock_movements", "title": "Saídas de Estoque", "filter": {"movement_type": "saida"}},
+        
+        # Obras
+        "obras": {"collection": "obras", "title": "Obras e Projetos", "filter": {}},
+        "obras_andamento": {"collection": "obras", "title": "Obras em Andamento", "filter": {"status": "em_andamento"}},
+        "obras_concluidas": {"collection": "obras", "title": "Obras Concluídas", "filter": {"status": "concluida"}},
+        "obras_pausadas": {"collection": "obras", "title": "Obras Pausadas", "filter": {"status": "pausada"}},
+        
+        # Uso
+        "usage_logs": {"collection": "usage_logs", "title": "Registros de Uso", "filter": {}},
+        
+        # Usuários
+        "users": {"collection": "users", "title": "Usuários", "filter": {}},
+        
+        # Auditoria
+        "audit_logs": {"collection": "audit_logs", "title": "Logs de Auditoria", "filter": {}},
+        
+        # Contas a Pagar
+        "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar", "filter": {}},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "pendente"}},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
+        "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas a Pagar Vencidas", "filter": {"status": "pendente", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
+        
+        # Contas a Receber
+        "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber", "filter": {}},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "pendente"}},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas a Receber Vencidas", "filter": {"status": "pendente", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
+        
+        # Cadastros
+        "cadastros": {"collection": "cadastros", "title": "Cadastros", "filter": {}},
+        "cadastros_clientes": {"collection": "cadastros", "title": "Clientes", "filter": {"tipo": "cliente"}},
+        "cadastros_fornecedores": {"collection": "cadastros", "title": "Fornecedores", "filter": {"tipo": "fornecedor"}},
+        
+        # Produtos
+        "produtos_admin": {"collection": "produtos_admin", "title": "Produtos", "filter": {}},
+        
+        # Ordens de Serviço
+        "ordens_servico": {"collection": "ordens_servico", "title": "Ordens de Serviço", "filter": {}},
+        "ordens_servico_aberta": {"collection": "ordens_servico", "title": "OS Abertas", "filter": {"status": "aberta"}},
+        "ordens_servico_andamento": {"collection": "ordens_servico", "title": "OS em Andamento", "filter": {"status": "em_andamento"}},
+        "ordens_servico_concluida": {"collection": "ordens_servico", "title": "OS Concluídas", "filter": {"status": "concluida"}},
+        
+        # Aluguéis
+        "alugueis": {"collection": "alugueis", "title": "Aluguéis de Máquinas", "filter": {}},
+        "alugueis_ativo": {"collection": "alugueis", "title": "Aluguéis Ativos", "filter": {"status": "ativo"}},
+        "alugueis_finalizado": {"collection": "alugueis", "title": "Aluguéis Finalizados", "filter": {"status": "finalizado"}},
+        
+        # Contabilidade
+        "plano_contas": {"collection": "plano_contas", "title": "Plano de Contas", "filter": {}},
+        "plano_contas_receita": {"collection": "plano_contas", "title": "Contas de Receita", "filter": {"tipo": "receita"}},
+        "plano_contas_despesa": {"collection": "plano_contas", "title": "Contas de Despesa", "filter": {"tipo": "despesa"}},
+        "centros_custo": {"collection": "centros_custo", "title": "Centros de Custo", "filter": {}},
+        "formas_pagamento": {"collection": "formas_pagamento", "title": "Formas de Pagamento", "filter": {}},
     }
     
-    if category not in category_map:
-        raise HTTPException(status_code=400, detail="Categoria inválida")
+    if category not in category_configs:
+        raise HTTPException(status_code=400, detail=f"Categoria '{category}' inválida")
     
-    collection_name, title = category_map[category]
+    config = category_configs[category]
+    collection_name = config["collection"]
+    title = config["title"]
+    query_filter = config["filter"]
     
-    # Buscar dados
+    # Buscar dados com filtro
     collection = db[collection_name]
-    data = await collection.find({}, {"_id": 0}).to_list(1000)
+    
+    # Para usuários, não expor senha
+    projection = {"_id": 0}
+    if collection_name == "users":
+        projection["password"] = 0
+    
+    data = await collection.find(query_filter, projection).to_list(1000)
+    
+    # Usar o nome base da coleção para formatação da tabela
+    base_category = collection_name
+    if base_category == "stock_categories":
+        base_category = "categories"
     
     # Gerar PDF
-    pdf_buffer = await generate_pdf_report(category, data, title)
+    pdf_buffer = await generate_pdf_report(base_category, data, title)
     
     # Registrar na auditoria
     await create_audit_log(
