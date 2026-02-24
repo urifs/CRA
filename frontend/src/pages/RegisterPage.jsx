@@ -57,7 +57,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md relative z-10 border-gray-200 shadow-2xl animate-fade-in">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto w-16 h-16 bg-[#E31A1A] rounded-xl flex items-center justify-center mb-4 shadow-lg">
-            <Construction className="text-white" size={32} />
+            <HardHat className="text-white" size={32} />
           </div>
           <CardTitle className="font-heading text-3xl font-black tracking-tight text-black">
             Criar Conta
