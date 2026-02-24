@@ -2085,16 +2085,16 @@ async def get_audit_logs(
     logs = await db.audit_logs.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     
     return [AuditLogResponse(
-        id=l["id"],
-        user_id=l["user_id"],
-        user_name=l["user_name"],
-        user_email=l["user_email"],
-        action=l["action"],
-        entity_type=l["entity_type"],
-        entity_id=l["entity_id"],
-        entity_name=l["entity_name"],
+        id=l.get("id", ""),
+        user_id=l.get("user_id", ""),
+        user_name=l.get("user_name", "Usuário"),
+        user_email=l.get("user_email", ""),
+        action=l.get("action", ""),
+        entity_type=l.get("entity_type", ""),
+        entity_id=l.get("entity_id", ""),
+        entity_name=l.get("entity_name", ""),
         details=l.get("details", ""),
-        created_at=l["created_at"]
+        created_at=l.get("created_at", "")
     ) for l in logs]
 
 # ============ ROOT ============
