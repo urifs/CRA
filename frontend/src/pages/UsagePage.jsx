@@ -142,8 +142,32 @@ export default function UsagePage() {
         </Button>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Input
+          type="text"
+          placeholder="Pesquisar máquinas..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-10 h-10 bg-white border-gray-200"
+          data-testid="search-usage"
+        />
+        {searchTerm && (
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            onClick={() => setSearchTerm("")}
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
       {/* Alert summary */}
-      {alertMachines.length > 0 && (
+      {alertMachines.filter(s => 
+        s.machine_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.machine_plate || "").toLowerCase().includes(searchTerm.toLowerCase())
+      ).length > 0 && (
         <Card className="bg-orange-50 border-orange-200">
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
