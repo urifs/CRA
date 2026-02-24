@@ -16,6 +16,19 @@ import {
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Hook para detectar mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  return isMobile;
+};
+
 // Função para formatar markdown para HTML
 const formatMessage = (text) => {
   if (!text) return "";
@@ -68,6 +81,7 @@ const FormattedMessage = ({ content, accentColor }) => {
 };
 
 export default function ChatbotWidget({ module = "gerenciamento", accentColor = "#E31A1A" }) {
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([
@@ -142,12 +156,15 @@ Como posso ajudar?`
     }
   };
 
+  // Posição do chatbot - acima da barra de navegação no mobile
+  const bottomPosition = isMobile ? 'calc(90px + env(safe-area-inset-bottom))' : '24px';
+
   if (!isOpen) {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg z-50 flex items-center justify-center hover:scale-110 transition-transform"
-        style={{ backgroundColor: accentColor }}
+        className="fixed right-4 md:right-6 w-14 h-14 rounded-full shadow-lg z-40 flex items-center justify-center hover:scale-110 transition-transform"
+        style={{ backgroundColor: accentColor, bottom: bottomPosition }}
         data-testid="chatbot-toggle-btn"
       >
         <MessageCircle size={24} className="text-white" />
@@ -157,9 +174,10 @@ Como posso ajudar?`
 
   return (
     <Card 
-      className={`fixed bottom-6 right-6 z-50 shadow-2xl border-gray-700 bg-gray-900 transition-all duration-300 ${
-        isMinimized ? "w-72 h-14" : "w-96 h-[500px]"
+      className={`fixed right-4 md:right-6 z-40 shadow-2xl border-gray-700 bg-gray-900 transition-all duration-300 ${
+        isMinimized ? "w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[60vh] md:h-[500px] max-h-[500px]"
       }`}
+      style={{ bottom: bottomPosition }}
       data-testid="chatbot-widget"
     >
       {/* Header */}
