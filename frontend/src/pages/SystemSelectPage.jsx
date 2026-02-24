@@ -94,7 +94,7 @@ export default function SystemSelectPage() {
 
   return (
     <div 
-      className="min-h-screen bg-black flex items-center justify-center p-4"
+      className="min-h-screen bg-black flex items-center justify-center p-3 sm:p-4"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {/* Background pattern - same as login page */}
@@ -106,23 +106,24 @@ export default function SystemSelectPage() {
 
       <div className="w-full max-w-4xl relative z-10">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/logo.png" alt="CRA Construtora" className="w-12 h-12 object-contain" />
-            <h1 className="text-3xl md:text-4xl font-heading font-black text-white">
+        <div className="text-center mb-4 sm:mb-8">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <img src="/logo.png" alt="CRA Construtora" className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-heading font-black text-white">
               CRA Construtora
             </h1>
           </div>
-          <p className="text-gray-400">
-            Olá, <span className="text-white font-medium">{user?.name}</span>! {getRoleBadge()}
+          <p className="text-gray-400 text-sm sm:text-base flex flex-wrap items-center justify-center gap-2">
+            <span>Olá, <span className="text-white font-medium">{user?.name}</span>!</span>
+            {getRoleBadge()}
           </p>
-          <p className="text-gray-500 text-sm mt-2">
+          <p className="text-gray-500 text-xs sm:text-sm mt-2">
             Selecione o sistema que deseja acessar:
           </p>
         </div>
 
         {/* System Cards */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 px-1">
           {systems.map((system) => (
             <Card
               key={system.id}
@@ -130,47 +131,47 @@ export default function SystemSelectPage() {
               onClick={() => system.hasAccess && navigate(system.path)}
               data-testid={`system-${system.id}`}
             >
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 {/* Icon and Title */}
-                <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-14 h-14 ${system.color} rounded-xl flex items-center justify-center flex-shrink-0 ${!system.hasAccess && 'grayscale'}`}>
+                <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 ${system.color} rounded-xl flex items-center justify-center flex-shrink-0 ${!system.hasAccess && 'grayscale'}`}>
                     {system.useLogo ? (
-                      <img src="/logo.png" alt="CRA" className="w-10 h-10 object-contain" />
+                      <img src="/logo.png" alt="CRA" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
                     ) : (
-                      <system.icon className={system.id === "administrativo" && system.hasAccess ? "text-black" : "text-white"} size={28} />
+                      <system.icon className={system.id === "administrativo" && system.hasAccess ? "text-black" : "text-white"} size={24} />
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-xl font-bold text-white">{system.title}</h2>
+                      <h2 className="text-lg sm:text-xl font-bold text-white">{system.title}</h2>
                       {!system.hasAccess && (
-                        <Lock size={16} className="text-gray-500" />
+                        <Lock size={14} className="text-gray-500 flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-sm text-gray-400">{system.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-400 line-clamp-2">{system.description}</p>
                   </div>
                 </div>
 
                 {/* Features */}
-                <div className="flex items-center gap-4 mb-4 pt-4 border-t border-gray-700">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-4 pt-3 sm:pt-4 border-t border-gray-700">
                   {system.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 text-gray-300">
-                      <feature.icon size={16} className="text-gray-400" />
-                      <span className="text-sm">{feature.label}</span>
+                    <div key={index} className="flex items-center gap-1 sm:gap-2 text-gray-300">
+                      <feature.icon size={14} className="text-gray-400" />
+                      <span className="text-xs sm:text-sm">{feature.label}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Action */}
-                <div className={`flex items-center justify-end gap-2 text-sm font-medium ${system.hasAccess ? system.textColor : 'text-gray-600'}`}>
+                <div className={`flex items-center justify-end gap-2 text-xs sm:text-sm font-medium ${system.hasAccess ? system.textColor : 'text-gray-600'}`}>
                   {system.hasAccess ? (
                     <>
                       <span>Acessar</span>
-                      <ArrowRight size={18} />
+                      <ArrowRight size={16} />
                     </>
                   ) : (
                     <>
-                      <Lock size={14} />
+                      <Lock size={12} />
                       <span>Sem acesso</span>
                     </>
                   )}
@@ -181,30 +182,32 @@ export default function SystemSelectPage() {
         </div>
 
         {/* Admin Panel Button - Visible for all, accessible only for admin */}
-        <div className="mt-8 flex justify-center">
+        <div className="mt-4 sm:mt-8 flex justify-center px-1">
           <Button
             variant="outline"
-            className={`${canAccessAdminPanel 
+            size="sm"
+            className={`text-xs sm:text-sm ${canAccessAdminPanel 
               ? 'bg-transparent border-green-700 text-green-500 hover:bg-green-900/30 hover:text-green-400 hover:border-green-600' 
               : 'bg-transparent border-gray-700 text-gray-500 hover:bg-gray-800/30'}`}
             onClick={handleAdminPanelClick}
             data-testid="admin-panel-btn"
           >
             {canAccessAdminPanel ? (
-              <Shield size={18} className="mr-2" />
+              <Shield size={16} className="mr-1 sm:mr-2" />
             ) : (
-              <Lock size={18} className="mr-2" />
+              <Lock size={16} className="mr-1 sm:mr-2" />
             )}
-            Painel Administrativo
-            {!canAccessAdminPanel && <span className="ml-2 text-xs">(Restrito)</span>}
+            Painel Admin
+            {!canAccessAdminPanel && <span className="ml-1 sm:ml-2 text-xs">(Restrito)</span>}
           </Button>
         </div>
 
         {/* Logout Button */}
-        <div className="mt-4 flex justify-center pb-8">
+        <div className="mt-3 sm:mt-4 flex justify-center pb-4 sm:pb-8">
           <Button
             variant="ghost"
-            className="text-gray-400 hover:text-white hover:bg-gray-800 active:bg-gray-700 min-h-[48px] px-6"
+            size="sm"
+            className="text-gray-400 hover:text-white hover:bg-gray-800 active:bg-gray-700 min-h-[44px] px-4 sm:px-6 text-xs sm:text-sm"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -212,14 +215,14 @@ export default function SystemSelectPage() {
             }}
             data-testid="logout-btn"
           >
-            <LogOut size={18} className="mr-2" />
+            <LogOut size={16} className="mr-1 sm:mr-2" />
             Sair da conta
           </Button>
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-500 text-sm mt-6">
-          CRA Construtora © 2026 - Sistema de Gestão Empresarial
+        <p className="text-center text-gray-500 text-xs sm:text-sm mt-4 sm:mt-6">
+          CRA Construtora © 2026
         </p>
       </div>
     </div>
