@@ -5396,6 +5396,321 @@ async def delete_task(
     return {"message": "Tarefa excluída com sucesso"}
 
 
+# ============ STORAGE SYSTEM (FILE MANAGER) ============
+
+# Directory for storage system
+STORAGE_DIR = ROOT_DIR / "storage"
+STORAGE_DIR.mkdir(exist_ok=True)
+
+class FolderCreate(BaseModel):
+    name: str
+    parent_path: str = "/"
+
+class RenameItem(BaseModel):
+    path: str
+    new_name: str
+
+@api_router.get("/storage/list")
+async def list_storage_items(
+    path: str = "/",
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """List files and folders in a path"""
+    await get_current_user(credentials)
+    
+    # Normalize path
+    if not path.startswith("/"):
+        path = "/" + path
+    
+    # Build absolute path
+    abs_path = STORAGE_DIR / path.lstrip("/")
+    
+    if not abs_path.exists():
+        abs_path.mkdir(parents=True, exist_ok=True)
+    
+    items = []
+    try:
+        for entry in abs_path.iterdir():
+            rel_path = "/" + str(entry.relative_to(STORAGE_DIR)).replace("\\", "/")
+            
+            if entry.is_dir():
+                # Count items inside folder
+                items_count = len(list(entry.iterdir())) if entry.exists() else 0
+                items.append({
+                    "name": entry.name,
+                    "type": "folder",
+                    "path": rel_path,
+                    "items_count": items_count,
+                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat()
+                })
+            else:
+                items.append({
+                    "name": entry.name,
+                    "type": "file",
+                    "path": rel_path,
+                    "size": entry.stat().st_size,
+                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat()
+                })
+    except Exception as e:
+        logger.error(f"Error listing storage: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao listar arquivos: {str(e)}")
+    
+    # Sort: folders first, then files, both alphabetically
+    items.sort(key=lambda x: (0 if x["type"] == "folder" else 1, x["name"].lower()))
+    
+    return items
+
+@api_router.post("/storage/folder")
+async def create_folder(
+    data: FolderCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Create a new folder"""
+    current_user = await get_current_user(credentials)
+    
+    # Validate folder name
+    if not data.name or "/" in data.name or "\\" in data.name:
+        raise HTTPException(status_code=400, detail="Nome de pasta inválido")
+    
+    # Normalize parent path
+    parent = data.parent_path if data.parent_path.startswith("/") else "/" + data.parent_path
+    
+    # Build full path
+    full_path = STORAGE_DIR / parent.lstrip("/") / data.name
+    
+    if full_path.exists():
+        raise HTTPException(status_code=400, detail="Pasta já existe")
+    
+    try:
+        full_path.mkdir(parents=True, exist_ok=False)
+        
+        # Auditoria
+        await create_audit_log(
+            user=current_user,
+            action="criar pasta",
+            entity_type="storage",
+            entity_id=data.name,
+            entity_name=data.name,
+            details=f"Pasta criada em {parent}",
+            module="Armazenamento"
+        )
+        
+        return {"message": "Pasta criada com sucesso", "path": "/" + str(full_path.relative_to(STORAGE_DIR)).replace("\\", "/")}
+    except Exception as e:
+        logger.error(f"Error creating folder: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao criar pasta: {str(e)}")
+
+@api_router.post("/storage/upload")
+async def upload_storage_file(
+    file: UploadFile = File(...),
+    path: str = Form("/"),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Upload a file to storage"""
+    current_user = await get_current_user(credentials)
+    
+    # Normalize path
+    if not path.startswith("/"):
+        path = "/" + path
+    
+    # Build full path
+    dir_path = STORAGE_DIR / path.lstrip("/")
+    dir_path.mkdir(parents=True, exist_ok=True)
+    
+    # Read file content
+    content = await file.read()
+    
+    # Save file with original name (handle duplicates)
+    filename = file.filename or "arquivo"
+    file_path = dir_path / filename
+    
+    # If file exists, add number suffix
+    counter = 1
+    base_name = Path(filename).stem
+    ext = Path(filename).suffix
+    while file_path.exists():
+        filename = f"{base_name}_{counter}{ext}"
+        file_path = dir_path / filename
+        counter += 1
+    
+    try:
+        with open(file_path, "wb") as f:
+            f.write(content)
+        
+        # Auditoria
+        await create_audit_log(
+            user=current_user,
+            action="upload arquivo",
+            entity_type="storage",
+            entity_id=filename,
+            entity_name=filename,
+            details=f"Arquivo enviado para {path}",
+            module="Armazenamento"
+        )
+        
+        rel_path = "/" + str(file_path.relative_to(STORAGE_DIR)).replace("\\", "/")
+        return {
+            "message": "Arquivo enviado com sucesso",
+            "name": filename,
+            "path": rel_path,
+            "size": len(content)
+        }
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao enviar arquivo: {str(e)}")
+
+@api_router.get("/storage/download")
+async def download_storage_file(
+    path: str,
+    token: Optional[str] = None,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+):
+    """Download a file from storage"""
+    # Support both Authorization header and query param token (for iframe/img src)
+    if not credentials and token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expirado")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Token inválido")
+    elif credentials:
+        await get_current_user(credentials)
+    else:
+        raise HTTPException(status_code=401, detail="Token não fornecido")
+    
+    # Normalize path
+    if not path.startswith("/"):
+        path = "/" + path
+    
+    # Build absolute path
+    abs_path = STORAGE_DIR / path.lstrip("/")
+    
+    if not abs_path.exists() or not abs_path.is_file():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    # Determine content type
+    content_type = "application/octet-stream"
+    ext = abs_path.suffix.lower()
+    content_types = {
+        ".pdf": "application/pdf",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".txt": "text/plain",
+        ".csv": "text/csv",
+        ".json": "application/json",
+        ".xml": "application/xml",
+        ".mp4": "video/mp4",
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".zip": "application/zip"
+    }
+    content_type = content_types.get(ext, content_type)
+    
+    return FileResponse(
+        path=str(abs_path),
+        filename=abs_path.name,
+        media_type=content_type
+    )
+
+@api_router.delete("/storage/delete")
+async def delete_storage_item(
+    path: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Delete a file or folder from storage"""
+    current_user = await get_current_user(credentials)
+    
+    # Normalize path
+    if not path.startswith("/"):
+        path = "/" + path
+    
+    # Build absolute path
+    abs_path = STORAGE_DIR / path.lstrip("/")
+    
+    if not abs_path.exists():
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    item_name = abs_path.name
+    is_folder = abs_path.is_dir()
+    
+    try:
+        if is_folder:
+            import shutil
+            shutil.rmtree(abs_path)
+        else:
+            abs_path.unlink()
+        
+        # Auditoria
+        await create_audit_log(
+            user=current_user,
+            action=f"excluir {'pasta' if is_folder else 'arquivo'}",
+            entity_type="storage",
+            entity_id=item_name,
+            entity_name=item_name,
+            details=f"{'Pasta' if is_folder else 'Arquivo'} excluído: {path}",
+            module="Armazenamento"
+        )
+        
+        return {"message": "Item excluído com sucesso"}
+    except Exception as e:
+        logger.error(f"Error deleting item: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao excluir: {str(e)}")
+
+@api_router.patch("/storage/rename")
+async def rename_storage_item(
+    data: RenameItem,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Rename a file or folder in storage"""
+    current_user = await get_current_user(credentials)
+    
+    # Validate new name
+    if not data.new_name or "/" in data.new_name or "\\" in data.new_name:
+        raise HTTPException(status_code=400, detail="Nome inválido")
+    
+    # Normalize path
+    path = data.path if data.path.startswith("/") else "/" + data.path
+    
+    # Build absolute paths
+    abs_path = STORAGE_DIR / path.lstrip("/")
+    new_path = abs_path.parent / data.new_name
+    
+    if not abs_path.exists():
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    if new_path.exists():
+        raise HTTPException(status_code=400, detail="Já existe um item com esse nome")
+    
+    old_name = abs_path.name
+    
+    try:
+        abs_path.rename(new_path)
+        
+        # Auditoria
+        await create_audit_log(
+            user=current_user,
+            action="renomear",
+            entity_type="storage",
+            entity_id=data.new_name,
+            entity_name=data.new_name,
+            details=f"Renomeado de '{old_name}' para '{data.new_name}'",
+            module="Armazenamento"
+        )
+        
+        return {
+            "message": "Item renomeado com sucesso",
+            "new_path": "/" + str(new_path.relative_to(STORAGE_DIR)).replace("\\", "/")
+        }
+    except Exception as e:
+        logger.error(f"Error renaming item: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao renomear: {str(e)}")
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
