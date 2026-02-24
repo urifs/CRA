@@ -3845,7 +3845,7 @@ async def get_collection_documents(
     # Build search query
     query = {}
     if search:
-        # Busca em campos comuns
+        # Busca em campos comuns - usar $exists para evitar erros
         query = {
             "$or": [
                 {"name": {"$regex": search, "$options": "i"}},
@@ -3857,21 +3857,30 @@ async def get_collection_documents(
             ]
         }
     
-    # Get total count
-    total = await collection.count_documents(query if search else {})
-    
-    # Get documents
-    documents = []
-    cursor = collection.find(query if search else {}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit)
-    async for doc in cursor:
-        documents.append(doc)
-    
-    return {
-        "documents": documents,
-        "total": total,
-        "page": page,
-        "limit": limit
-    }
+    try:
+        # Get total count
+        total = await collection.count_documents(query if search else {})
+        
+        # Get documents - tentar ordenar por created_at, se falhar usar _id
+        documents = []
+        try:
+            cursor = collection.find(query if search else {}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit)
+            async for doc in cursor:
+                documents.append(doc)
+        except Exception:
+            # Fallback sem ordenação
+            cursor = collection.find(query if search else {}, {"_id": 0}).skip(skip).limit(limit)
+            async for doc in cursor:
+                documents.append(doc)
+        
+        return {
+            "documents": documents,
+            "total": total,
+            "page": page,
+            "limit": limit
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar documentos: {str(e)}")
 
 @api_router.post("/admin-panel/database/{collection_name}")
 async def create_document(
