@@ -534,6 +534,9 @@ export default function PainelAdminPage() {
           <Button size="sm" variant={activeTab === "database" ? "default" : "outline"} className={activeTab === "database" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("database")}>
             <Database size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Banco de Dados</span><span className="sm:hidden">DB</span>
           </Button>
+          <Button size="sm" variant={activeTab === "tasks" ? "default" : "outline"} className={activeTab === "tasks" ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("tasks")}>
+            <Send size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Lançar Tarefa</span><span className="sm:hidden">Tarefas</span>
+          </Button>
         </div>
 
         {/* Users Tab */}
