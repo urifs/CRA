@@ -579,7 +579,7 @@ export default function ArmazenamentoPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRenameModal(false)}>Cancelar</Button>
-            <Button onClick={handleRename} className="bg-blue-600 hover:bg-blue-700">Renomear</Button>
+            <Button onClick={handleRename} className="bg-[#E31A1A] hover:bg-red-700">Renomear</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
