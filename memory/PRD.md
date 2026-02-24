@@ -11,6 +11,7 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Plano de Obras
 - Sistema Compartilhado com Auditoria
 - **Módulo Administrativo** (financeiro, fornecedores, produtos, OS, NF-e, aluguéis, notificações)
+- **Painel Administrativo** (gestão de usuários e auditoria)
 
 ## Paleta de Cores (Atualizada 24/02/2026)
 - **Vermelho**: #E31A1A (cor primária, botões de ação, links)
@@ -24,15 +25,28 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Auth**: JWT com bcrypt
 - **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, audit_logs, contas_pagar, contas_receber, cadastros, produtos_admin, ordens_servico, plano_contas, centros_custo, formas_pagamento, **alugueis**
 - **Sistema Compartilhado**: Dados globais com auditoria
+- **Painel Admin**: Endpoints para gestão de usuários e auditoria
 
 ### Frontend (React + Shadcn UI)
-- **Dois Módulos**:
+- **Três Módulos**:
   1. **Gerenciamento Geral** (vermelho #E31A1A): Máquinas, Manutenções, Estoque, Obras
   2. **Administrativo** (amarelo #FFC232): Financeiro, Fornecedores, Produtos, OS, NF-e, Aluguéis, Notificações
+  3. **Painel Administrativo** (vermelho #E31A1A): Gestão de Usuários, Auditoria, Criação de Contas
 - **PWA**: Instalável em dispositivos móveis (Service Worker desativado para debug)
 - **Design Responsivo**: Navegação inferior no mobile
 
 ## O Que Foi Implementado
+
+### Painel Administrativo ✅ (24/02/2026)
+- [x] Listagem de todos os usuários da plataforma
+- [x] Criar novos usuários (apenas via painel admin)
+- [x] Excluir usuários
+- [x] Visualizar atividades por usuário (clicável)
+- [x] Aba de Auditoria com todos os logs do sistema
+- [x] Estatísticas (total usuários, atividades do dia, registros totais)
+- [x] Busca e filtros
+- [x] Removido link "Cadastre-se" da tela de login
+- [x] Registro de último login dos usuários
 
 ### Módulo Gerenciamento Geral ✅
 - [x] Autenticação (login/registro)
