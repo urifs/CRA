@@ -713,6 +713,197 @@ export default function PainelAdminPage() {
             </div>
           </>
         )}
+
+        {/* Tasks Tab */}
+        {activeTab === "tasks" && (
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Create Task Form */}
+            <Card className="bg-gray-900 border-gray-700">
+              <CardContent className="p-4 md:p-6">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Send size={20} className="text-purple-500" />
+                  Nova Tarefa
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Target System */}
+                  <div>
+                    <Label className="text-gray-400 mb-2 block">Sistema Destino</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(TARGET_SYSTEMS).map(([key, { label, color }]) => (
+                        <Button
+                          key={key}
+                          type="button"
+                          variant={taskForm.target_system === key ? "default" : "outline"}
+                          className={taskForm.target_system === key 
+                            ? `${color} text-white` 
+                            : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"}
+                          onClick={() => setTaskForm({ ...taskForm, target_system: key })}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Priority */}
+                  <div>
+                    <Label className="text-gray-400 mb-2 block">Prioridade</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.entries(PRIORITIES).map(([key, { label, color, icon: Icon }]) => (
+                        <Button
+                          key={key}
+                          type="button"
+                          variant={taskForm.priority === key ? "default" : "outline"}
+                          className={taskForm.priority === key 
+                            ? `${color} text-white` 
+                            : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"}
+                          onClick={() => setTaskForm({ ...taskForm, priority: key })}
+                        >
+                          <Icon size={14} className="mr-1" />
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <Label className="text-gray-400">Título</Label>
+                    <Input
+                      value={taskForm.title}
+                      onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                      placeholder="Ex: Verificar estoque de peças"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
+                  </div>
+
+                  {/* Message */}
+                  <div>
+                    <Label className="text-gray-400">Mensagem</Label>
+                    <Textarea
+                      value={taskForm.message}
+                      onChange={(e) => setTaskForm({ ...taskForm, message: e.target.value })}
+                      placeholder="Descreva a tarefa em detalhes..."
+                      className="bg-gray-800 border-gray-700 text-white min-h-[120px]"
+                    />
+                  </div>
+
+                  {/* Attachments */}
+                  <div>
+                    <Label className="text-gray-400 mb-2 block">Anexos (máx. 100MB cada)</Label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {taskAttachments.map((file, index) => (
+                        <div key={index} className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2 text-sm">
+                          <Paperclip size={14} className="text-gray-400" />
+                          <span className="text-white truncate max-w-[150px]">{file.name}</span>
+                          <span className="text-gray-500 text-xs">({formatFileSize(file.size)})</span>
+                          <button onClick={() => removeTaskAttachment(index)} className="text-red-400 hover:text-red-300">
+                            <XIcon size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleTaskFileSelect}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm">
+                        <Paperclip size={16} />
+                        <span>Adicionar anexo</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Submit */}
+                  <Button
+                    onClick={handleCreateTask}
+                    disabled={creatingTask || !taskForm.title.trim() || !taskForm.message.trim()}
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                  >
+                    {creatingTask ? (
+                      <><Loader2 size={18} className="mr-2 animate-spin" />Enviando...</>
+                    ) : (
+                      <><Send size={18} className="mr-2" />Enviar Tarefa</>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tasks History */}
+            <Card className="bg-gray-900 border-gray-700">
+              <CardContent className="p-4 md:p-6">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Inbox size={20} className="text-purple-500" />
+                  Histórico de Tarefas
+                </h3>
+
+                {tasksLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-purple-500" />
+                  </div>
+                ) : tasks.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Inbox size={48} className="mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma tarefa enviada</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    {tasks.map((task) => {
+                      const PriorityIcon = PRIORITIES[task.priority]?.icon || Info;
+                      return (
+                        <div
+                          key={task.id}
+                          className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 cursor-pointer"
+                          onClick={() => { setSelectedTask(task); setShowTaskDetailModal(true); }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-full ${PRIORITIES[task.priority]?.color} shrink-0`}>
+                              <PriorityIcon size={14} className="text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <h4 className="font-medium text-white truncate">{task.title}</h4>
+                                <Badge className={`${TARGET_SYSTEMS[task.target_system]?.color} text-white text-xs`}>
+                                  {TARGET_SYSTEMS[task.target_system]?.label}
+                                </Badge>
+                                {task.read && (
+                                  <Badge variant="outline" className="text-green-400 border-green-600 text-xs">Lida</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-400 truncate">{task.message}</p>
+                              <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                <span>{new Date(task.created_at).toLocaleString("pt-BR")}</span>
+                                {task.attachments?.length > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <Paperclip size={12} />
+                                    {task.attachments.length}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-400 hover:text-red-300 hover:bg-red-900/30 shrink-0"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
 
       {/* Create User Modal */}
