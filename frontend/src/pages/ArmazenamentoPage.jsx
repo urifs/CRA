@@ -365,7 +365,7 @@ export default function ArmazenamentoPage() {
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="animate-spin text-blue-600" size={40} />
+            <Loader2 className="animate-spin text-[#E31A1A]" size={40} />
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-20">
