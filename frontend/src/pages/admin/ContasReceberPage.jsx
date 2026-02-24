@@ -39,6 +39,7 @@ export default function ContasReceberPage() {
   const [editingConta, setEditingConta] = useState(null);
   const [planoContas, setPlanoContas] = useState([]);
   const [centrosCusto, setCentrosCusto] = useState([]);
+  const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
   
   const [formData, setFormData] = useState({
     cliente_nome: "", documento: "", numero_doc: "", descricao: "",
@@ -48,7 +49,7 @@ export default function ContasReceberPage() {
     forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: ""
   });
 
-  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); }, [filterStatus, filterVencimento, filterFormaPag]);
+  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); }, [filterStatus, filterVencimento, filterFormaPag]);
 
   const fetchContas = async () => {
     try {
