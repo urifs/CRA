@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Bell, AlertTriangle, Clock, CheckCircle2, DollarSign, 
   TrendingDown, TrendingUp, ClipboardList, Truck, Calendar,
-  Filter, ChevronRight
+  Filter, ChevronRight, Search, X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -30,6 +30,7 @@ export default function NotificacoesPage() {
   const [prazoDias, setPrazoDias] = useState(7);
   const [filterTipo, setFilterTipo] = useState("todos");
   const [filterUrgencia, setFilterUrgencia] = useState("todas");
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
