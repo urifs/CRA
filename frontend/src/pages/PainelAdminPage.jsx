@@ -936,6 +936,72 @@ export default function PainelAdminPage() {
         )}
       </main>
 
+      {/* Edit Role Modal */}
+      <Dialog open={showEditRoleModal} onOpenChange={setShowEditRoleModal}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
+          <DialogHeader>
+            <DialogTitle>
+              <Edit size={20} className="inline mr-2 text-blue-400" />
+              Editar Permissões
+            </DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <div className="space-y-4">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <p className="text-white font-medium">{editingUser.name}</p>
+                <p className="text-gray-400 text-sm">{editingUser.email}</p>
+                <p className="text-gray-500 text-xs mt-1">Permissão atual: {USER_ROLES[editingUser.role]?.label || editingUser.role}</p>
+              </div>
+              
+              <div>
+                <Label className="text-gray-400 mb-2 block">Nova Permissão</Label>
+                <Select value={newRole} onValueChange={setNewRole}>
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700">
+                    <SelectItem value="gerenciamento" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#E31A1A]"></span>
+                        Gerenciamento Geral
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="administrativo" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#D4A000]"></span>
+                        Administrativo
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="ambos" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                        Gerenciamento + Administrativo
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="admin" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        Administrador (Acesso Total)
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowEditRoleModal(false)} className="bg-transparent border-gray-700 text-gray-400">
+                  Cancelar
+                </Button>
+                <Button onClick={handleUpdateRole} className="bg-blue-600 hover:bg-blue-700" disabled={updatingRole}>
+                  {updatingRole ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Edit size={18} className="mr-2" />}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Create User Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white">
