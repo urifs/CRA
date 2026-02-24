@@ -607,8 +607,9 @@ export default function PainelAdminPage() {
                         <TableCell className="text-gray-400">{formatDateShort(u.created_at)}</TableCell>
                         <TableCell className="text-gray-400">{formatDate(u.last_login) || "Nunca"}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={(e) => { e.stopPropagation(); fetchUserActivities(u.id, u.name, u.role); }}><Eye size={16} /></Button>
-                          {u.id !== user?.id && <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300" onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id, u.name); }}><Trash2 size={16} /></Button>}
+                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={(e) => { e.stopPropagation(); fetchUserActivities(u.id, u.name, u.role); }} title="Ver atividades"><Eye size={16} /></Button>
+                          <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); openEditRoleModal(u); }} title="Editar permissões"><Edit size={16} /></Button>
+                          {u.id !== user?.id && <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300" onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id, u.name); }} title="Excluir"><Trash2 size={16} /></Button>}
                         </TableCell>
                       </TableRow>
                     ))}
