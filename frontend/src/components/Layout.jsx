@@ -14,9 +14,8 @@ import {
   Package,
   Clock,
   Bell,
-  Construction,
-  DollarSign,
   HardHat,
+  DollarSign,
   ClipboardList,
   MoreHorizontal,
   ArrowLeft
