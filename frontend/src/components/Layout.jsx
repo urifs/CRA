@@ -115,13 +115,23 @@ export const Layout = () => {
         }`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
+        {/* Back to system select button */}
+        <button
+          onClick={handleBackToSelect}
+          className="w-full flex items-center gap-2 px-4 py-3 text-slate-400 hover:bg-slate-800 transition-colors border-b border-slate-700"
+          data-testid="back-to-select"
+        >
+          <ArrowLeft size={18} />
+          <span className="text-sm">Trocar Sistema</span>
+        </button>
+
         {/* Logo - Fixed at top */}
         <div className="p-5 border-b border-slate-700" style={{ flexShrink: 0 }}>
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
             <Construction className="text-orange-500" size={28} />
             <span>CRA Construtora</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Sistema de Manutenção</p>
+          <p className="text-xs text-slate-400 mt-1">Gerenciamento Geral</p>
         </div>
 
         {/* Navigation - Scrollable */}
