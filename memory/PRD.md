@@ -204,6 +204,39 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - OS com tipo financeiro
 - **Aluguéis de Máquinas**
 - **Central de Notificações**
+- **Sistema de Armazenamento** (estilo Google Drive) ← NOVO 24/02/2026
+- **Campo de Contrato em Aluguéis** (número + anexo) ← NOVO 24/02/2026
+
+### NOVO - Sistema de Armazenamento ✅ (24/02/2026)
+- [x] **Página dedicada** (`/armazenamento`) no estilo Google Drive
+- [x] **Criar pastas** com nomes customizados
+- [x] **Upload de arquivos** (múltiplos, qualquer formato)
+- [x] **Visualização em grid ou lista**
+- [x] **Navegação por breadcrumbs**
+- [x] **Preview** de imagens e PDFs
+- [x] **Download** de arquivos
+- [x] **Renomear** arquivos e pastas
+- [x] **Excluir** itens
+- [x] **Pesquisa** por nome
+- [x] Tema visual alinhado com a paleta CRA (vermelho e amarelo)
+
+### NOVO - Contrato em Aluguéis ✅ (24/02/2026)
+- [x] Campo **Nº do Contrato** no formulário de aluguel
+- [x] **Anexo de arquivo de contrato** (PDF, DOC, DOCX, imagens)
+- [x] **Visualização** do contrato diretamente na listagem
+- [x] **Download** do arquivo de contrato
+
+### Endpoints do Sistema de Armazenamento (24/02/2026)
+- **GET `/api/storage/list?path=/`** - Lista arquivos e pastas
+- **POST `/api/storage/folder`** - Cria nova pasta
+- **POST `/api/storage/upload`** - Upload de arquivo
+- **GET `/api/storage/download?path=/file.pdf`** - Download de arquivo
+- **DELETE `/api/storage/delete?path=/item`** - Exclui arquivo ou pasta
+- **PATCH `/api/storage/rename`** - Renomeia item
+
+### Endpoints de Contrato de Aluguel (24/02/2026)
+- **POST `/api/admin/alugueis/{id}/contrato`** - Upload de contrato
+- **GET `/api/admin/alugueis/{id}/contrato/download`** - Download de contrato
 
 ### P1 (Importante) - Próximos Passos
 - [ ] **Integração estoque ↔ manutenção** (baixa automática de peças)
