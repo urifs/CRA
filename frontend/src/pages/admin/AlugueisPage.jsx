@@ -425,6 +425,32 @@ export default function AlugueisPage() {
                         Entrega: {new Date(aluguel.data_entrega).toLocaleDateString('pt-BR')} | 
                         Vencimento: {new Date(aluguel.data_vencimento).toLocaleDateString('pt-BR')}
                       </p>
+                      {aluguel.numero_contrato && (
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          <FileText size={14} />
+                          Contrato: {aluguel.numero_contrato}
+                          {aluguel.contrato_arquivo && (
+                            <span className="flex items-center gap-1 ml-2">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-6 px-2 text-[#D4A000]"
+                                onClick={(e) => { e.stopPropagation(); handleViewContract(aluguel); }}
+                              >
+                                <Eye size={12} className="mr-1" /> Ver
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-6 px-2 text-gray-500"
+                                onClick={(e) => { e.stopPropagation(); handleDownloadContract(aluguel); }}
+                              >
+                                <Download size={12} />
+                              </Button>
+                            </span>
+                          )}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-black">{formatCurrency(aluguel.valor)}</p>
