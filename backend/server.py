@@ -474,6 +474,40 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         created_at=current_user["created_at"]
     )
 
+# ============ SPECIAL ADMIN SETUP ENDPOINT ============
+# Endpoint especial para promover usuário para admin (usar uma vez para configurar)
+
+class AdminSetupRequest(BaseModel):
+    email: str
+    secret_key: str
+
+@api_router.post("/auth/setup-admin")
+async def setup_admin(request: AdminSetupRequest):
+    """
+    Endpoint especial para promover um usuário existente para admin.
+    Usar a chave secreta: CRA-SETUP-2026-ADMIN
+    """
+    SETUP_SECRET = "CRA-SETUP-2026-ADMIN"
+    
+    if request.secret_key != SETUP_SECRET:
+        raise HTTPException(status_code=403, detail="Chave secreta inválida")
+    
+    user = await db.users.find_one({"email": request.email})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Promover para admin com acesso total
+    await db.users.update_one(
+        {"email": request.email},
+        {"$set": {"role": "admin"}}
+    )
+    
+    return {
+        "message": f"Usuário {request.email} promovido para administrador com sucesso!",
+        "email": request.email,
+        "new_role": "admin"
+    }
+
 # ============ CATEGORY ROUTES ============
 
 @api_router.post("/categories", response_model=CategoryResponse)
