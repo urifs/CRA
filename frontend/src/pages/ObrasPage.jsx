@@ -206,7 +206,7 @@ export default function ObrasPage() {
           placeholder="Buscar por nome, local ou descrição..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 form-input"
+          className="pl-10 h-11 bg-white border border-gray-300 rounded-md focus:border-[#E31A1A] focus:ring-2 focus:ring-[#E31A1A] focus:outline-none"
           data-testid="obras-search-input"
         />
       </div>
