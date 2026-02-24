@@ -78,6 +78,8 @@ export default function NotificacoesPage() {
   const filteredNotificacoes = data.notificacoes.filter(n => {
     if (filterTipo !== "todos" && n.tipo !== filterTipo) return false;
     if (filterUrgencia !== "todas" && n.urgencia !== filterUrgencia) return false;
+    if (searchTerm && !n.descricao.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !(n.nome_relacionado || "").toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 
@@ -97,6 +99,27 @@ export default function NotificacoesPage() {
           </h1>
           <p className="text-gray-500 mt-1">Acompanhe vencimentos e prazos importantes</p>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative max-w-md mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Input
+          type="text"
+          placeholder="Pesquisar notificações..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-10 h-10 bg-white border-gray-200"
+          data-testid="search-notificacoes"
+        />
+        {searchTerm && (
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            onClick={() => setSearchTerm("")}
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {/* Configuração de prazo */}
