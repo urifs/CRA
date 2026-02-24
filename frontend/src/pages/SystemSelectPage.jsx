@@ -144,7 +144,7 @@ export default function SystemSelectPage() {
         </div>
 
         {/* System Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 px-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 px-1">
           {systems.map((system) => (
             <Card
               key={system.id}
@@ -152,12 +152,12 @@ export default function SystemSelectPage() {
               onClick={() => system.hasAccess && navigate(system.path)}
               data-testid={`system-${system.id}`}
             >
-              <CardContent className="p-4 sm:p-6">
+              <CardContent className="p-4">
                 {/* Icon and Title */}
-                <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-                  <div className={`w-12 h-12 sm:w-14 sm:h-14 ${system.color} rounded-xl flex items-center justify-center flex-shrink-0 ${!system.hasAccess && 'grayscale'}`}>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={`w-12 h-12 ${system.color} rounded-xl flex items-center justify-center flex-shrink-0 ${!system.hasAccess && 'grayscale'}`}>
                     {system.useLogo ? (
-                      <img src="/logo.png" alt="CRA" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
+                      <img src="/logo.png" alt="CRA" className="w-8 h-8 object-contain" />
                     ) : (
                       <system.icon className={system.id === "administrativo" && system.hasAccess ? "text-black" : "text-white"} size={24} />
                     )}
