@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
-  HardHat, 
+  Landmark, 
   Building2,
   Truck,
   Wrench,
@@ -23,7 +23,7 @@ export default function SystemSelectPage() {
       id: "gerenciamento",
       title: "Gerenciamento Geral",
       description: "Sistema de manutenção de máquinas, obras e estoque de peças",
-      icon: HardHat,
+      icon: Landmark,
       color: "bg-[#E31A1A]",
       hoverColor: "hover:border-[#E31A1A]",
       textColor: "text-[#E31A1A]",
@@ -60,7 +60,7 @@ export default function SystemSelectPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <HardHat className="text-[#E31A1A]" size={40} />
+            <Landmark className="text-[#E31A1A]" size={40} />
             <h1 className="text-3xl md:text-4xl font-heading font-black text-white">
               CRA Construtora
             </h1>
