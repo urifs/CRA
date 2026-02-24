@@ -130,6 +130,9 @@ function App() {
           {/* System selection */}
           <Route path="/select-system" element={<ProtectedRoute><SystemSelectPage /></ProtectedRoute>} />
           
+          {/* Painel Administrativo (Gestão de Usuários) */}
+          <Route path="/painel-admin" element={<ProtectedRoute><PainelAdminPage /></ProtectedRoute>} />
+          
           {/* Gerenciamento Geral routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="dashboard" element={<DashboardPage />} />
