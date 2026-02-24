@@ -125,7 +125,7 @@ export default function SystemSelectPage() {
         }} />
       </div>
 
-      <div className="w-full max-w-4xl relative z-10">
+      <div className="w-full max-w-5xl relative z-10">
         {/* Header */}
         <div className="text-center mb-4 sm:mb-8">
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
