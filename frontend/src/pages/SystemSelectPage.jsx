@@ -173,23 +173,41 @@ export default function SystemSelectPage() {
           ))}
         </div>
 
-        {/* Admin Panel Button - Only for admin users */}
-        {canAccessAdminPanel && (
-          <div className="mt-8 flex justify-center">
-            <Button
-              variant="outline"
-              className="bg-transparent border-green-700 text-green-500 hover:bg-green-900/30 hover:text-green-400 hover:border-green-600"
-              onClick={() => navigate("/painel-admin")}
-              data-testid="admin-panel-btn"
-            >
+        {/* Admin Panel Button - Visible for all, accessible only for admin */}
+        <div className="mt-8 flex justify-center">
+          <Button
+            variant="outline"
+            className={`${canAccessAdminPanel 
+              ? 'bg-transparent border-green-700 text-green-500 hover:bg-green-900/30 hover:text-green-400 hover:border-green-600' 
+              : 'bg-transparent border-gray-700 text-gray-500 hover:bg-gray-800/30'}`}
+            onClick={handleAdminPanelClick}
+            data-testid="admin-panel-btn"
+          >
+            {canAccessAdminPanel ? (
               <Shield size={18} className="mr-2" />
-              Painel Administrativo
-            </Button>
-          </div>
-        )}
+            ) : (
+              <Lock size={18} className="mr-2" />
+            )}
+            Painel Administrativo
+            {!canAccessAdminPanel && <span className="ml-2 text-xs">(Restrito)</span>}
+          </Button>
+        </div>
+
+        {/* Logout Button */}
+        <div className="mt-4 flex justify-center">
+          <Button
+            variant="ghost"
+            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            onClick={handleLogout}
+            data-testid="logout-btn"
+          >
+            <LogOut size={18} className="mr-2" />
+            Sair da conta
+          </Button>
+        </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-500 text-sm mt-8">
+        <p className="text-center text-gray-500 text-sm mt-6">
           CRA Construtora © 2026 - Sistema de Gestão Empresarial
         </p>
       </div>
