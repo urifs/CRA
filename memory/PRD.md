@@ -224,6 +224,19 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Arquivos**: `ContasPagarPage.jsx`, `ContasReceberPage.jsx`
 - **Testes**: 100% aprovados (iteration_9.json)
 
+### Sistema de Tarefas/Mensagens ✅ (24/02/2026)
+- [x] **Lançar Tarefa no Painel Admin**: Nova aba para criar tarefas/mensagens
+- [x] **Seletor de Sistema Destino**: Gerenciamento Geral ou Administrativo
+- [x] **Seletor de Prioridade**: Baixa, Média ou Alta (com ícones e cores)
+- [x] **Campos**: Título, Mensagem e Anexos
+- [x] **Upload de Anexos**: Até 100MB por arquivo, múltiplos anexos permitidos
+- [x] **Download de Anexos**: Usuários podem baixar arquivos da tarefa
+- [x] **Caixa de Tarefas**: Componente flutuante nos sistemas de destino
+- [x] **Badge de Notificação**: Contador de tarefas não lidas no header
+- [x] **Marcar como Lida**: Tarefas são marcadas automaticamente ao visualizar
+- [x] **Histórico de Tarefas**: Admin pode ver todas as tarefas enviadas
+- [x] **Excluir Tarefas**: Admin pode remover tarefas do sistema
+
 ### Bug Fix - Chatbot e Logout Mobile (24/02/2026)
 - **Problema 1**: Chatbot estava sobrepondo a barra de navegação inferior no mobile
 - **Solução**: Ajustada posição do chatbot para `calc(90px + env(safe-area-inset-bottom))` no mobile
