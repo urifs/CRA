@@ -1,4 +1,46 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form
+"""
+================================================================================
+CRA CONSTRUTORA - SISTEMA DE GESTÃO EMPRESARIAL
+================================================================================
+Backend API - FastAPI + MongoDB
+
+ÍNDICE DO ARQUIVO:
+------------------
+Linha ~40   : MODELS - Modelos Pydantic
+Linha ~350  : AUTH HELPERS - Funções de autenticação
+Linha ~450  : AUTH ROUTES - Rotas de autenticação
+Linha ~520  : CATEGORY ROUTES - Rotas de categorias de máquinas
+Linha ~600  : MACHINE ROUTES - Rotas de máquinas
+Linha ~800  : MAINTENANCE ROUTES - Rotas de manutenções
+Linha ~1000 : STOCK ROUTES - Rotas de estoque
+Linha ~1300 : OBRA ROUTES - Rotas de obras/projetos
+Linha ~1500 : DASHBOARD ROUTES - Rotas do dashboard
+Linha ~1800 : ADMIN FINANCIAL ROUTES - Rotas administrativas financeiras
+Linha ~3200 : NOTIFICATION ROUTES - Rotas de notificações
+Linha ~3400 : ADMIN PANEL ROUTES - Rotas do painel admin (usuários, auditoria, DB)
+Linha ~4200 : EXPORT ROUTES - Rotas de exportação PDF
+Linha ~4600 : CHATBOT ROUTES - Rotas do chatbot com IA
+Linha ~4900 : FILE ROUTES - Rotas de upload de arquivos
+Linha ~5100 : TASK ROUTES - Rotas do sistema de tarefas
+Linha ~5350 : APP STARTUP/SHUTDOWN - Eventos da aplicação
+
+ARQUITETURA:
+------------
+- Frontend: React + TailwindCSS + Shadcn/UI
+- Backend: FastAPI + MongoDB (Motor)
+- Auth: JWT com bcrypt para senhas
+- Integração: Gemini AI para chatbot
+
+DEPENDÊNCIAS PRINCIPAIS:
+------------------------
+- fastapi, motor (async MongoDB)
+- pydantic, python-jose (JWT)
+- bcrypt, reportlab (PDF)
+- emergentintegrations (Gemini AI)
+================================================================================
+"""
+
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
