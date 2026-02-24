@@ -3726,6 +3726,184 @@ async def get_user_activities(user_id: str, current_user: dict = Depends(get_cur
     return activities
 
 
+# ============ DATABASE MANAGER ROUTES (ADMIN ONLY) ============
+
+def require_admin(user: dict):
+    """Verifica se o usuário é admin"""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado. Somente administradores podem acessar este recurso.")
+
+# Lista de coleções disponíveis para gerenciamento
+ALLOWED_COLLECTIONS = [
+    "users", "machines", "maintenances", "categories", "stock_items", 
+    "stock_categories", "stock_movements", "obras", "contas_pagar", 
+    "contas_receber", "cadastros", "produtos_admin", "ordens_servico", 
+    "alugueis", "audit_logs", "usage_logs"
+]
+
+@api_router.get("/admin-panel/database/{collection_name}")
+async def get_collection_documents(
+    collection_name: str, 
+    page: int = 1, 
+    limit: int = 20, 
+    search: str = "",
+    current_user: dict = Depends(get_current_user)
+):
+    """Retorna documentos de uma coleção específica com paginação e busca"""
+    require_admin(current_user)
+    
+    if collection_name not in ALLOWED_COLLECTIONS:
+        raise HTTPException(status_code=400, detail=f"Coleção '{collection_name}' não permitida")
+    
+    collection = db[collection_name]
+    skip = (page - 1) * limit
+    
+    # Build search query
+    query = {}
+    if search:
+        # Busca em campos comuns
+        query = {
+            "$or": [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+                {"titulo": {"$regex": search, "$options": "i"}},
+                {"descricao": {"$regex": search, "$options": "i"}},
+                {"action": {"$regex": search, "$options": "i"}},
+                {"id": {"$regex": search, "$options": "i"}}
+            ]
+        }
+    
+    # Get total count
+    total = await collection.count_documents(query if search else {})
+    
+    # Get documents
+    documents = []
+    cursor = collection.find(query if search else {}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit)
+    async for doc in cursor:
+        documents.append(doc)
+    
+    return {
+        "documents": documents,
+        "total": total,
+        "page": page,
+        "limit": limit
+    }
+
+@api_router.post("/admin-panel/database/{collection_name}")
+async def create_document(
+    collection_name: str,
+    document: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Cria um novo documento em uma coleção"""
+    require_admin(current_user)
+    
+    if collection_name not in ALLOWED_COLLECTIONS:
+        raise HTTPException(status_code=400, detail=f"Coleção '{collection_name}' não permitida")
+    
+    collection = db[collection_name]
+    
+    # Adiciona ID e timestamp se não existirem
+    if "id" not in document:
+        document["id"] = str(uuid.uuid4())
+    if "created_at" not in document:
+        document["created_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await collection.insert_one(document)
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type=f"documento ({collection_name})",
+        entity_id=document["id"],
+        entity_name=document.get("name") or document.get("email") or document.get("titulo") or document["id"][:8],
+        details=f"Documento criado via painel admin"
+    )
+    
+    # Remove _id antes de retornar
+    document.pop("_id", None)
+    return {"message": "Documento criado com sucesso", "document": document}
+
+@api_router.put("/admin-panel/database/{collection_name}/{doc_id}")
+async def update_document(
+    collection_name: str,
+    doc_id: str,
+    document: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Atualiza um documento existente"""
+    require_admin(current_user)
+    
+    if collection_name not in ALLOWED_COLLECTIONS:
+        raise HTTPException(status_code=400, detail=f"Coleção '{collection_name}' não permitida")
+    
+    collection = db[collection_name]
+    
+    # Encontra o documento
+    existing = await collection.find_one({"id": doc_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Documento não encontrado")
+    
+    # Remove campos que não devem ser alterados diretamente
+    document.pop("_id", None)
+    
+    # Atualiza o documento
+    await collection.update_one({"id": doc_id}, {"$set": document})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type=f"documento ({collection_name})",
+        entity_id=doc_id,
+        entity_name=document.get("name") or document.get("email") or document.get("titulo") or doc_id[:8],
+        details=f"Documento editado via painel admin"
+    )
+    
+    return {"message": "Documento atualizado com sucesso"}
+
+@api_router.delete("/admin-panel/database/{collection_name}/{doc_id}")
+async def delete_document(
+    collection_name: str,
+    doc_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Exclui um documento de uma coleção"""
+    require_admin(current_user)
+    
+    if collection_name not in ALLOWED_COLLECTIONS:
+        raise HTTPException(status_code=400, detail=f"Coleção '{collection_name}' não permitida")
+    
+    # Proteção especial para usuários admin
+    if collection_name == "users":
+        user_doc = await db.users.find_one({"id": doc_id}, {"_id": 0})
+        if user_doc and user_doc.get("id") == current_user["id"]:
+            raise HTTPException(status_code=400, detail="Você não pode excluir sua própria conta")
+    
+    collection = db[collection_name]
+    
+    # Encontra o documento para log
+    existing = await collection.find_one({"id": doc_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Documento não encontrado")
+    
+    # Exclui o documento
+    await collection.delete_one({"id": doc_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type=f"documento ({collection_name})",
+        entity_id=doc_id,
+        entity_name=existing.get("name") or existing.get("email") or existing.get("titulo") or doc_id[:8],
+        details=f"Documento excluído via painel admin"
+    )
+    
+    return {"message": "Documento excluído com sucesso"}
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
