@@ -16,7 +16,10 @@ import {
   Shield,
   Lock,
   HardHat,
-  LogOut
+  LogOut,
+  FolderOpen,
+  Upload,
+  HardDrive
 } from "lucide-react";
 
 export default function SystemSelectPage() {
@@ -28,6 +31,7 @@ export default function SystemSelectPage() {
   
   const canAccessGerenciamento = ["gerenciamento", "ambos", "admin"].includes(userRole);
   const canAccessAdministrativo = ["administrativo", "ambos", "admin"].includes(userRole);
+  const canAccessArmazenamento = ["admin", "ambos", "gerenciamento", "administrativo"].includes(userRole); // Todos podem acessar
   const canAccessAdminPanel = userRole === "admin";
 
   const handleLogout = () => {
@@ -77,6 +81,23 @@ export default function SystemSelectPage() {
         { icon: DollarSign, label: "Financeiro" },
         { icon: FileText, label: "NF-e" },
         { icon: Users, label: "Fornecedores" },
+      ]
+    },
+    {
+      id: "armazenamento",
+      title: "Armazenamento",
+      description: "Sistema de arquivos e documentos da empresa",
+      icon: HardDrive,
+      useLogo: false,
+      color: "bg-blue-600",
+      hoverColor: "hover:border-blue-600",
+      textColor: "text-blue-600",
+      path: "/armazenamento",
+      hasAccess: canAccessArmazenamento,
+      features: [
+        { icon: FolderOpen, label: "Pastas" },
+        { icon: Upload, label: "Upload" },
+        { icon: FileText, label: "Documentos" },
       ]
     }
   ];
