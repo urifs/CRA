@@ -171,6 +171,16 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **GET `/api/admin/notificacoes/contagem`** (novo - para badge)
 - GET `/api/admin/dashboard`
 
+### Endpoints de Tarefas (NOVO - 24/02/2026)
+- **POST `/api/admin-panel/tasks`** - Criar nova tarefa
+- **POST `/api/admin-panel/tasks/{task_id}/attachments`** - Adicionar anexo à tarefa (100MB max)
+- **GET `/api/admin-panel/tasks`** - Listar todas as tarefas (admin)
+- **DELETE `/api/admin-panel/tasks/{task_id}`** - Excluir tarefa (admin)
+- **GET `/api/tasks?system=gerenciamento|administrativo`** - Listar tarefas por sistema
+- **GET `/api/tasks/unread-count?system=...`** - Contagem de tarefas não lidas
+- **PATCH `/api/tasks/{task_id}/read`** - Marcar tarefa como lida
+- **GET `/api/tasks/{task_id}/attachments/{filename}`** - Download de anexo
+
 ### Endpoints do Painel Administrativo (Database Manager)
 - **GET `/api/admin-panel/database/{collection_name}`** - Lista documentos com paginação e busca
 - **POST `/api/admin-panel/database/{collection_name}`** - Cria novo documento
