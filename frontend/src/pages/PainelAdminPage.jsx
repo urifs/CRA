@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -39,8 +46,20 @@ import {
   Wrench,
   Package,
   DollarSign,
-  Search
+  Search,
+  Building2,
+  Landmark,
+  Crown,
+  Info
 } from "lucide-react";
+
+// Tipos de usuário
+const USER_ROLES = {
+  gerenciamento: { label: "Gerenciamento Geral", icon: Landmark, color: "bg-[#E31A1A]" },
+  administrativo: { label: "Administrativo", icon: Building2, color: "bg-[#FFC232]" },
+  ambos: { label: "Gerenciamento + Administrativo", icon: Users, color: "bg-purple-500" },
+  admin: { label: "Administrador", icon: Crown, color: "bg-green-500" }
+};
 
 export default function PainelAdminPage() {
   const navigate = useNavigate();
@@ -52,13 +71,16 @@ export default function PainelAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
+  const [showActivityDetailModal, setShowActivityDetailModal] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [createForm, setCreateForm] = useState({
     name: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
+    role: "gerenciamento"
   });
   const [creating, setCreating] = useState(false);
 
@@ -92,13 +114,13 @@ export default function PainelAdminPage() {
     }
   };
 
-  const fetchUserActivities = async (userId, userName) => {
+  const fetchUserActivities = async (userId, userName, userRole) => {
     try {
       const response = await axios.get(`${API}/admin-panel/users/${userId}/activities`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUserActivities(response.data);
-      setSelectedUser({ id: userId, name: userName });
+      setSelectedUser({ id: userId, name: userName, role: userRole });
       setShowActivitiesModal(true);
     } catch (error) {
       console.error("Erro ao carregar atividades:", error);
@@ -124,13 +146,14 @@ export default function PainelAdminPage() {
       await axios.post(`${API}/admin-panel/users`, {
         name: createForm.name,
         email: createForm.email,
-        password: createForm.password
+        password: createForm.password,
+        role: createForm.role
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Usuário criado com sucesso!");
       setShowCreateModal(false);
-      setCreateForm({ name: "", email: "", password: "", confirmPassword: "" });
+      setCreateForm({ name: "", email: "", password: "", confirmPassword: "", role: "gerenciamento" });
       fetchUsers();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao criar usuário");
@@ -160,6 +183,11 @@ export default function PainelAdminPage() {
     }
   };
 
+  const openActivityDetail = (activity) => {
+    setSelectedActivity(activity);
+    setShowActivityDetailModal(true);
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleString("pt-BR");
@@ -174,15 +202,26 @@ export default function PainelAdminPage() {
     if (action?.includes("manutenção") || action?.includes("maintenance")) return <Wrench size={14} />;
     if (action?.includes("estoque") || action?.includes("stock")) return <Package size={14} />;
     if (action?.includes("financeiro") || action?.includes("conta")) return <DollarSign size={14} />;
-    if (action?.includes("usuário") || action?.includes("user")) return <User size={14} />;
+    if (action?.includes("usuário") || action?.includes("user") || action?.includes("Criou usuário") || action?.includes("Excluiu usuário")) return <User size={14} />;
     return <FileText size={14} />;
   };
 
   const getActionColor = (action) => {
-    if (action?.includes("criou") || action?.includes("create")) return "bg-green-500/20 text-green-400";
-    if (action?.includes("editou") || action?.includes("update")) return "bg-blue-500/20 text-blue-400";
-    if (action?.includes("excluiu") || action?.includes("delete")) return "bg-red-500/20 text-red-400";
+    if (action?.includes("criou") || action?.includes("create") || action?.includes("Criou")) return "bg-green-500/20 text-green-400";
+    if (action?.includes("editou") || action?.includes("update") || action?.includes("Editou") || action?.includes("Atualizou")) return "bg-blue-500/20 text-blue-400";
+    if (action?.includes("excluiu") || action?.includes("delete") || action?.includes("Excluiu")) return "bg-red-500/20 text-red-400";
     return "bg-gray-500/20 text-gray-400";
+  };
+
+  const getRoleBadge = (role) => {
+    const roleInfo = USER_ROLES[role] || USER_ROLES.gerenciamento;
+    const Icon = roleInfo.icon;
+    return (
+      <Badge className={`${roleInfo.color} text-white text-xs flex items-center gap-1`}>
+        <Icon size={12} />
+        {roleInfo.label}
+      </Badge>
+    );
   };
 
   const filteredUsers = users.filter(u => 
@@ -342,6 +381,7 @@ export default function PainelAdminPage() {
                   <TableRow className="border-gray-800 hover:bg-transparent">
                     <TableHead className="text-gray-400">Nome</TableHead>
                     <TableHead className="text-gray-400">Email</TableHead>
+                    <TableHead className="text-gray-400">Tipo de Acesso</TableHead>
                     <TableHead className="text-gray-400">Criado em</TableHead>
                     <TableHead className="text-gray-400">Último acesso</TableHead>
                     <TableHead className="text-gray-400 text-right">Ações</TableHead>
@@ -352,7 +392,7 @@ export default function PainelAdminPage() {
                     <TableRow 
                       key={u.id} 
                       className="border-gray-800 hover:bg-gray-800/50 cursor-pointer"
-                      onClick={() => fetchUserActivities(u.id, u.name)}
+                      onClick={() => fetchUserActivities(u.id, u.name, u.role)}
                       data-testid={`user-row-${u.id}`}
                     >
                       <TableCell className="font-medium text-white">
@@ -367,6 +407,7 @@ export default function PainelAdminPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-gray-400">{u.email}</TableCell>
+                      <TableCell>{getRoleBadge(u.role)}</TableCell>
                       <TableCell className="text-gray-400">{formatDateShort(u.created_at)}</TableCell>
                       <TableCell className="text-gray-400">{formatDate(u.last_login) || "Nunca"}</TableCell>
                       <TableCell className="text-right">
@@ -377,7 +418,7 @@ export default function PainelAdminPage() {
                             className="text-gray-400 hover:text-white"
                             onClick={(e) => {
                               e.stopPropagation();
-                              fetchUserActivities(u.id, u.name);
+                              fetchUserActivities(u.id, u.name, u.role);
                             }}
                             data-testid={`view-activities-${u.id}`}
                           >
@@ -403,7 +444,7 @@ export default function PainelAdminPage() {
                   ))}
                   {filteredUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={6} className="text-center text-gray-500 py-8">
                         Nenhum usuário encontrado
                       </TableCell>
                     </TableRow>
@@ -425,13 +466,15 @@ export default function PainelAdminPage() {
                     <TableHead className="text-gray-400">Usuário</TableHead>
                     <TableHead className="text-gray-400">Ação</TableHead>
                     <TableHead className="text-gray-400">Detalhes</TableHead>
+                    <TableHead className="text-gray-400 text-right">Ver mais</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.slice(0, 100).map((log, index) => (
                     <TableRow 
                       key={log.id || index} 
-                      className="border-gray-800 hover:bg-gray-800/50"
+                      className="border-gray-800 hover:bg-gray-800/50 cursor-pointer"
+                      onClick={() => openActivityDetail(log)}
                       data-testid={`audit-row-${index}`}
                     >
                       <TableCell className="text-gray-400 whitespace-nowrap">
@@ -443,9 +486,10 @@ export default function PainelAdminPage() {
                       <TableCell>
                         <Badge 
                           className="bg-gray-700 text-gray-300 cursor-pointer hover:bg-gray-600"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const foundUser = users.find(u => u.name === log.user_name);
-                            if (foundUser) fetchUserActivities(foundUser.id, foundUser.name);
+                            if (foundUser) fetchUserActivities(foundUser.id, foundUser.name, foundUser.role);
                           }}
                         >
                           {log.user_name || "Sistema"}
@@ -462,11 +506,24 @@ export default function PainelAdminPage() {
                       <TableCell className="text-gray-400 max-w-xs truncate">
                         {log.details || "-"}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-gray-400 hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openActivityDetail(log);
+                          }}
+                        >
+                          <Info size={16} />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {filteredLogs.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
                         Nenhuma atividade registrada
                       </TableCell>
                     </TableRow>
@@ -510,6 +567,49 @@ export default function PainelAdminPage() {
                 required
                 data-testid="create-user-email"
               />
+            </div>
+            <div>
+              <Label className="text-gray-400">Tipo de Acesso</Label>
+              <Select 
+                value={createForm.role} 
+                onValueChange={(value) => setCreateForm({...createForm, role: value})}
+              >
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white" data-testid="create-user-role">
+                  <SelectValue placeholder="Selecione o tipo de acesso" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="gerenciamento" className="text-white hover:bg-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Landmark size={16} className="text-[#E31A1A]" />
+                      <span>Gerenciamento Geral</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="administrativo" className="text-white hover:bg-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Building2 size={16} className="text-[#FFC232]" />
+                      <span>Administrativo</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="ambos" className="text-white hover:bg-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Users size={16} className="text-purple-500" />
+                      <span>Gerenciamento + Administrativo</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="admin" className="text-white hover:bg-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Crown size={16} className="text-green-500" />
+                      <span>Administrador (Acesso Total)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                {createForm.role === "gerenciamento" && "Acesso apenas ao módulo de Gerenciamento Geral (Máquinas, Manutenções, Estoque)"}
+                {createForm.role === "administrativo" && "Acesso apenas ao módulo Administrativo (Financeiro, Fornecedores, Produtos)"}
+                {createForm.role === "ambos" && "Acesso aos módulos Gerenciamento Geral e Administrativo"}
+                {createForm.role === "admin" && "Acesso total: todos os módulos + Painel Administrativo"}
+              </p>
             </div>
             <div>
               <Label className="text-gray-400">Senha</Label>
@@ -564,7 +664,10 @@ export default function PainelAdminPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity size={20} className="text-[#FFC232]" />
-              Atividades de {selectedUser?.name}
+              <span>Atividades de {selectedUser?.name}</span>
+              {selectedUser?.role && (
+                <span className="ml-2">{getRoleBadge(selectedUser.role)}</span>
+              )}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto">
@@ -573,7 +676,8 @@ export default function PainelAdminPage() {
                 {userActivities.map((activity, index) => (
                   <div 
                     key={index} 
-                    className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                    className="bg-gray-800 rounded-lg p-4 border border-gray-700 cursor-pointer hover:border-gray-600 transition-colors"
+                    onClick={() => openActivityDetail(activity)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -582,12 +686,15 @@ export default function PainelAdminPage() {
                         </span>
                         <div>
                           <p className="text-white font-medium">{activity.action}</p>
-                          <p className="text-sm text-gray-400">{activity.details || "Sem detalhes"}</p>
+                          <p className="text-sm text-gray-400 truncate max-w-md">{activity.details || "Sem detalhes"}</p>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        {formatDate(activity.created_at)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                          {formatDate(activity.created_at)}
+                        </span>
+                        <Info size={14} className="text-gray-500" />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -603,6 +710,81 @@ export default function PainelAdminPage() {
             <Button
               variant="outline"
               onClick={() => setShowActivitiesModal(false)}
+              className="bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Detail Modal */}
+      <Dialog open={showActivityDetailModal} onOpenChange={setShowActivityDetailModal}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info size={20} className="text-[#FFC232]" />
+              Detalhes da Atividade
+            </DialogTitle>
+          </DialogHeader>
+          {selectedActivity && (
+            <div className="space-y-4">
+              <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className={`p-3 rounded-lg ${getActionColor(selectedActivity.action)}`}>
+                    {getActionIcon(selectedActivity.action)}
+                  </span>
+                  <div>
+                    <p className="text-white font-bold text-lg">{selectedActivity.action}</p>
+                    <p className="text-sm text-gray-400">
+                      Por: {selectedActivity.user_name || "Sistema"}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar size={16} className="text-gray-400" />
+                    <span className="text-gray-400">Data/Hora:</span>
+                    <span className="text-white">{formatDate(selectedActivity.created_at)}</span>
+                  </div>
+                  
+                  {selectedActivity.user_id && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <User size={16} className="text-gray-400" />
+                      <span className="text-gray-400">ID do Usuário:</span>
+                      <span className="text-white font-mono text-xs">{selectedActivity.user_id}</span>
+                    </div>
+                  )}
+                  
+                  {selectedActivity.id && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText size={16} className="text-gray-400" />
+                      <span className="text-gray-400">ID do Registro:</span>
+                      <span className="text-white font-mono text-xs">{selectedActivity.id}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {selectedActivity.details && (
+                <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                  <p className="text-sm text-gray-400 mb-2">Detalhes Completos:</p>
+                  <p className="text-white whitespace-pre-wrap">{selectedActivity.details}</p>
+                </div>
+              )}
+              
+              {!selectedActivity.details && (
+                <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
+                  <p className="text-gray-500">Nenhum detalhe adicional disponível</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowActivityDetailModal(false)}
               className="bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"
             >
               Fechar
