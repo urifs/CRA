@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { 
   Plus, Search, Truck, Calendar, User, MapPin, CheckCircle2, Clock, XCircle,
-  Edit, Trash2, DollarSign, Phone
+  Edit, Trash2, DollarSign, Phone, FileText, Paperclip, Eye, Download, X
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
