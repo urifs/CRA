@@ -373,7 +373,7 @@ export default function ArmazenamentoPage() {
             <p className="text-gray-500 mb-4">
               {searchTerm ? "Nenhum item encontrado" : "Esta pasta está vazia"}
             </p>
-            <Button onClick={() => fileInputRef.current?.click()}>
+            <Button onClick={() => fileInputRef.current?.click()} className="bg-[#E31A1A] hover:bg-red-700">
               <Upload size={18} className="mr-2" />
               Fazer Upload
             </Button>
