@@ -24,6 +24,7 @@ import ObraDetailPage from "@/pages/ObraDetailPage";
 import AuditPage from "@/pages/AuditPage";
 import MorePage from "@/pages/MorePage";
 import SystemSelectPage from "@/pages/SystemSelectPage";
+import PainelAdminPage from "@/pages/PainelAdminPage";
 import Layout from "@/components/Layout";
 import AdminLayout from "@/components/AdminLayout";
 
