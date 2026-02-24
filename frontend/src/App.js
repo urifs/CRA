@@ -25,6 +25,7 @@ import AuditPage from "@/pages/AuditPage";
 import MorePage from "@/pages/MorePage";
 import SystemSelectPage from "@/pages/SystemSelectPage";
 import PainelAdminPage from "@/pages/PainelAdminPage";
+import ExportPage from "@/pages/ExportPage";
 import Layout from "@/components/Layout";
 import AdminLayout from "@/components/AdminLayout";
 
