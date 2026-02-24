@@ -3997,6 +3997,179 @@ async def delete_document(
     return {"message": "Documento excluído com sucesso"}
 
 
+# ============ CHATBOT ROUTES (AI ASSISTANT) ============
+
+from pydantic import BaseModel as PydanticBaseModel
+
+class ChatMessage(PydanticBaseModel):
+    message: str
+    module: str = "gerenciamento"  # gerenciamento ou administrativo
+
+class ChatResponse(PydanticBaseModel):
+    response: str
+    context_used: List[str] = []
+
+async def get_platform_context(module: str) -> str:
+    """Coleta todas as informações relevantes da plataforma para contexto do chatbot"""
+    context_parts = []
+    
+    # Informações gerais
+    context_parts.append("=== INFORMAÇÕES DO SISTEMA CRA CONSTRUTORA ===")
+    context_parts.append(f"Módulo atual: {module.upper()}")
+    
+    # Estatísticas gerais
+    users_count = await db.users.count_documents({})
+    machines_count = await db.machines.count_documents({})
+    maintenances_count = await db.maintenances.count_documents({})
+    context_parts.append(f"\n=== ESTATÍSTICAS GERAIS ===")
+    context_parts.append(f"Total de usuários: {users_count}")
+    context_parts.append(f"Total de máquinas: {machines_count}")
+    context_parts.append(f"Total de manutenções: {maintenances_count}")
+    
+    # Máquinas cadastradas
+    machines = await db.machines.find({}, {"_id": 0}).to_list(100)
+    if machines:
+        context_parts.append(f"\n=== MÁQUINAS CADASTRADAS ({len(machines)}) ===")
+        for m in machines[:20]:
+            status = "Operacional" if m.get("status") == "operational" else "Em manutenção"
+            context_parts.append(f"- {m.get('name', 'Sem nome')} | Placa: {m.get('plate', '-')} | Status: {status}")
+    
+    # Categorias de máquinas
+    categories = await db.categories.find({}, {"_id": 0}).to_list(50)
+    if categories:
+        context_parts.append(f"\n=== CATEGORIAS DE MÁQUINAS ({len(categories)}) ===")
+        for c in categories:
+            context_parts.append(f"- {c.get('name', 'Sem nome')}: {c.get('description', '')}")
+    
+    # Manutenções recentes
+    maintenances = await db.maintenances.find({}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    if maintenances:
+        context_parts.append(f"\n=== ÚLTIMAS MANUTENÇÕES ({len(maintenances)}) ===")
+        for m in maintenances[:10]:
+            tipo = "Preventiva" if m.get("maintenance_type") == "preventiva" else "Corretiva"
+            context_parts.append(f"- {m.get('part_name', 'Sem peça')} | Tipo: {tipo} | Valor: R$ {m.get('part_value', 0):.2f}")
+    
+    # Estoque
+    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(100)
+    if stock_items:
+        context_parts.append(f"\n=== ESTOQUE ({len(stock_items)} itens) ===")
+        low_stock = [i for i in stock_items if i.get("quantity", 0) <= i.get("min_quantity", 0)]
+        context_parts.append(f"Itens com estoque baixo: {len(low_stock)}")
+        for i in stock_items[:15]:
+            status = "⚠️ BAIXO" if i.get("quantity", 0) <= i.get("min_quantity", 0) else "OK"
+            context_parts.append(f"- {i.get('name', 'Sem nome')} | Qtd: {i.get('quantity', 0)} {i.get('unit', 'un')} | {status}")
+    
+    # Obras
+    obras = await db.obras.find({}, {"_id": 0}).to_list(50)
+    if obras:
+        context_parts.append(f"\n=== OBRAS/PROJETOS ({len(obras)}) ===")
+        for o in obras:
+            status_map = {"em_andamento": "Em andamento", "concluida": "Concluída", "pausada": "Pausada"}
+            status = status_map.get(o.get("status", ""), o.get("status", ""))
+            context_parts.append(f"- {o.get('name', 'Sem nome')} | Local: {o.get('location', '-')} | Status: {status}")
+    
+    if module == "administrativo" or module == "ambos":
+        # Contas a Pagar
+        contas_pagar = await db.contas_pagar.find({}, {"_id": 0}).to_list(100)
+        if contas_pagar:
+            pendentes = [c for c in contas_pagar if c.get("status") == "pendente"]
+            total_pendente = sum(c.get("valor", 0) for c in pendentes)
+            context_parts.append(f"\n=== CONTAS A PAGAR ===")
+            context_parts.append(f"Total de contas: {len(contas_pagar)}")
+            context_parts.append(f"Contas pendentes: {len(pendentes)}")
+            context_parts.append(f"Valor total pendente: R$ {total_pendente:.2f}")
+            for c in pendentes[:10]:
+                context_parts.append(f"- {c.get('descricao', 'Sem descrição')} | R$ {c.get('valor', 0):.2f} | Venc: {c.get('data_vencimento', '-')}")
+        
+        # Contas a Receber
+        contas_receber = await db.contas_receber.find({}, {"_id": 0}).to_list(100)
+        if contas_receber:
+            pendentes = [c for c in contas_receber if c.get("status") == "pendente"]
+            total_pendente = sum(c.get("valor", 0) for c in pendentes)
+            context_parts.append(f"\n=== CONTAS A RECEBER ===")
+            context_parts.append(f"Total de contas: {len(contas_receber)}")
+            context_parts.append(f"Contas pendentes: {len(pendentes)}")
+            context_parts.append(f"Valor total a receber: R$ {total_pendente:.2f}")
+            for c in pendentes[:10]:
+                context_parts.append(f"- {c.get('descricao', 'Sem descrição')} | R$ {c.get('valor', 0):.2f} | Venc: {c.get('data_vencimento', '-')}")
+        
+        # Cadastros (Clientes/Fornecedores)
+        cadastros = await db.cadastros.find({}, {"_id": 0}).to_list(100)
+        if cadastros:
+            context_parts.append(f"\n=== CADASTROS (Clientes/Fornecedores) ({len(cadastros)}) ===")
+            for c in cadastros[:15]:
+                tipo = c.get("tipo", "cliente")
+                context_parts.append(f"- {c.get('nome_razao', 'Sem nome')} | Tipo: {tipo} | Tel: {c.get('telefone', '-')}")
+        
+        # Ordens de Serviço
+        ordens = await db.ordens_servico.find({}, {"_id": 0}).to_list(100)
+        if ordens:
+            abertas = [o for o in ordens if o.get("status") in ["aberta", "em_andamento"]]
+            context_parts.append(f"\n=== ORDENS DE SERVIÇO ({len(ordens)}) ===")
+            context_parts.append(f"Ordens abertas/em andamento: {len(abertas)}")
+            for o in abertas[:10]:
+                context_parts.append(f"- OS-{o.get('numero', '-')} | {o.get('descricao', 'Sem descrição')[:50]} | Status: {o.get('status', '-')}")
+        
+        # Aluguéis
+        alugueis = await db.alugueis.find({}, {"_id": 0}).to_list(100)
+        if alugueis:
+            ativos = [a for a in alugueis if a.get("status") == "ativo"]
+            context_parts.append(f"\n=== ALUGUÉIS DE MÁQUINAS ({len(alugueis)}) ===")
+            context_parts.append(f"Aluguéis ativos: {len(ativos)}")
+            for a in ativos[:10]:
+                context_parts.append(f"- Máquina: {a.get('maquina_nome', '-')} | Cliente: {a.get('cliente_nome', '-')} | Valor: R$ {a.get('valor_total', 0):.2f}")
+    
+    return "\n".join(context_parts)
+
+@api_router.post("/chatbot/ask", response_model=ChatResponse)
+async def chatbot_ask(chat: ChatMessage, current_user: dict = Depends(get_current_user)):
+    """Endpoint do chatbot que responde perguntas sobre a plataforma"""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    
+    try:
+        # Coletar contexto da plataforma
+        platform_context = await get_platform_context(chat.module)
+        
+        # Sistema message com contexto completo
+        system_message = f"""Você é o assistente virtual da CRA Construtora, uma plataforma de gestão de máquinas e administrativo.
+Você tem acesso completo a todas as informações da plataforma e deve responder de forma clara e útil.
+
+INFORMAÇÕES ATUAIS DA PLATAFORMA:
+{platform_context}
+
+INSTRUÇÕES:
+1. Responda sempre em português brasileiro
+2. Seja direto e objetivo nas respostas
+3. Use os dados fornecidos para responder perguntas específicas
+4. Se não souber algo, diga que não tem essa informação disponível
+5. Formate valores monetários como R$ X.XXX,XX
+6. Ajude o usuário a entender os dados e tomar decisões
+7. Se o usuário perguntar sobre algo que não está nos dados, explique o que você sabe e sugira onde ele pode encontrar mais informações na plataforma
+"""
+        
+        # Inicializar chat com Gemini
+        llm_key = os.environ.get("EMERGENT_LLM_KEY")
+        
+        llm_chat = LlmChat(
+            api_key=llm_key,
+            session_id=f"chatbot-{current_user['id']}-{chat.module}",
+            system_message=system_message
+        ).with_model("gemini", "gemini-2.0-flash")
+        
+        # Enviar mensagem
+        user_message = UserMessage(text=chat.message)
+        response = await llm_chat.send_message(user_message)
+        
+        return ChatResponse(
+            response=response,
+            context_used=[chat.module]
+        )
+        
+    except Exception as e:
+        logging.error(f"Erro no chatbot: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao processar pergunta: {str(e)}")
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
