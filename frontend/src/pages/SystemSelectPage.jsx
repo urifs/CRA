@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
-  Construction, 
+  HardHat, 
   Building2,
   Truck,
   Wrench,
@@ -23,7 +23,7 @@ export default function SystemSelectPage() {
       id: "gerenciamento",
       title: "Gerenciamento Geral",
       description: "Sistema de manutenção de máquinas, obras e estoque de peças",
-      icon: Construction,
+      icon: HardHat,
       color: "bg-[#E31A1A]",
       hoverColor: "hover:border-[#E31A1A]",
       textColor: "text-[#E31A1A]",
