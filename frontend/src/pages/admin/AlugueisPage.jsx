@@ -175,6 +175,9 @@ export default function AlugueisPage() {
   };
 
   const openModal = (aluguel = null) => {
+    setContractFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    
     if (aluguel) {
       setEditingAluguel(aluguel);
       setFormData({
@@ -184,6 +187,7 @@ export default function AlugueisPage() {
         cliente_nome: aluguel.cliente_nome || "",
         cliente_telefone: aluguel.cliente_telefone || "",
         cliente_documento: aluguel.cliente_documento || "",
+        numero_contrato: aluguel.numero_contrato || "",
         tipo_periodo: aluguel.tipo_periodo || "diaria",
         periodo_especificado: aluguel.periodo_especificado || "",
         data_entrega: aluguel.data_entrega?.split("T")[0] || "",
@@ -203,6 +207,7 @@ export default function AlugueisPage() {
         cliente_nome: "",
         cliente_telefone: "",
         cliente_documento: "",
+        numero_contrato: "",
         tipo_periodo: "diaria",
         periodo_especificado: "",
         data_entrega: new Date().toISOString().split("T")[0],
