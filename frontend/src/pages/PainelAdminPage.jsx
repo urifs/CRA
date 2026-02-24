@@ -69,7 +69,7 @@ export default function PainelAdminPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin-panel/users`, {
+      const response = await axios.get(`${API}/admin-panel/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(response.data);
@@ -83,7 +83,7 @@ export default function PainelAdminPage() {
 
   const fetchAuditLogs = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin-panel/audit-logs`, {
+      const response = await axios.get(`${API}/admin-panel/audit-logs`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAuditLogs(response.data);
@@ -94,7 +94,7 @@ export default function PainelAdminPage() {
 
   const fetchUserActivities = async (userId, userName) => {
     try {
-      const response = await axios.get(`${API}/api/admin-panel/users/${userId}/activities`, {
+      const response = await axios.get(`${API}/admin-panel/users/${userId}/activities`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUserActivities(response.data);
@@ -121,7 +121,7 @@ export default function PainelAdminPage() {
 
     setCreating(true);
     try {
-      await axios.post(`${API}/api/admin-panel/users`, {
+      await axios.post(`${API}/admin-panel/users`, {
         name: createForm.name,
         email: createForm.email,
         password: createForm.password
@@ -150,7 +150,7 @@ export default function PainelAdminPage() {
     }
 
     try {
-      await axios.delete(`${API}/api/admin-panel/users/${userId}`, {
+      await axios.delete(`${API}/admin-panel/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Usuário excluído com sucesso!");
