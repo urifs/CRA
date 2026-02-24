@@ -133,10 +133,15 @@ export const Layout = () => {
 
         {/* Logo - Fixed at top */}
         <div className="p-5 border-b border-gray-800" style={{ flexShrink: 0 }}>
-          <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <img src="/logo.png" alt="CRA" className="w-8 h-8 object-contain" />
-            <span>CRA Construtora</span>
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
+              <img src="/logo.png" alt="CRA" className="w-8 h-8 object-contain" />
+              <span>CRA Construtora</span>
+            </h1>
+            <div className="hidden md:block">
+              <TasksInbox system="gerenciamento" accentColor="#E31A1A" />
+            </div>
+          </div>
           <p className="text-xs text-gray-400 mt-1">Gerenciamento Geral</p>
         </div>
 
