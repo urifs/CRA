@@ -372,6 +372,12 @@ async def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
+    # Atualizar último login
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+    )
+    
     token = create_token(user["id"], user["email"])
     user_response = UserResponse(
         id=user["id"],
