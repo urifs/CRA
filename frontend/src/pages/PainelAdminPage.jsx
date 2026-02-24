@@ -721,6 +721,9 @@ export default function PainelAdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Chatbot Widget */}
+      <ChatbotWidget module="admin" accentColor="#9333ea" />
     </div>
   );
 }
