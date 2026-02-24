@@ -60,6 +60,10 @@ export const Layout = () => {
     navigate("/login");
   };
 
+  const handleBackToSelect = () => {
+    navigate("/select-system");
+  };
+
   const navItems = [
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/obras", icon: HardHat, label: "Plano de Obras" },
