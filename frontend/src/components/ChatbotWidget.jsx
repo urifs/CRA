@@ -80,7 +80,7 @@ const FormattedMessage = ({ content, accentColor }) => {
   );
 };
 
-export default function ChatbotWidget({ module = "gerenciamento", accentColor = "#E31A1A" }) {
+export default function ChatbotWidget({ module = "gerenciamento", accentColor = "#E31A1A", hasFab = false }) {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
