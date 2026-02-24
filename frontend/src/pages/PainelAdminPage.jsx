@@ -55,7 +55,6 @@ import {
   Info,
   Database,
   RefreshCw,
-  Edit,
   ChevronLeft,
   ChevronRight,
   Send,
