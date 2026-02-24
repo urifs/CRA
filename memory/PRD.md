@@ -144,6 +144,17 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Arquivos**: `ContasPagarPage.jsx`, `ContasReceberPage.jsx`
 - **Testes**: 100% aprovados (iteration_9.json)
 
+### Rebranding e Paleta de Cores (24/02/2026)
+- **Mudança de Nome**: "CRA Construtora" → "RA Locadora"
+- **Nova Paleta**: Vermelho (#E31A1A), Amarelo (#FFC232), Preto (#000000), Branco (#FFFFFF)
+- **Arquivos Modificados**: 
+  - index.css (variáveis CSS globais)
+  - App.css (sidebar, botões, estilos)
+  - Layout.jsx, AdminLayout.jsx (sidebars)
+  - LoginPage.jsx, RegisterPage.jsx (telas de login)
+  - SystemSelectPage.jsx (seleção de módulos)
+  - Todas as páginas em /pages e /pages/admin (substituição global de cores)
+
 ## Estrutura de Arquivos
 ```
 /app/
