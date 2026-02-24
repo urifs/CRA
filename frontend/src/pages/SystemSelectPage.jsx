@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   Landmark, 
   Building2,
@@ -11,7 +12,8 @@ import {
   Package,
   Users,
   ClipboardList,
-  ArrowRight
+  ArrowRight,
+  Shield
 } from "lucide-react";
 
 export default function SystemSelectPage() {
@@ -109,6 +111,19 @@ export default function SystemSelectPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Admin Panel Button */}
+        <div className="mt-8 flex justify-center">
+          <Button
+            variant="outline"
+            className="bg-transparent border-gray-700 text-gray-400 hover:bg-gray-900 hover:text-white hover:border-gray-600"
+            onClick={() => navigate("/painel-admin")}
+            data-testid="admin-panel-btn"
+          >
+            <Shield size={18} className="mr-2" />
+            Painel Administrativo
+          </Button>
         </div>
 
         {/* Footer */}
