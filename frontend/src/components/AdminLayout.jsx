@@ -101,7 +101,9 @@ export const AdminLayout = () => {
             <Building2 className="text-[#D4A000]" size={24} />
             <span className="font-heading font-bold">Administrativo</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {/* Tasks inbox */}
+            <TasksInbox system="administrativo" accentColor="#D4A000" />
             {/* Notification bell for mobile header */}
             <button
               data-testid="admin-mobile-notif-btn"
