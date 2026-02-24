@@ -615,15 +615,21 @@ export default function PainelAdminPage() {
           <div className="flex-1 overflow-y-auto">
             {userActivities.length > 0 ? userActivities.map((activity, index) => (
               <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-3 cursor-pointer hover:border-gray-600" onClick={() => openActivityDetail(activity)}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className={`p-2 rounded-lg ${getActionColor(activity.action)}`}>{getActionIcon(activity.action)}</span>
-                    <div><p className="text-white font-medium">{activity.action}</p><p className="text-sm text-gray-400 truncate max-w-md">{activity.details || "Sem detalhes"}</p></div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <span className={`p-2 rounded-lg shrink-0 ${getActionColor(activity.action)}`}>{getActionIcon(activity.action, activity.entity_type)}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <p className="text-white font-medium">{activity.action}</p>
+                        {activity.module && getModuleBadge(activity.module)}
+                      </div>
+                      <p className="text-sm text-gray-400 break-words">{activity.details || "Sem detalhes"}</p>
+                    </div>
                   </div>
-                  <span className="text-xs text-gray-500">{formatDate(activity.created_at)}</span>
+                  <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">{formatDate(activity.created_at)}</span>
                 </div>
               </div>
-            )) : <div className="text-center py-8 text-gray-500"><Activity size={40} className="mx-auto mb-4 opacity-50" /><p>Nenhuma atividade</p></div>}
+            )) : <div className="text-center py-8 text-gray-500"><Activity size={40} className="mx-auto mb-4 opacity-50" /><p>Nenhuma atividade registrada</p></div>}
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setShowActivitiesModal(false)} className="bg-transparent border-gray-700 text-gray-400">Fechar</Button></DialogFooter>
         </DialogContent>
@@ -636,16 +642,48 @@ export default function PainelAdminPage() {
           {selectedActivity && (
             <div className="space-y-4">
               <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className={`p-3 rounded-lg ${getActionColor(selectedActivity.action)}`}>{getActionIcon(selectedActivity.action)}</span>
-                  <div><p className="text-white font-bold text-lg">{selectedActivity.action}</p><p className="text-sm text-gray-400">Por: {selectedActivity.user_name || "Sistema"}</p></div>
+                <div className="flex items-start gap-3 mb-4">
+                  <span className={`p-3 rounded-lg shrink-0 ${getActionColor(selectedActivity.action)}`}>{getActionIcon(selectedActivity.action, selectedActivity.entity_type)}</span>
+                  <div>
+                    <p className="text-white font-bold text-lg">{selectedActivity.action}</p>
+                    <p className="text-sm text-gray-400">Por: {selectedActivity.user_name || "Sistema"}</p>
+                  </div>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div><Calendar size={14} className="inline mr-2 text-gray-400" /><span className="text-gray-400">Data:</span> <span className="text-white">{formatDate(selectedActivity.created_at)}</span></div>
-                  {selectedActivity.user_id && <div><User size={14} className="inline mr-2 text-gray-400" /><span className="text-gray-400">User ID:</span> <span className="text-white font-mono text-xs">{selectedActivity.user_id}</span></div>}
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-gray-400 shrink-0" />
+                    <span className="text-gray-400">Data:</span>
+                    <span className="text-white">{formatDate(selectedActivity.created_at)}</span>
+                  </div>
+                  {selectedActivity.module && (
+                    <div className="flex items-center gap-2">
+                      <Building2 size={14} className="text-gray-400 shrink-0" />
+                      <span className="text-gray-400">Módulo:</span>
+                      {getModuleBadge(selectedActivity.module)}
+                    </div>
+                  )}
+                  {selectedActivity.entity_name && (
+                    <div className="flex items-center gap-2">
+                      <FileText size={14} className="text-gray-400 shrink-0" />
+                      <span className="text-gray-400">Item:</span>
+                      <span className="text-white">{selectedActivity.entity_name}</span>
+                    </div>
+                  )}
+                  {selectedActivity.user_id && (
+                    <div className="flex items-center gap-2">
+                      <User size={14} className="text-gray-400 shrink-0" />
+                      <span className="text-gray-400">User ID:</span>
+                      <span className="text-white font-mono text-xs">{selectedActivity.user_id}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              {selectedActivity.details && <div className="bg-gray-800 rounded-lg p-4 border border-gray-700"><p className="text-sm text-gray-400 mb-2">Detalhes:</p><p className="text-white whitespace-pre-wrap">{selectedActivity.details}</p></div>}
+              {selectedActivity.details && (
+                <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                  <p className="text-sm text-gray-400 mb-2">Descrição Completa:</p>
+                  <p className="text-white whitespace-pre-wrap">{selectedActivity.details}</p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter><Button variant="outline" onClick={() => setShowActivityDetailModal(false)} className="bg-transparent border-gray-700 text-gray-400">Fechar</Button></DialogFooter>
