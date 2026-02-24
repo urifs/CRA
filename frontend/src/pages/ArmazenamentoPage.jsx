@@ -312,7 +312,7 @@ export default function ArmazenamentoPage() {
               <FolderPlus size={18} className="mr-2" />
               Nova Pasta
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Button className="bg-[#E31A1A] hover:bg-red-700" size="sm" onClick={() => fileInputRef.current?.click()}>
               <Upload size={18} className="mr-2" />
               Upload
             </Button>
