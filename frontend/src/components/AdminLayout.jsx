@@ -147,10 +147,15 @@ export const AdminLayout = () => {
 
         {/* Logo */}
         <div className="p-5 border-b border-gray-800" style={{ flexShrink: 0 }}>
-          <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <Building2 className="text-[#D4A000]" size={28} />
-            <span>Administrativo</span>
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
+              <Building2 className="text-[#D4A000]" size={28} />
+              <span>Administrativo</span>
+            </h1>
+            <div className="hidden md:block">
+              <TasksInbox system="administrativo" accentColor="#D4A000" />
+            </div>
+          </div>
           <p className="text-xs text-gray-400 mt-1">Sistema Financeiro</p>
         </div>
 
