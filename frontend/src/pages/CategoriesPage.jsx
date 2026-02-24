@@ -20,12 +20,15 @@ import {
   Trash2,
   Edit,
   Loader2,
-  Construction
+  Construction,
+  Search,
+  X
 } from "lucide-react";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
