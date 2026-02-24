@@ -37,6 +37,14 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 
 ## O Que Foi Implementado
 
+### Chatbot IA com Gemini ✅ (24/02/2026)
+- [x] **Chatbot flutuante** em ambas as plataformas (Gerenciamento e Administrativo)
+- [x] Integrado com **Gemini 2.0 Flash** via Emergent LLM Key
+- [x] **Acesso completo ao banco de dados**: máquinas, manutenções, estoque, obras, contas, OS, aluguéis
+- [x] Responde perguntas sobre qualquer informação da plataforma
+- [x] Contexto dinâmico atualizado a cada pergunta
+- [x] Design responsivo com botão flutuante colorido por módulo
+
 ### Painel Administrativo ✅ (24/02/2026)
 - [x] Listagem de todos os usuários da plataforma
 - [x] Criar novos usuários (apenas via painel admin)
