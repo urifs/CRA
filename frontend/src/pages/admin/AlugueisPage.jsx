@@ -712,11 +712,37 @@ export default function AlugueisPage() {
 
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">
-                {editingAluguel ? "Atualizar" : "Registrar Aluguel"}
+              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]" disabled={uploadingFile}>
+                {uploadingFile ? "Enviando..." : editingAluguel ? "Atualizar" : "Registrar Aluguel"}
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Contract Modal */}
+      <Dialog open={previewModal.open} onOpenChange={(open) => setPreviewModal({ ...previewModal, open })}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{previewModal.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center min-h-[400px] bg-gray-100 rounded-lg overflow-hidden">
+            {previewModal.url && (
+              previewModal.name?.toLowerCase().endsWith('.pdf') ? (
+                <iframe
+                  src={previewModal.url}
+                  className="w-full h-[70vh]"
+                  title="Contrato PDF"
+                />
+              ) : (
+                <img
+                  src={previewModal.url}
+                  alt={previewModal.name}
+                  className="max-w-full max-h-[70vh] object-contain"
+                />
+              )
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
