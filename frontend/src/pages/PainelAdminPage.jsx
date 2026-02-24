@@ -119,6 +119,10 @@ export default function PainelAdminPage() {
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [newRole, setNewRole] = useState("");
+  const [updatingRole, setUpdatingRole] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
     email: "",
