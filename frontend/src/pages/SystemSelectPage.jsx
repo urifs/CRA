@@ -83,7 +83,7 @@ export default function SystemSelectPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Landmark className="text-[#E31A1A]" size={40} />
+            <img src="/logo.png" alt="CRA Construtora" className="w-12 h-12 object-contain" />
             <h1 className="text-3xl md:text-4xl font-heading font-black text-white">
               CRA Construtora
             </h1>
