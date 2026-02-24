@@ -101,13 +101,16 @@ export const Layout = () => {
             <img src="/logo.png" alt="CRA" className="w-8 h-8 object-contain" />
             <span className="font-heading font-bold">CRA Construtora</span>
           </div>
-          <button
-            data-testid="mobile-menu-btn"
-            className="p-2 hover:bg-gray-900 rounded-lg"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <TasksInbox system="gerenciamento" accentColor="#E31A1A" />
+            <button
+              data-testid="mobile-menu-btn"
+              className="p-2 hover:bg-gray-900 rounded-lg"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </header>
 
