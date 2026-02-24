@@ -38,14 +38,24 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 ## O Que Foi Implementado
 
 ### Exportação de Relatórios PDF ✅ (24/02/2026)
-- [x] Página de exportação em ambos os módulos (Gerenciamento e Administrativo)
-- [x] 16 categorias de dados exportáveis total
-- [x] Gerenciamento: Máquinas, Manutenções, Categorias, Estoque, Movimentações, Obras, Registros de Uso
-- [x] Administrativo: Contas a Pagar/Receber, Cadastros, Produtos, OS, Aluguéis, Plano de Contas, Centros de Custo, Formas de Pagamento
-- [x] PDFs formatados com logo da CRA Construtora
-- [x] Tabelas organizadas com cabeçalho vermelho
-- [x] Seleção múltipla para exportar várias categorias de uma vez
-- [x] Download automático após geração
+- [x] Página de exportação redesenhada com categorias expansíveis
+- [x] **Gerenciamento (21 opções)**:
+  - Máquinas: Lista completa, Operacionais, Em Manutenção, Categorias
+  - Manutenções: Todas, Preventivas, Corretivas, Trocas de Óleo
+  - Estoque: Itens, Estoque Baixo, Categorias, Movimentações (entrada/saída)
+  - Obras: Todas, Em Andamento, Concluídas, Pausadas
+  - Registros de Uso, Usuários, Auditoria
+- [x] **Administrativo (27 opções)**:
+  - Contas a Pagar: Todas, Pendentes, Quitadas, Vencidas
+  - Contas a Receber: Todas, Pendentes, Recebidas, Vencidas
+  - Cadastros: Todos, Clientes, Fornecedores
+  - Ordens de Serviço: Todas, Abertas, Em Andamento, Concluídas
+  - Aluguéis: Todos, Ativos, Finalizados
+  - Contabilidade: Plano de Contas (receitas/despesas), Centros de Custo, Formas de Pagamento
+  - Produtos, Usuários, Auditoria
+- [x] Interface com checkbox para categoria completa ou subcategorias individuais
+- [x] PDFs com logo CRA, tabelas formatadas, letras pretas
+- [x] Exportação individual ou em lote
 
 ### Chatbot IA com Gemini ✅ (24/02/2026)
 - [x] **Chatbot flutuante** em ambas as plataformas (Gerenciamento e Administrativo)
