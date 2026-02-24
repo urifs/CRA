@@ -1,4 +1,4 @@
-# RA Locadora - Sistema de Gestão Empresarial
+# CRA Construtora - Sistema de Gestão Empresarial
 
 ## Problema Original
 Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de manutenções, expandido para incluir:
