@@ -37,6 +37,10 @@ export default function AlugueisPage() {
   const [filter, setFilter] = useState("todos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAluguel, setEditingAluguel] = useState(null);
+  const [contractFile, setContractFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [previewModal, setPreviewModal] = useState({ open: false, url: null, name: null });
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     maquina_id: "",
     maquina_nome: "",
@@ -44,6 +48,7 @@ export default function AlugueisPage() {
     cliente_nome: "",
     cliente_telefone: "",
     cliente_documento: "",
+    numero_contrato: "",
     tipo_periodo: "diaria",
     periodo_especificado: "",
     data_entrega: new Date().toISOString().split("T")[0],
