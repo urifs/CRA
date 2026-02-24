@@ -4834,8 +4834,150 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
     )
 
 
+# ============ FILE UPLOAD/ATTACHMENT ROUTES ============
+
+from fastapi.staticfiles import StaticFiles
+import shutil
+
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+ALLOWED_EXTENSIONS = {'.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp'}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+@api_router.post("/attachments/upload")
+async def upload_attachment(
+    file: UploadFile = File(...),
+    entity_type: str = Form(...),  # contas_pagar, contas_receber, ordens_servico, etc
+    entity_id: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload de anexo para uma entidade (conta, OS, etc)"""
+    
+    # Validar extensão
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Tipo de arquivo não permitido. Permitidos: {', '.join(ALLOWED_EXTENSIONS)}")
+    
+    # Validar tamanho
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 10MB")
+    
+    # Gerar nome único
+    file_id = str(uuid.uuid4())
+    filename = f"{file_id}{file_ext}"
+    file_path = UPLOAD_DIR / filename
+    
+    # Salvar arquivo
+    with open(file_path, "wb") as f:
+        f.write(contents)
+    
+    # Criar registro do anexo
+    attachment = {
+        "id": file_id,
+        "filename": file.filename,
+        "stored_filename": filename,
+        "file_type": file.content_type,
+        "file_size": len(contents),
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "uploaded_by": current_user["id"],
+        "uploaded_by_name": current_user["name"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.attachments.insert_one(attachment)
+    
+    # Atualizar a entidade com referência ao anexo
+    collection = db[entity_type]
+    await collection.update_one(
+        {"id": entity_id},
+        {"$push": {"anexos": file_id}}
+    )
+    
+    # Auditoria
+    await create_audit_log(
+        user=current_user,
+        action="anexar",
+        entity_type=f"arquivo em {entity_type}",
+        entity_id=entity_id,
+        entity_name=file.filename,
+        details=f"Arquivo anexado: {file.filename}",
+        module="Administrativo"
+    )
+    
+    attachment.pop("_id", None)
+    return {"message": "Arquivo enviado com sucesso", "attachment": attachment}
+
+@api_router.get("/attachments/{entity_type}/{entity_id}")
+async def get_attachments(entity_type: str, entity_id: str, current_user: dict = Depends(get_current_user)):
+    """Lista anexos de uma entidade"""
+    attachments = await db.attachments.find(
+        {"entity_type": entity_type, "entity_id": entity_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return attachments
+
+@api_router.get("/attachments/download/{file_id}")
+async def download_attachment(file_id: str, current_user: dict = Depends(get_current_user)):
+    """Download de um anexo"""
+    attachment = await db.attachments.find_one({"id": file_id}, {"_id": 0})
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    file_path = UPLOAD_DIR / attachment["stored_filename"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=str(file_path),
+        filename=attachment["filename"],
+        media_type=attachment.get("file_type", "application/octet-stream")
+    )
+
+@api_router.delete("/attachments/{file_id}")
+async def delete_attachment(file_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove um anexo"""
+    attachment = await db.attachments.find_one({"id": file_id}, {"_id": 0})
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    # Remover arquivo físico
+    file_path = UPLOAD_DIR / attachment["stored_filename"]
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Remover registro do banco
+    await db.attachments.delete_one({"id": file_id})
+    
+    # Remover referência da entidade
+    collection = db[attachment["entity_type"]]
+    await collection.update_one(
+        {"id": attachment["entity_id"]},
+        {"$pull": {"anexos": file_id}}
+    )
+    
+    # Auditoria
+    await create_audit_log(
+        user=current_user,
+        action="remover anexo",
+        entity_type=f"arquivo de {attachment['entity_type']}",
+        entity_id=attachment["entity_id"],
+        entity_name=attachment["filename"],
+        details=f"Anexo removido: {attachment['filename']}",
+        module="Administrativo"
+    )
+    
+    return {"message": "Anexo removido com sucesso"}
+
+
 # Include the router in the main app
 app.include_router(api_router)
+
+# Serve uploaded files
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
