@@ -120,6 +120,12 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **GET `/api/admin/notificacoes/contagem`** (novo - para badge)
 - GET `/api/admin/dashboard`
 
+### Endpoints do Painel Administrativo (Database Manager)
+- **GET `/api/admin-panel/database/{collection_name}`** - Lista documentos com paginação e busca
+- **POST `/api/admin-panel/database/{collection_name}`** - Cria novo documento
+- **PUT `/api/admin-panel/database/{collection_name}/{doc_id}`** - Atualiza documento
+- **DELETE `/api/admin-panel/database/{collection_name}/{doc_id}`** - Exclui documento
+
 ## Backlog Priorizado
 
 ### P0 (Crítico) - ✅ CONCLUÍDO
