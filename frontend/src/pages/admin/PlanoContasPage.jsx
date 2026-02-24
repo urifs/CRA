@@ -54,10 +54,19 @@ export default function PlanoContasPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Excluir esta conta? Subcontas também serão afetadas.")) return;
+    const conta = contas.find(c => c.id === id);
+    const subcontas = contas.filter(c => c.pai_id === id);
+    
+    let confirmMsg = `Excluir a conta "${conta?.nome}"?`;
+    if (subcontas.length > 0) {
+      confirmMsg += `\n\nATENÇÃO: ${subcontas.length} subconta(s) também serão excluídas!`;
+    }
+    
+    if (!window.confirm(confirmMsg)) return;
     try {
-      await axios.delete(`${API}/admin/plano-contas/${id}`);
-      toast.success("Conta excluída!"); fetchContas();
+      const response = await axios.delete(`${API}/admin/plano-contas/${id}`);
+      toast.success(response.data?.message || "Conta excluída!"); 
+      fetchContas();
     } catch (error) { toast.error(error.response?.data?.detail || "Erro ao excluir"); }
   };
 
