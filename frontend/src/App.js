@@ -151,6 +151,7 @@ function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="more" element={<MorePage />} />
+            <Route path="exportar" element={<ExportPage module="gerenciamento" />} />
           </Route>
 
           {/* Administrativo routes */}
@@ -169,6 +170,7 @@ function App() {
             <Route path="produtos" element={<ProdutosPage />} />
             <Route path="ordens-servico" element={<OrdensServicoPage />} />
             <Route path="more" element={<AdminMorePage />} />
+            <Route path="exportar" element={<ExportPage module="administrativo" />} />
           </Route>
           
           {/* Catch all */}
