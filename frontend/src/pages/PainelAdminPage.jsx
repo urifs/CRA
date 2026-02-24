@@ -362,7 +362,7 @@ export default function PainelAdminPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Total de Usuários</p>
-                <p className="text-2xl font-bold">{users.length}</p>
+                <p className="text-2xl font-bold text-white">{users.length}</p>
               </div>
             </CardContent>
           </Card>
@@ -373,7 +373,7 @@ export default function PainelAdminPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Atividades Hoje</p>
-                <p className="text-2xl font-bold">{auditLogs.filter(log => new Date(log.created_at).toDateString() === new Date().toDateString()).length}</p>
+                <p className="text-2xl font-bold text-white">{auditLogs.filter(log => new Date(log.created_at).toDateString() === new Date().toDateString()).length}</p>
               </div>
             </CardContent>
           </Card>
@@ -384,7 +384,7 @@ export default function PainelAdminPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-400">Coleções</p>
-                <p className="text-2xl font-bold">{COLLECTIONS.length}</p>
+                <p className="text-2xl font-bold text-white">{COLLECTIONS.length}</p>
               </div>
             </CardContent>
           </Card>
