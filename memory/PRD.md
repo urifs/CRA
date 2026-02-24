@@ -173,6 +173,16 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Arquivos**: `ContasPagarPage.jsx`, `ContasReceberPage.jsx`
 - **Testes**: 100% aprovados (iteration_9.json)
 
+### Auditoria Detalhada (24/02/2026)
+- **Problema**: Ações de auditoria estavam genéricas (apenas "criar", "excluir", etc)
+- **Solução**: 
+  - Adicionado campo `module` para identificar a plataforma (Gerenciamento Geral, Administrativo, Painel Admin)
+  - Ações agora mostram descrição completa (ex: "Criou Item de Estoque" ao invés de "create")
+  - Detalhes incluem nome do item e informações adicionais
+  - Badges coloridos por módulo (vermelho=Gerenciamento, amarelo=Administrativo, roxo=Painel Admin)
+- **Arquivos**: `server.py` (função create_audit_log), `PainelAdminPage.jsx`
+- **Contraste**: Corrigido texto dos badges de usuário para branco
+
 ### Rebranding e Paleta de Cores (24/02/2026)
 - **Nome da Empresa**: CRA Construtora (mantido)
 - **Ícone**: HardHat (capacete de construção) do lucide-react
