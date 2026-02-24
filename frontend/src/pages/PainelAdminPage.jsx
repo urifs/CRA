@@ -460,7 +460,7 @@ export default function PainelAdminPage() {
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                <Input placeholder="Buscar atividades..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-900 border-gray-700 text-white" />
+                <Input placeholder="Buscar por usuário, ação, módulo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-900 border-gray-700 text-white" />
               </div>
             </div>
             <Card className="bg-gray-900 border-gray-800">
@@ -470,6 +470,7 @@ export default function PainelAdminPage() {
                     <TableRow className="border-gray-800">
                       <TableHead className="text-gray-400">Data/Hora</TableHead>
                       <TableHead className="text-gray-400">Usuário</TableHead>
+                      <TableHead className="text-gray-400">Módulo</TableHead>
                       <TableHead className="text-gray-400">Ação</TableHead>
                       <TableHead className="text-gray-400">Detalhes</TableHead>
                       <TableHead className="text-gray-400 text-right">Ver</TableHead>
@@ -478,9 +479,15 @@ export default function PainelAdminPage() {
                   <TableBody>
                     {filteredLogs.slice(0, 100).map((log, index) => (
                       <TableRow key={log.id || index} className="border-gray-800 hover:bg-gray-800/50 cursor-pointer" onClick={() => openActivityDetail(log)}>
-                        <TableCell className="text-gray-400 whitespace-nowrap"><Calendar size={14} className="inline mr-2" />{formatDate(log.created_at)}</TableCell>
-                        <TableCell><Badge className="bg-gray-700 text-gray-300">{log.user_name || "Sistema"}</Badge></TableCell>
-                        <TableCell><span className={`p-1 rounded ${getActionColor(log.action)} mr-2`}>{getActionIcon(log.action)}</span><span className="text-white">{log.action}</span></TableCell>
+                        <TableCell className="text-gray-400 whitespace-nowrap"><Clock size={14} className="inline mr-2" />{formatDate(log.created_at)}</TableCell>
+                        <TableCell><Badge className="bg-gray-700 text-white">{log.user_name || "Sistema"}</Badge></TableCell>
+                        <TableCell>{getModuleBadge(log.module)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className={`p-1.5 rounded ${getActionColor(log.action)}`}>{getActionIcon(log.action, log.entity_type)}</span>
+                            <span className="text-white font-medium">{log.action}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="text-gray-400 max-w-xs truncate">{log.details || "-"}</TableCell>
                         <TableCell className="text-right"><Button variant="ghost" size="sm" className="text-gray-400 hover:text-white"><Info size={16} /></Button></TableCell>
                       </TableRow>
