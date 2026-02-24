@@ -76,6 +76,7 @@ export const Layout = () => {
     { path: "/stock", icon: Package, label: "Estoque" },
     { path: "/categories", icon: Tags, label: "Categorias" },
     { path: "/audit", icon: ClipboardList, label: "Auditoria" },
+    { path: "/exportar", icon: FileDown, label: "Exportação" },
   ];
 
   // Mobile bottom navigation items
