@@ -1,4 +1,5 @@
 /* Fleet Maintenance System - Custom Styles */
+/* RA Locadora Brand Colors: Red #E31A1A, Yellow #FFC232, Black #000000, White #FFFFFF */
 
 /* Sidebar styles */
 .sidebar {
@@ -8,7 +9,7 @@
     width: 16rem;
     height: 100vh;
     height: 100dvh;
-    background-color: #0f172a;
+    background-color: #000000;
     color: white;
     z-index: 60;
     display: flex;
@@ -35,12 +36,12 @@
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-    background: #475569;
+    background: #333333;
     border-radius: 4px;
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #555555;
 }
 
 /* Legacy support */
@@ -60,77 +61,77 @@
 }
 
 .sidebar nav::-webkit-scrollbar-thumb {
-    background: #475569;
+    background: #333333;
     border-radius: 4px;
 }
 
 .sidebar nav::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #555555;
 }
 
 .sidebar-link {
-    @apply flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors duration-200;
+    @apply flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-900 hover:text-white transition-colors duration-200;
 }
 
 .sidebar-link.active {
-    @apply bg-slate-800 text-white border-l-4 border-orange-500;
+    @apply bg-gray-900 text-white border-l-4 border-[#E31A1A];
 }
 
 /* Main content */
 .main-content {
-    @apply ml-64 min-h-screen bg-slate-50;
+    @apply ml-64 min-h-screen bg-white;
 }
 
 /* Dashboard cards */
 .stat-card {
-    @apply bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200;
+    @apply bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200;
 }
 
 /* Table styles */
 .data-table {
-    @apply w-full bg-white border border-slate-200 rounded-lg overflow-hidden;
+    @apply w-full bg-white border border-gray-200 rounded-lg overflow-hidden;
 }
 
 .data-table th {
-    @apply bg-slate-50 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200;
+    @apply bg-gray-50 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-600 border-b border-gray-200;
 }
 
 .data-table td {
-    @apply px-4 py-3 text-sm border-b border-slate-100;
+    @apply px-4 py-3 text-sm border-b border-gray-100;
 }
 
 .data-table tr:hover {
-    @apply bg-slate-50;
+    @apply bg-gray-50;
 }
 
 /* Form styles */
 .form-label {
-    @apply block text-sm font-bold text-slate-700 mb-1.5;
+    @apply block text-sm font-bold text-gray-700 mb-1.5;
 }
 
 .form-input {
-    @apply w-full h-11 px-3 bg-white border border-slate-300 rounded-md text-base focus:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-colors;
+    @apply w-full h-11 px-3 bg-white border border-gray-300 rounded-md text-base focus:border-[#E31A1A] focus:ring-2 focus:ring-[#E31A1A] focus:outline-none transition-colors;
 }
 
 .form-select {
-    @apply w-full h-11 px-3 bg-white border border-slate-300 rounded-md text-base focus:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-colors appearance-none;
+    @apply w-full h-11 px-3 bg-white border border-gray-300 rounded-md text-base focus:border-[#E31A1A] focus:ring-2 focus:ring-[#E31A1A] focus:outline-none transition-colors appearance-none;
 }
 
 /* Button styles */
 .btn-primary {
-    @apply bg-slate-900 text-white hover:bg-slate-800 rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
+    @apply bg-black text-white hover:bg-gray-800 rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
 }
 
 .btn-secondary {
-    @apply bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-md px-6 py-2.5 font-medium transition-colors duration-200;
+    @apply bg-white text-black border border-gray-200 hover:bg-gray-50 rounded-md px-6 py-2.5 font-medium transition-colors duration-200;
 }
 
 .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
+    @apply bg-[#E31A1A] text-white hover:bg-red-700 rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
 }
 
 .btn-orange {
-    @apply bg-orange-500 text-white hover:bg-orange-600 rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
+    @apply bg-[#FFC232] text-black hover:bg-[#e6ad2a] rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
 }
 
 /* Status badge */
@@ -144,7 +145,7 @@
 }
 
 .photo-item {
-    @apply relative aspect-square rounded-lg overflow-hidden border border-slate-200;
+    @apply relative aspect-square rounded-lg overflow-hidden border border-gray-200;
 }
 
 .photo-item img {
@@ -157,17 +158,17 @@
 
 /* Machine card */
 .machine-card {
-    @apply flex flex-col h-full bg-white border border-slate-200 rounded-lg overflow-hidden hover:border-orange-500/50 transition-colors duration-200;
+    @apply flex flex-col h-full bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-[#E31A1A]/50 transition-colors duration-200;
 }
 
 /* Loading spinner */
 .spinner {
-    @apply animate-spin rounded-full border-2 border-slate-200 border-t-orange-500;
+    @apply animate-spin rounded-full border-2 border-gray-200 border-t-[#E31A1A];
 }
 
 /* Empty state */
 .empty-state {
-    @apply flex flex-col items-center justify-center py-12 text-slate-400;
+    @apply flex flex-col items-center justify-center py-12 text-gray-400;
 }
 
 /* Modal backdrop */
@@ -181,7 +182,7 @@
 }
 
 .page-title {
-    @apply text-3xl font-bold tracking-tight text-slate-900;
+    @apply text-3xl font-bold tracking-tight text-black;
 }
 
 /* Responsive sidebar */
@@ -200,7 +201,7 @@
     width: 16rem;
     height: 100vh;
     height: 100dvh;
-    background-color: #1e3a5f;
+    background-color: #000000;
     color: white;
     z-index: 60;
     display: flex;
@@ -209,31 +210,31 @@
 }
 
 .admin-sidebar-link {
-    @apply flex items-center gap-3 px-4 py-3 text-blue-200 hover:bg-blue-800 hover:text-white transition-colors duration-200;
+    @apply flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-gray-900 hover:text-white transition-colors duration-200;
 }
 
 .admin-sidebar-link.active {
-    @apply bg-blue-800 text-white border-l-4 border-blue-400;
+    @apply bg-gray-900 text-white border-l-4 border-[#FFC232];
 }
 
 /* Admin main content */
 .admin-main-content {
-    @apply ml-64 min-h-screen bg-slate-50;
+    @apply ml-64 min-h-screen bg-white;
 }
 
 /* Admin mobile navigation */
 .admin-mobile-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-blue-900 border-t border-blue-800 md:hidden flex;
+    @apply fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 md:hidden flex;
     padding-bottom: env(safe-area-inset-bottom);
     z-index: 50;
 }
 
 .admin-mobile-nav .mobile-nav-item {
-    @apply flex-1 flex flex-col items-center justify-center py-2 text-blue-300;
+    @apply flex-1 flex flex-col items-center justify-center py-2 text-gray-400;
 }
 
 .admin-mobile-nav .mobile-nav-item.active {
-    @apply text-white bg-blue-800;
+    @apply text-[#FFC232] bg-gray-900;
 }
 
 @media (max-width: 768px) {
