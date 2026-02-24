@@ -131,6 +131,13 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Frontend: 100% (todos os fluxos)
 - Funcionalidades testadas: Aluguéis CRUD, seleção de máquinas, geração de conta a receber, finalização, notificações com prazo configurável, filtros, badge no header
 
+### Bug Fix - Dropdowns (24/02/2026)
+- **Problema**: Dropdown "Plano de Contas" não abria nos formulários de Contas a Pagar/Receber
+- **Causa**: Componente Select do Shadcn/UI precisa de value válido correspondente a SelectItem
+- **Solução**: Adicionada opção "Nenhum" (value='none') e tratamento de valor vazio
+- **Arquivos**: `ContasPagarPage.jsx`, `ContasReceberPage.jsx`
+- **Testes**: 100% aprovados (iteration_9.json)
+
 ## Estrutura de Arquivos
 ```
 /app/
