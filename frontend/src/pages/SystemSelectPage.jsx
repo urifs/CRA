@@ -3,6 +3,7 @@ import { useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { 
   Building2,
   Truck,
@@ -14,12 +15,13 @@ import {
   ArrowRight,
   Shield,
   Lock,
-  HardHat
+  HardHat,
+  LogOut
 } from "lucide-react";
 
 export default function SystemSelectPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Verificar permissões baseado no role do usuário
   const userRole = user?.role || "gerenciamento";
@@ -27,6 +29,20 @@ export default function SystemSelectPage() {
   const canAccessGerenciamento = ["gerenciamento", "ambos", "admin"].includes(userRole);
   const canAccessAdministrativo = ["administrativo", "ambos", "admin"].includes(userRole);
   const canAccessAdminPanel = userRole === "admin";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+    toast.success("Logout realizado com sucesso!");
+  };
+
+  const handleAdminPanelClick = () => {
+    if (canAccessAdminPanel) {
+      navigate("/painel-admin");
+    } else {
+      toast.error("Acesso negado. Apenas administradores podem acessar este painel.");
+    }
+  };
 
   const systems = [
     {
