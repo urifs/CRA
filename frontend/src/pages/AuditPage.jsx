@@ -101,14 +101,14 @@ export default function AuditPage() {
     });
   };
 
-  // Get unique entity types for filter
-  const entityTypes = [...new Set(logs.map(l => l.entity_type))];
+  // Get unique entity types for filter (filter out empty strings)
+  const entityTypes = [...new Set(logs.map(l => l.entity_type))].filter(t => t && t.trim() !== "");
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = 
-      log.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.entity_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.entity_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.user_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.entity_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.entity_type || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (log.details && log.details.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = filterType === "all" || log.entity_type === filterType;
