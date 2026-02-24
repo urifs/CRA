@@ -474,6 +474,41 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         created_at=current_user["created_at"]
     )
 
+# ============ CREATE ADMIN ACCOUNT (PUBLIC) ============
+
+class AdminCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+
+@api_router.post("/auth/create-admin")
+async def create_admin_account(data: AdminCreate):
+    """
+    Cria uma conta administrador com acesso total ao sistema.
+    Disponível publicamente na tela de login.
+    """
+    # Verificar se email já existe
+    existing = await db.users.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Este email já está cadastrado")
+    
+    if len(data.password) < 6:
+        raise HTTPException(status_code=400, detail="A senha deve ter pelo menos 6 caracteres")
+    
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "name": data.name,
+        "email": data.email,
+        "password": hash_password(data.password),
+        "role": "admin",  # Acesso total
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    return {"message": "Conta administrador criada com sucesso!", "email": data.email}
+
 # ============ SPECIAL ADMIN SETUP ENDPOINT ============
 # Endpoint especial para promover usuário para admin (usar uma vez para configurar)
 
