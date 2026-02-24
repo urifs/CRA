@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center bg-slate-900 p-4"
+      className="min-h-screen flex items-center justify-center bg-black p-4"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {/* Background pattern */}
@@ -44,15 +44,15 @@ export default function LoginPage() {
         }} />
       </div>
 
-      <Card className="w-full max-w-md relative z-10 border-slate-200 shadow-2xl animate-fade-in">
+      <Card className="w-full max-w-md relative z-10 border-gray-200 shadow-2xl animate-fade-in">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto w-16 h-16 bg-orange-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
+          <div className="mx-auto w-16 h-16 bg-[#E31A1A] rounded-xl flex items-center justify-center mb-4 shadow-lg">
             <Construction className="text-white" size={32} />
           </div>
-          <CardTitle className="font-heading text-3xl font-black tracking-tight text-slate-900">
-            CRA Construtora
+          <CardTitle className="font-heading text-3xl font-black tracking-tight text-black">
+            RA Locadora
           </CardTitle>
-          <CardDescription className="text-slate-500">
+          <CardDescription className="text-gray-500">
             Sistema de Gerenciamento de Manutenção
           </CardDescription>
         </CardHeader>
@@ -89,7 +89,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12"
+              className="w-full bg-[#E31A1A] hover:bg-red-700 text-white font-bold h-12"
               disabled={loading}
               data-testid="login-submit-btn"
             >
@@ -105,11 +105,11 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-gray-500">
               Não tem uma conta?{" "}
               <Link
                 to="/register"
-                className="text-orange-500 hover:text-orange-600 font-semibold"
+                className="text-[#E31A1A] hover:text-red-700 font-semibold"
                 data-testid="register-link"
               >
                 Cadastre-se
