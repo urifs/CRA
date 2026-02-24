@@ -55,7 +55,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API}/api/export/categories/${module}`, {
+      const response = await axios.get(`${API}/export/categories/${module}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(response.data);
