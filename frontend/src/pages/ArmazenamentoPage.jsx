@@ -468,7 +468,7 @@ export default function ArmazenamentoPage() {
                     <tr key={item.path} className="border-b hover:bg-gray-50 cursor-pointer" onDoubleClick={() => handleNavigate(item.path)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
-                          <FolderOpen size={24} className="text-blue-500" />
+                          <FolderOpen size={24} className="text-[#D4A000]" />
                           <span className="font-medium">{item.name}</span>
                         </div>
                       </td>
