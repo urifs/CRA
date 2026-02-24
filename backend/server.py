@@ -384,6 +384,7 @@ async def login(credentials: UserLogin):
         id=user["id"],
         name=user["name"],
         email=user["email"],
+        role=user.get("role", "gerenciamento"),
         created_at=user["created_at"]
     )
     return TokenResponse(token=token, user=user_response)
