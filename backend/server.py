@@ -4645,6 +4645,27 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     item.get("created_at", "-")[:10] if item.get("created_at") else "-",
                     item.get("notes", "-")[:30]
                 ])
+        elif category == "users":
+            headers = ["Nome", "Email", "Tipo", "Criado em"]
+            table_data = [headers]
+            for item in data:
+                role_map = {"admin": "Administrador", "gerenciamento": "Gerenciamento", "administrativo": "Administrativo", "ambos": "Ambos"}
+                table_data.append([
+                    item.get("name", "-")[:25],
+                    item.get("email", "-")[:30],
+                    role_map.get(item.get("role", ""), item.get("role", "-")),
+                    item.get("created_at", "-")[:10] if item.get("created_at") else "-"
+                ])
+        elif category == "audit_logs":
+            headers = ["Data", "Usuário", "Ação", "Módulo"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("created_at", "-")[:16] if item.get("created_at") else "-",
+                    item.get("user_name", "-")[:20],
+                    item.get("action", "-")[:30],
+                    item.get("module", "-")[:15]
+                ])
         else:
             # Fallback genérico
             headers = ["ID", "Dados"]
