@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import ChatbotWidget from "@/components/ChatbotWidget";
 import {
   Shield,
   Users,
