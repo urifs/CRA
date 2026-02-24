@@ -229,6 +229,30 @@ export default function AlugueisPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleViewContract = (aluguel) => {
+    if (aluguel.contrato_arquivo) {
+      const url = `${API.replace('/api', '')}/uploads/contratos/${aluguel.contrato_arquivo}`;
+      setPreviewModal({ open: true, url, name: aluguel.contrato_nome || aluguel.contrato_arquivo });
+    }
+  };
+
+  const handleDownloadContract = async (aluguel) => {
+    try {
+      const response = await axios.get(`${API}/admin/alugueis/${aluguel.id}/contrato/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', aluguel.contrato_nome || 'contrato');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error("Erro ao baixar contrato");
+    }
+  };
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
