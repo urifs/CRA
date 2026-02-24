@@ -4973,6 +4973,280 @@ async def delete_attachment(file_id: str, current_user: dict = Depends(get_curre
     return {"message": "Anexo removido com sucesso"}
 
 
+# ============ TASK/MESSAGE SYSTEM ============
+
+# Directory for task attachments (100MB max)
+TASK_UPLOAD_DIR = ROOT_DIR / "task_uploads"
+TASK_UPLOAD_DIR.mkdir(exist_ok=True)
+
+class TaskCreate(BaseModel):
+    target_system: str  # "gerenciamento" or "administrativo"
+    priority: str  # "baixa", "media", "alta"
+    title: str
+    message: str
+
+class TaskResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    target_system: str
+    priority: str
+    title: str
+    message: str
+    attachments: List[dict] = []
+    created_by_id: str
+    created_by_name: str
+    created_at: str
+    read: bool = False
+    read_at: Optional[str] = None
+    read_by: Optional[str] = None
+
+@api_router.post("/admin-panel/tasks")
+async def create_task(
+    task: TaskCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Create a new task/message for a specific system"""
+    current_user = await get_current_user(credentials)
+    
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem criar tarefas")
+    
+    if task.target_system not in ["gerenciamento", "administrativo"]:
+        raise HTTPException(status_code=400, detail="Sistema alvo inválido")
+    
+    if task.priority not in ["baixa", "media", "alta"]:
+        raise HTTPException(status_code=400, detail="Prioridade inválida")
+    
+    task_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    task_doc = {
+        "id": task_id,
+        "target_system": task.target_system,
+        "priority": task.priority,
+        "title": task.title,
+        "message": task.message,
+        "attachments": [],
+        "created_by_id": current_user["id"],
+        "created_by_name": current_user["name"],
+        "created_at": now,
+        "read": False,
+        "read_at": None,
+        "read_by": None
+    }
+    
+    await db.tasks.insert_one(task_doc)
+    
+    # Auditoria
+    await create_audit_log(
+        user=current_user,
+        action="criar tarefa",
+        entity_type="tarefa",
+        entity_id=task_id,
+        entity_name=task.title,
+        details=f"Tarefa criada para {task.target_system} - Prioridade: {task.priority}",
+        module="Painel Admin"
+    )
+    
+    task_doc.pop("_id", None)
+    return task_doc
+
+@api_router.post("/admin-panel/tasks/{task_id}/attachments")
+async def upload_task_attachment(
+    task_id: str,
+    file: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Upload attachment to a task (max 100MB)"""
+    current_user = await get_current_user(credentials)
+    
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem adicionar anexos")
+    
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    # Read file content
+    content = await file.read()
+    
+    # Check file size (100MB max)
+    max_size = 100 * 1024 * 1024  # 100MB
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 100MB")
+    
+    # Create task directory
+    task_dir = TASK_UPLOAD_DIR / task_id
+    task_dir.mkdir(exist_ok=True)
+    
+    # Generate unique filename
+    ext = Path(file.filename).suffix if file.filename else ""
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    file_path = task_dir / unique_filename
+    
+    # Save file
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Add attachment info to task
+    attachment = {
+        "id": str(uuid.uuid4()),
+        "original_name": file.filename,
+        "filename": unique_filename,
+        "content_type": file.content_type,
+        "size": len(content),
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.tasks.update_one(
+        {"id": task_id},
+        {"$push": {"attachments": attachment}}
+    )
+    
+    return {"message": "Anexo adicionado com sucesso", "attachment": attachment}
+
+@api_router.get("/admin-panel/tasks")
+async def list_all_tasks(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """List all tasks (admin only)"""
+    current_user = await get_current_user(credentials)
+    
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem ver todas as tarefas")
+    
+    tasks = await db.tasks.find().sort("created_at", -1).to_list(1000)
+    
+    for task in tasks:
+        task.pop("_id", None)
+    
+    return tasks
+
+@api_router.get("/tasks")
+async def list_tasks_for_system(
+    system: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """List tasks for a specific system"""
+    current_user = await get_current_user(credentials)
+    
+    if system not in ["gerenciamento", "administrativo"]:
+        raise HTTPException(status_code=400, detail="Sistema inválido")
+    
+    tasks = await db.tasks.find({"target_system": system}).sort("created_at", -1).to_list(1000)
+    
+    for task in tasks:
+        task.pop("_id", None)
+    
+    return tasks
+
+@api_router.get("/tasks/unread-count")
+async def get_unread_task_count(
+    system: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get count of unread tasks for a system"""
+    await get_current_user(credentials)
+    
+    if system not in ["gerenciamento", "administrativo"]:
+        raise HTTPException(status_code=400, detail="Sistema inválido")
+    
+    count = await db.tasks.count_documents({"target_system": system, "read": False})
+    
+    return {"count": count}
+
+@api_router.patch("/tasks/{task_id}/read")
+async def mark_task_as_read(
+    task_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Mark a task as read"""
+    current_user = await get_current_user(credentials)
+    
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.tasks.update_one(
+        {"id": task_id},
+        {"$set": {"read": True, "read_at": now, "read_by": current_user["name"]}}
+    )
+    
+    return {"message": "Tarefa marcada como lida"}
+
+@api_router.get("/tasks/{task_id}/attachments/{filename}")
+async def download_task_attachment(
+    task_id: str,
+    filename: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Download a task attachment"""
+    await get_current_user(credentials)
+    
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    # Find attachment
+    attachment = None
+    for att in task.get("attachments", []):
+        if att["filename"] == filename:
+            attachment = att
+            break
+    
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    file_path = TASK_UPLOAD_DIR / task_id / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=str(file_path),
+        filename=attachment["original_name"],
+        media_type=attachment.get("content_type", "application/octet-stream")
+    )
+
+@api_router.delete("/admin-panel/tasks/{task_id}")
+async def delete_task(
+    task_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Delete a task (admin only)"""
+    current_user = await get_current_user(credentials)
+    
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem excluir tarefas")
+    
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    # Delete attachments directory
+    task_dir = TASK_UPLOAD_DIR / task_id
+    if task_dir.exists():
+        import shutil
+        shutil.rmtree(task_dir)
+    
+    await db.tasks.delete_one({"id": task_id})
+    
+    # Auditoria
+    await create_audit_log(
+        user=current_user,
+        action="excluir tarefa",
+        entity_type="tarefa",
+        entity_id=task_id,
+        entity_name=task["title"],
+        details=f"Tarefa excluída: {task['title']}",
+        module="Painel Admin"
+    )
+    
+    return {"message": "Tarefa excluída com sucesso"}
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
