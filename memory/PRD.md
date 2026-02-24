@@ -145,7 +145,8 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Testes**: 100% aprovados (iteration_9.json)
 
 ### Rebranding e Paleta de Cores (24/02/2026)
-- **Mudança de Nome**: "CRA Construtora" → "RA Locadora"
+- **Nome da Empresa**: CRA Construtora (mantido)
+- **Ícone**: HardHat (capacete de construção) do lucide-react
 - **Nova Paleta**: Vermelho (#E31A1A), Amarelo (#FFC232), Preto (#000000), Branco (#FFFFFF)
 - **Arquivos Modificados**: 
   - index.css (variáveis CSS globais)
