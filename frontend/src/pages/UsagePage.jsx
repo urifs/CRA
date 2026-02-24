@@ -36,7 +36,9 @@ import {
   Loader2,
   History,
   Droplet,
-  Calendar
+  Calendar,
+  Search,
+  X
 } from "lucide-react";
 
 export default function UsagePage() {
@@ -44,6 +46,7 @@ export default function UsagePage() {
   const [oilStatus, setOilStatus] = useState([]);
   const [usageLogs, setUsageLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("status");
