@@ -165,7 +165,104 @@ export default function PainelAdminPage() {
     if (activeTab === "database") {
       fetchDbDocuments();
     }
+    if (activeTab === "tasks") {
+      fetchTasks();
+    }
   }, [activeTab, selectedCollection, dbPage]);
+
+  const fetchTasks = async () => {
+    setTasksLoading(true);
+    try {
+      const response = await axios.get(`${API}/admin-panel/tasks`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTasks(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar tarefas:", error);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!taskForm.title.trim() || !taskForm.message.trim()) {
+      toast.error("Preencha o título e a mensagem");
+      return;
+    }
+
+    setCreatingTask(true);
+    try {
+      // Create task first
+      const response = await axios.post(`${API}/admin-panel/tasks`, taskForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const taskId = response.data.id;
+
+      // Upload attachments if any
+      for (const file of taskAttachments) {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        await axios.post(`${API}/admin-panel/tasks/${taskId}/attachments`, formData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
+        });
+      }
+
+      toast.success("Tarefa criada e enviada com sucesso!");
+      setTaskForm({ target_system: "gerenciamento", priority: "media", title: "", message: "" });
+      setTaskAttachments([]);
+      fetchTasks();
+    } catch (error) {
+      console.error("Erro ao criar tarefa:", error);
+      toast.error(error.response?.data?.detail || "Erro ao criar tarefa");
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  const handleTaskFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    
+    for (const file of files) {
+      if (file.size > 100 * 1024 * 1024) {
+        toast.error(`${file.name} é muito grande. Máximo: 100MB`);
+      } else {
+        validFiles.push(file);
+      }
+    }
+    
+    setTaskAttachments(prev => [...prev, ...validFiles]);
+    e.target.value = "";
+  };
+
+  const removeTaskAttachment = (index) => {
+    setTaskAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (!confirm("Tem certeza que deseja excluir esta tarefa?")) return;
+    
+    try {
+      await axios.delete(`${API}/admin-panel/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Tarefa excluída");
+      fetchTasks();
+    } catch (error) {
+      toast.error("Erro ao excluir tarefa");
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   const fetchUsers = async () => {
     try {
