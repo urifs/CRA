@@ -4009,115 +4009,172 @@ class ChatResponse(PydanticBaseModel):
     response: str
     context_used: List[str] = []
 
-async def get_platform_context(module: str) -> str:
-    """Coleta todas as informações relevantes da plataforma para contexto do chatbot"""
+async def get_full_platform_context() -> str:
+    """Coleta TODAS as informações de TODAS as coleções do banco de dados"""
     context_parts = []
     
-    # Informações gerais
-    context_parts.append("=== INFORMAÇÕES DO SISTEMA CRA CONSTRUTORA ===")
-    context_parts.append(f"Módulo atual: {module.upper()}")
+    context_parts.append("=" * 60)
+    context_parts.append("BANCO DE DADOS COMPLETO - CRA CONSTRUTORA")
+    context_parts.append("=" * 60)
     
-    # Estatísticas gerais
-    users_count = await db.users.count_documents({})
-    machines_count = await db.machines.count_documents({})
-    maintenances_count = await db.maintenances.count_documents({})
-    context_parts.append(f"\n=== ESTATÍSTICAS GERAIS ===")
-    context_parts.append(f"Total de usuários: {users_count}")
-    context_parts.append(f"Total de máquinas: {machines_count}")
-    context_parts.append(f"Total de manutenções: {maintenances_count}")
+    # ========== USUÁRIOS ==========
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nUSUÁRIOS DO SISTEMA ({len(users)} registros)\n{'='*40}")
+    for u in users:
+        context_parts.append(f"- Nome: {u.get('name')} | Email: {u.get('email')} | Tipo: {u.get('role', 'gerenciamento')} | Criado: {u.get('created_at', '-')[:10] if u.get('created_at') else '-'}")
     
-    # Máquinas cadastradas
-    machines = await db.machines.find({}, {"_id": 0}).to_list(100)
-    if machines:
-        context_parts.append(f"\n=== MÁQUINAS CADASTRADAS ({len(machines)}) ===")
-        for m in machines[:20]:
-            status = "Operacional" if m.get("status") == "operational" else "Em manutenção"
-            context_parts.append(f"- {m.get('name', 'Sem nome')} | Placa: {m.get('plate', '-')} | Status: {status}")
+    # ========== CATEGORIAS DE MÁQUINAS ==========
+    categories = await db.categories.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nCATEGORIAS DE MÁQUINAS ({len(categories)} registros)\n{'='*40}")
+    for c in categories:
+        context_parts.append(f"- ID: {c.get('id', '-')[:8]} | Nome: {c.get('name')} | Descrição: {c.get('description', '-')}")
     
-    # Categorias de máquinas
-    categories = await db.categories.find({}, {"_id": 0}).to_list(50)
-    if categories:
-        context_parts.append(f"\n=== CATEGORIAS DE MÁQUINAS ({len(categories)}) ===")
-        for c in categories:
-            context_parts.append(f"- {c.get('name', 'Sem nome')}: {c.get('description', '')}")
+    # ========== MÁQUINAS ==========
+    machines = await db.machines.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nMÁQUINAS CADASTRADAS ({len(machines)} registros)\n{'='*40}")
+    for m in machines:
+        status = "Operacional" if m.get("status") == "operational" else "Em manutenção"
+        context_parts.append(f"- ID: {m.get('id', '-')[:8]} | Nome: {m.get('name')} | Placa: {m.get('plate')} | Marca: {m.get('brand', '-')} | Modelo: {m.get('model', '-')} | Ano: {m.get('year', '-')} | Status: {status} | Horas desde troca óleo: {m.get('hours_since_oil_change', 0)}")
     
-    # Manutenções recentes
-    maintenances = await db.maintenances.find({}, {"_id": 0}).sort("created_at", -1).to_list(20)
-    if maintenances:
-        context_parts.append(f"\n=== ÚLTIMAS MANUTENÇÕES ({len(maintenances)}) ===")
-        for m in maintenances[:10]:
-            tipo = "Preventiva" if m.get("maintenance_type") == "preventiva" else "Corretiva"
-            context_parts.append(f"- {m.get('part_name', 'Sem peça')} | Tipo: {tipo} | Valor: R$ {m.get('part_value', 0):.2f}")
+    # ========== MANUTENÇÕES ==========
+    maintenances = await db.maintenances.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nMANUTENÇÕES ({len(maintenances)} registros)\n{'='*40}")
+    # Calcular totais
+    total_valor = sum(m.get('part_value', 0) for m in maintenances)
+    preventivas = [m for m in maintenances if m.get('maintenance_type') == 'preventiva']
+    corretivas = [m for m in maintenances if m.get('maintenance_type') == 'corretiva']
+    context_parts.append(f"RESUMO: Total gasto: R$ {total_valor:.2f} | Preventivas: {len(preventivas)} | Corretivas: {len(corretivas)}")
+    for m in maintenances:
+        tipo = "Preventiva" if m.get("maintenance_type") == "preventiva" else "Corretiva"
+        context_parts.append(f"- Peça: {m.get('part_name')} | Tipo: {tipo} | Valor: R$ {m.get('part_value', 0):.2f} | Data: {m.get('replacement_date', '-')} | Máquina ID: {m.get('machine_id', '-')[:8] if m.get('machine_id') else '-'} | Troca óleo: {'Sim' if m.get('is_oil_change') else 'Não'}")
     
-    # Estoque
-    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(100)
-    if stock_items:
-        context_parts.append(f"\n=== ESTOQUE ({len(stock_items)} itens) ===")
-        low_stock = [i for i in stock_items if i.get("quantity", 0) <= i.get("min_quantity", 0)]
-        context_parts.append(f"Itens com estoque baixo: {len(low_stock)}")
-        for i in stock_items[:15]:
-            status = "⚠️ BAIXO" if i.get("quantity", 0) <= i.get("min_quantity", 0) else "OK"
-            context_parts.append(f"- {i.get('name', 'Sem nome')} | Qtd: {i.get('quantity', 0)} {i.get('unit', 'un')} | {status}")
+    # ========== ESTOQUE - CATEGORIAS ==========
+    stock_categories = await db.stock_categories.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nCATEGORIAS DE ESTOQUE ({len(stock_categories)} registros)\n{'='*40}")
+    for c in stock_categories:
+        context_parts.append(f"- Nome: {c.get('name')}")
     
-    # Obras
-    obras = await db.obras.find({}, {"_id": 0}).to_list(50)
-    if obras:
-        context_parts.append(f"\n=== OBRAS/PROJETOS ({len(obras)}) ===")
-        for o in obras:
-            status_map = {"em_andamento": "Em andamento", "concluida": "Concluída", "pausada": "Pausada"}
-            status = status_map.get(o.get("status", ""), o.get("status", ""))
-            context_parts.append(f"- {o.get('name', 'Sem nome')} | Local: {o.get('location', '-')} | Status: {status}")
+    # ========== ESTOQUE - ITENS ==========
+    stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nITENS DE ESTOQUE ({len(stock_items)} registros)\n{'='*40}")
+    low_stock = [i for i in stock_items if i.get("quantity", 0) <= i.get("min_quantity", 0)]
+    context_parts.append(f"ALERTA: {len(low_stock)} itens com estoque baixo!")
+    for i in stock_items:
+        status = "⚠️ BAIXO" if i.get("quantity", 0) <= i.get("min_quantity", 0) else "OK"
+        context_parts.append(f"- Nome: {i.get('name')} | Código: {i.get('code', '-')} | Categoria: {i.get('category', '-')} | Qtd: {i.get('quantity', 0)} {i.get('unit', 'un')} | Mínimo: {i.get('min_quantity', 0)} | Preço unit: R$ {i.get('unit_price', 0):.2f} | Local: {i.get('location', '-')} | Status: {status}")
     
-    if module == "administrativo" or module == "ambos":
-        # Contas a Pagar
-        contas_pagar = await db.contas_pagar.find({}, {"_id": 0}).to_list(100)
-        if contas_pagar:
-            pendentes = [c for c in contas_pagar if c.get("status") == "pendente"]
-            total_pendente = sum(c.get("valor", 0) for c in pendentes)
-            context_parts.append(f"\n=== CONTAS A PAGAR ===")
-            context_parts.append(f"Total de contas: {len(contas_pagar)}")
-            context_parts.append(f"Contas pendentes: {len(pendentes)}")
-            context_parts.append(f"Valor total pendente: R$ {total_pendente:.2f}")
-            for c in pendentes[:10]:
-                context_parts.append(f"- {c.get('descricao', 'Sem descrição')} | R$ {c.get('valor', 0):.2f} | Venc: {c.get('data_vencimento', '-')}")
-        
-        # Contas a Receber
-        contas_receber = await db.contas_receber.find({}, {"_id": 0}).to_list(100)
-        if contas_receber:
-            pendentes = [c for c in contas_receber if c.get("status") == "pendente"]
-            total_pendente = sum(c.get("valor", 0) for c in pendentes)
-            context_parts.append(f"\n=== CONTAS A RECEBER ===")
-            context_parts.append(f"Total de contas: {len(contas_receber)}")
-            context_parts.append(f"Contas pendentes: {len(pendentes)}")
-            context_parts.append(f"Valor total a receber: R$ {total_pendente:.2f}")
-            for c in pendentes[:10]:
-                context_parts.append(f"- {c.get('descricao', 'Sem descrição')} | R$ {c.get('valor', 0):.2f} | Venc: {c.get('data_vencimento', '-')}")
-        
-        # Cadastros (Clientes/Fornecedores)
-        cadastros = await db.cadastros.find({}, {"_id": 0}).to_list(100)
-        if cadastros:
-            context_parts.append(f"\n=== CADASTROS (Clientes/Fornecedores) ({len(cadastros)}) ===")
-            for c in cadastros[:15]:
-                tipo = c.get("tipo", "cliente")
-                context_parts.append(f"- {c.get('nome_razao', 'Sem nome')} | Tipo: {tipo} | Tel: {c.get('telefone', '-')}")
-        
-        # Ordens de Serviço
-        ordens = await db.ordens_servico.find({}, {"_id": 0}).to_list(100)
-        if ordens:
-            abertas = [o for o in ordens if o.get("status") in ["aberta", "em_andamento"]]
-            context_parts.append(f"\n=== ORDENS DE SERVIÇO ({len(ordens)}) ===")
-            context_parts.append(f"Ordens abertas/em andamento: {len(abertas)}")
-            for o in abertas[:10]:
-                context_parts.append(f"- OS-{o.get('numero', '-')} | {o.get('descricao', 'Sem descrição')[:50]} | Status: {o.get('status', '-')}")
-        
-        # Aluguéis
-        alugueis = await db.alugueis.find({}, {"_id": 0}).to_list(100)
-        if alugueis:
-            ativos = [a for a in alugueis if a.get("status") == "ativo"]
-            context_parts.append(f"\n=== ALUGUÉIS DE MÁQUINAS ({len(alugueis)}) ===")
-            context_parts.append(f"Aluguéis ativos: {len(ativos)}")
-            for a in ativos[:10]:
-                context_parts.append(f"- Máquina: {a.get('maquina_nome', '-')} | Cliente: {a.get('cliente_nome', '-')} | Valor: R$ {a.get('valor_total', 0):.2f}")
+    # ========== ESTOQUE - MOVIMENTAÇÕES ==========
+    stock_movements = await db.stock_movements.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    context_parts.append(f"\n\n{'='*40}\nMOVIMENTAÇÕES DE ESTOQUE (últimas {len(stock_movements)})\n{'='*40}")
+    for m in stock_movements:
+        tipo = "ENTRADA" if m.get("movement_type") == "entrada" else "SAÍDA"
+        context_parts.append(f"- {tipo}: {m.get('quantity')} unidades | Item ID: {m.get('item_id', '-')[:8] if m.get('item_id') else '-'} | Motivo: {m.get('reason', '-')} | Data: {m.get('created_at', '-')[:10] if m.get('created_at') else '-'}")
+    
+    # ========== OBRAS ==========
+    obras = await db.obras.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nOBRAS/PROJETOS ({len(obras)} registros)\n{'='*40}")
+    for o in obras:
+        status_map = {"em_andamento": "Em andamento", "concluida": "Concluída", "pausada": "Pausada"}
+        status = status_map.get(o.get("status", ""), o.get("status", ""))
+        context_parts.append(f"- Nome: {o.get('name')} | Local: {o.get('location', '-')} | Status: {status} | Início: {o.get('start_date', '-')} | Fim: {o.get('end_date', '-')} | Descrição: {o.get('description', '-')}")
+    
+    # ========== REGISTROS DE USO (HORÍMETRO) ==========
+    usage_logs = await db.usage_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    context_parts.append(f"\n\n{'='*40}\nREGISTROS DE USO/HORÍMETRO (últimos {len(usage_logs)})\n{'='*40}")
+    for u in usage_logs:
+        context_parts.append(f"- Máquina ID: {u.get('machine_id', '-')[:8] if u.get('machine_id') else '-'} | Horas: {u.get('hours', 0)} | Data: {u.get('created_at', '-')[:10] if u.get('created_at') else '-'} | Obs: {u.get('notes', '-')}")
+    
+    # ========== CADASTROS (CLIENTES/FORNECEDORES) ==========
+    cadastros = await db.cadastros.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nCADASTROS - CLIENTES/FORNECEDORES ({len(cadastros)} registros)\n{'='*40}")
+    clientes = [c for c in cadastros if c.get('tipo') == 'cliente']
+    fornecedores = [c for c in cadastros if c.get('tipo') == 'fornecedor']
+    context_parts.append(f"RESUMO: {len(clientes)} clientes | {len(fornecedores)} fornecedores")
+    for c in cadastros:
+        context_parts.append(f"- Tipo: {c.get('tipo', 'cliente').upper()} | Nome/Razão: {c.get('nome_razao')} | CPF/CNPJ: {c.get('cpf_cnpj', '-')} | Tel: {c.get('telefone', '-')} | Email: {c.get('email', '-')} | Cidade: {c.get('cidade', '-')}/{c.get('estado', '-')}")
+    
+    # ========== CONTAS A PAGAR ==========
+    contas_pagar = await db.contas_pagar.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nCONTAS A PAGAR ({len(contas_pagar)} registros)\n{'='*40}")
+    pendentes_pagar = [c for c in contas_pagar if c.get("status") == "pendente"]
+    quitadas_pagar = [c for c in contas_pagar if c.get("status") == "quitada"]
+    total_pendente_pagar = sum(c.get("valor", 0) for c in pendentes_pagar)
+    total_quitado_pagar = sum(c.get("valor", 0) for c in quitadas_pagar)
+    context_parts.append(f"RESUMO: Pendentes: {len(pendentes_pagar)} (R$ {total_pendente_pagar:.2f}) | Quitadas: {len(quitadas_pagar)} (R$ {total_quitado_pagar:.2f})")
+    for c in contas_pagar:
+        context_parts.append(f"- Descrição: {c.get('descricao')} | Valor: R$ {c.get('valor', 0):.2f} | Vencimento: {c.get('data_vencimento', '-')} | Status: {c.get('status', 'pendente').upper()} | Fornecedor: {c.get('fornecedor_nome', '-')} | Categoria: {c.get('plano_conta_nome', '-')}")
+    
+    # ========== CONTAS A RECEBER ==========
+    contas_receber = await db.contas_receber.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nCONTAS A RECEBER ({len(contas_receber)} registros)\n{'='*40}")
+    pendentes_receber = [c for c in contas_receber if c.get("status") == "pendente"]
+    quitadas_receber = [c for c in contas_receber if c.get("status") == "quitada"]
+    total_pendente_receber = sum(c.get("valor", 0) for c in pendentes_receber)
+    total_quitado_receber = sum(c.get("valor", 0) for c in quitadas_receber)
+    context_parts.append(f"RESUMO: Pendentes: {len(pendentes_receber)} (R$ {total_pendente_receber:.2f}) | Recebidas: {len(quitadas_receber)} (R$ {total_quitado_receber:.2f})")
+    for c in contas_receber:
+        context_parts.append(f"- Descrição: {c.get('descricao')} | Valor: R$ {c.get('valor', 0):.2f} | Vencimento: {c.get('data_vencimento', '-')} | Status: {c.get('status', 'pendente').upper()} | Cliente: {c.get('cliente_nome', '-')} | Categoria: {c.get('plano_conta_nome', '-')}")
+    
+    # ========== PRODUTOS ==========
+    produtos = await db.produtos_admin.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nPRODUTOS ({len(produtos)} registros)\n{'='*40}")
+    for p in produtos:
+        context_parts.append(f"- Código: {p.get('codigo', '-')} | Descrição: {p.get('descricao')} | Unidade: {p.get('unidade', '-')} | Preço: R$ {p.get('preco', 0):.2f} | Estoque: {p.get('estoque', 0)}")
+    
+    # ========== ORDENS DE SERVIÇO ==========
+    ordens = await db.ordens_servico.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nORDENS DE SERVIÇO ({len(ordens)} registros)\n{'='*40}")
+    abertas = [o for o in ordens if o.get("status") in ["aberta", "em_andamento"]]
+    concluidas = [o for o in ordens if o.get("status") == "concluida"]
+    context_parts.append(f"RESUMO: Abertas/Em andamento: {len(abertas)} | Concluídas: {len(concluidas)}")
+    for o in ordens:
+        context_parts.append(f"- OS Nº {o.get('numero')} | Descrição: {o.get('descricao', '-')[:60]} | Cliente: {o.get('cliente_nome', '-')} | Valor: R$ {o.get('valor_total', 0):.2f} | Status: {o.get('status', '-').upper()} | Tipo Financeiro: {o.get('tipo_financeiro', '-')}")
+    
+    # ========== PLANO DE CONTAS ==========
+    plano_contas = await db.plano_contas.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nPLANO DE CONTAS ({len(plano_contas)} registros)\n{'='*40}")
+    for p in plano_contas:
+        tipo = "📥 RECEITA" if p.get("tipo") == "receita" else "📤 DESPESA"
+        context_parts.append(f"- {tipo} | Código: {p.get('codigo', '-')} | Nome: {p.get('nome')} | Pai: {p.get('pai_nome', 'Raiz')}")
+    
+    # ========== CENTROS DE CUSTO ==========
+    centros_custo = await db.centros_custo.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nCENTROS DE CUSTO ({len(centros_custo)} registros)\n{'='*40}")
+    for c in centros_custo:
+        context_parts.append(f"- Código: {c.get('codigo', '-')} | Nome: {c.get('nome')} | Descrição: {c.get('descricao', '-')}")
+    
+    # ========== FORMAS DE PAGAMENTO ==========
+    formas_pagamento = await db.formas_pagamento.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nFORMAS DE PAGAMENTO ({len(formas_pagamento)} registros)\n{'='*40}")
+    for f in formas_pagamento:
+        context_parts.append(f"- Nome: {f.get('nome')} | Descrição: {f.get('descricao', '-')}")
+    
+    # ========== ALUGUÉIS DE MÁQUINAS ==========
+    alugueis = await db.alugueis.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nALUGUÉIS DE MÁQUINAS ({len(alugueis)} registros)\n{'='*40}")
+    ativos = [a for a in alugueis if a.get("status") == "ativo"]
+    finalizados = [a for a in alugueis if a.get("status") == "finalizado"]
+    total_alugueis = sum(a.get("valor_total", 0) for a in alugueis)
+    context_parts.append(f"RESUMO: Ativos: {len(ativos)} | Finalizados: {len(finalizados)} | Valor total: R$ {total_alugueis:.2f}")
+    for a in alugueis:
+        context_parts.append(f"- Máquina: {a.get('maquina_nome', '-')} | Cliente: {a.get('cliente_nome', '-')} | Tel: {a.get('cliente_telefone', '-')} | Período: {a.get('tipo_periodo', '-')} | Valor: R$ {a.get('valor_total', 0):.2f} | Status: {a.get('status', '-').upper()} | Entrega: {a.get('data_entrega', '-')} | Vencimento: {a.get('data_vencimento', '-')}")
+    
+    # ========== LOGS DE AUDITORIA (ÚLTIMOS) ==========
+    audit_logs = await db.audit_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    context_parts.append(f"\n\n{'='*40}\nÚLTIMAS ATIVIDADES/AUDITORIA ({len(audit_logs)} registros)\n{'='*40}")
+    for a in audit_logs:
+        context_parts.append(f"- {a.get('created_at', '-')[:16] if a.get('created_at') else '-'} | Usuário: {a.get('user_name', '-')} | Ação: {a.get('action', '-')} | Módulo: {a.get('module', '-')}")
+    
+    # ========== RESUMO FINANCEIRO GERAL ==========
+    context_parts.append(f"\n\n{'='*60}")
+    context_parts.append("RESUMO FINANCEIRO GERAL")
+    context_parts.append(f"{'='*60}")
+    context_parts.append(f"Total gasto em manutenções: R$ {total_valor:.2f}")
+    context_parts.append(f"Contas a pagar pendentes: R$ {total_pendente_pagar:.2f}")
+    context_parts.append(f"Contas a receber pendentes: R$ {total_pendente_receber:.2f}")
+    context_parts.append(f"Total em aluguéis: R$ {total_alugueis:.2f}")
+    saldo_projetado = total_pendente_receber - total_pendente_pagar
+    context_parts.append(f"Saldo projetado (a receber - a pagar): R$ {saldo_projetado:.2f}")
     
     return "\n".join(context_parts)
 
@@ -4127,24 +4184,32 @@ async def chatbot_ask(chat: ChatMessage, current_user: dict = Depends(get_curren
     from emergentintegrations.llm.chat import LlmChat, UserMessage
     
     try:
-        # Coletar contexto da plataforma
-        platform_context = await get_platform_context(chat.module)
+        # Coletar contexto COMPLETO da plataforma
+        platform_context = await get_full_platform_context()
         
         # Sistema message com contexto completo
-        system_message = f"""Você é o assistente virtual da CRA Construtora, uma plataforma de gestão de máquinas e administrativo.
-Você tem acesso completo a todas as informações da plataforma e deve responder de forma clara e útil.
+        system_message = f"""Você é o assistente virtual inteligente da CRA Construtora.
+Você tem ACESSO COMPLETO E TOTAL a TODAS as informações do banco de dados da plataforma.
 
-INFORMAÇÕES ATUAIS DA PLATAFORMA:
+DADOS COMPLETOS DO SISTEMA (ATUALIZADOS EM TEMPO REAL):
 {platform_context}
 
-INSTRUÇÕES:
-1. Responda sempre em português brasileiro
-2. Seja direto e objetivo nas respostas
-3. Use os dados fornecidos para responder perguntas específicas
-4. Se não souber algo, diga que não tem essa informação disponível
-5. Formate valores monetários como R$ X.XXX,XX
-6. Ajude o usuário a entender os dados e tomar decisões
-7. Se o usuário perguntar sobre algo que não está nos dados, explique o que você sabe e sugira onde ele pode encontrar mais informações na plataforma
+SUAS CAPACIDADES:
+- Você conhece TODOS os usuários, máquinas, manutenções, estoque, obras, contas, ordens de serviço, aluguéis, etc.
+- Você pode calcular totais, médias, fazer comparações e análises
+- Você sabe quais itens estão com estoque baixo
+- Você conhece o histórico financeiro completo
+- Você pode identificar padrões e fazer recomendações
+
+INSTRUÇÕES IMPORTANTES:
+1. SEMPRE responda em português brasileiro
+2. SEMPRE use os dados REAIS fornecidos acima para responder
+3. Seja ESPECÍFICO - cite nomes, valores, datas exatos quando relevante
+4. Se perguntarem sobre algo específico (ex: "máquina X"), procure nos dados e responda com detalhes
+5. Formate valores como R$ X.XXX,XX
+6. Se não encontrar a informação nos dados, diga claramente que não há registro
+7. Faça cálculos quando necessário (totais, médias, etc.)
+8. Seja proativo em fornecer informações relacionadas úteis
 """
         
         # Inicializar chat com Gemini
@@ -4152,7 +4217,7 @@ INSTRUÇÕES:
         
         llm_chat = LlmChat(
             api_key=llm_key,
-            session_id=f"chatbot-{current_user['id']}-{chat.module}",
+            session_id=f"chatbot-{current_user['id']}-{datetime.now().strftime('%Y%m%d%H%M')}",
             system_message=system_message
         ).with_model("gemini", "gemini-2.0-flash")
         
@@ -4162,7 +4227,7 @@ INSTRUÇÕES:
         
         return ChatResponse(
             response=response,
-            context_used=[chat.module]
+            context_used=["todos_os_modulos"]
         )
         
     except Exception as e:
