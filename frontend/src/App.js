@@ -43,6 +43,7 @@ import CentroCustoPage from "@/pages/admin/CentroCustoPage";
 import FormasPagamentoPage from "@/pages/admin/FormasPagamentoPage";
 import AlugueisPage from "@/pages/admin/AlugueisPage";
 import AdminNotificacoesPage from "@/pages/admin/NotificacoesPage";
+import ArmazenamentoPage from "@/pages/ArmazenamentoPage";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
