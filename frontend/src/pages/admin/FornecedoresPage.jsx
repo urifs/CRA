@@ -140,7 +140,7 @@ export default function FornecedoresPage() {
           <h1 className="page-title">Fornecedores</h1>
           <p className="text-gray-500 mt-1">Cadastro de fornecedores</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-fornecedor-btn">
+        <Button onClick={() => openModal()} className="bg-[#D4A000] hover:bg-[#D4A000]" data-testid="new-fornecedor-btn">
           <Plus size={18} className="mr-2" />
           Novo Fornecedor
         </Button>
@@ -175,7 +175,7 @@ export default function FornecedoresPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Building className="text-[#FFC232]" size={20} />
+                      <Building className="text-[#D4A000]" size={20} />
                     </div>
                     <div>
                       <h3 className="font-medium text-black">{fornecedor.nome}</h3>
@@ -314,7 +314,7 @@ export default function FornecedoresPage() {
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 bg-[#FFC232] hover:bg-[#FFC232]" data-testid="submit-fornecedor">
+              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]" data-testid="submit-fornecedor">
                 {editingFornecedor ? "Atualizar" : "Cadastrar"}
               </Button>
             </div>

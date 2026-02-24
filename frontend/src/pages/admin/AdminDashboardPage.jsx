@@ -139,12 +139,12 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Saldo Previsto</p>
-                    <p className={`text-2xl font-bold mt-1 ${stats.saldoPrevisto >= 0 ? 'text-[#FFC232]' : 'text-red-600'}`}>
+                    <p className={`text-2xl font-bold mt-1 ${stats.saldoPrevisto >= 0 ? 'text-[#D4A000]' : 'text-red-600'}`}>
                       {formatCurrency(stats.saldoPrevisto)}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <DollarSign className="text-[#FFC232]" size={24} />
+                    <DollarSign className="text-[#D4A000]" size={24} />
                   </div>
                 </div>
               </CardContent>
@@ -307,10 +307,10 @@ export default function AdminDashboardPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <ClipboardList className="text-[#FFC232]" size={24} />
+                  <ClipboardList className="text-[#D4A000]" size={24} />
                   <div>
                     <p className="text-sm text-gray-500">Valor em OS (a pagar)</p>
-                    <p className="text-xl font-bold text-[#FFC232]">{formatCurrency(aPagar.osValor)}</p>
+                    <p className="text-xl font-bold text-[#D4A000]">{formatCurrency(aPagar.osValor)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -371,10 +371,10 @@ export default function AdminDashboardPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <ClipboardList className="text-[#FFC232]" size={24} />
+                  <ClipboardList className="text-[#D4A000]" size={24} />
                   <div>
                     <p className="text-sm text-gray-500">Valor em OS (a receber)</p>
-                    <p className="text-xl font-bold text-[#FFC232]">{formatCurrency(aReceber.osValor)}</p>
+                    <p className="text-xl font-bold text-[#D4A000]">{formatCurrency(aReceber.osValor)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -443,7 +443,7 @@ export default function AdminDashboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <BadgeDollarSign className="text-[#FFC232]" size={32} />
+                  <BadgeDollarSign className="text-[#D4A000]" size={32} />
                   <div>
                     <p className="text-sm text-gray-500">Saldo Líquido (Recebido - Pago)</p>
                     <p className={`text-3xl font-bold ${(quitados.receber?.total - quitados.pagar?.total) >= 0 ? 'text-green-600' : 'text-red-600'}`}>

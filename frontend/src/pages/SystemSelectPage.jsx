@@ -52,9 +52,9 @@ export default function SystemSelectPage() {
       description: "Sistema financeiro, notas fiscais, fornecedores e ordens de serviço",
       icon: Building2,
       useLogo: false,
-      color: "bg-[#FFC232]",
-      hoverColor: "hover:border-[#FFC232]",
-      textColor: "text-[#FFC232]",
+      color: "bg-[#D4A000]",
+      hoverColor: "hover:border-[#D4A000]",
+      textColor: "text-[#D4A000]",
       path: "/administrativo/dashboard",
       hasAccess: canAccessAdministrativo,
       features: [
@@ -68,7 +68,7 @@ export default function SystemSelectPage() {
   const getRoleBadge = () => {
     const roleInfo = {
       gerenciamento: { label: "Gerenciamento", color: "bg-[#E31A1A]" },
-      administrativo: { label: "Administrativo", color: "bg-[#FFC232] text-black" },
+      administrativo: { label: "Administrativo", color: "bg-[#D4A000] text-black" },
       ambos: { label: "Acesso Duplo", color: "bg-purple-500" },
       admin: { label: "Administrador", color: "bg-green-500" }
     };

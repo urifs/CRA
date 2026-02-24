@@ -256,7 +256,7 @@ export default function PlanoContasPage() {
           <h1 className="page-title">Plano de Contas</h1>
           <p className="text-gray-500 mt-1">Categorias financeiras com subcontas</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]">
+        <Button onClick={() => openModal()} className="bg-[#D4A000] hover:bg-[#D4A000]">
           <Plus size={18} className="mr-2" />Nova Conta
         </Button>
       </div>
@@ -364,7 +364,7 @@ export default function PlanoContasPage() {
             </div>
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-[#FFC232] hover:bg-[#FFC232]">{editingConta ? "Atualizar" : "Cadastrar"}</Button>
+              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingConta ? "Atualizar" : "Cadastrar"}</Button>
             </div>
           </form>
         </DialogContent>

@@ -1,5 +1,5 @@
 /* Fleet Maintenance System - Custom Styles */
-/* RA Locadora Brand Colors: Red #E31A1A, Yellow #FFC232, Black #000000, White #FFFFFF */
+/* RA Locadora Brand Colors: Red #E31A1A, Yellow #D4A000, Black #000000, White #FFFFFF */
 
 /* Sidebar styles */
 .sidebar {
@@ -131,7 +131,7 @@
 }
 
 .btn-orange {
-    @apply bg-[#FFC232] text-black hover:bg-[#e6ad2a] rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
+    @apply bg-[#D4A000] text-black hover:bg-[#e6ad2a] rounded-md px-6 py-2.5 font-bold shadow-sm transition-colors duration-200;
 }
 
 /* Status badge */
@@ -214,7 +214,7 @@
 }
 
 .admin-sidebar-link.active {
-    @apply bg-gray-900 text-white border-l-4 border-[#FFC232];
+    @apply bg-gray-900 text-white border-l-4 border-[#D4A000];
 }
 
 /* Admin main content */
@@ -234,7 +234,7 @@
 }
 
 .admin-mobile-nav .mobile-nav-item.active {
-    @apply text-[#FFC232] bg-gray-900;
+    @apply text-[#D4A000] bg-gray-900;
 }
 
 @media (max-width: 768px) {

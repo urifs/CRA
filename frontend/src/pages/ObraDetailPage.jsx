@@ -104,7 +104,7 @@ export default function ObraDetailPage() {
   const getStatusBadge = (status) => {
     const badges = {
       em_andamento: { class: "bg-green-100 text-green-700 border-green-200", label: "Em Andamento" },
-      concluida: { class: "bg-blue-100 text-[#FFC232] border-blue-200", label: "Concluída" },
+      concluida: { class: "bg-blue-100 text-[#D4A000] border-blue-200", label: "Concluída" },
       pausada: { class: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Pausada" }
     };
     const badge = badges[status] || badges.em_andamento;
@@ -131,7 +131,7 @@ export default function ObraDetailPage() {
 
   const getMaintenanceTypeBadge = (type) => {
     const badges = {
-      preventiva: { class: "bg-blue-100 text-[#FFC232]", label: "Preventiva" },
+      preventiva: { class: "bg-blue-100 text-[#D4A000]", label: "Preventiva" },
       corretiva: { class: "bg-orange-100 text-[#E31A1A]", label: "Corretiva" }
     };
     const badge = badges[type] || badges.corretiva;
@@ -215,7 +215,7 @@ export default function ObraDetailPage() {
                 <p className="text-2xl font-bold text-black">{obra.machines.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Truck className="text-[#FFC232]" size={24} />
+                <Truck className="text-[#D4A000]" size={24} />
               </div>
             </div>
           </CardContent>
@@ -279,7 +279,7 @@ export default function ObraDetailPage() {
                 <p className="text-xl font-bold font-mono text-black">{formatCurrency(obra.total_maintenance_cost)}</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-[#FFC232]">Preventiva</p>
+                <p className="text-sm text-[#D4A000]">Preventiva</p>
                 <p className="text-xl font-bold font-mono text-blue-900">{formatCurrency(obra.preventive_cost)}</p>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">

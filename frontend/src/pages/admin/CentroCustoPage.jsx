@@ -92,7 +92,7 @@ export default function CentroCustoPage() {
           <h1 className="page-title">Centros de Custo</h1>
           <p className="text-gray-500 mt-1">Gerencie os centros de custo da empresa</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-centro-btn">
+        <Button onClick={() => openModal()} className="bg-[#D4A000] hover:bg-[#D4A000]" data-testid="new-centro-btn">
           <Plus size={18} className="mr-2" />Novo Centro
         </Button>
       </div>
@@ -115,11 +115,11 @@ export default function CentroCustoPage() {
         <Card className="stat-card">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Building2 className="text-[#FFC232]" size={20} />
+              <Building2 className="text-[#D4A000]" size={20} />
             </div>
             <div>
               <p className="text-xs text-gray-500">Total de Centros</p>
-              <p className="text-lg font-bold text-[#FFC232]">{centros.length}</p>
+              <p className="text-lg font-bold text-[#D4A000]">{centros.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -221,7 +221,7 @@ export default function CentroCustoPage() {
             </div>
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-[#FFC232] hover:bg-[#FFC232]">{editingCentro ? "Atualizar" : "Cadastrar"}</Button>
+              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingCentro ? "Atualizar" : "Cadastrar"}</Button>
             </div>
           </form>
         </DialogContent>

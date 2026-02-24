@@ -94,7 +94,7 @@ export const AdminLayout = () => {
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Building2 className="text-[#FFC232]" size={24} />
+            <Building2 className="text-[#D4A000]" size={24} />
             <span className="font-heading font-bold">Administrativo</span>
           </div>
           <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export const AdminLayout = () => {
             >
               <Bell size={22} />
               {notifCount.total > 0 && (
-                <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-xs font-bold rounded-full ${notifCount.vencidas > 0 ? 'bg-[#E31A1A]' : 'bg-[#FFC232] text-black'} text-white`}>
+                <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-xs font-bold rounded-full ${notifCount.vencidas > 0 ? 'bg-[#E31A1A]' : 'bg-[#D4A000] text-black'} text-white`}>
                   {notifCount.total > 99 ? '99+' : notifCount.total}
                 </span>
               )}
@@ -142,7 +142,7 @@ export const AdminLayout = () => {
         {/* Logo */}
         <div className="p-5 border-b border-gray-800" style={{ flexShrink: 0 }}>
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <Building2 className="text-[#FFC232]" size={28} />
+            <Building2 className="text-[#D4A000]" size={28} />
             <span>Administrativo</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">Sistema Financeiro</p>
@@ -155,14 +155,14 @@ export const AdminLayout = () => {
             to="/administrativo/notificacoes"
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
-              `admin-sidebar-link ${isActive ? "active" : ""} ${notifCount.vencidas > 0 ? "text-[#FFC232]" : ""}`
+              `admin-sidebar-link ${isActive ? "active" : ""} ${notifCount.vencidas > 0 ? "text-[#D4A000]" : ""}`
             }
             data-testid="admin-nav-notificacoes"
           >
             <Bell size={20} />
             <span className="flex-1">Notificações</span>
             {notifCount.total > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${notifCount.vencidas > 0 ? 'bg-[#E31A1A]' : 'bg-[#FFC232] text-black'} text-white`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${notifCount.vencidas > 0 ? 'bg-[#E31A1A]' : 'bg-[#D4A000] text-black'} text-white`}>
                 {notifCount.total}
               </span>
             )}

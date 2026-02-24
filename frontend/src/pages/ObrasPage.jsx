@@ -147,7 +147,7 @@ export default function ObrasPage() {
   const getStatusBadge = (status) => {
     const badges = {
       em_andamento: { class: "bg-green-100 text-green-700 border-green-200", label: "Em Andamento" },
-      concluida: { class: "bg-blue-100 text-[#FFC232] border-blue-200", label: "Concluída" },
+      concluida: { class: "bg-blue-100 text-[#D4A000] border-blue-200", label: "Concluída" },
       pausada: { class: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Pausada" }
     };
     const badge = badges[status] || badges.em_andamento;

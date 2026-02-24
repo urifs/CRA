@@ -16,7 +16,7 @@ export default function NFEPage() {
       <Card>
         <CardContent className="py-16 text-center">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="text-[#FFC232]" size={32} />
+            <FileText className="text-[#D4A000]" size={32} />
           </div>
           <h2 className="text-xl font-bold text-black mb-2">Módulo de NF-e</h2>
           <p className="text-gray-500 mb-4 max-w-md mx-auto">

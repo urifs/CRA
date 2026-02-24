@@ -175,7 +175,7 @@ export default function ContasReceberPage() {
     const hoje = new Date().toISOString().split("T")[0];
     if (conta.data_vencimento < hoje) return { label: "Vencida", color: "bg-red-100 text-red-700", icon: AlertCircle };
     if (conta.data_vencimento === hoje) return { label: "Vence Hoje", color: "bg-orange-100 text-[#E31A1A]", icon: Clock };
-    return { label: "Em Aberto", color: "bg-blue-100 text-[#FFC232]", icon: Calendar };
+    return { label: "Em Aberto", color: "bg-blue-100 text-[#D4A000]", icon: Calendar };
   };
 
   const filteredContas = contas.filter(c => {
@@ -216,7 +216,7 @@ export default function ContasReceberPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card className="border-l-4 border-l-blue-500"><CardContent className="p-4">
           <p className="text-sm text-gray-500">Total Em Aberto</p>
-          <p className="text-xl font-bold text-[#FFC232]">{formatCurrency(totalEmAberto)}</p>
+          <p className="text-xl font-bold text-[#D4A000]">{formatCurrency(totalEmAberto)}</p>
         </CardContent></Card>
         <Card className="border-l-4 border-l-red-500"><CardContent className="p-4">
           <p className="text-sm text-gray-500">Total Vencidas</p>

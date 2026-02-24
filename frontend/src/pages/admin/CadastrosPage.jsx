@@ -196,7 +196,7 @@ export default function CadastrosPage() {
           <h1 className="page-title">Cadastros</h1>
           <p className="text-gray-500 mt-1">Clientes, Fornecedores, Transportadores</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]">
+        <Button onClick={() => openModal()} className="bg-[#D4A000] hover:bg-[#D4A000]">
           <Plus size={18} className="mr-2" />Novo Cadastro
         </Button>
       </div>
@@ -422,7 +422,7 @@ export default function CadastrosPage() {
 
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-[#FFC232] hover:bg-[#FFC232]">{editingCadastro ? "Atualizar" : "Cadastrar"}</Button>
+              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingCadastro ? "Atualizar" : "Cadastrar"}</Button>
             </div>
           </form>
         </DialogContent>

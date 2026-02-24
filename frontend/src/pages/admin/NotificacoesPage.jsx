@@ -14,14 +14,14 @@ import { useNavigate } from "react-router-dom";
 const tipoIcons = {
   conta_pagar: { icon: TrendingDown, color: "text-red-600", bg: "bg-red-100", label: "Conta a Pagar" },
   conta_receber: { icon: TrendingUp, color: "text-green-600", bg: "bg-green-100", label: "Conta a Receber" },
-  ordem_servico: { icon: ClipboardList, color: "text-[#FFC232]", bg: "bg-blue-100", label: "Ordem de Serviço" },
+  ordem_servico: { icon: ClipboardList, color: "text-[#D4A000]", bg: "bg-blue-100", label: "Ordem de Serviço" },
   aluguel: { icon: Truck, color: "text-purple-600", bg: "bg-purple-100", label: "Aluguel" }
 };
 
 const urgenciaInfo = {
   alta: { color: "bg-red-500", textColor: "text-red-700", label: "Urgente" },
   media: { color: "bg-[#E31A1A]", textColor: "text-[#E31A1A]", label: "Atenção" },
-  baixa: { color: "bg-[#FFC232]", textColor: "text-[#FFC232]", label: "Em breve" }
+  baixa: { color: "bg-[#D4A000]", textColor: "text-[#D4A000]", label: "Em breve" }
 };
 
 export default function NotificacoesPage() {
@@ -160,7 +160,7 @@ export default function NotificacoesPage() {
         <Card className="stat-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <ClipboardList className="text-[#FFC232]" size={20} />
+              <ClipboardList className="text-[#D4A000]" size={20} />
               <div>
                 <p className="text-xs text-gray-500">OS</p>
                 <p className="text-xl font-bold">{resumo.por_tipo?.ordem_servico || 0}</p>
@@ -197,7 +197,7 @@ export default function NotificacoesPage() {
               variant={filterTipo === f.value ? "default" : "outline"} 
               size="sm"
               onClick={() => setFilterTipo(f.value)}
-              className={filterTipo === f.value ? "bg-[#FFC232]" : ""}
+              className={filterTipo === f.value ? "bg-[#D4A000]" : ""}
             >
               {f.label}
             </Button>
@@ -216,7 +216,7 @@ export default function NotificacoesPage() {
               variant={filterUrgencia === f.value ? "default" : "outline"} 
               size="sm"
               onClick={() => setFilterUrgencia(f.value)}
-              className={filterUrgencia === f.value ? "bg-[#FFC232]" : ""}
+              className={filterUrgencia === f.value ? "bg-[#D4A000]" : ""}
             >
               {f.label}
             </Button>

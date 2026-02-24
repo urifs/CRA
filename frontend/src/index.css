@@ -58,7 +58,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
         
         /* RA Locadora brand colors */
         --ra-red: #E31A1A;
-        --ra-yellow: #FFC232;
+        --ra-yellow: #D4A000;
         --ra-black: #000000;
         --ra-white: #FFFFFF;
     }
@@ -284,7 +284,7 @@ button:active:not(:disabled) {
 }
 
 .mobile-nav-item.active {
-    color: #FFC232;
+    color: #D4A000;
 }
 
 .mobile-nav-item svg {

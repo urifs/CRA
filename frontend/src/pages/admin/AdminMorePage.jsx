@@ -90,10 +90,10 @@ export default function AdminMorePage() {
       <div className="space-y-3 mb-8">
         {menuItems.map((item) => (
           <NavLink key={item.path} to={item.path}>
-            <Card className="hover:border-[#FFC232] transition-colors cursor-pointer">
+            <Card className="hover:border-[#D4A000] transition-colors cursor-pointer">
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <item.icon className="text-[#FFC232]" size={24} />
+                  <item.icon className="text-[#D4A000]" size={24} />
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-black">{item.label}</p>

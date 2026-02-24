@@ -56,7 +56,7 @@ import {
 // Tipos de usuário
 const USER_ROLES = {
   gerenciamento: { label: "Gerenciamento Geral", icon: Landmark, color: "bg-[#E31A1A]" },
-  administrativo: { label: "Administrativo", icon: Building2, color: "bg-[#FFC232]" },
+  administrativo: { label: "Administrativo", icon: Building2, color: "bg-[#D4A000]" },
   ambos: { label: "Gerenciamento + Administrativo", icon: Users, color: "bg-purple-500" },
   admin: { label: "Administrador", icon: Crown, color: "bg-green-500" }
 };
@@ -295,8 +295,8 @@ export default function PainelAdminPage() {
           <Card className="bg-gray-900 border-gray-800">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#FFC232]/20 rounded-lg flex items-center justify-center">
-                  <Activity className="text-[#FFC232]" size={24} />
+                <div className="w-12 h-12 bg-[#D4A000]/20 rounded-lg flex items-center justify-center">
+                  <Activity className="text-[#D4A000]" size={24} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Atividades Hoje</p>
@@ -586,7 +586,7 @@ export default function PainelAdminPage() {
                   </SelectItem>
                   <SelectItem value="administrativo" className="text-white hover:bg-gray-700">
                     <div className="flex items-center gap-2">
-                      <Building2 size={16} className="text-[#FFC232]" />
+                      <Building2 size={16} className="text-[#D4A000]" />
                       <span>Administrativo</span>
                     </div>
                   </SelectItem>
@@ -663,7 +663,7 @@ export default function PainelAdminPage() {
         <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Activity size={20} className="text-[#FFC232]" />
+              <Activity size={20} className="text-[#D4A000]" />
               <span>Atividades de {selectedUser?.name}</span>
               {selectedUser?.role && (
                 <span className="ml-2">{getRoleBadge(selectedUser.role)}</span>
@@ -723,7 +723,7 @@ export default function PainelAdminPage() {
         <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Info size={20} className="text-[#FFC232]" />
+              <Info size={20} className="text-[#D4A000]" />
               Detalhes da Atividade
             </DialogTitle>
           </DialogHeader>

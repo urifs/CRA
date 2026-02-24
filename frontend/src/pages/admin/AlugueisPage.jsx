@@ -204,7 +204,7 @@ export default function AlugueisPage() {
   const getStatusInfo = (status) => {
     switch (status) {
       case "ativo": return { label: "Ativo", color: "bg-green-100 text-green-700", icon: Clock };
-      case "finalizado": return { label: "Finalizado", color: "bg-blue-100 text-[#FFC232]", icon: CheckCircle2 };
+      case "finalizado": return { label: "Finalizado", color: "bg-blue-100 text-[#D4A000]", icon: CheckCircle2 };
       case "cancelado": return { label: "Cancelado", color: "bg-red-100 text-red-700", icon: XCircle };
       default: return { label: status, color: "bg-gray-100 text-gray-700", icon: Clock };
     }
@@ -241,7 +241,7 @@ export default function AlugueisPage() {
           <h1 className="page-title">Aluguéis de Máquinas</h1>
           <p className="text-gray-500 mt-1">Controle de locação de equipamentos</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-aluguel-btn">
+        <Button onClick={() => openModal()} className="bg-[#D4A000] hover:bg-[#D4A000]" data-testid="new-aluguel-btn">
           <Plus size={18} className="mr-2" />Novo Aluguel
         </Button>
       </div>
@@ -251,11 +251,11 @@ export default function AlugueisPage() {
         <Card className="stat-card">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Truck className="text-[#FFC232]" size={20} />
+              <Truck className="text-[#D4A000]" size={20} />
             </div>
             <div>
               <p className="text-xs text-gray-500">Total de Aluguéis</p>
-              <p className="text-lg font-bold text-[#FFC232]">{alugueis.length}</p>
+              <p className="text-lg font-bold text-[#D4A000]">{alugueis.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -305,7 +305,7 @@ export default function AlugueisPage() {
               key={f.value}
               variant={filter === f.value ? "default" : "outline"}
               onClick={() => setFilter(f.value)}
-              className={filter === f.value ? "bg-[#FFC232]" : ""}
+              className={filter === f.value ? "bg-[#D4A000]" : ""}
               size="sm"
             >
               {f.label}
@@ -335,7 +335,7 @@ export default function AlugueisPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-bold text-[#FFC232]">#{aluguel.numero}</span>
+                        <span className="font-bold text-[#D4A000]">#{aluguel.numero}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
                           <StatusIcon className="inline mr-1" size={12} />{statusInfo.label}
                         </span>
@@ -578,7 +578,7 @@ export default function AlugueisPage() {
                   onChange={(e) => setFormData({...formData, gerar_conta_receber: e.target.checked})} 
                   className="w-4 h-4" 
                 />
-                <label htmlFor="gerar_conta" className="text-sm text-[#FFC232]">
+                <label htmlFor="gerar_conta" className="text-sm text-[#D4A000]">
                   Gerar automaticamente uma conta a receber para este aluguel
                 </label>
               </div>
@@ -586,7 +586,7 @@ export default function AlugueisPage() {
 
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-[#FFC232] hover:bg-[#FFC232]">
+              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">
                 {editingAluguel ? "Atualizar" : "Registrar Aluguel"}
               </Button>
             </div>
