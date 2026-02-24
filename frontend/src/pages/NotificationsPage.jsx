@@ -5,6 +5,7 @@ import { API } from "@/App";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Bell, 
   Truck,
@@ -13,12 +14,15 @@ import {
   Clock,
   ArrowRight,
   CheckCircle,
-  Package
+  Package,
+  Search,
+  X
 } from "lucide-react";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
