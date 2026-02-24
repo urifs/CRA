@@ -253,6 +253,9 @@ export const AdminLayout = () => {
           );
         })}
       </nav>
+
+      {/* Chatbot Widget */}
+      <ChatbotWidget module="administrativo" accentColor="#D4A000" />
     </div>
   );
 };
