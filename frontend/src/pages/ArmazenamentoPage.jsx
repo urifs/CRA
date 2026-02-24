@@ -403,7 +403,7 @@ export default function ArmazenamentoPage() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <FolderOpen size={48} className="mx-auto text-blue-500 mb-2" />
+                  <FolderOpen size={48} className="mx-auto text-[#D4A000] mb-2" />
                   <p className="text-sm font-medium truncate">{item.name}</p>
                   <p className="text-xs text-gray-400">{item.items_count || 0} itens</p>
                 </CardContent>
