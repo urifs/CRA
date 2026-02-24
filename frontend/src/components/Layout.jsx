@@ -87,20 +87,20 @@ export const Layout = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       {/* Mobile header */}
       <header 
-        className="fixed top-0 left-0 right-0 z-40 md:hidden bg-slate-900 text-white"
+        className="fixed top-0 left-0 right-0 z-40 md:hidden bg-black text-white"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Construction className="text-orange-500" size={24} />
-            <span className="font-heading font-bold">CRA Construtora</span>
+            <Construction className="text-[#E31A1A]" size={24} />
+            <span className="font-heading font-bold">RA Locadora</span>
           </div>
           <button
             data-testid="mobile-menu-btn"
-            className="p-2 hover:bg-slate-800 rounded-lg"
+            className="p-2 hover:bg-gray-900 rounded-lg"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -118,7 +118,7 @@ export const Layout = () => {
         {/* Back to system select button */}
         <button
           onClick={handleBackToSelect}
-          className="w-full flex items-center gap-2 px-4 py-3 text-slate-400 hover:bg-slate-800 transition-colors border-b border-slate-700"
+          className="w-full flex items-center gap-2 px-4 py-3 text-gray-400 hover:bg-gray-900 transition-colors border-b border-gray-800"
           data-testid="back-to-select"
         >
           <ArrowLeft size={18} />
@@ -126,12 +126,12 @@ export const Layout = () => {
         </button>
 
         {/* Logo - Fixed at top */}
-        <div className="p-5 border-b border-slate-700" style={{ flexShrink: 0 }}>
+        <div className="p-5 border-b border-gray-800" style={{ flexShrink: 0 }}>
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <Construction className="text-orange-500" size={28} />
-            <span>CRA Construtora</span>
+            <Construction className="text-[#E31A1A]" size={28} />
+            <span>RA Locadora</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Gerenciamento Geral</p>
+          <p className="text-xs text-gray-400 mt-1">Gerenciamento Geral</p>
         </div>
 
         {/* Navigation - Scrollable */}
@@ -150,7 +150,7 @@ export const Layout = () => {
               <span className="flex-1">{item.label}</span>
               {item.badge > 0 && (
                 <span 
-                  className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center"
+                  className="bg-[#E31A1A] text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center"
                   data-testid="notification-badge"
                 >
                   {item.badge > 99 ? "99+" : item.badge}
@@ -161,10 +161,10 @@ export const Layout = () => {
         </div>
 
         {/* Quick action - Fixed at bottom */}
-        <div className="px-4 py-3 border-t border-slate-700" style={{ flexShrink: 0 }}>
+        <div className="px-4 py-3 border-t border-gray-800" style={{ flexShrink: 0 }}>
           <Button
             data-testid="new-maintenance-btn"
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold"
+            className="w-full bg-[#E31A1A] hover:bg-red-700 text-white font-bold"
             onClick={() => {
               navigate("/maintenances/new");
               setSidebarOpen(false);
@@ -176,18 +176,18 @@ export const Layout = () => {
         </div>
 
         {/* User info - Fixed at bottom */}
-        <div className="p-3 border-t border-slate-700" style={{ flexShrink: 0 }}>
+        <div className="p-3 border-t border-gray-800" style={{ flexShrink: 0 }}>
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate" data-testid="user-name">
                 {user?.name}
               </p>
-              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+              <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
             <button
               data-testid="logout-btn"
               onClick={handleLogout}
-              className="ml-2 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+              className="ml-2 p-2 text-gray-400 hover:text-white hover:bg-gray-900 rounded-md transition-colors"
               title="Sair"
             >
               <LogOut size={20} />
@@ -239,7 +239,7 @@ export const Layout = () => {
       {isMobile && location.pathname !== "/maintenances/new" && (
         <button
           onClick={() => navigate("/maintenances/new")}
-          className="fab bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg"
+          className="fab bg-[#E31A1A] hover:bg-red-700 text-white flex items-center justify-center shadow-lg"
           data-testid="fab-new-maintenance"
           style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}
         >
