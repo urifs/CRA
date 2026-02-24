@@ -194,11 +194,15 @@ export default function SystemSelectPage() {
         </div>
 
         {/* Logout Button */}
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex justify-center pb-8">
           <Button
             variant="ghost"
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
-            onClick={handleLogout}
+            className="text-gray-400 hover:text-white hover:bg-gray-800 active:bg-gray-700 min-h-[48px] px-6"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleLogout();
+            }}
             data-testid="logout-btn"
           >
             <LogOut size={18} className="mr-2" />
