@@ -3609,6 +3609,76 @@ async def delete_aluguel(id: str, current_user: dict = Depends(get_current_user)
     await create_audit_log(current_user, "delete", "aluguel", id, f"Aluguel #{aluguel['numero']}")
     return {"message": "Aluguel excluído"}
 
+# --- Upload contrato de aluguel ---
+CONTRATOS_DIR = ROOT_DIR / "uploads" / "contratos"
+CONTRATOS_DIR.mkdir(parents=True, exist_ok=True)
+
+@api_router.post("/admin/alugueis/{id}/contrato")
+async def upload_contrato(
+    id: str, 
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload de arquivo de contrato para um aluguel"""
+    aluguel = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    if not aluguel:
+        raise HTTPException(status_code=404, detail="Aluguel não encontrado")
+    
+    # Validate file type
+    allowed_extensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png']
+    ext = Path(file.filename).suffix.lower() if file.filename else ''
+    if ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Tipo de arquivo não permitido. Use: {', '.join(allowed_extensions)}")
+    
+    # Read file content
+    content = await file.read()
+    max_size = 50 * 1024 * 1024  # 50MB
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 50MB")
+    
+    # Save file
+    unique_filename = f"{id}_{uuid.uuid4()}{ext}"
+    file_path = CONTRATOS_DIR / unique_filename
+    
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Update aluguel
+    await db.alugueis.update_one(
+        {"id": id},
+        {"$set": {
+            "contrato_arquivo": unique_filename,
+            "contrato_nome": file.filename,
+            "contrato_uploaded_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    await create_audit_log(current_user, "upload", "contrato", id, f"Contrato do aluguel #{aluguel.get('numero', id)}")
+    return {"message": "Contrato anexado com sucesso", "filename": unique_filename}
+
+@api_router.get("/admin/alugueis/{id}/contrato/download")
+async def download_contrato(
+    id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Download de arquivo de contrato"""
+    aluguel = await db.alugueis.find_one({"id": id}, {"_id": 0})
+    if not aluguel:
+        raise HTTPException(status_code=404, detail="Aluguel não encontrado")
+    
+    if not aluguel.get("contrato_arquivo"):
+        raise HTTPException(status_code=404, detail="Contrato não encontrado")
+    
+    file_path = CONTRATOS_DIR / aluguel["contrato_arquivo"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=aluguel.get("contrato_nome", aluguel["contrato_arquivo"]),
+        media_type="application/octet-stream"
+    )
+
 # --- Buscar máquinas do sistema de gerenciamento ---
 @api_router.get("/admin/maquinas-disponiveis")
 async def get_maquinas_disponiveis(current_user: dict = Depends(get_current_user)):
