@@ -7,14 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Loader2, ShieldPlus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -22,11 +15,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  // Admin creation modal
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [adminForm, setAdminForm] = useState({ name: "", email: "", password: "" });
-  const [creatingAdmin, setCreatingAdmin] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,31 +29,6 @@ export default function LoginPage() {
       toast.error(error.response?.data?.detail || "Erro ao fazer login");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreateAdmin = async () => {
-    if (!adminForm.name || !adminForm.email || !adminForm.password) {
-      toast.error("Preencha todos os campos");
-      return;
-    }
-    if (adminForm.password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
-      return;
-    }
-
-    setCreatingAdmin(true);
-    try {
-      await axios.post(`${API}/auth/create-admin`, adminForm);
-      toast.success("Conta administrador criada com sucesso! Faça login.");
-      setShowAdminModal(false);
-      setAdminForm({ name: "", email: "", password: "" });
-      // Preencher o email automaticamente
-      setEmail(adminForm.email);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao criar conta");
-    } finally {
-      setCreatingAdmin(false);
     }
   };
 
@@ -141,20 +104,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Botão para criar conta admin */}
-          <div className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-green-600 text-green-600 hover:bg-green-600 hover:text-white h-12"
-              onClick={() => setShowAdminModal(true)}
-              data-testid="create-admin-btn"
-            >
-              <ShieldPlus className="mr-2 h-5 w-5" />
-              Criar Conta Administrador
-            </Button>
-          </div>
-
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
               Acesso restrito a usuários autorizados
@@ -162,70 +111,6 @@ export default function LoginPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Modal para criar conta admin */}
-      <Dialog open={showAdminModal} onOpenChange={setShowAdminModal}>
-        <DialogContent className="bg-white">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
-              <ShieldPlus size={24} />
-              Criar Conta Administrador
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">
-              Crie uma conta com acesso total ao sistema (Gerenciamento, Administrativo e Painel Admin).
-            </p>
-
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input
-                placeholder="Seu nome completo"
-                value={adminForm.name}
-                onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                placeholder="seu@email.com"
-                value={adminForm.email}
-                onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Senha</Label>
-              <Input
-                type="password"
-                placeholder="Mínimo 6 caracteres"
-                value={adminForm.password}
-                onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdminModal(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleCreateAdmin} 
-              className="bg-green-600 hover:bg-green-700"
-              disabled={creatingAdmin}
-            >
-              {creatingAdmin ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Criando...</>
-              ) : (
-                <><ShieldPlus className="mr-2 h-4 w-4" /> Criar Conta</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
