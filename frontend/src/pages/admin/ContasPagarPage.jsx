@@ -30,6 +30,7 @@ const formasPagamento = [
 ];
 
 export default function ContasPagarPage() {
+  const { token } = useAuth();
   const [contas, setContas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
