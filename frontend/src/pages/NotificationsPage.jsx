@@ -157,9 +157,19 @@ export default function NotificationsPage() {
       </div>
 
       {/* Notifications List */}
-      {notifications.length > 0 ? (
+      {notifications.filter(n => 
+        n.machine_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (n.machine_plate || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        n.message.toLowerCase().includes(searchTerm.toLowerCase())
+      ).length > 0 ? (
         <div className="space-y-4">
-          {notifications.map((notification) => (
+          {notifications
+            .filter(n => 
+              n.machine_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (n.machine_plate || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+              n.message.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((notification) => (
             <Card 
               key={notification.id}
               className={getCardClass(notification.notification_type)}
