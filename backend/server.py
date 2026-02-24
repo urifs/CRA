@@ -2531,6 +2531,9 @@ class AluguelCreate(BaseModel):
     cliente_telefone: Optional[str] = None
     cliente_documento: Optional[str] = None  # CPF/CNPJ
     
+    # Contrato
+    numero_contrato: Optional[str] = None
+    
     # Período
     tipo_periodo: str  # diaria, semanal, quinzenal, mensal, semestral, anual, hora, outro
     periodo_especificado: Optional[str] = None  # quando tipo_periodo = outro
