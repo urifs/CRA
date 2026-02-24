@@ -78,6 +78,27 @@ export default function NotificationsPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Input
+          type="text"
+          placeholder="Pesquisar notificações..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-10 h-10 bg-white border-gray-200"
+          data-testid="search-notifications"
+        />
+        {searchTerm && (
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            onClick={() => setSearchTerm("")}
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="stat-card">
