@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi.responses import FileResponse
 """
 ================================================================================
 CRA CONSTRUTORA - SISTEMA DE GESTÃO EMPRESARIAL
