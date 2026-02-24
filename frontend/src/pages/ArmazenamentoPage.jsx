@@ -608,7 +608,7 @@ export default function ArmazenamentoPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPreviewModal(false)}>Fechar</Button>
-            <Button onClick={() => previewItem && handleDownload(previewItem)} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={() => previewItem && handleDownload(previewItem)} className="bg-[#E31A1A] hover:bg-red-700">
               <Download size={16} className="mr-2" />
               Baixar
             </Button>
