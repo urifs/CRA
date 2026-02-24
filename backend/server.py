@@ -322,20 +322,95 @@ async def create_audit_log(
     entity_type: str,
     entity_id: str,
     entity_name: str,
-    details: str = ""
+    details: str = "",
+    module: str = ""
 ):
     """Create an audit log entry for tracking user actions."""
+    # Mapear ações para descrições em português
+    action_labels = {
+        "criar": "Criou",
+        "create": "Criou",
+        "editar": "Editou",
+        "update": "Editou",
+        "excluir": "Excluiu",
+        "delete": "Excluiu",
+        "login": "Fez login",
+        "logout": "Fez logout"
+    }
+    
+    # Mapear tipos de entidade para descrições
+    entity_labels = {
+        "categoria": "Categoria de Máquina",
+        "máquina": "Máquina",
+        "maquina": "Máquina",
+        "manutenção": "Manutenção",
+        "manutencao": "Manutenção",
+        "registro de uso": "Registro de Uso (Horímetro)",
+        "categoria de estoque": "Categoria de Estoque",
+        "item de estoque": "Item de Estoque",
+        "movimentação de estoque (entrada)": "Entrada de Estoque",
+        "movimentação de estoque (saída)": "Saída de Estoque",
+        "obra": "Obra/Projeto",
+        "cadastro": "Cadastro (Cliente/Fornecedor)",
+        "conta_pagar": "Conta a Pagar",
+        "conta_receber": "Conta a Receber",
+        "produto": "Produto",
+        "ordem_servico": "Ordem de Serviço",
+        "plano_contas": "Plano de Contas",
+        "centro_custo": "Centro de Custo",
+        "forma_pagamento": "Forma de Pagamento",
+        "aluguel": "Aluguel de Máquina",
+        "documento (users)": "Documento (Usuários)",
+        "documento (machines)": "Documento (Máquinas)",
+        "documento (maintenances)": "Documento (Manutenções)",
+        "usuario": "Usuário",
+        "user": "Usuário"
+    }
+    
+    # Determinar o módulo automaticamente se não especificado
+    if not module:
+        admin_entities = ["cadastro", "conta_pagar", "conta_receber", "produto", 
+                         "ordem_servico", "plano_contas", "centro_custo", 
+                         "forma_pagamento", "aluguel"]
+        gerenciamento_entities = ["categoria", "máquina", "maquina", "manutenção", 
+                                  "manutencao", "registro de uso", "categoria de estoque",
+                                  "item de estoque", "obra"]
+        admin_panel_entities = ["usuario", "user"]
+        
+        entity_lower = entity_type.lower()
+        if any(e in entity_lower for e in admin_entities):
+            module = "Administrativo"
+        elif any(e in entity_lower for e in gerenciamento_entities) or "estoque" in entity_lower:
+            module = "Gerenciamento Geral"
+        elif any(e in entity_lower for e in admin_panel_entities) or "documento" in entity_lower:
+            module = "Painel Admin"
+        else:
+            module = "Sistema"
+    
+    # Criar descrição detalhada da ação
+    action_label = action_labels.get(action.lower(), action.capitalize())
+    entity_label = entity_labels.get(entity_type.lower(), entity_type)
+    
+    # Construir descrição completa
+    full_action = f"{action_label} {entity_label}"
+    
+    # Adicionar detalhes formatados
+    detailed_info = f"Item: {entity_name}"
+    if details:
+        detailed_info += f" | {details}"
+    
     audit_id = str(uuid.uuid4())
     audit_doc = {
         "id": audit_id,
         "user_id": user["id"],
         "user_name": user["name"],
         "user_email": user["email"],
-        "action": action,
+        "action": full_action,
         "entity_type": entity_type,
         "entity_id": entity_id,
         "entity_name": entity_name,
-        "details": details,
+        "module": module,
+        "details": detailed_info,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.audit_logs.insert_one(audit_doc)
