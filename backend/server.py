@@ -4264,36 +4264,179 @@ import io
 import base64
 import urllib.request
 
-# Categorias disponíveis para exportação
-EXPORT_CATEGORIES = {
+# Categorias e subcategorias para exportação
+EXPORT_CATEGORIES_V2 = {
     "gerenciamento": [
-        {"id": "machines", "label": "Máquinas", "description": "Lista de todas as máquinas cadastradas"},
-        {"id": "maintenances", "label": "Manutenções", "description": "Histórico de manutenções realizadas"},
-        {"id": "categories", "label": "Categorias de Máquinas", "description": "Categorias para organização"},
-        {"id": "stock_items", "label": "Estoque", "description": "Itens em estoque com quantidades"},
-        {"id": "stock_movements", "label": "Movimentações de Estoque", "description": "Entradas e saídas de estoque"},
-        {"id": "obras", "label": "Obras/Projetos", "description": "Projetos e obras em andamento"},
-        {"id": "usage_logs", "label": "Registros de Uso", "description": "Horímetro e tempo de uso"},
+        {
+            "id": "maquinas",
+            "label": "Máquinas",
+            "icon": "truck",
+            "subcategories": [
+                {"id": "machines", "label": "Lista de Máquinas", "description": "Todas as máquinas cadastradas"},
+                {"id": "machines_operational", "label": "Máquinas Operacionais", "description": "Apenas máquinas em operação"},
+                {"id": "machines_maintenance", "label": "Máquinas em Manutenção", "description": "Máquinas paradas para manutenção"},
+                {"id": "categories", "label": "Categorias de Máquinas", "description": "Tipos e categorias"},
+            ]
+        },
+        {
+            "id": "manutencoes",
+            "label": "Manutenções",
+            "icon": "wrench",
+            "subcategories": [
+                {"id": "maintenances", "label": "Todas as Manutenções", "description": "Histórico completo"},
+                {"id": "maintenances_preventiva", "label": "Manutenções Preventivas", "description": "Apenas preventivas"},
+                {"id": "maintenances_corretiva", "label": "Manutenções Corretivas", "description": "Apenas corretivas"},
+                {"id": "maintenances_oil", "label": "Trocas de Óleo", "description": "Histórico de trocas de óleo"},
+            ]
+        },
+        {
+            "id": "estoque",
+            "label": "Estoque",
+            "icon": "package",
+            "subcategories": [
+                {"id": "stock_items", "label": "Itens de Estoque", "description": "Todos os itens cadastrados"},
+                {"id": "stock_low", "label": "Estoque Baixo", "description": "Itens abaixo do mínimo"},
+                {"id": "stock_categories", "label": "Categorias de Estoque", "description": "Categorias de produtos"},
+                {"id": "stock_movements", "label": "Movimentações", "description": "Entradas e saídas"},
+                {"id": "stock_movements_entrada", "label": "Entradas de Estoque", "description": "Apenas entradas"},
+                {"id": "stock_movements_saida", "label": "Saídas de Estoque", "description": "Apenas saídas"},
+            ]
+        },
+        {
+            "id": "obras",
+            "label": "Obras e Projetos",
+            "icon": "building",
+            "subcategories": [
+                {"id": "obras", "label": "Todas as Obras", "description": "Lista completa de obras"},
+                {"id": "obras_andamento", "label": "Obras em Andamento", "description": "Projetos ativos"},
+                {"id": "obras_concluidas", "label": "Obras Concluídas", "description": "Projetos finalizados"},
+                {"id": "obras_pausadas", "label": "Obras Pausadas", "description": "Projetos pausados"},
+            ]
+        },
+        {
+            "id": "uso",
+            "label": "Registros de Uso",
+            "icon": "clock",
+            "subcategories": [
+                {"id": "usage_logs", "label": "Todos os Registros", "description": "Horímetro completo"},
+            ]
+        },
+        {
+            "id": "usuarios",
+            "label": "Usuários",
+            "icon": "users",
+            "subcategories": [
+                {"id": "users", "label": "Lista de Usuários", "description": "Todos os usuários do sistema"},
+            ]
+        },
+        {
+            "id": "auditoria",
+            "label": "Auditoria",
+            "icon": "clipboard",
+            "subcategories": [
+                {"id": "audit_logs", "label": "Logs de Auditoria", "description": "Todas as atividades registradas"},
+            ]
+        },
     ],
     "administrativo": [
-        {"id": "contas_pagar", "label": "Contas a Pagar", "description": "Contas pendentes e quitadas"},
-        {"id": "contas_receber", "label": "Contas a Receber", "description": "Recebíveis pendentes e recebidos"},
-        {"id": "cadastros", "label": "Cadastros", "description": "Clientes e fornecedores"},
-        {"id": "produtos_admin", "label": "Produtos", "description": "Catálogo de produtos"},
-        {"id": "ordens_servico", "label": "Ordens de Serviço", "description": "OS abertas e concluídas"},
-        {"id": "alugueis", "label": "Aluguéis", "description": "Aluguéis de máquinas"},
-        {"id": "plano_contas", "label": "Plano de Contas", "description": "Estrutura de contas contábeis"},
-        {"id": "centros_custo", "label": "Centros de Custo", "description": "Centros de custo cadastrados"},
-        {"id": "formas_pagamento", "label": "Formas de Pagamento", "description": "Métodos de pagamento"},
+        {
+            "id": "financeiro_pagar",
+            "label": "Contas a Pagar",
+            "icon": "trending-down",
+            "subcategories": [
+                {"id": "contas_pagar", "label": "Todas as Contas", "description": "Lista completa"},
+                {"id": "contas_pagar_pendente", "label": "Contas Pendentes", "description": "Aguardando pagamento"},
+                {"id": "contas_pagar_quitada", "label": "Contas Quitadas", "description": "Já pagas"},
+                {"id": "contas_pagar_vencidas", "label": "Contas Vencidas", "description": "Fora do prazo"},
+            ]
+        },
+        {
+            "id": "financeiro_receber",
+            "label": "Contas a Receber",
+            "icon": "trending-up",
+            "subcategories": [
+                {"id": "contas_receber", "label": "Todas as Contas", "description": "Lista completa"},
+                {"id": "contas_receber_pendente", "label": "Contas Pendentes", "description": "Aguardando recebimento"},
+                {"id": "contas_receber_quitada", "label": "Contas Recebidas", "description": "Já recebidas"},
+                {"id": "contas_receber_vencidas", "label": "Contas Vencidas", "description": "Fora do prazo"},
+            ]
+        },
+        {
+            "id": "cadastros",
+            "label": "Cadastros",
+            "icon": "users",
+            "subcategories": [
+                {"id": "cadastros", "label": "Todos os Cadastros", "description": "Clientes e fornecedores"},
+                {"id": "cadastros_clientes", "label": "Clientes", "description": "Apenas clientes"},
+                {"id": "cadastros_fornecedores", "label": "Fornecedores", "description": "Apenas fornecedores"},
+            ]
+        },
+        {
+            "id": "produtos",
+            "label": "Produtos e Serviços",
+            "icon": "package",
+            "subcategories": [
+                {"id": "produtos_admin", "label": "Todos os Produtos", "description": "Catálogo completo"},
+            ]
+        },
+        {
+            "id": "ordens",
+            "label": "Ordens de Serviço",
+            "icon": "clipboard",
+            "subcategories": [
+                {"id": "ordens_servico", "label": "Todas as OS", "description": "Lista completa"},
+                {"id": "ordens_servico_aberta", "label": "OS Abertas", "description": "Aguardando execução"},
+                {"id": "ordens_servico_andamento", "label": "OS em Andamento", "description": "Em execução"},
+                {"id": "ordens_servico_concluida", "label": "OS Concluídas", "description": "Finalizadas"},
+            ]
+        },
+        {
+            "id": "alugueis",
+            "label": "Aluguéis de Máquinas",
+            "icon": "truck",
+            "subcategories": [
+                {"id": "alugueis", "label": "Todos os Aluguéis", "description": "Lista completa"},
+                {"id": "alugueis_ativo", "label": "Aluguéis Ativos", "description": "Em andamento"},
+                {"id": "alugueis_finalizado", "label": "Aluguéis Finalizados", "description": "Encerrados"},
+            ]
+        },
+        {
+            "id": "contabil",
+            "label": "Contabilidade",
+            "icon": "dollar",
+            "subcategories": [
+                {"id": "plano_contas", "label": "Plano de Contas", "description": "Estrutura contábil"},
+                {"id": "plano_contas_receita", "label": "Contas de Receita", "description": "Apenas receitas"},
+                {"id": "plano_contas_despesa", "label": "Contas de Despesa", "description": "Apenas despesas"},
+                {"id": "centros_custo", "label": "Centros de Custo", "description": "Todos os centros"},
+                {"id": "formas_pagamento", "label": "Formas de Pagamento", "description": "Métodos de pagamento"},
+            ]
+        },
+        {
+            "id": "usuarios_admin",
+            "label": "Usuários",
+            "icon": "users",
+            "subcategories": [
+                {"id": "users", "label": "Lista de Usuários", "description": "Todos os usuários"},
+            ]
+        },
+        {
+            "id": "auditoria_admin",
+            "label": "Auditoria",
+            "icon": "clipboard",
+            "subcategories": [
+                {"id": "audit_logs", "label": "Logs de Auditoria", "description": "Atividades registradas"},
+            ]
+        },
     ]
 }
 
 @api_router.get("/export/categories/{module}")
 async def get_export_categories(module: str, current_user: dict = Depends(get_current_user)):
     """Retorna as categorias disponíveis para exportação"""
-    if module not in EXPORT_CATEGORIES:
+    if module not in EXPORT_CATEGORIES_V2:
         raise HTTPException(status_code=400, detail="Módulo inválido")
-    return EXPORT_CATEGORIES[module]
+    return EXPORT_CATEGORIES_V2[module]
 
 async def generate_pdf_report(category: str, data: list, title: str) -> io.BytesIO:
     """Gera um relatório PDF formatado"""
