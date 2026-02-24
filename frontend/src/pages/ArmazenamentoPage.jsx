@@ -556,7 +556,7 @@ export default function ArmazenamentoPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewFolderModal(false)}>Cancelar</Button>
-            <Button onClick={handleCreateFolder} className="bg-blue-600 hover:bg-blue-700">Criar</Button>
+            <Button onClick={handleCreateFolder} className="bg-[#E31A1A] hover:bg-red-700">Criar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
