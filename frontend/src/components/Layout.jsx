@@ -76,7 +76,6 @@ export const Layout = () => {
     { path: "/notifications", icon: Bell, label: "Notificações", badge: notificationCount },
     { path: "/stock", icon: Package, label: "Estoque" },
     { path: "/categories", icon: Tags, label: "Categorias" },
-    { path: "/audit", icon: ClipboardList, label: "Auditoria" },
     { path: "/exportar", icon: FileDown, label: "Exportação" },
   ];
 
