@@ -269,17 +269,17 @@ export default function ArmazenamentoPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-blue-600 text-white sticky top-0 z-40">
+      <header className="bg-[#E31A1A] text-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-blue-700" onClick={() => navigate("/select-system")}>
+            <Button variant="ghost" size="sm" className="text-white hover:bg-red-700" onClick={() => navigate("/select-system")}>
               <ArrowLeft size={20} />
             </Button>
             <HardDrive size={24} />
             <h1 className="text-xl font-bold">Armazenamento</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-blue-700" onClick={() => { logout(); navigate("/login"); }}>
+            <Button variant="ghost" size="sm" className="text-white hover:bg-red-700" onClick={() => { logout(); navigate("/login"); }}>
               <LogOut size={18} className="mr-2" />
               Sair
             </Button>
