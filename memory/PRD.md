@@ -15,7 +15,7 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 
 ## Paleta de Cores (Atualizada 24/02/2026)
 - **Vermelho**: #E31A1A (cor primária, botões de ação, links)
-- **Amarelo**: #FFC232 (cor secundária, módulo administrativo)
+- **Amarelo**: #D4A000 (cor secundária escurecida, módulo administrativo) ← ATUALIZADO
 - **Preto**: #000000 (sidebars, fundos de login/seleção)
 - **Branco**: #FFFFFF (fundos de conteúdo principal)
 
