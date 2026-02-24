@@ -48,6 +48,7 @@ import {
   Wrench,
   Package,
   DollarSign,
+  Edit,
   Search,
   Building2,
   Crown,
