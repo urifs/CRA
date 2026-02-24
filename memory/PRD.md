@@ -224,6 +224,16 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Arquivos**: `ContasPagarPage.jsx`, `ContasReceberPage.jsx`
 - **Testes**: 100% aprovados (iteration_9.json)
 
+### Bug Fix - Chatbot e Logout Mobile (24/02/2026)
+- **Problema 1**: Chatbot estava sobrepondo a barra de navegação inferior no mobile
+- **Solução**: Ajustada posição do chatbot para `calc(90px + env(safe-area-inset-bottom))` no mobile
+- **Problema 2**: Chatbot e FAB (botão +) estavam sobrepostos no mobile
+- **Solução**: Quando há FAB presente, o chatbot é posicionado à esquerda (`calc(16px + 56px + 16px)`)
+- **Arquivos**: `ChatbotWidget.jsx`, `Layout.jsx`
+- **Problema 3**: Logout não funcionava no mobile na tela de seleção de sistemas
+- **Solução**: Adicionado `e.preventDefault()` e `e.stopPropagation()` no handler do botão
+- **Arquivos**: `SystemSelectPage.jsx`
+
 ### Auditoria Detalhada (24/02/2026)
 - **Problema**: Ações de auditoria estavam genéricas (apenas "criar", "excluir", etc)
 - **Solução**: 
