@@ -37,6 +37,20 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 
 ## O Que Foi Implementado
 
+### Anexos em Transações Financeiras ✅ (24/02/2026)
+- [x] Componente reutilizável AttachmentsSection
+- [x] Upload de imagens (PNG, JPG, GIF, WebP) e PDFs
+- [x] Limite de 10MB por arquivo
+- [x] Visualização de imagens inline, download de PDFs
+- [x] Exclusão de anexos com confirmação
+- [x] Integrado em: Contas a Pagar, Contas a Receber
+- [x] Auditoria de uploads e exclusões
+
+### Melhorias na Tela de Seleção de Sistema ✅ (24/02/2026)
+- [x] Botão "Sair da conta" para fazer logout
+- [x] Painel Administrativo visível para todos os usuários
+- [x] Acesso ao Painel Admin bloqueado para não-administradores (com mensagem de erro)
+
 ### Exportação de Relatórios PDF ✅ (24/02/2026)
 - [x] Página de exportação redesenhada com categorias expansíveis
 - [x] **Gerenciamento (21 opções)**:
