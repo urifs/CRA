@@ -77,6 +77,7 @@ export const AdminLayout = () => {
     { path: "/administrativo/cadastros", icon: Users, label: "Cadastros" },
     { path: "/administrativo/produtos", icon: Package, label: "Produtos" },
     { path: "/administrativo/ordens-servico", icon: ClipboardList, label: "Ordens de Serviço" },
+    { path: "/administrativo/exportar", icon: FileDown, label: "Exportação" },
   ];
 
   const mobileNavItems = [
