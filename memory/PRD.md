@@ -239,9 +239,12 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **GET `/api/admin/alugueis/{id}/contrato/download`** - Download de contrato
 
 ### P1 (Importante) - Próximos Passos
+- [ ] **Exportação Excel/OFX** (além do PDF existente)
+- [ ] **Visualização de Anexos em Modal** (Contas a Pagar/Receber e Cadastros)
+- [ ] **Consulta de CNPJ** (preenchimento automático via API externa)
+- [ ] **Anexos em Produtos** (upload de arquivos no cadastro)
 - [ ] **Integração estoque ↔ manutenção** (baixa automática de peças)
 - [ ] **Integração NF-e com SEFAZ** (requer certificado digital A1)
-- [ ] Exportação de relatórios (PDF/Excel)
 - [ ] Gráficos de custos por categoria
 
 ### P2 (Desejável)
