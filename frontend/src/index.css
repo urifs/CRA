@@ -28,33 +28,39 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 @layer base {
     :root {
-        --background: 210 40% 98%;
-        --foreground: 222 47% 11%;
+        --background: 0 0% 100%;
+        --foreground: 0 0% 0%;
         --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --card-foreground: 0 0% 0%;
         --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
-        --primary: 222 47% 11%;
-        --primary-foreground: 210 40% 98%;
-        --secondary: 210 40% 96%;
-        --secondary-foreground: 222 47% 11%;
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
-        --accent: 24 95% 53%;
+        --popover-foreground: 0 0% 0%;
+        --primary: 0 0% 0%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 45 100% 60%;
+        --secondary-foreground: 0 0% 0%;
+        --muted: 45 30% 96%;
+        --muted-foreground: 0 0% 40%;
+        --accent: 0 82% 50%;
         --accent-foreground: 0 0% 100%;
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 24 95% 53%;
-        --chart-1: 24 95% 53%;
-        --chart-2: 173 58% 39%;
-        --chart-3: 197 37% 24%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 27 87% 67%;
+        --destructive: 0 82% 50%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 0 0% 85%;
+        --input: 0 0% 85%;
+        --ring: 0 82% 50%;
+        --chart-1: 0 82% 50%;
+        --chart-2: 45 100% 60%;
+        --chart-3: 0 0% 20%;
+        --chart-4: 45 80% 70%;
+        --chart-5: 0 60% 70%;
         --radius: 0.5rem;
         --success: 142 76% 36%;
-        --warning: 48 96% 53%;
+        --warning: 45 100% 60%;
+        
+        /* RA Locadora brand colors */
+        --ra-red: #E31A1A;
+        --ra-yellow: #FFC232;
+        --ra-black: #000000;
+        --ra-white: #FFFFFF;
     }
 }
 
@@ -63,7 +69,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
         @apply border-border;
     }
     body {
-        @apply bg-slate-50 text-slate-900;
+        @apply bg-white text-black;
     }
 }
 
@@ -115,7 +121,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 /* Input focus styles */
 input:focus, select:focus, textarea:focus {
-    @apply ring-2 ring-orange-500 border-orange-500;
+    @apply ring-2 ring-[#E31A1A] border-[#E31A1A];
 }
 
 /* Button active state */
@@ -212,7 +218,7 @@ button:active:not(:disabled) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(to bottom, rgba(249, 115, 22, 0.1), transparent);
+    background: linear-gradient(to bottom, rgba(227, 26, 26, 0.1), transparent);
     transform: translateY(-100%);
     transition: transform 0.2s ease;
     z-index: 1000;
@@ -244,13 +250,13 @@ button:active:not(:disabled) {
     bottom: 0;
     left: 0;
     right: 0;
-    background: #0f172a;
+    background: #000000;
     display: none;
     justify-content: space-around;
     padding: 8px 0;
     padding-bottom: calc(8px + env(safe-area-inset-bottom));
     z-index: 1000;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
 }
 
 @media (max-width: 768px) {
@@ -270,7 +276,7 @@ button:active:not(:disabled) {
     align-items: center;
     gap: 2px;
     padding: 8px 12px;
-    color: #94a3b8;
+    color: #888888;
     text-decoration: none;
     font-size: 10px;
     font-weight: 500;
@@ -278,7 +284,7 @@ button:active:not(:disabled) {
 }
 
 .mobile-nav-item.active {
-    color: #f97316;
+    color: #FFC232;
 }
 
 .mobile-nav-item svg {
