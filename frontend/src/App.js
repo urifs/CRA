@@ -135,6 +135,9 @@ function App() {
           {/* Painel Administrativo (Gestão de Usuários) */}
           <Route path="/painel-admin" element={<ProtectedRoute><PainelAdminPage /></ProtectedRoute>} />
           
+          {/* Sistema de Armazenamento */}
+          <Route path="/armazenamento" element={<ProtectedRoute><ArmazenamentoPage /></ProtectedRoute>} />
+          
           {/* Gerenciamento routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="dashboard" element={<DashboardPage />} />
