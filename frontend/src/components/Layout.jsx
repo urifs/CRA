@@ -229,7 +229,7 @@ export const Layout = () => {
       <nav className="mobile-nav" data-testid="mobile-bottom-nav">
         {mobileNavItems.map((item) => {
           const isActive = location.pathname === item.path || 
-            (item.path === "/more" && ["/balance", "/usage", "/notifications", "/stock", "/categories", "/audit"].includes(location.pathname));
+            (item.path === "/more" && ["/balance", "/usage", "/notifications", "/stock", "/categories"].includes(location.pathname));
           
           return (
             <NavLink
