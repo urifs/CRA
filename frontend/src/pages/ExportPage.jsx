@@ -18,32 +18,31 @@ import {
   ClipboardList,
   CreditCard,
   Download,
-  CheckCircle2
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  TrendingDown,
+  TrendingUp
 } from "lucide-react";
 
-const CATEGORY_ICONS = {
-  machines: Truck,
-  maintenances: Wrench,
-  categories: FileText,
-  stock_items: Package,
-  stock_movements: Package,
-  obras: Building2,
-  usage_logs: ClipboardList,
-  contas_pagar: DollarSign,
-  contas_receber: DollarSign,
-  cadastros: Users,
-  produtos_admin: Package,
-  ordens_servico: ClipboardList,
-  alugueis: Truck,
-  plano_contas: FileText,
-  centros_custo: Building2,
-  formas_pagamento: CreditCard,
+const ICONS = {
+  truck: Truck,
+  wrench: Wrench,
+  package: Package,
+  building: Building2,
+  dollar: DollarSign,
+  users: Users,
+  clipboard: ClipboardList,
+  "trending-down": TrendingDown,
+  "trending-up": TrendingUp,
+  clock: Clock,
 };
 
 export default function ExportPage({ module = "gerenciamento" }) {
   const { token } = useAuth();
   const [categories, setCategories] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(null);
 
@@ -59,34 +58,72 @@ export default function ExportPage({ module = "gerenciamento" }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(response.data);
+      // Expandir todas as categorias por padrão
+      const expanded = {};
+      response.data.forEach(cat => {
+        expanded[cat.id] = true;
+      });
+      setExpandedCategories(expanded);
     } catch (error) {
       console.error("Erro ao carregar categorias:", error);
-      toast.error("Erro ao carregar categorias de exportação");
+      toast.error("Erro ao carregar categorias");
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleCategory = (categoryId) => {
-    setSelectedCategories(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
+  const toggleExpand = (categoryId) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  const toggleItem = (itemId) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
     );
   };
 
-  const selectAll = () => {
-    if (selectedCategories.length === categories.length) {
-      setSelectedCategories([]);
+  const toggleCategory = (category) => {
+    const subcategoryIds = category.subcategories.map(s => s.id);
+    const allSelected = subcategoryIds.every(id => selectedItems.includes(id));
+    
+    if (allSelected) {
+      // Desmarcar todos
+      setSelectedItems(prev => prev.filter(id => !subcategoryIds.includes(id)));
     } else {
-      setSelectedCategories(categories.map(c => c.id));
+      // Marcar todos
+      setSelectedItems(prev => [...new Set([...prev, ...subcategoryIds])]);
     }
   };
 
-  const exportPDF = async (categoryId) => {
-    setExporting(categoryId);
+  const isCategorySelected = (category) => {
+    const subcategoryIds = category.subcategories.map(s => s.id);
+    return subcategoryIds.every(id => selectedItems.includes(id));
+  };
+
+  const isCategoryPartiallySelected = (category) => {
+    const subcategoryIds = category.subcategories.map(s => s.id);
+    const selectedCount = subcategoryIds.filter(id => selectedItems.includes(id)).length;
+    return selectedCount > 0 && selectedCount < subcategoryIds.length;
+  };
+
+  const selectAll = () => {
+    const allIds = categories.flatMap(cat => cat.subcategories.map(s => s.id));
+    if (selectedItems.length === allIds.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(allIds);
+    }
+  };
+
+  const exportPDF = async (itemId) => {
+    setExporting(itemId);
     try {
-      const response = await axios.get(`${API}/export/pdf/${categoryId}`, {
+      const response = await axios.get(`${API}/export/pdf/${itemId}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -96,7 +133,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
       link.href = url;
       
       const contentDisposition = response.headers['content-disposition'];
-      let filename = `CRA_Relatorio_${categoryId}.pdf`;
+      let filename = `CRA_Relatorio_${itemId}.pdf`;
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename=(.+)/);
         if (filenameMatch) {
@@ -110,7 +147,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      toast.success("PDF exportado com sucesso!");
+      toast.success("PDF exportado!");
     } catch (error) {
       console.error("Erro ao exportar:", error);
       toast.error("Erro ao exportar PDF");
@@ -120,15 +157,16 @@ export default function ExportPage({ module = "gerenciamento" }) {
   };
 
   const exportSelected = async () => {
-    if (selectedCategories.length === 0) {
-      toast.error("Selecione pelo menos uma categoria");
+    if (selectedItems.length === 0) {
+      toast.error("Selecione pelo menos um item");
       return;
     }
 
-    for (const categoryId of selectedCategories) {
-      await exportPDF(categoryId);
-      await new Promise(resolve => setTimeout(resolve, 500));
+    for (const itemId of selectedItems) {
+      await exportPDF(itemId);
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
+    toast.success(`${selectedItems.length} relatórios exportados!`);
   };
 
   if (loading) {
@@ -138,6 +176,8 @@ export default function ExportPage({ module = "gerenciamento" }) {
       </div>
     );
   }
+
+  const totalSubcategories = categories.reduce((acc, cat) => acc + cat.subcategories.length, 0);
 
   return (
     <div className="p-4 md:p-6">
@@ -152,7 +192,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Exportação de Relatórios</h1>
-            <p className="text-sm text-gray-500">Selecione as categorias para exportar em PDF</p>
+            <p className="text-sm text-gray-500">{totalSubcategories} opções disponíveis</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -161,11 +201,11 @@ export default function ExportPage({ module = "gerenciamento" }) {
             onClick={selectAll}
             className="border-gray-300"
           >
-            {selectedCategories.length === categories.length ? "Desmarcar Todos" : "Selecionar Todos"}
+            {selectedItems.length === totalSubcategories ? "Desmarcar Todos" : "Selecionar Todos"}
           </Button>
           <Button
             onClick={exportSelected}
-            disabled={selectedCategories.length === 0 || exporting}
+            disabled={selectedItems.length === 0 || exporting}
             style={{ backgroundColor: accentColor }}
             className="text-white"
           >
@@ -174,100 +214,131 @@ export default function ExportPage({ module = "gerenciamento" }) {
             ) : (
               <Download size={18} className="mr-2" />
             )}
-            Exportar ({selectedCategories.length})
+            Exportar ({selectedItems.length})
           </Button>
         </div>
       </div>
 
-      {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      {/* Categories */}
+      <div className="space-y-3">
         {categories.map((category) => {
-          const Icon = CATEGORY_ICONS[category.id] || FileText;
-          const isSelected = selectedCategories.includes(category.id);
-          const isExporting = exporting === category.id;
+          const Icon = ICONS[category.icon] || FileText;
+          const isExpanded = expandedCategories[category.id];
+          const isSelected = isCategorySelected(category);
+          const isPartial = isCategoryPartiallySelected(category);
 
           return (
-            <Card 
-              key={category.id}
-              className={`cursor-pointer transition-all hover:shadow-md border-2 ${
-                isSelected ? 'border-current shadow-md' : 'border-gray-200 hover:border-gray-300'
-              }`}
-              style={{ 
-                borderColor: isSelected ? accentColor : undefined,
-              }}
-              onClick={() => toggleCategory(category.id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div 
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0`}
-                      style={{ 
-                        backgroundColor: isSelected ? accentColor : `${accentColor}15`,
-                        color: isSelected ? 'white' : accentColor
-                      }}
-                    >
-                      <Icon size={20} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{category.label}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-                    </div>
-                  </div>
-                  {isSelected && (
-                    <CheckCircle2 size={20} style={{ color: accentColor }} className="shrink-0" />
-                  )}
+            <Card key={category.id} className="overflow-hidden border-gray-200">
+              {/* Category Header */}
+              <div 
+                className={`flex items-center gap-3 p-4 cursor-pointer transition-colors ${
+                  isSelected ? 'bg-gray-100' : 'hover:bg-gray-50'
+                }`}
+                style={{ borderLeft: `4px solid ${isSelected || isPartial ? accentColor : 'transparent'}` }}
+              >
+                <Checkbox 
+                  checked={isSelected}
+                  ref={(el) => {
+                    if (el && isPartial && !isSelected) {
+                      el.dataset.state = "indeterminate";
+                    }
+                  }}
+                  onCheckedChange={() => toggleCategory(category)}
+                  className="shrink-0"
+                  style={{ 
+                    borderColor: isSelected || isPartial ? accentColor : undefined,
+                    backgroundColor: isSelected ? accentColor : undefined
+                  }}
+                />
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ 
+                    backgroundColor: `${accentColor}15`,
+                    color: accentColor
+                  }}
+                >
+                  <Icon size={20} />
                 </div>
-                <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      exportPDF(category.id);
-                    }}
-                    disabled={isExporting}
-                    className="text-gray-600 hover:text-gray-900"
-                  >
-                    {isExporting ? (
-                      <Loader2 size={16} className="animate-spin mr-2" />
-                    ) : (
-                      <FileDown size={16} className="mr-2" />
-                    )}
-                    Exportar PDF
-                  </Button>
+                <div className="flex-1 min-w-0" onClick={() => toggleExpand(category.id)}>
+                  <h3 className="font-semibold text-gray-900">{category.label}</h3>
+                  <p className="text-sm text-gray-500">
+                    {category.subcategories.filter(s => selectedItems.includes(s.id)).length} de {category.subcategories.length} selecionados
+                  </p>
                 </div>
-              </CardContent>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="shrink-0"
+                  onClick={() => toggleExpand(category.id)}
+                >
+                  {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                </Button>
+              </div>
+
+              {/* Subcategories */}
+              {isExpanded && (
+                <div className="border-t border-gray-100 bg-gray-50">
+                  {category.subcategories.map((sub, index) => {
+                    const isSubSelected = selectedItems.includes(sub.id);
+                    const isSubExporting = exporting === sub.id;
+
+                    return (
+                      <div 
+                        key={sub.id}
+                        className={`flex items-center gap-3 px-4 py-3 pl-16 ${
+                          index !== category.subcategories.length - 1 ? 'border-b border-gray-100' : ''
+                        } ${isSubSelected ? 'bg-white' : 'hover:bg-white'}`}
+                      >
+                        <Checkbox 
+                          checked={isSubSelected}
+                          onCheckedChange={() => toggleItem(sub.id)}
+                          className="shrink-0"
+                          style={{ 
+                            borderColor: isSubSelected ? accentColor : undefined,
+                            backgroundColor: isSubSelected ? accentColor : undefined
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm ${isSubSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                            {sub.label}
+                          </p>
+                          <p className="text-xs text-gray-500">{sub.description}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => exportPDF(sub.id)}
+                          disabled={isSubExporting}
+                          className="shrink-0 text-gray-500 hover:text-gray-900"
+                        >
+                          {isSubExporting ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <FileDown size={14} />
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
           );
         })}
       </div>
 
-      {/* Info Box */}
-      <Card className="bg-gray-50 border-gray-200">
+      {/* Info */}
+      <Card className="mt-6 bg-gray-50 border-gray-200">
         <CardContent className="p-4">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <FileText size={18} style={{ color: accentColor }} />
-            Informações sobre a Exportação
+          <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+            <FileText size={16} style={{ color: accentColor }} />
+            Sobre a Exportação
           </h3>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: accentColor }} />
-              Os relatórios são gerados em formato PDF com a identidade visual da CRA Construtora
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: accentColor }} />
-              Todos os dados são exportados em tabelas organizadas e de fácil leitura
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: accentColor }} />
-              O download inicia automaticamente após a geração do arquivo
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: accentColor }} />
-              Selecione múltiplas categorias e clique em "Exportar" para baixar todos de uma vez
-            </li>
-          </ul>
+          <p className="text-sm text-gray-600">
+            Selecione as categorias ou subcategorias desejadas e clique em "Exportar". 
+            Os relatórios são gerados em PDF com a identidade visual da CRA Construtora.
+            Você pode clicar no ícone <FileDown size={12} className="inline" /> ao lado de cada item para exportar individualmente.
+          </p>
         </CardContent>
       </Card>
     </div>
