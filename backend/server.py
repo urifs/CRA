@@ -3589,6 +3589,114 @@ async def get_notificacoes_contagem(
         "prazo_dias": prazo_dias
     }
 
+
+# ============ PAINEL ADMINISTRATIVO (GESTÃO DE USUÁRIOS) ============
+
+@api_router.get("/admin-panel/users")
+async def get_all_users(current_user: dict = Depends(get_current_user)):
+    """Lista todos os usuários da plataforma"""
+    users = []
+    cursor = db.users.find({}, {"password": 0})
+    async for user in cursor:
+        users.append({
+            "id": user.get("id"),
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "created_at": user.get("created_at"),
+            "last_login": user.get("last_login")
+        })
+    return users
+
+@api_router.post("/admin-panel/users")
+async def create_user_admin(data: UserCreate, current_user: dict = Depends(get_current_user)):
+    """Cria um novo usuário (apenas via painel admin)"""
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+    
+    # Hash password
+    hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt())
+    
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "name": data.name,
+        "email": data.email,
+        "password": hashed_password.decode('utf-8'),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "last_login": None
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    # Registrar na auditoria
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "user_name": current_user["name"],
+        "action": f"Criou usuário: {data.name}",
+        "details": f"Email: {data.email}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "Usuário criado com sucesso", "id": user_id}
+
+@api_router.delete("/admin-panel/users/{user_id}")
+async def delete_user_admin(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Exclui um usuário"""
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Você não pode excluir sua própria conta")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    await db.users.delete_one({"id": user_id})
+    
+    # Registrar na auditoria
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "user_name": current_user["name"],
+        "action": f"Excluiu usuário: {user.get('name')}",
+        "details": f"Email: {user.get('email')}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "Usuário excluído com sucesso"}
+
+@api_router.get("/admin-panel/audit-logs")
+async def get_audit_logs(current_user: dict = Depends(get_current_user)):
+    """Retorna todos os logs de auditoria"""
+    logs = []
+    cursor = db.audit_logs.find({}).sort("created_at", -1).limit(500)
+    async for log in cursor:
+        logs.append({
+            "id": log.get("id"),
+            "user_id": log.get("user_id"),
+            "user_name": log.get("user_name"),
+            "action": log.get("action"),
+            "details": log.get("details"),
+            "created_at": log.get("created_at")
+        })
+    return logs
+
+@api_router.get("/admin-panel/users/{user_id}/activities")
+async def get_user_activities(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Retorna as atividades de um usuário específico"""
+    activities = []
+    cursor = db.audit_logs.find({"user_id": user_id}).sort("created_at", -1).limit(100)
+    async for log in cursor:
+        activities.append({
+            "id": log.get("id"),
+            "action": log.get("action"),
+            "details": log.get("details"),
+            "created_at": log.get("created_at")
+        })
+    return activities
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
