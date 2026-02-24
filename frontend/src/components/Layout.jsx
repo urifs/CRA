@@ -94,7 +94,7 @@ export const Layout = () => {
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Construction className="text-[#E31A1A]" size={24} />
+            <HardHat className="text-[#E31A1A]" size={24} />
             <span className="font-heading font-bold">CRA Construtora</span>
           </div>
           <button
@@ -127,7 +127,7 @@ export const Layout = () => {
         {/* Logo - Fixed at top */}
         <div className="p-5 border-b border-gray-800" style={{ flexShrink: 0 }}>
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <Construction className="text-[#E31A1A]" size={28} />
+            <HardHat className="text-[#E31A1A]" size={28} />
             <span>CRA Construtora</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">Gerenciamento Geral</p>
