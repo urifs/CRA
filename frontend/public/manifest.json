@@ -1,11 +1,11 @@
 {
   "name": "CRA Construtora",
   "short_name": "CRA",
-  "description": "Sistema de Gerenciamento de Manutenção de Máquinas",
+  "description": "Sistema de Gestão Empresarial",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#000000",
+  "theme_color": "#E31A1A",
   "orientation": "portrait-primary",
   "icons": [
     {
