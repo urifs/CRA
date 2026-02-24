@@ -3780,7 +3780,11 @@ async def get_audit_logs(current_user: dict = Depends(get_current_user)):
             "id": log.get("id"),
             "user_id": log.get("user_id"),
             "user_name": log.get("user_name"),
+            "user_email": log.get("user_email", ""),
             "action": log.get("action"),
+            "entity_type": log.get("entity_type", ""),
+            "entity_name": log.get("entity_name", ""),
+            "module": log.get("module", "Sistema"),
             "details": log.get("details"),
             "created_at": log.get("created_at")
         })
@@ -3794,7 +3798,12 @@ async def get_user_activities(user_id: str, current_user: dict = Depends(get_cur
     async for log in cursor:
         activities.append({
             "id": log.get("id"),
+            "user_id": log.get("user_id"),
+            "user_name": log.get("user_name"),
             "action": log.get("action"),
+            "entity_type": log.get("entity_type", ""),
+            "entity_name": log.get("entity_name", ""),
+            "module": log.get("module", "Sistema"),
             "details": log.get("details"),
             "created_at": log.get("created_at")
         })
