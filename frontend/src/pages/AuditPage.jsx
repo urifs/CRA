@@ -50,7 +50,7 @@ export default function AuditPage() {
       case "criar":
         return <Plus className="text-green-500" size={16} />;
       case "editar":
-        return <Pencil className="text-blue-500" size={16} />;
+        return <Pencil className="text-[#FFC232]" size={16} />;
       case "excluir":
         return <Trash2 className="text-red-500" size={16} />;
       default:
@@ -61,7 +61,7 @@ export default function AuditPage() {
   const getActionBadge = (action) => {
     const badges = {
       criar: { class: "bg-green-100 text-green-700 border-green-200", label: "Criar" },
-      editar: { class: "bg-blue-100 text-blue-700 border-blue-200", label: "Editar" },
+      editar: { class: "bg-blue-100 text-[#FFC232] border-blue-200", label: "Editar" },
       excluir: { class: "bg-red-100 text-red-700 border-red-200", label: "Excluir" }
     };
     const badge = badges[action] || { class: "bg-slate-100 text-slate-700", label: action };
@@ -74,8 +74,8 @@ export default function AuditPage() {
 
   const getEntityTypeBadge = (type) => {
     const colors = {
-      "máquina": "bg-blue-50 text-blue-700",
-      "manutenção": "bg-orange-50 text-orange-700",
+      "máquina": "bg-blue-50 text-[#FFC232]",
+      "manutenção": "bg-orange-50 text-[#E31A1A]",
       "categoria": "bg-purple-50 text-purple-700",
       "obra": "bg-yellow-50 text-yellow-700",
       "item de estoque": "bg-green-50 text-green-700",

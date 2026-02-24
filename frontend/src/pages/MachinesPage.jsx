@@ -299,7 +299,7 @@ export default function MachinesPage() {
           </p>
           {!searchTerm && (
             <Button
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-[#E31A1A] hover:bg-[#E31A1A]"
               onClick={() => setShowDialog(true)}
             >
               <Plus size={18} className="mr-2" />
@@ -369,7 +369,7 @@ export default function MachinesPage() {
                 </SelectContent>
               </Select>
               {categories.length === 0 && (
-                <p className="text-sm text-orange-500">
+                <p className="text-sm text-[#E31A1A]">
                   Nenhuma categoria cadastrada.{" "}
                   <button
                     type="button"

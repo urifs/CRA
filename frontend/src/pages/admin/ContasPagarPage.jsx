@@ -173,8 +173,8 @@ export default function ContasPagarPage() {
     if (conta.status === "cancelada") return { label: "Cancelada", color: "bg-slate-100 text-slate-700", icon: X };
     const hoje = new Date().toISOString().split("T")[0];
     if (conta.data_vencimento < hoje) return { label: "Vencida", color: "bg-red-100 text-red-700", icon: AlertCircle };
-    if (conta.data_vencimento === hoje) return { label: "Vence Hoje", color: "bg-orange-100 text-orange-700", icon: Clock };
-    return { label: "Em Aberto", color: "bg-blue-100 text-blue-700", icon: Calendar };
+    if (conta.data_vencimento === hoje) return { label: "Vence Hoje", color: "bg-orange-100 text-[#E31A1A]", icon: Clock };
+    return { label: "Em Aberto", color: "bg-blue-100 text-[#FFC232]", icon: Calendar };
   };
 
   const filteredContas = contas.filter(c => {
@@ -215,7 +215,7 @@ export default function ContasPagarPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card className="border-l-4 border-l-blue-500"><CardContent className="p-4">
           <p className="text-sm text-slate-500">Total Em Aberto</p>
-          <p className="text-xl font-bold text-blue-600">{formatCurrency(totalEmAberto)}</p>
+          <p className="text-xl font-bold text-[#FFC232]">{formatCurrency(totalEmAberto)}</p>
         </CardContent></Card>
         <Card className="border-l-4 border-l-red-500"><CardContent className="p-4">
           <p className="text-sm text-slate-500">Total Vencidas</p>
@@ -299,7 +299,7 @@ export default function ContasPagarPage() {
                       <div className="flex justify-center gap-1">
                         {c.status === "em_aberto" && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleQuitar(c.id)} title="Quitar"><CheckCircle2 size={14} /></Button>}
                         <Button size="sm" variant="outline" onClick={() => openModal(c)}><Edit size={14} /></Button>
-                        {c.status === "em_aberto" && <Button size="sm" variant="outline" className="text-orange-600" onClick={() => handleCancelar(c.id)} title="Cancelar"><X size={14} /></Button>}
+                        {c.status === "em_aberto" && <Button size="sm" variant="outline" className="text-[#E31A1A]" onClick={() => handleCancelar(c.id)} title="Cancelar"><X size={14} /></Button>}
                         <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></Button>
                       </div>
                     </td>

@@ -158,7 +158,7 @@ export default function NewMaintenancePage() {
                   </SelectContent>
                 </Select>
                 {machines.length === 0 && (
-                  <p className="text-sm text-orange-500">
+                  <p className="text-sm text-[#E31A1A]">
                     Nenhuma máquina cadastrada.{" "}
                     <button
                       type="button"
@@ -261,7 +261,7 @@ export default function NewMaintenancePage() {
                     onClick={() => setFormData({...formData, maintenance_type: "corretiva"})}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
                       formData.maintenance_type === "corretiva"
-                        ? "border-orange-500 bg-orange-50"
+                        ? "border-[#E31A1A] bg-orange-50"
                         : "border-slate-200 hover:border-slate-300"
                     }`}
                     data-testid="maintenance-type-corretiva"
@@ -271,7 +271,7 @@ export default function NewMaintenancePage() {
                         formData.maintenance_type === "corretiva" ? "bg-orange-100" : "bg-slate-100"
                       }`}>
                         <AlertTriangle className={`${
-                          formData.maintenance_type === "corretiva" ? "text-orange-500" : "text-slate-400"
+                          formData.maintenance_type === "corretiva" ? "text-[#E31A1A]" : "text-slate-400"
                         }`} size={20} />
                       </div>
                       <div>
@@ -328,7 +328,7 @@ export default function NewMaintenancePage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-orange-500 hover:bg-orange-600"
+                  className="flex-1 bg-[#E31A1A] hover:bg-[#E31A1A]"
                   disabled={submitting || !formData.machine_id || machines.length === 0}
                   data-testid="maintenance-submit-btn"
                 >

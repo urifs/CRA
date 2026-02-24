@@ -159,7 +159,7 @@ export default function CategoriesPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 flex-1">
                     <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                      <Tags className="text-slate-600 group-hover:text-orange-500 transition-colors" size={24} />
+                      <Tags className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-slate-900 truncate">{category.name}</h3>
@@ -211,7 +211,7 @@ export default function CategoriesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => createDefaultCategory(cat)}
-                      className="hover:bg-orange-50 hover:border-orange-500"
+                      className="hover:bg-orange-50 hover:border-[#E31A1A]"
                       data-testid={`quick-add-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       <Plus size={14} className="mr-1" />
@@ -230,7 +230,7 @@ export default function CategoriesPage() {
         <CardContent className="py-6">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Construction className="text-orange-600" size={20} />
+              <Construction className="text-[#E31A1A]" size={20} />
             </div>
             <div>
               <h3 className="font-bold text-slate-900">Sobre Categorias</h3>

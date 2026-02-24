@@ -147,7 +147,7 @@ export default function ObrasPage() {
   const getStatusBadge = (status) => {
     const badges = {
       em_andamento: { class: "bg-green-100 text-green-700 border-green-200", label: "Em Andamento" },
-      concluida: { class: "bg-blue-100 text-blue-700 border-blue-200", label: "Concluída" },
+      concluida: { class: "bg-blue-100 text-[#FFC232] border-blue-200", label: "Concluída" },
       pausada: { class: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Pausada" }
     };
     const badge = badges[status] || badges.em_andamento;
@@ -227,7 +227,7 @@ export default function ObrasPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <HardHat className="text-orange-600" size={24} />
+                        <HardHat className="text-[#E31A1A]" size={24} />
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900">{obra.name}</h3>
@@ -319,7 +319,7 @@ export default function ObrasPage() {
           </p>
           {!searchTerm && (
             <Button
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-[#E31A1A] hover:bg-[#E31A1A]"
               onClick={() => setShowDialog(true)}
             >
               <Plus size={18} className="mr-2" />

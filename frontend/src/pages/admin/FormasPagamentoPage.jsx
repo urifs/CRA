@@ -117,7 +117,7 @@ export default function FormasPagamentoPage() {
           <h1 className="page-title">Formas de Pagamento</h1>
           <p className="text-slate-500 mt-1">Configure as formas de pagamento disponíveis</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700" data-testid="new-forma-btn">
+        <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-forma-btn">
           <Plus size={18} className="mr-2" />Nova Forma
         </Button>
       </div>
@@ -140,11 +140,11 @@ export default function FormasPagamentoPage() {
         <Card className="stat-card">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <CreditCard className="text-blue-600" size={20} />
+              <CreditCard className="text-[#FFC232]" size={20} />
             </div>
             <div>
               <p className="text-xs text-slate-500">Total de Formas</p>
-              <p className="text-lg font-bold text-blue-600">{formas.length}</p>
+              <p className="text-lg font-bold text-[#FFC232]">{formas.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -196,7 +196,7 @@ export default function FormasPagamentoPage() {
                   </td>
                   <td className="p-3 text-right">
                     {f.taxa > 0 ? (
-                      <span className="text-orange-600 flex items-center justify-end gap-1">
+                      <span className="text-[#E31A1A] flex items-center justify-end gap-1">
                         <Percent size={12} />{f.taxa}%
                       </span>
                     ) : "-"}
@@ -287,7 +287,7 @@ export default function FormasPagamentoPage() {
             </div>
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">{editingForma ? "Atualizar" : "Cadastrar"}</Button>
+              <Button type="submit" className="flex-1 bg-[#FFC232] hover:bg-[#FFC232]">{editingForma ? "Atualizar" : "Cadastrar"}</Button>
             </div>
           </form>
         </DialogContent>

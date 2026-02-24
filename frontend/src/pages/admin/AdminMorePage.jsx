@@ -90,10 +90,10 @@ export default function AdminMorePage() {
       <div className="space-y-3 mb-8">
         {menuItems.map((item) => (
           <NavLink key={item.path} to={item.path}>
-            <Card className="hover:border-blue-500 transition-colors cursor-pointer">
+            <Card className="hover:border-[#FFC232] transition-colors cursor-pointer">
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <item.icon className="text-blue-600" size={24} />
+                  <item.icon className="text-[#FFC232]" size={24} />
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-slate-900">{item.label}</p>
@@ -108,12 +108,12 @@ export default function AdminMorePage() {
 
       {/* System switch */}
       <Card 
-        className="hover:border-orange-500 transition-colors cursor-pointer mb-4"
+        className="hover:border-[#E31A1A] transition-colors cursor-pointer mb-4"
         onClick={() => navigate("/select-system")}
       >
         <CardContent className="p-4 flex items-center gap-4">
           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-            <ArrowLeft className="text-orange-600" size={24} />
+            <ArrowLeft className="text-[#E31A1A]" size={24} />
           </div>
           <div className="flex-1">
             <p className="font-medium text-slate-900">Trocar Sistema</p>

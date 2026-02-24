@@ -165,15 +165,15 @@ export default function OrdensServicoPage() {
   const getStatusInfo = (status) => {
     switch (status) {
       case "em_aberto":
-        return { label: "Aberta", color: "bg-blue-100 text-blue-700", icon: Clock };
+        return { label: "Aberta", color: "bg-blue-100 text-[#FFC232]", icon: Clock };
       case "em_andamento":
-        return { label: "Em Andamento", color: "bg-orange-100 text-orange-700", icon: AlertCircle };
+        return { label: "Em Andamento", color: "bg-orange-100 text-[#E31A1A]", icon: AlertCircle };
       case "concluida":
         return { label: "Concluída", color: "bg-green-100 text-green-700", icon: CheckCircle2 };
       case "cancelada":
         return { label: "Cancelada", color: "bg-red-100 text-red-700", icon: AlertCircle };
       default:
-        return { label: "Aberta", color: "bg-blue-100 text-blue-700", icon: Clock };
+        return { label: "Aberta", color: "bg-blue-100 text-[#FFC232]", icon: Clock };
     }
   };
 
@@ -220,7 +220,7 @@ export default function OrdensServicoPage() {
           <h1 className="page-title">Ordens de Serviço</h1>
           <p className="text-slate-500 mt-1">Gerenciamento de OS</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700" data-testid="new-os-btn">
+        <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-os-btn">
           <Plus size={18} className="mr-2" />
           Nova OS
         </Button>
@@ -231,11 +231,11 @@ export default function OrdensServicoPage() {
         <Card className="stat-card">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <ClipboardList className="text-blue-600" size={20} />
+              <ClipboardList className="text-[#FFC232]" size={20} />
             </div>
             <div>
               <p className="text-xs text-slate-500">Total OS</p>
-              <p className="text-lg font-bold text-blue-600">{totalOS}</p>
+              <p className="text-lg font-bold text-[#FFC232]">{totalOS}</p>
             </div>
           </CardContent>
         </Card>
@@ -286,7 +286,7 @@ export default function OrdensServicoPage() {
               key={f.value}
               variant={filter === f.value ? "default" : "outline"}
               onClick={() => setFilter(f.value)}
-              className={filter === f.value ? "bg-blue-600" : ""}
+              className={filter === f.value ? "bg-[#FFC232]" : ""}
               size="sm"
             >
               {f.label}
@@ -317,7 +317,7 @@ export default function OrdensServicoPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-bold text-blue-600">OS-{ordem.numero}</span>
+                        <span className="font-bold text-[#FFC232]">OS-{ordem.numero}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
                           <StatusIcon className="inline mr-1" size={12} />
                           {statusInfo.label}
@@ -357,7 +357,7 @@ export default function OrdensServicoPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-orange-600"
+                            className="text-[#E31A1A]"
                             onClick={() => handleUpdateStatus(ordem.id, "em_andamento")}
                             title="Iniciar"
                           >
@@ -513,7 +513,7 @@ export default function OrdensServicoPage() {
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" className="flex-1 bg-[#FFC232] hover:bg-[#FFC232]">
                 {editingOrdem ? "Atualizar" : "Criar OS"}
               </Button>
             </div>

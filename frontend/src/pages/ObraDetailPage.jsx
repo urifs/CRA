@@ -104,7 +104,7 @@ export default function ObraDetailPage() {
   const getStatusBadge = (status) => {
     const badges = {
       em_andamento: { class: "bg-green-100 text-green-700 border-green-200", label: "Em Andamento" },
-      concluida: { class: "bg-blue-100 text-blue-700 border-blue-200", label: "Concluída" },
+      concluida: { class: "bg-blue-100 text-[#FFC232] border-blue-200", label: "Concluída" },
       pausada: { class: "bg-yellow-100 text-yellow-700 border-yellow-200", label: "Pausada" }
     };
     const badge = badges[status] || badges.em_andamento;
@@ -131,8 +131,8 @@ export default function ObraDetailPage() {
 
   const getMaintenanceTypeBadge = (type) => {
     const badges = {
-      preventiva: { class: "bg-blue-100 text-blue-700", label: "Preventiva" },
-      corretiva: { class: "bg-orange-100 text-orange-700", label: "Corretiva" }
+      preventiva: { class: "bg-blue-100 text-[#FFC232]", label: "Preventiva" },
+      corretiva: { class: "bg-orange-100 text-[#E31A1A]", label: "Corretiva" }
     };
     const badge = badges[type] || badges.corretiva;
     return (
@@ -190,7 +190,7 @@ export default function ObraDetailPage() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <HardHat className="text-orange-500" size={32} />
+            <HardHat className="text-[#E31A1A]" size={32} />
             <div>
               <h1 className="page-title font-heading">{obra.name}</h1>
               {obra.location && (
@@ -215,7 +215,7 @@ export default function ObraDetailPage() {
                 <p className="text-2xl font-bold text-slate-900">{obra.machines.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Truck className="text-blue-600" size={24} />
+                <Truck className="text-[#FFC232]" size={24} />
               </div>
             </div>
           </CardContent>
@@ -229,7 +229,7 @@ export default function ObraDetailPage() {
                 <p className="text-2xl font-bold text-slate-900">{obra.maintenances.length}</p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Wrench className="text-orange-600" size={24} />
+                <Wrench className="text-[#E31A1A]" size={24} />
               </div>
             </div>
           </CardContent>
@@ -279,11 +279,11 @@ export default function ObraDetailPage() {
                 <p className="text-xl font-bold font-mono text-slate-900">{formatCurrency(obra.total_maintenance_cost)}</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-600">Preventiva</p>
+                <p className="text-sm text-[#FFC232]">Preventiva</p>
                 <p className="text-xl font-bold font-mono text-blue-900">{formatCurrency(obra.preventive_cost)}</p>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <p className="text-sm text-orange-600">Corretiva</p>
+                <p className="text-sm text-[#E31A1A]">Corretiva</p>
                 <p className="text-xl font-bold font-mono text-orange-900">{formatCurrency(obra.corrective_cost)}</p>
               </div>
             </div>
@@ -455,7 +455,7 @@ export default function ObraDetailPage() {
             </Select>
             
             {availableMachines.length === 0 && (
-              <p className="text-sm text-orange-500 mt-2">
+              <p className="text-sm text-[#E31A1A] mt-2">
                 Todas as máquinas já estão vinculadas a esta obra ou não há máquinas cadastradas.
               </p>
             )}

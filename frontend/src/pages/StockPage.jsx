@@ -326,17 +326,17 @@ export default function StockPage() {
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="text-orange-600" size={20} />
+                <AlertTriangle className="text-[#E31A1A]" size={20} />
               </div>
               <div className="flex-1">
                 <p className="font-bold text-orange-800">Atenção: Estoque Baixo</p>
-                <p className="text-sm text-orange-600">
+                <p className="text-sm text-[#E31A1A]">
                   {lowStockCount} {lowStockCount === 1 ? "item está" : "itens estão"} abaixo do estoque mínimo
                 </p>
               </div>
               <Button
                 variant="outline"
-                className="border-orange-300 text-orange-700 hover:bg-orange-100"
+                className="border-orange-300 text-[#E31A1A] hover:bg-orange-100"
                 onClick={() => setShowLowStockOnly(!showLowStockOnly)}
               >
                 {showLowStockOnly ? "Ver Todos" : "Ver Itens"}
@@ -376,7 +376,7 @@ export default function StockPage() {
             <Button
               variant={showLowStockOnly ? "default" : "outline"}
               onClick={() => setShowLowStockOnly(!showLowStockOnly)}
-              className={showLowStockOnly ? "bg-orange-500 hover:bg-orange-600" : ""}
+              className={showLowStockOnly ? "bg-[#E31A1A] hover:bg-[#E31A1A]" : ""}
             >
               <Filter size={16} className="mr-2" />
               Estoque Baixo
@@ -398,7 +398,7 @@ export default function StockPage() {
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                           item.is_low_stock ? "bg-orange-100" : "bg-slate-100"
                         }`}>
-                          <Package className={item.is_low_stock ? "text-orange-600" : "text-slate-600"} size={24} />
+                          <Package className={item.is_low_stock ? "text-[#E31A1A]" : "text-slate-600"} size={24} />
                         </div>
                         <div>
                           <h3 className="font-bold text-slate-900">{item.name}</h3>
@@ -417,7 +417,7 @@ export default function StockPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-slate-500">Quantidade:</span>
-                        <span className={`font-bold ${item.is_low_stock ? "text-orange-600" : "text-slate-900"}`}>
+                        <span className={`font-bold ${item.is_low_stock ? "text-[#E31A1A]" : "text-slate-900"}`}>
                           {item.quantity} {item.unit}
                         </span>
                       </div>
@@ -497,7 +497,7 @@ export default function StockPage() {
               </p>
               {!searchTerm && !showLowStockOnly && (
                 <Button
-                  className="bg-orange-500 hover:bg-orange-600"
+                  className="bg-[#E31A1A] hover:bg-[#E31A1A]"
                   onClick={() => setShowItemDialog(true)}
                 >
                   <Plus size={18} className="mr-2" />
@@ -572,7 +572,7 @@ export default function StockPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl font-bold flex items-center gap-2">
-              <Tags className="text-orange-500" size={24} />
+              <Tags className="text-[#E31A1A]" size={24} />
               Gerenciar Categorias
             </DialogTitle>
             <DialogDescription>
@@ -591,7 +591,7 @@ export default function StockPage() {
             />
             <Button
               type="submit"
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-[#E31A1A] hover:bg-[#E31A1A]"
               disabled={formLoading || !newCategoryName.trim()}
               data-testid="create-category-btn"
             >
@@ -696,7 +696,7 @@ export default function StockPage() {
                   </SelectContent>
                 </Select>
                 {categories.length === 0 && (
-                  <p className="text-xs text-orange-500">
+                  <p className="text-xs text-[#E31A1A]">
                     Nenhuma categoria.{" "}
                     <button
                       type="button"

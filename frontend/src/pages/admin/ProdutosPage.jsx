@@ -270,7 +270,7 @@ export default function ProdutosPage() {
                     <td className="p-3 font-mono text-xs">{p.ncm || "-"}</td>
                     <td className="p-3 text-center">
                       <div className="flex justify-center gap-1">
-                        <Button size="sm" variant="outline" onClick={() => handleGoogleSearch(p)} title="Buscar no Google" className="text-blue-600">
+                        <Button size="sm" variant="outline" onClick={() => handleGoogleSearch(p)} title="Buscar no Google" className="text-[#FFC232]">
                           <ExternalLink size={14} />
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => openModal(p)}><Edit size={14} /></Button>

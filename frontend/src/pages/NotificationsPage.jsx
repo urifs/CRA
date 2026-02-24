@@ -41,9 +41,9 @@ export default function NotificationsPage() {
       return <AlertTriangle className="text-red-500" size={24} />;
     }
     if (type.includes("stock")) {
-      return <Package className="text-orange-500" size={24} />;
+      return <Package className="text-[#E31A1A]" size={24} />;
     }
-    return <Droplet className="text-orange-500" size={24} />;
+    return <Droplet className="text-[#E31A1A]" size={24} />;
   };
 
   const getCardClass = (type) => {
@@ -119,12 +119,12 @@ export default function NotificationsPage() {
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Avisos
                 </p>
-                <p className="text-4xl font-black text-orange-500 mt-2 font-heading">
+                <p className="text-4xl font-black text-[#E31A1A] mt-2 font-heading">
                   {warningCount}
                 </p>
               </div>
               <div className="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center">
-                <Clock className="text-orange-500" size={28} />
+                <Clock className="text-[#E31A1A]" size={28} />
               </div>
             </div>
           </CardContent>

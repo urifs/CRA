@@ -16,18 +16,18 @@ export default function NFEPage() {
       <Card>
         <CardContent className="py-16 text-center">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="text-blue-600" size={32} />
+            <FileText className="text-[#FFC232]" size={32} />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Módulo de NF-e</h2>
           <p className="text-slate-500 mb-4 max-w-md mx-auto">
             A emissão de Notas Fiscais Eletrônicas requer integração com a SEFAZ e certificado digital A1.
           </p>
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md mx-auto">
-            <div className="flex items-center gap-2 text-orange-700">
+            <div className="flex items-center gap-2 text-[#E31A1A]">
               <AlertTriangle size={20} />
               <span className="font-medium">Funcionalidade em desenvolvimento</span>
             </div>
-            <p className="text-sm text-orange-600 mt-1">
+            <p className="text-sm text-[#E31A1A] mt-1">
               Para emitir NF-e, será necessário configurar o certificado digital e dados fiscais da empresa.
             </p>
           </div>

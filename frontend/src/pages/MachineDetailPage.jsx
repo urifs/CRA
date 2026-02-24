@@ -116,7 +116,7 @@ export default function MachineDetailPage() {
               </div>
             </div>
             <Button
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-[#E31A1A] hover:bg-[#E31A1A]"
               onClick={() => navigate(`/maintenances/new?machine=${machine.id}`)}
               data-testid="new-maintenance-for-machine-btn"
             >
@@ -199,12 +199,12 @@ export default function MachineDetailPage() {
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Corretivas
                 </p>
-                <p className="text-3xl font-black text-orange-500 mt-1 font-heading">
+                <p className="text-3xl font-black text-[#E31A1A] mt-1 font-heading">
                   {correctiveCount}
                 </p>
               </div>
               <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="text-orange-500" size={24} />
+                <AlertTriangle className="text-[#E31A1A]" size={24} />
               </div>
             </div>
           </CardContent>
@@ -255,7 +255,7 @@ export default function MachineDetailPage() {
                       {maintenance.maintenance_type === "preventiva" ? (
                         <Shield className="text-green-600" size={20} />
                       ) : (
-                        <AlertTriangle className="text-orange-500" size={20} />
+                        <AlertTriangle className="text-[#E31A1A]" size={20} />
                       )}
                     </div>
                     <div>
@@ -284,7 +284,7 @@ export default function MachineDetailPage() {
               <Wrench className="text-slate-300 mb-4" size={48} />
               <p className="text-slate-500">Nenhuma manutenção registrada para esta máquina</p>
               <Button
-                className="mt-4 bg-orange-500 hover:bg-orange-600"
+                className="mt-4 bg-[#E31A1A] hover:bg-[#E31A1A]"
                 onClick={() => navigate(`/maintenances/new?machine=${machine.id}`)}
               >
                 <Plus size={18} className="mr-2" />

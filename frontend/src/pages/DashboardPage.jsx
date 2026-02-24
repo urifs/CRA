@@ -64,7 +64,7 @@ export default function DashboardPage() {
           <p className="text-slate-500 mt-1">Visão geral do sistema de manutenção</p>
         </div>
         <Button
-          className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+          className="bg-[#E31A1A] hover:bg-[#E31A1A] text-white font-bold"
           onClick={() => navigate("/maintenances/new")}
           data-testid="dashboard-new-maintenance-btn"
         >
@@ -140,12 +140,12 @@ export default function DashboardPage() {
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Corretivas
                 </p>
-                <p className="text-4xl font-black text-orange-500 mt-2 font-heading">
+                <p className="text-4xl font-black text-[#E31A1A] mt-2 font-heading">
                   {stats?.corrective_count || 0}
                 </p>
               </div>
               <div className="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center group-hover:bg-orange-100 transition-colors">
-                <AlertTriangle className="text-orange-500" size={28} />
+                <AlertTriangle className="text-[#E31A1A]" size={28} />
               </div>
             </div>
           </CardContent>
@@ -159,17 +159,17 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Package className="text-orange-600" size={20} />
+                  <Package className="text-[#E31A1A]" size={20} />
                 </div>
                 <div>
                   <p className="font-bold text-orange-800">Alerta de Estoque</p>
-                  <p className="text-sm text-orange-600">
+                  <p className="text-sm text-[#E31A1A]">
                     {stats.low_stock_count} {stats.low_stock_count === 1 ? "item está" : "itens estão"} abaixo do estoque mínimo
                   </p>
                 </div>
               </div>
               <Button
-                className="bg-orange-500 hover:bg-orange-600"
+                className="bg-[#E31A1A] hover:bg-[#E31A1A]"
                 onClick={() => navigate("/stock")}
               >
                 Ver Estoque
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                       {maintenance.maintenance_type === "preventiva" ? (
                         <Shield className="text-green-600" size={20} />
                       ) : (
-                        <AlertTriangle className="text-orange-500" size={20} />
+                        <AlertTriangle className="text-[#E31A1A]" size={20} />
                       )}
                     </div>
                     <div>
@@ -247,7 +247,7 @@ export default function DashboardPage() {
               <Wrench className="text-slate-300 mb-4" size={48} />
               <p className="text-slate-500">Nenhuma manutenção registrada</p>
               <Button
-                className="mt-4 bg-orange-500 hover:bg-orange-600"
+                className="mt-4 bg-[#E31A1A] hover:bg-[#E31A1A]"
                 onClick={() => navigate("/maintenances/new")}
               >
                 <Plus size={18} className="mr-2" />
@@ -268,7 +268,7 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Truck className="text-slate-600 group-hover:text-orange-500 transition-colors" size={24} />
+                <Truck className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
                 <p className="font-bold text-slate-900">Gerenciar Máquinas</p>
@@ -286,7 +286,7 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Plus className="text-slate-600 group-hover:text-orange-500 transition-colors" size={24} />
+                <Plus className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
                 <p className="font-bold text-slate-900">Nova Manutenção</p>
@@ -304,7 +304,7 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Package className="text-slate-600 group-hover:text-orange-500 transition-colors" size={24} />
+                <Package className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
                 <p className="font-bold text-slate-900">Estoque</p>
@@ -322,7 +322,7 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Wrench className="text-slate-600 group-hover:text-orange-500 transition-colors" size={24} />
+                <Wrench className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
                 <p className="font-bold text-slate-900">Categorias</p>

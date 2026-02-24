@@ -91,7 +91,7 @@ export default function BalancePage() {
                   {formatCurrency(balance?.total_spent || 0)}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-orange-500 rounded-xl flex items-center justify-center">
+              <div className="w-14 h-14 bg-[#E31A1A] rounded-xl flex items-center justify-center">
                 <DollarSign className="text-white" size={28} />
               </div>
             </div>
@@ -144,7 +144,7 @@ export default function BalancePage() {
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Corretivas
                 </p>
-                <p className="text-3xl font-black text-orange-500 mt-2 font-heading">
+                <p className="text-3xl font-black text-[#E31A1A] mt-2 font-heading">
                   {formatCurrency(balance?.corrective_total || 0)}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
@@ -152,7 +152,7 @@ export default function BalancePage() {
                 </p>
               </div>
               <div className="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center">
-                <AlertTriangle className="text-orange-500" size={28} />
+                <AlertTriangle className="text-[#E31A1A]" size={28} />
               </div>
             </div>
           </CardContent>
@@ -184,7 +184,7 @@ export default function BalancePage() {
                   style={{ width: `${preventivePercentage}%` }}
                 />
                 <div 
-                  className="h-full bg-orange-500 transition-all duration-500"
+                  className="h-full bg-[#E31A1A] transition-all duration-500"
                   style={{ width: `${100 - preventivePercentage}%` }}
                 />
               </div>
@@ -195,7 +195,7 @@ export default function BalancePage() {
               <Shield size={14} />
               Preventiva ({balance?.preventive_count || 0})
             </span>
-            <span className="text-orange-500 font-medium flex items-center gap-1">
+            <span className="text-[#E31A1A] font-medium flex items-center gap-1">
               <AlertTriangle size={14} />
               Corretiva ({balance?.corrective_count || 0})
             </span>
@@ -232,7 +232,7 @@ export default function BalancePage() {
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                         index === 0 ? "bg-orange-100" : "bg-slate-100"
                       }`}>
-                        <span className={`font-bold ${index === 0 ? "text-orange-600" : "text-slate-600"}`}>
+                        <span className={`font-bold ${index === 0 ? "text-[#E31A1A]" : "text-slate-600"}`}>
                           #{index + 1}
                         </span>
                       </div>
@@ -263,7 +263,7 @@ export default function BalancePage() {
                             <Shield size={12} className="inline mr-1" />
                             {formatCurrency(machine.preventive_spent)}
                           </span>
-                          <span className="text-orange-500">
+                          <span className="text-[#E31A1A]">
                             <AlertTriangle size={12} className="inline mr-1" />
                             {formatCurrency(machine.corrective_spent)}
                           </span>
@@ -282,7 +282,7 @@ export default function BalancePage() {
                             style={{ width: `${(machine.preventive_spent / machine.total_spent) * 100}%` }}
                           />
                           <div 
-                            className="h-full bg-orange-500"
+                            className="h-full bg-[#E31A1A]"
                             style={{ width: `${(machine.corrective_spent / machine.total_spent) * 100}%` }}
                           />
                         </div>
@@ -362,7 +362,7 @@ export default function BalancePage() {
               <p className="text-sm text-slate-600 mt-1">
                 Manutenções preventivas costumam ser mais baratas e evitam problemas maiores. 
                 {preventivePercentage < 50 ? (
-                  <span className="text-orange-600 font-medium">
+                  <span className="text-[#E31A1A] font-medium">
                     {" "}Considere aumentar a frequência de manutenções preventivas para reduzir custos a longo prazo.
                   </span>
                 ) : (

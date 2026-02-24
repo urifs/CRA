@@ -147,7 +147,7 @@ export default function MaintenanceDetailPage() {
                 {maintenance.maintenance_type === "preventiva" ? (
                   <Shield className="text-green-600" size={28} />
                 ) : (
-                  <AlertTriangle className="text-orange-500" size={28} />
+                  <AlertTriangle className="text-[#E31A1A]" size={28} />
                 )}
               </div>
               <div>

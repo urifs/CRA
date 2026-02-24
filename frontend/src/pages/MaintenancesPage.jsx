@@ -115,7 +115,7 @@ export default function MaintenancesPage() {
           <p className="text-slate-500 mt-1">Histórico de todas as manutenções</p>
         </div>
         <Button
-          className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+          className="bg-[#E31A1A] hover:bg-[#E31A1A] text-white font-bold"
           onClick={() => navigate("/maintenances/new")}
           data-testid="new-maintenance-btn"
         >
@@ -199,7 +199,7 @@ export default function MaintenancesPage() {
                           {maintenance.maintenance_type === "preventiva" ? (
                             <Shield className="text-green-600" size={16} />
                           ) : (
-                            <AlertTriangle className="text-orange-500" size={16} />
+                            <AlertTriangle className="text-[#E31A1A]" size={16} />
                           )}
                         </div>
                       </td>
@@ -265,7 +265,7 @@ export default function MaintenancesPage() {
           </p>
           {!searchTerm && filterType === "all" && filterMachine === "all" && (
             <Button
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-[#E31A1A] hover:bg-[#E31A1A]"
               onClick={() => navigate("/maintenances/new")}
             >
               <Plus size={18} className="mr-2" />

@@ -107,7 +107,7 @@ export default function UsagePage() {
 
   const getProgressColor = (hoursRemaining, daysRemaining) => {
     if (hoursRemaining <= 0 || daysRemaining <= 0) return "bg-red-500";
-    if (hoursRemaining <= 50 || daysRemaining <= 60) return "bg-orange-500";
+    if (hoursRemaining <= 50 || daysRemaining <= 60) return "bg-[#E31A1A]";
     return "bg-green-500";
   };
 
@@ -130,7 +130,7 @@ export default function UsagePage() {
           <p className="text-slate-500 mt-1">Controle de horas de uso e troca de óleo</p>
         </div>
         <Button
-          className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+          className="bg-[#E31A1A] hover:bg-[#E31A1A] text-white font-bold"
           onClick={() => setShowLogDialog(true)}
           data-testid="add-hours-btn"
         >
@@ -145,11 +145,11 @@ export default function UsagePage() {
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Droplet className="text-orange-600" size={20} />
+                <Droplet className="text-[#E31A1A]" size={20} />
               </div>
               <div className="flex-1">
                 <p className="font-bold text-orange-800">Atenção: Troca de Óleo Necessária</p>
-                <p className="text-sm text-orange-600">
+                <p className="text-sm text-[#E31A1A]">
                   {alertMachines.length} {alertMachines.length === 1 ? "máquina precisa" : "máquinas precisam"} de troca de óleo
                 </p>
               </div>
@@ -188,7 +188,7 @@ export default function UsagePage() {
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                           status.needs_alert ? "bg-orange-100" : "bg-slate-100"
                         }`}>
-                          <Truck className={status.needs_alert ? "text-orange-600" : "text-slate-600"} size={24} />
+                          <Truck className={status.needs_alert ? "text-[#E31A1A]" : "text-slate-600"} size={24} />
                         </div>
                         <div>
                           <h3 className="font-bold text-slate-900">{status.machine_name}</h3>
@@ -216,7 +216,7 @@ export default function UsagePage() {
                         className="h-2"
                       />
                       <div className="flex justify-between text-xs">
-                        <span className={`font-medium ${status.hours_remaining <= 50 ? "text-orange-600" : "text-slate-500"}`}>
+                        <span className={`font-medium ${status.hours_remaining <= 50 ? "text-[#E31A1A]" : "text-slate-500"}`}>
                           {status.hours_remaining > 0 
                             ? `Restam ${status.hours_remaining.toFixed(0)}h`
                             : "Limite atingido!"
@@ -238,7 +238,7 @@ export default function UsagePage() {
                         className="h-2"
                       />
                       <div className="flex justify-between text-xs">
-                        <span className={`font-medium ${status.days_remaining <= 60 ? "text-orange-600" : "text-slate-500"}`}>
+                        <span className={`font-medium ${status.days_remaining <= 60 ? "text-[#E31A1A]" : "text-slate-500"}`}>
                           {status.days_remaining > 0 
                             ? `Restam ${status.days_remaining} dias`
                             : "1 ano atingido!"
@@ -301,7 +301,7 @@ export default function UsagePage() {
                           <td className="font-medium text-slate-900">{log.machine_name}</td>
                           <td className="font-mono text-slate-500">{log.machine_plate}</td>
                           <td>
-                            <span className="font-bold text-orange-600">+{log.hours}h</span>
+                            <span className="font-bold text-[#E31A1A]">+{log.hours}h</span>
                           </td>
                           <td className="text-slate-600">{log.notes || "-"}</td>
                           <td className="text-sm text-slate-500">{formatDateTime(log.created_at)}</td>
@@ -318,7 +318,7 @@ export default function UsagePage() {
               <p className="text-lg font-medium text-slate-600">Nenhum registro de uso</p>
               <p className="text-slate-400 mb-4">Registre as horas de uso das máquinas</p>
               <Button
-                className="bg-orange-500 hover:bg-orange-600"
+                className="bg-[#E31A1A] hover:bg-[#E31A1A]"
                 onClick={() => setShowLogDialog(true)}
               >
                 <Plus size={18} className="mr-2" />
@@ -334,7 +334,7 @@ export default function UsagePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-heading text-xl font-bold flex items-center gap-2">
-              <Clock className="text-orange-500" size={24} />
+              <Clock className="text-[#E31A1A]" size={24} />
               Registrar Horas de Uso
             </DialogTitle>
             <DialogDescription>
@@ -401,7 +401,7 @@ export default function UsagePage() {
               </Button>
               <Button
                 type="submit"
-                className="bg-orange-500 hover:bg-orange-600"
+                className="bg-[#E31A1A] hover:bg-[#E31A1A]"
                 disabled={formLoading || !logForm.machine_id}
                 data-testid="usage-submit-btn"
               >
