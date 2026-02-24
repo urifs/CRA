@@ -3171,14 +3171,18 @@ async def delete_plano_conta(id: str, current_user: dict = Depends(get_current_u
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
     
-    # Verificar se tem filhos
-    filhos = await db.plano_contas.count_documents({"pai_id": id})
-    if filhos > 0:
-        raise HTTPException(status_code=400, detail="Não é possível excluir conta com subcategorias")
+    # Excluir subcontas primeiro (cascata)
+    subcontas = await db.plano_contas.find({"pai_id": id}, {"_id": 0}).to_list(100)
+    for sub in subcontas:
+        await db.plano_contas.delete_one({"id": sub["id"]})
+        await create_audit_log(current_user, "delete", "plano_conta", sub["id"], f"Subconta: {sub['nome']}")
     
+    # Excluir a conta principal
     await db.plano_contas.delete_one({"id": id})
     await create_audit_log(current_user, "delete", "plano_conta", id, conta["nome"])
-    return {"message": "Conta excluída"}
+    
+    msg = f"Conta excluída" + (f" junto com {len(subcontas)} subconta(s)" if subcontas else "")
+    return {"message": msg}
 
 # --- Centro de Custo ---
 @api_router.get("/admin/centros-custo")
