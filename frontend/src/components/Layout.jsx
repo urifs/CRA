@@ -18,7 +18,8 @@ import {
   DollarSign,
   ClipboardList,
   MoreHorizontal,
-  ArrowLeft
+  ArrowLeft,
+  HardHat
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
