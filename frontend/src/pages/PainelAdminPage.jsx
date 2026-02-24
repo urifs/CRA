@@ -333,74 +333,74 @@ export default function PainelAdminPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+      <header className="bg-gray-900 border-b border-gray-800 px-4 md:px-6 py-3 md:py-4 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/select-system")} className="text-gray-400 hover:text-white">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/select-system")} className="text-gray-400 hover:text-white p-1 md:p-2">
               <ArrowLeft size={20} />
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#E31A1A] rounded-lg flex items-center justify-center">
-                <Shield className="text-white" size={20} />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-[#E31A1A] rounded-lg flex items-center justify-center">
+                <Shield className="text-white" size={18} />
               </div>
               <div>
-                <h1 className="font-bold text-lg">Painel Administrativo</h1>
-                <p className="text-xs text-gray-400">Gestão de usuários, auditoria e banco de dados</p>
+                <h1 className="font-bold text-base md:text-lg">Painel Admin</h1>
+                <p className="text-xs text-gray-400 hidden md:block">Gestão de usuários, auditoria e banco de dados</p>
               </div>
             </div>
           </div>
-          <Badge variant="secondary" className="bg-gray-800">{user?.name}</Badge>
+          <Badge variant="secondary" className="bg-gray-800 text-xs hidden sm:flex">{user?.name}</Badge>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-6 mb-4 md:mb-8">
           <Card className="bg-gray-900 border-gray-800">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#E31A1A]/20 rounded-lg flex items-center justify-center">
-                <Users className="text-[#E31A1A]" size={24} />
+            <CardContent className="p-3 md:p-6 flex flex-col md:flex-row items-center gap-2 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#E31A1A]/20 rounded-lg flex items-center justify-center">
+                <Users className="text-[#E31A1A]" size={20} />
               </div>
-              <div>
-                <p className="text-sm text-gray-400">Total de Usuários</p>
-                <p className="text-2xl font-bold text-white">{users.length}</p>
+              <div className="text-center md:text-left">
+                <p className="text-xs text-gray-400">Usuários</p>
+                <p className="text-xl md:text-2xl font-bold text-white">{users.length}</p>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gray-900 border-gray-800">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#D4A000]/20 rounded-lg flex items-center justify-center">
-                <Activity className="text-[#D4A000]" size={24} />
+            <CardContent className="p-3 md:p-6 flex flex-col md:flex-row items-center gap-2 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-[#D4A000]/20 rounded-lg flex items-center justify-center">
+                <Activity className="text-[#D4A000]" size={20} />
               </div>
-              <div>
-                <p className="text-sm text-gray-400">Atividades Hoje</p>
-                <p className="text-2xl font-bold text-white">{auditLogs.filter(log => new Date(log.created_at).toDateString() === new Date().toDateString()).length}</p>
+              <div className="text-center md:text-left">
+                <p className="text-xs text-gray-400">Atividades</p>
+                <p className="text-xl md:text-2xl font-bold text-white">{auditLogs.filter(log => new Date(log.created_at).toDateString() === new Date().toDateString()).length}</p>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gray-900 border-gray-800">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                <Database className="text-green-500" size={24} />
+            <CardContent className="p-3 md:p-6 flex flex-col md:flex-row items-center gap-2 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <Database className="text-green-500" size={20} />
               </div>
-              <div>
-                <p className="text-sm text-gray-400">Coleções</p>
-                <p className="text-2xl font-bold text-white">{COLLECTIONS.length}</p>
+              <div className="text-center md:text-left">
+                <p className="text-xs text-gray-400">Coleções</p>
+                <p className="text-xl md:text-2xl font-bold text-white">{COLLECTIONS.length}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          <Button variant={activeTab === "users" ? "default" : "outline"} className={activeTab === "users" ? "bg-[#E31A1A] hover:bg-red-700" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("users")}>
-            <Users size={18} className="mr-2" />Usuários
+        {/* Tabs - Mobile optimized */}
+        <div className="flex flex-wrap gap-2 mb-4 md:mb-6">
+          <Button size="sm" variant={activeTab === "users" ? "default" : "outline"} className={activeTab === "users" ? "bg-[#E31A1A] hover:bg-red-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("users")}>
+            <Users size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Usuários</span><span className="sm:hidden">Users</span>
           </Button>
-          <Button variant={activeTab === "audit" ? "default" : "outline"} className={activeTab === "audit" ? "bg-[#E31A1A] hover:bg-red-700" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("audit")}>
-            <Activity size={18} className="mr-2" />Auditoria
+          <Button size="sm" variant={activeTab === "audit" ? "default" : "outline"} className={activeTab === "audit" ? "bg-[#D4A000] hover:bg-yellow-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("audit")}>
+            <Activity size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Auditoria</span><span className="sm:hidden">Audit</span>
           </Button>
-          <Button variant={activeTab === "database" ? "default" : "outline"} className={activeTab === "database" ? "bg-[#E31A1A] hover:bg-red-700" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("database")}>
-            <Database size={18} className="mr-2" />Banco de Dados
+          <Button size="sm" variant={activeTab === "database" ? "default" : "outline"} className={activeTab === "database" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("database")}>
+            <Database size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Banco de Dados</span><span className="sm:hidden">DB</span>
           </Button>
         </div>
 
