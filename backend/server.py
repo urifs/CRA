@@ -3747,6 +3747,43 @@ async def create_user_admin(data: UserCreateAdmin, current_user: dict = Depends(
     
     return {"message": "Usuário criado com sucesso", "id": user_id}
 
+class UserRoleUpdate(BaseModel):
+    role: str
+
+@api_router.patch("/admin-panel/users/{user_id}/role")
+async def update_user_role(user_id: str, data: UserRoleUpdate, current_user: dict = Depends(get_current_user)):
+    """Atualiza o role/permissões de um usuário"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem alterar permissões")
+    
+    valid_roles = ["gerenciamento", "administrativo", "ambos", "admin"]
+    if data.role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Role inválido. Opções: {', '.join(valid_roles)}")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    old_role = user.get("role", "gerenciamento")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"role": data.role}}
+    )
+    
+    # Registrar na auditoria
+    await create_audit_log(
+        user=current_user,
+        action="alterar permissão",
+        entity_type="usuário",
+        entity_id=user_id,
+        entity_name=user.get("name"),
+        details=f"Permissão alterada de '{old_role}' para '{data.role}'",
+        module="Painel Admin"
+    )
+    
+    return {"message": "Permissão atualizada com sucesso", "new_role": data.role}
+
 @api_router.delete("/admin-panel/users/{user_id}")
 async def delete_user_admin(user_id: str, current_user: dict = Depends(get_current_user)):
     """Exclui um usuário"""
