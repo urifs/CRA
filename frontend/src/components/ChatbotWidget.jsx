@@ -215,7 +215,7 @@ Como posso ajudar?`
       {!isMinimized && (
         <>
           {/* Messages */}
-          <CardContent className="p-3 h-[380px] overflow-y-auto flex flex-col gap-3 bg-gray-900">
+          <CardContent className="p-3 flex-1 overflow-y-auto flex flex-col gap-3 bg-gray-900" style={{ height: 'calc(100% - 110px)' }}>
             {messages.map((msg, index) => (
               <div
                 key={index}
