@@ -326,11 +326,13 @@ export default function ContasPagarPage() {
                 <Select value={formData.forma_pagamento} onValueChange={(value) => setFormData({...formData, forma_pagamento: value})}>
                   <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="z-[9999]">
-                    {formasPagamentoDB.length > 0 ? (
-                      formasPagamentoDB.map(f => <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>)
-                    ) : (
-                      formasPagamento.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)
-                    )}
+                    {/* Formas padrão */}
+                    {formasPagamento.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                    {/* Formas cadastradas (que não estejam nas padrão) */}
+                    {formasPagamentoDB
+                      .filter(f => !formasPagamento.some(fp => fp.value.toLowerCase() === f.nome?.toLowerCase() || fp.label.toLowerCase() === f.nome?.toLowerCase()))
+                      .map(f => <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>)
+                    }
                   </SelectContent>
                 </Select>
               </div>
