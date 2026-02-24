@@ -4251,6 +4251,355 @@ INSTRUÇÕES DE CONTEÚDO:
         raise HTTPException(status_code=500, detail=f"Erro ao processar pergunta: {str(e)}")
 
 
+# ============ PDF EXPORT ROUTES ============
+
+from fastapi.responses import StreamingResponse
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm, mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+import io
+import base64
+import urllib.request
+
+# Categorias disponíveis para exportação
+EXPORT_CATEGORIES = {
+    "gerenciamento": [
+        {"id": "machines", "label": "Máquinas", "description": "Lista de todas as máquinas cadastradas"},
+        {"id": "maintenances", "label": "Manutenções", "description": "Histórico de manutenções realizadas"},
+        {"id": "categories", "label": "Categorias de Máquinas", "description": "Categorias para organização"},
+        {"id": "stock_items", "label": "Estoque", "description": "Itens em estoque com quantidades"},
+        {"id": "stock_movements", "label": "Movimentações de Estoque", "description": "Entradas e saídas de estoque"},
+        {"id": "obras", "label": "Obras/Projetos", "description": "Projetos e obras em andamento"},
+        {"id": "usage_logs", "label": "Registros de Uso", "description": "Horímetro e tempo de uso"},
+    ],
+    "administrativo": [
+        {"id": "contas_pagar", "label": "Contas a Pagar", "description": "Contas pendentes e quitadas"},
+        {"id": "contas_receber", "label": "Contas a Receber", "description": "Recebíveis pendentes e recebidos"},
+        {"id": "cadastros", "label": "Cadastros", "description": "Clientes e fornecedores"},
+        {"id": "produtos_admin", "label": "Produtos", "description": "Catálogo de produtos"},
+        {"id": "ordens_servico", "label": "Ordens de Serviço", "description": "OS abertas e concluídas"},
+        {"id": "alugueis", "label": "Aluguéis", "description": "Aluguéis de máquinas"},
+        {"id": "plano_contas", "label": "Plano de Contas", "description": "Estrutura de contas contábeis"},
+        {"id": "centros_custo", "label": "Centros de Custo", "description": "Centros de custo cadastrados"},
+        {"id": "formas_pagamento", "label": "Formas de Pagamento", "description": "Métodos de pagamento"},
+    ]
+}
+
+@api_router.get("/export/categories/{module}")
+async def get_export_categories(module: str, current_user: dict = Depends(get_current_user)):
+    """Retorna as categorias disponíveis para exportação"""
+    if module not in EXPORT_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Módulo inválido")
+    return EXPORT_CATEGORIES[module]
+
+async def generate_pdf_report(category: str, data: list, title: str) -> io.BytesIO:
+    """Gera um relatório PDF formatado"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm, leftMargin=2*cm, rightMargin=2*cm)
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, textColor=colors.black, alignment=TA_CENTER, spaceAfter=20)
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=TA_CENTER, spaceAfter=30)
+    section_style = ParagraphStyle('SectionTitle', parent=styles['Heading2'], fontSize=14, textColor=colors.black, spaceBefore=20, spaceAfter=10)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=10, textColor=colors.black, spaceAfter=5)
+    
+    elements = []
+    
+    # Logo CRA (tentar carregar do arquivo local)
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            logo = RLImage(logo_path, width=4*cm, height=1.5*cm)
+            elements.append(logo)
+            elements.append(Spacer(1, 10))
+    except Exception as e:
+        logging.warning(f"Não foi possível carregar o logo: {e}")
+    
+    # Título
+    elements.append(Paragraph(f"CRA Construtora", title_style))
+    elements.append(Paragraph(f"Relatório de {title}", section_style))
+    elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
+    elements.append(Spacer(1, 20))
+    
+    # Resumo
+    elements.append(Paragraph(f"Total de registros: {len(data)}", normal_style))
+    elements.append(Spacer(1, 20))
+    
+    if not data:
+        elements.append(Paragraph("Nenhum registro encontrado.", normal_style))
+    else:
+        # Criar tabela com os dados
+        if category == "machines":
+            headers = ["Nome", "Placa", "Marca", "Modelo", "Status"]
+            table_data = [headers]
+            for item in data:
+                status = "Operacional" if item.get("status") == "operational" else "Em manutenção"
+                table_data.append([
+                    item.get("name", "-")[:30],
+                    item.get("plate", "-"),
+                    item.get("brand", "-")[:15],
+                    item.get("model", "-")[:15],
+                    status
+                ])
+        elif category == "maintenances":
+            headers = ["Peça", "Tipo", "Valor", "Data", "Troca Óleo"]
+            table_data = [headers]
+            for item in data:
+                tipo = "Preventiva" if item.get("maintenance_type") == "preventiva" else "Corretiva"
+                table_data.append([
+                    item.get("part_name", "-")[:25],
+                    tipo,
+                    f"R$ {item.get('part_value', 0):.2f}",
+                    item.get("replacement_date", "-")[:10] if item.get("replacement_date") else "-",
+                    "Sim" if item.get("is_oil_change") else "Não"
+                ])
+        elif category == "stock_items":
+            headers = ["Nome", "Código", "Categoria", "Qtd", "Mínimo", "Preço Un."]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("name", "-")[:20],
+                    item.get("code", "-"),
+                    item.get("category", "-")[:15],
+                    str(item.get("quantity", 0)),
+                    str(item.get("min_quantity", 0)),
+                    f"R$ {item.get('unit_price', 0):.2f}"
+                ])
+        elif category == "obras":
+            headers = ["Nome", "Local", "Status", "Início", "Fim"]
+            table_data = [headers]
+            for item in data:
+                status_map = {"em_andamento": "Em andamento", "concluida": "Concluída", "pausada": "Pausada"}
+                table_data.append([
+                    item.get("name", "-")[:25],
+                    item.get("location", "-")[:20],
+                    status_map.get(item.get("status", ""), item.get("status", "-")),
+                    item.get("start_date", "-")[:10] if item.get("start_date") else "-",
+                    item.get("end_date", "-")[:10] if item.get("end_date") else "-"
+                ])
+        elif category == "contas_pagar":
+            headers = ["Descrição", "Valor", "Vencimento", "Status", "Fornecedor"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("descricao", "-")[:25],
+                    f"R$ {item.get('valor', 0):.2f}",
+                    item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-",
+                    item.get("status", "-").upper(),
+                    item.get("fornecedor_nome", "-")[:15]
+                ])
+        elif category == "contas_receber":
+            headers = ["Descrição", "Valor", "Vencimento", "Status", "Cliente"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("descricao", "-")[:25],
+                    f"R$ {item.get('valor', 0):.2f}",
+                    item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-",
+                    item.get("status", "-").upper(),
+                    item.get("cliente_nome", "-")[:15]
+                ])
+        elif category == "cadastros":
+            headers = ["Nome/Razão", "Tipo", "CPF/CNPJ", "Telefone", "Cidade"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("nome_razao", "-")[:25],
+                    item.get("tipo", "-").upper(),
+                    item.get("cpf_cnpj", "-"),
+                    item.get("telefone", "-"),
+                    item.get("cidade", "-")[:15]
+                ])
+        elif category == "ordens_servico":
+            headers = ["Nº OS", "Descrição", "Cliente", "Valor", "Status"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    str(item.get("numero", "-")),
+                    item.get("descricao", "-")[:25],
+                    item.get("cliente_nome", "-")[:15],
+                    f"R$ {item.get('valor_total', 0):.2f}",
+                    item.get("status", "-").upper()
+                ])
+        elif category == "alugueis":
+            headers = ["Máquina", "Cliente", "Valor", "Status", "Vencimento"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("maquina_nome", "-")[:20],
+                    item.get("cliente_nome", "-")[:15],
+                    f"R$ {item.get('valor_total', 0):.2f}",
+                    item.get("status", "-").upper(),
+                    item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"
+                ])
+        elif category == "produtos_admin":
+            headers = ["Código", "Descrição", "Unidade", "Preço", "Estoque"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("codigo", "-"),
+                    item.get("descricao", "-")[:25],
+                    item.get("unidade", "-"),
+                    f"R$ {item.get('preco', 0):.2f}",
+                    str(item.get("estoque", 0))
+                ])
+        elif category == "plano_contas":
+            headers = ["Código", "Nome", "Tipo", "Conta Pai"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("codigo", "-"),
+                    item.get("nome", "-")[:30],
+                    "Receita" if item.get("tipo") == "receita" else "Despesa",
+                    item.get("pai_nome", "Raiz")[:20]
+                ])
+        elif category == "centros_custo":
+            headers = ["Código", "Nome", "Descrição"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("codigo", "-"),
+                    item.get("nome", "-")[:30],
+                    item.get("descricao", "-")[:40]
+                ])
+        elif category == "formas_pagamento":
+            headers = ["Nome", "Descrição"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("nome", "-")[:30],
+                    item.get("descricao", "-")[:50]
+                ])
+        elif category == "categories":
+            headers = ["Nome", "Descrição"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("name", "-")[:30],
+                    item.get("description", "-")[:50]
+                ])
+        elif category == "stock_movements":
+            headers = ["Tipo", "Quantidade", "Motivo", "Data"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    "ENTRADA" if item.get("movement_type") == "entrada" else "SAÍDA",
+                    str(item.get("quantity", 0)),
+                    item.get("reason", "-")[:30],
+                    item.get("created_at", "-")[:10] if item.get("created_at") else "-"
+                ])
+        elif category == "usage_logs":
+            headers = ["Máquina ID", "Horas", "Data", "Observações"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("machine_id", "-")[:15] if item.get("machine_id") else "-",
+                    str(item.get("hours", 0)),
+                    item.get("created_at", "-")[:10] if item.get("created_at") else "-",
+                    item.get("notes", "-")[:30]
+                ])
+        else:
+            # Fallback genérico
+            headers = ["ID", "Dados"]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    item.get("id", "-")[:20] if item.get("id") else "-",
+                    str(item)[:60]
+                ])
+        
+        # Criar e estilizar a tabela
+        col_widths = [doc.width / len(headers)] * len(headers)
+        table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.89, 0.10, 0.10)),  # Vermelho CRA
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+            ('TOPPADDING', (0, 0), (-1, 0), 10),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(table)
+    
+    # Rodapé
+    elements.append(Spacer(1, 30))
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
+    elements.append(Paragraph("CRA Construtora - Sistema de Gestão Empresarial", footer_style))
+    elements.append(Paragraph(f"Documento gerado automaticamente em {datetime.now().strftime('%d/%m/%Y %H:%M')}", footer_style))
+    
+    # Gerar PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+@api_router.get("/export/pdf/{category}")
+async def export_pdf(category: str, current_user: dict = Depends(get_current_user)):
+    """Exporta dados de uma categoria em PDF"""
+    
+    # Mapear categoria para coleção e título
+    category_map = {
+        "machines": ("machines", "Máquinas"),
+        "maintenances": ("maintenances", "Manutenções"),
+        "categories": ("categories", "Categorias de Máquinas"),
+        "stock_items": ("stock_items", "Itens de Estoque"),
+        "stock_movements": ("stock_movements", "Movimentações de Estoque"),
+        "obras": ("obras", "Obras e Projetos"),
+        "usage_logs": ("usage_logs", "Registros de Uso"),
+        "contas_pagar": ("contas_pagar", "Contas a Pagar"),
+        "contas_receber": ("contas_receber", "Contas a Receber"),
+        "cadastros": ("cadastros", "Cadastros"),
+        "produtos_admin": ("produtos_admin", "Produtos"),
+        "ordens_servico": ("ordens_servico", "Ordens de Serviço"),
+        "alugueis": ("alugueis", "Aluguéis de Máquinas"),
+        "plano_contas": ("plano_contas", "Plano de Contas"),
+        "centros_custo": ("centros_custo", "Centros de Custo"),
+        "formas_pagamento": ("formas_pagamento", "Formas de Pagamento"),
+    }
+    
+    if category not in category_map:
+        raise HTTPException(status_code=400, detail="Categoria inválida")
+    
+    collection_name, title = category_map[category]
+    
+    # Buscar dados
+    collection = db[collection_name]
+    data = await collection.find({}, {"_id": 0}).to_list(1000)
+    
+    # Gerar PDF
+    pdf_buffer = await generate_pdf_report(category, data, title)
+    
+    # Registrar na auditoria
+    await create_audit_log(
+        user=current_user,
+        action="exportar",
+        entity_type="relatório PDF",
+        entity_id=category,
+        entity_name=title,
+        details=f"Exportou {len(data)} registros",
+        module="Exportação"
+    )
+    
+    # Retornar o PDF
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=CRA_{title.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        }
+    )
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
