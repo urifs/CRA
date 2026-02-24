@@ -86,7 +86,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const exportPDF = async (categoryId) => {
     setExporting(categoryId);
     try {
-      const response = await axios.get(`${API}/api/export/pdf/${categoryId}`, {
+      const response = await axios.get(`${API}/export/pdf/${categoryId}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
