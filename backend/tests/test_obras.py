@@ -5,7 +5,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cra-erp-admin.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://gestao-maquinas.preview.emergentagent.com')
 
 class TestObrasFeature:
     """Test Obras (Projects) CRUD and machine linking functionality"""
