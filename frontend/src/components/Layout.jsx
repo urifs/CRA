@@ -15,7 +15,6 @@ import {
   Clock,
   Bell,
   DollarSign,
-  ClipboardList,
   MoreHorizontal,
   ArrowLeft,
   HardHat,
