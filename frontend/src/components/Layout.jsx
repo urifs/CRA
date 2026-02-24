@@ -246,6 +246,9 @@ export const Layout = () => {
           <Plus size={28} />
         </button>
       )}
+
+      {/* Chatbot Widget */}
+      <ChatbotWidget module="gerenciamento" accentColor="#E31A1A" />
     </div>
   );
 };
