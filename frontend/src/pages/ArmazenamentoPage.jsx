@@ -465,7 +465,7 @@ export default function ArmazenamentoPage() {
                 </thead>
                 <tbody>
                   {folders.map((item) => (
-                    <tr key={item.path} className="border-b hover:bg-gray-50 cursor-pointer" onDoubleClick={() => handleNavigate(item.path)}>
+                    <tr key={item.path} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleNavigate(item.path)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <FolderOpen size={24} className="text-[#D4A000]" />
