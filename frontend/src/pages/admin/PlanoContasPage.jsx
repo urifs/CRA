@@ -185,17 +185,17 @@ export default function PlanoContasPage() {
     
     return (
       <div key={conta.id}>
-        <div className={`flex items-center justify-between p-3 hover:bg-slate-100 rounded-lg ${level > 0 ? 'ml-6 border-l-2 border-slate-200' : ''}`}>
+        <div className={`flex items-center justify-between p-3 hover:bg-gray-100 rounded-lg ${level > 0 ? 'ml-6 border-l-2 border-gray-200' : ''}`}>
           <div className="flex items-center gap-2">
             {subcontas.length > 0 && (
-              <button onClick={() => toggleGroup(conta.id)} className="p-1 hover:bg-slate-200 rounded">
+              <button onClick={() => toggleGroup(conta.id)} className="p-1 hover:bg-gray-200 rounded">
                 {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </button>
             )}
             {subcontas.length === 0 && <span className="w-6" />}
-            {conta.codigo && <span className="text-xs font-mono bg-slate-200 px-2 py-0.5 rounded">{conta.codigo}</span>}
+            {conta.codigo && <span className="text-xs font-mono bg-gray-200 px-2 py-0.5 rounded">{conta.codigo}</span>}
             <span className="font-medium">{conta.nome}</span>
-            {conta.nivel === 1 && <span className="text-xs text-slate-500">({subcontas.length} subcontas)</span>}
+            {conta.nivel === 1 && <span className="text-xs text-gray-500">({subcontas.length} subcontas)</span>}
           </div>
           <div className="flex gap-1">
             {conta.nivel === 1 && (
@@ -218,12 +218,12 @@ export default function PlanoContasPage() {
     
     return (
       <Card className={`border-l-4 ${color}`}>
-        <CardHeader className="cursor-pointer hover:bg-slate-50" onClick={() => toggleGroup(title.toLowerCase())}>
+        <CardHeader className="cursor-pointer hover:bg-white" onClick={() => toggleGroup(title.toLowerCase())}>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon size={20} />
               <span>{title}</span>
-              <span className="text-sm font-normal text-slate-500">({items.length} contas)</span>
+              <span className="text-sm font-normal text-gray-500">({items.length} contas)</span>
             </div>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openModal(null, false, null, title.toLowerCase() === 'receitas' ? 'receita' : 'despesa'); }}>
@@ -236,7 +236,7 @@ export default function PlanoContasPage() {
         {isExpanded && (
           <CardContent className="pt-0">
             {items.length === 0 ? (
-              <p className="text-slate-400 text-center py-4">Nenhuma conta cadastrada</p>
+              <p className="text-gray-400 text-center py-4">Nenhuma conta cadastrada</p>
             ) : (
               items.map(conta => renderConta(conta))
             )}
@@ -254,7 +254,7 @@ export default function PlanoContasPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Plano de Contas</h1>
-          <p className="text-slate-500 mt-1">Categorias financeiras com subcontas</p>
+          <p className="text-gray-500 mt-1">Categorias financeiras com subcontas</p>
         </div>
         <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]">
           <Plus size={18} className="mr-2" />Nova Conta
@@ -265,7 +265,7 @@ export default function PlanoContasPage() {
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            <FileText className="text-slate-500" size={24} />
+            <FileText className="text-gray-500" size={24} />
             <div className="flex-1">
               <label className="form-label">Exportar Relatório</label>
               <Select value={selectedForReport} onValueChange={setSelectedForReport}>
@@ -292,7 +292,7 @@ export default function PlanoContasPage() {
               <TrendingUp className="text-green-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Receitas</p>
+              <p className="text-xs text-gray-500">Receitas</p>
               <p className="text-lg font-bold text-green-600">{receitas.length} contas</p>
             </div>
           </CardContent>
@@ -303,7 +303,7 @@ export default function PlanoContasPage() {
               <TrendingDown className="text-red-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Despesas</p>
+              <p className="text-xs text-gray-500">Despesas</p>
               <p className="text-lg font-bold text-red-600">{despesas.length} contas</p>
             </div>
           </CardContent>

@@ -116,7 +116,7 @@ export default function NewMaintenancePage() {
       <Button
         variant="ghost"
         onClick={() => navigate("/maintenances")}
-        className="text-slate-600 hover:text-slate-900"
+        className="text-gray-600 hover:text-black"
         data-testid="back-btn"
       >
         <ArrowLeft size={18} className="mr-2" />
@@ -126,13 +126,13 @@ export default function NewMaintenancePage() {
       {/* Page header */}
       <div>
         <h1 className="page-title font-heading">Nova Ficha de Manutenção</h1>
-        <p className="text-slate-500 mt-1">Registre uma nova manutenção para sua máquina</p>
+        <p className="text-gray-500 mt-1">Registre uma nova manutenção para sua máquina</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
         <Card className="lg:col-span-2">
-          <CardHeader className="border-b border-slate-200">
+          <CardHeader className="border-b border-gray-200">
             <CardTitle className="font-heading text-lg font-bold">
               Dados da Manutenção
             </CardTitle>
@@ -237,21 +237,21 @@ export default function NewMaintenancePage() {
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
                       formData.maintenance_type === "preventiva"
                         ? "border-green-500 bg-green-50"
-                        : "border-slate-200 hover:border-slate-300"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                     data-testid="maintenance-type-preventiva"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        formData.maintenance_type === "preventiva" ? "bg-green-100" : "bg-slate-100"
+                        formData.maintenance_type === "preventiva" ? "bg-green-100" : "bg-gray-100"
                       }`}>
                         <Shield className={`${
-                          formData.maintenance_type === "preventiva" ? "text-green-600" : "text-slate-400"
+                          formData.maintenance_type === "preventiva" ? "text-green-600" : "text-gray-400"
                         }`} size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">Preventiva</p>
-                        <p className="text-xs text-slate-500">Manutenção programada</p>
+                        <p className="font-bold text-black">Preventiva</p>
+                        <p className="text-xs text-gray-500">Manutenção programada</p>
                       </div>
                     </div>
                   </button>
@@ -262,21 +262,21 @@ export default function NewMaintenancePage() {
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
                       formData.maintenance_type === "corretiva"
                         ? "border-[#E31A1A] bg-orange-50"
-                        : "border-slate-200 hover:border-slate-300"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                     data-testid="maintenance-type-corretiva"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        formData.maintenance_type === "corretiva" ? "bg-orange-100" : "bg-slate-100"
+                        formData.maintenance_type === "corretiva" ? "bg-orange-100" : "bg-gray-100"
                       }`}>
                         <AlertTriangle className={`${
-                          formData.maintenance_type === "corretiva" ? "text-[#E31A1A]" : "text-slate-400"
+                          formData.maintenance_type === "corretiva" ? "text-[#E31A1A]" : "text-gray-400"
                         }`} size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">Corretiva</p>
-                        <p className="text-xs text-slate-500">Reparo de problema</p>
+                        <p className="font-bold text-black">Corretiva</p>
+                        <p className="text-xs text-gray-500">Reparo de problema</p>
                       </div>
                     </div>
                   </button>
@@ -317,7 +317,7 @@ export default function NewMaintenancePage() {
               </div>
 
               {/* Submit */}
-              <div className="flex gap-4 pt-4 border-t border-slate-200">
+              <div className="flex gap-4 pt-4 border-t border-gray-200">
                 <Button
                   type="button"
                   variant="outline"
@@ -350,33 +350,33 @@ export default function NewMaintenancePage() {
         <div className="space-y-6">
           {/* Selected Machine Preview */}
           {selectedMachine && (
-            <Card className="bg-slate-50">
+            <Card className="bg-white">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-gray-500">
                   Máquina Selecionada
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center">
-                    <Truck className="text-slate-600" size={24} />
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <Truck className="text-gray-600" size={24} />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900">{selectedMachine.name}</p>
-                    <p className="font-mono text-sm text-slate-500">{selectedMachine.plate}</p>
+                    <p className="font-bold text-black">{selectedMachine.name}</p>
+                    <p className="font-mono text-sm text-gray-500">{selectedMachine.plate}</p>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-slate-200 space-y-2 text-sm">
+                <div className="mt-4 pt-4 border-t border-gray-200 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Categoria:</span>
+                    <span className="text-gray-500">Categoria:</span>
                     <span className="font-medium">{selectedMachine.category_name || "-"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Marca:</span>
+                    <span className="text-gray-500">Marca:</span>
                     <span className="font-medium">{selectedMachine.brand || "-"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Modelo:</span>
+                    <span className="text-gray-500">Modelo:</span>
                     <span className="font-medium">{selectedMachine.model || "-"}</span>
                   </div>
                 </div>
@@ -385,10 +385,10 @@ export default function NewMaintenancePage() {
           )}
 
           {/* Help Card */}
-          <Card className="bg-slate-900 text-white">
+          <Card className="bg-black text-white">
             <CardContent className="pt-6">
               <h3 className="font-bold text-lg mb-4">Dica</h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <p className="text-sm text-gray-300 leading-relaxed">
                 Após criar a ficha de manutenção, você poderá adicionar fotos 
                 para documentar o serviço realizado. As fotos são importantes 
                 para manter um histórico visual da manutenção.

@@ -184,10 +184,10 @@ export default function ObrasPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Plano de Obras</h1>
-          <p className="text-slate-500 mt-1">Gerencie suas obras e vincule máquinas</p>
+          <p className="text-gray-500 mt-1">Gerencie suas obras e vincule máquinas</p>
         </div>
         <Button
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+          className="bg-black hover:bg-gray-900 text-white font-bold"
           onClick={() => {
             resetForm();
             setShowDialog(true);
@@ -201,7 +201,7 @@ export default function ObrasPage() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <Input
           placeholder="Buscar por nome, local ou descrição..."
           value={searchTerm}
@@ -223,16 +223,16 @@ export default function ObrasPage() {
             >
               <CardContent className="p-0">
                 {/* Card Header */}
-                <div className="p-4 border-b border-slate-100">
+                <div className="p-4 border-b border-gray-100">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                         <HardHat className="text-[#E31A1A]" size={24} />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900">{obra.name}</h3>
+                        <h3 className="font-bold text-black">{obra.name}</h3>
                         {obra.location && (
-                          <p className="text-sm text-slate-500 flex items-center gap-1">
+                          <p className="text-sm text-gray-500 flex items-center gap-1">
                             <MapPin size={12} />
                             {obra.location}
                           </p>
@@ -246,26 +246,26 @@ export default function ObrasPage() {
                 {/* Card Body */}
                 <div className="p-4 space-y-3">
                   {obra.description && (
-                    <p className="text-sm text-slate-600 line-clamp-2">{obra.description}</p>
+                    <p className="text-sm text-gray-600 line-clamp-2">{obra.description}</p>
                   )}
                   
                   <div className="grid grid-cols-2 gap-2 pt-2">
                     <div className="flex items-center gap-2 text-sm">
-                      <Truck className="text-slate-400" size={16} />
-                      <span className="text-slate-600">
-                        <span className="font-bold text-slate-900">{obra.machine_count}</span> máquinas
+                      <Truck className="text-gray-400" size={16} />
+                      <span className="text-gray-600">
+                        <span className="font-bold text-black">{obra.machine_count}</span> máquinas
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="text-slate-400" size={16} />
-                      <span className="font-mono text-slate-900 font-medium">
+                      <DollarSign className="text-gray-400" size={16} />
+                      <span className="font-mono text-black font-medium">
                         {formatCurrency(obra.total_maintenance_cost)}
                       </span>
                     </div>
                   </div>
 
                   {(obra.start_date || obra.end_date) && (
-                    <div className="flex items-center gap-2 text-sm text-slate-500 pt-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 pt-1">
                       <Calendar size={14} />
                       <span>
                         {formatDate(obra.start_date)} - {formatDate(obra.end_date)}
@@ -312,9 +312,9 @@ export default function ObrasPage() {
         </div>
       ) : (
         <div className="empty-state">
-          <HardHat className="text-slate-300 mb-4" size={64} />
-          <p className="text-lg font-medium text-slate-600">Nenhuma obra encontrada</p>
-          <p className="text-slate-400 mb-4">
+          <HardHat className="text-gray-300 mb-4" size={64} />
+          <p className="text-lg font-medium text-gray-600">Nenhuma obra encontrada</p>
+          <p className="text-gray-400 mb-4">
             {searchTerm ? "Tente uma busca diferente" : "Cadastre sua primeira obra"}
           </p>
           {!searchTerm && (
@@ -429,7 +429,7 @@ export default function ObrasPage() {
               </Button>
               <Button
                 type="submit"
-                className="bg-slate-900 hover:bg-slate-800"
+                className="bg-black hover:bg-gray-900"
                 disabled={formLoading}
                 data-testid="obra-submit-btn"
               >

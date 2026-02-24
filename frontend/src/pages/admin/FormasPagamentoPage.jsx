@@ -115,7 +115,7 @@ export default function FormasPagamentoPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Formas de Pagamento</h1>
-          <p className="text-slate-500 mt-1">Configure as formas de pagamento disponíveis</p>
+          <p className="text-gray-500 mt-1">Configure as formas de pagamento disponíveis</p>
         </div>
         <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-forma-btn">
           <Plus size={18} className="mr-2" />Nova Forma
@@ -125,7 +125,7 @@ export default function FormasPagamentoPage() {
       {/* Busca */}
       <div className="mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input 
             placeholder="Buscar por código, nome ou tipo..." 
             value={search} 
@@ -143,7 +143,7 @@ export default function FormasPagamentoPage() {
               <CreditCard className="text-[#FFC232]" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total de Formas</p>
+              <p className="text-xs text-gray-500">Total de Formas</p>
               <p className="text-lg font-bold text-[#FFC232]">{formas.length}</p>
             </div>
           </CardContent>
@@ -154,7 +154,7 @@ export default function FormasPagamentoPage() {
               <CheckCircle2 className="text-green-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Ativas</p>
+              <p className="text-xs text-gray-500">Ativas</p>
               <p className="text-lg font-bold text-green-600">{formas.filter(f => f.ativo !== false).length}</p>
             </div>
           </CardContent>
@@ -164,7 +164,7 @@ export default function FormasPagamentoPage() {
       {/* Lista */}
       {filteredFormas.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-400">
+          <CardContent className="py-12 text-center text-gray-400">
             <CreditCard className="mx-auto mb-4" size={48} />
             <p>Nenhuma forma de pagamento encontrada</p>
           </CardContent>
@@ -172,25 +172,25 @@ export default function FormasPagamentoPage() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow text-sm">
-            <thead className="bg-slate-100">
+            <thead className="bg-gray-100">
               <tr>
-                <th className="text-left p-3 font-medium text-slate-600">Código</th>
-                <th className="text-left p-3 font-medium text-slate-600">Nome</th>
-                <th className="text-left p-3 font-medium text-slate-600">Tipo</th>
-                <th className="text-right p-3 font-medium text-slate-600">Taxa %</th>
-                <th className="text-right p-3 font-medium text-slate-600">Prazo (dias)</th>
-                <th className="text-left p-3 font-medium text-slate-600">Conta</th>
-                <th className="text-left p-3 font-medium text-slate-600">Status</th>
-                <th className="text-center p-3 font-medium text-slate-600">Ações</th>
+                <th className="text-left p-3 font-medium text-gray-600">Código</th>
+                <th className="text-left p-3 font-medium text-gray-600">Nome</th>
+                <th className="text-left p-3 font-medium text-gray-600">Tipo</th>
+                <th className="text-right p-3 font-medium text-gray-600">Taxa %</th>
+                <th className="text-right p-3 font-medium text-gray-600">Prazo (dias)</th>
+                <th className="text-left p-3 font-medium text-gray-600">Conta</th>
+                <th className="text-left p-3 font-medium text-gray-600">Status</th>
+                <th className="text-center p-3 font-medium text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredFormas.map((f) => (
-                <tr key={f.id} className="border-t hover:bg-slate-50" data-testid={`forma-${f.id}`}>
+                <tr key={f.id} className="border-t hover:bg-white" data-testid={`forma-${f.id}`}>
                   <td className="p-3 font-mono">{f.codigo || "-"}</td>
                   <td className="p-3 font-medium">{f.nome}</td>
                   <td className="p-3">
-                    <span className="px-2 py-1 rounded text-xs bg-slate-100 text-slate-700">
+                    <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
                       {tiposForma.find(t => t.value === f.tipo)?.label || f.tipo}
                     </span>
                   </td>
@@ -208,14 +208,14 @@ export default function FormasPagamentoPage() {
                       </span>
                     ) : "-"}
                   </td>
-                  <td className="p-3 text-slate-500">{f.conta_bancaria || "-"}</td>
+                  <td className="p-3 text-gray-500">{f.conta_bancaria || "-"}</td>
                   <td className="p-3">
                     {f.ativo !== false ? (
                       <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-700">
                         <CheckCircle2 className="inline mr-1" size={12} />Ativa
                       </span>
                     ) : (
-                      <span className="px-2 py-1 rounded text-xs bg-slate-100 text-slate-600">
+                      <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
                         <XCircle className="inline mr-1" size={12} />Inativa
                       </span>
                     )}

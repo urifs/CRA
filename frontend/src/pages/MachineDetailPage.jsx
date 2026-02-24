@@ -90,7 +90,7 @@ export default function MachineDetailPage() {
       <Button
         variant="ghost"
         onClick={() => navigate("/machines")}
-        className="text-slate-600 hover:text-slate-900"
+        className="text-gray-600 hover:text-black"
         data-testid="back-btn"
       >
         <ArrowLeft size={18} className="mr-2" />
@@ -102,17 +102,17 @@ export default function MachineDetailPage() {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center">
-                <Truck className="text-slate-600" size={32} />
+              <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center">
+                <Truck className="text-gray-600" size={32} />
               </div>
               <div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold font-heading text-slate-900">
+                  <h1 className="text-2xl font-bold font-heading text-black">
                     {machine.name}
                   </h1>
                   {getStatusBadge(machine.status)}
                 </div>
-                <p className="font-mono text-lg text-slate-500 mt-1">{machine.plate}</p>
+                <p className="font-mono text-lg text-gray-500 mt-1">{machine.plate}</p>
               </div>
             </div>
             <Button
@@ -126,29 +126,29 @@ export default function MachineDetailPage() {
           </div>
 
           {/* Machine Details */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-200">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Categoria</p>
-              <p className="font-medium text-slate-900 mt-1">{machine.category_name || "-"}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Categoria</p>
+              <p className="font-medium text-black mt-1">{machine.category_name || "-"}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Marca</p>
-              <p className="font-medium text-slate-900 mt-1">{machine.brand || "-"}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Marca</p>
+              <p className="font-medium text-black mt-1">{machine.brand || "-"}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Modelo</p>
-              <p className="font-medium text-slate-900 mt-1">{machine.model || "-"}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Modelo</p>
+              <p className="font-medium text-black mt-1">{machine.model || "-"}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Ano</p>
-              <p className="font-mono text-slate-900 mt-1">{machine.year || "-"}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Ano</p>
+              <p className="font-mono text-black mt-1">{machine.year || "-"}</p>
             </div>
           </div>
 
           {machine.notes && (
-            <div className="mt-4 pt-4 border-t border-slate-200">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Observações</p>
-              <p className="text-slate-700 mt-1">{machine.notes}</p>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Observações</p>
+              <p className="text-gray-700 mt-1">{machine.notes}</p>
             </div>
           )}
         </CardContent>
@@ -160,15 +160,15 @@ export default function MachineDetailPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Total de Manutenções
                 </p>
-                <p className="text-3xl font-black text-slate-900 mt-1 font-heading">
+                <p className="text-3xl font-black text-black mt-1 font-heading">
                   {maintenances.length}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                <Wrench className="text-slate-600" size={24} />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Wrench className="text-gray-600" size={24} />
               </div>
             </div>
           </CardContent>
@@ -178,7 +178,7 @@ export default function MachineDetailPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Preventivas
                 </p>
                 <p className="text-3xl font-black text-green-600 mt-1 font-heading">
@@ -196,7 +196,7 @@ export default function MachineDetailPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Corretivas
                 </p>
                 <p className="text-3xl font-black text-[#E31A1A] mt-1 font-heading">
@@ -214,15 +214,15 @@ export default function MachineDetailPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Total Gasto
                 </p>
-                <p className="text-2xl font-black text-slate-900 mt-1 font-heading">
+                <p className="text-2xl font-black text-black mt-1 font-heading">
                   {formatCurrency(totalSpent)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-slate-600" size={24} />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-gray-600" size={24} />
               </div>
             </div>
           </CardContent>
@@ -231,7 +231,7 @@ export default function MachineDetailPage() {
 
       {/* Maintenance History */}
       <Card>
-        <CardHeader className="border-b border-slate-200">
+        <CardHeader className="border-b border-gray-200">
           <CardTitle className="font-heading text-xl font-bold">
             Histórico de Manutenções
           </CardTitle>
@@ -242,7 +242,7 @@ export default function MachineDetailPage() {
               {maintenances.map((maintenance) => (
                 <div
                   key={maintenance.id}
-                  className="flex items-center justify-between p-4 hover:bg-slate-50 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-4 hover:bg-white cursor-pointer transition-colors"
                   onClick={() => navigate(`/maintenances/${maintenance.id}`)}
                   data-testid={`maintenance-history-item-${maintenance.id}`}
                 >
@@ -259,19 +259,19 @@ export default function MachineDetailPage() {
                       )}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-black">
                         {maintenance.part_name}
                       </p>
-                      <p className="text-sm text-slate-500 capitalize">
+                      <p className="text-sm text-gray-500 capitalize">
                         Manutenção {maintenance.maintenance_type}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-slate-900">
+                    <p className="font-bold text-black">
                       {formatCurrency(maintenance.part_value)}
                     </p>
-                    <p className="text-sm text-slate-500 flex items-center justify-end gap-1">
+                    <p className="text-sm text-gray-500 flex items-center justify-end gap-1">
                       <Calendar size={14} />
                       {formatDate(maintenance.replacement_date)}
                     </p>
@@ -281,8 +281,8 @@ export default function MachineDetailPage() {
             </div>
           ) : (
             <div className="empty-state py-12">
-              <Wrench className="text-slate-300 mb-4" size={48} />
-              <p className="text-slate-500">Nenhuma manutenção registrada para esta máquina</p>
+              <Wrench className="text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500">Nenhuma manutenção registrada para esta máquina</p>
               <Button
                 className="mt-4 bg-[#E31A1A] hover:bg-[#E31A1A]"
                 onClick={() => navigate(`/maintenances/new?machine=${machine.id}`)}

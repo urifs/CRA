@@ -175,10 +175,10 @@ export default function MachinesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Máquinas</h1>
-          <p className="text-slate-500 mt-1">Gerencie sua frota de máquinas</p>
+          <p className="text-gray-500 mt-1">Gerencie sua frota de máquinas</p>
         </div>
         <Button
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+          className="bg-black hover:bg-gray-900 text-white font-bold"
           onClick={() => {
             resetForm();
             setShowDialog(true);
@@ -192,7 +192,7 @@ export default function MachinesPage() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <Input
           placeholder="Buscar por nome, placa ou categoria..."
           value={searchTerm}
@@ -213,15 +213,15 @@ export default function MachinesPage() {
             >
               <CardContent className="p-0">
                 {/* Card Header */}
-                <div className="p-4 border-b border-slate-100">
+                <div className="p-4 border-b border-gray-100">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Truck className="text-slate-600" size={24} />
+                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <Truck className="text-gray-600" size={24} />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900">{machine.name}</h3>
-                        <p className="font-mono text-sm text-slate-500">{machine.plate}</p>
+                        <h3 className="font-bold text-black">{machine.name}</h3>
+                        <p className="font-mono text-sm text-gray-500">{machine.plate}</p>
                       </div>
                     </div>
                     {getStatusBadge(machine.status)}
@@ -231,25 +231,25 @@ export default function MachinesPage() {
                 {/* Card Body */}
                 <div className="p-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Categoria:</span>
-                    <span className="font-medium text-slate-900">{machine.category_name || "-"}</span>
+                    <span className="text-gray-500">Categoria:</span>
+                    <span className="font-medium text-black">{machine.category_name || "-"}</span>
                   </div>
                   {machine.brand && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Marca:</span>
-                      <span className="font-medium text-slate-900">{machine.brand}</span>
+                      <span className="text-gray-500">Marca:</span>
+                      <span className="font-medium text-black">{machine.brand}</span>
                     </div>
                   )}
                   {machine.model && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Modelo:</span>
-                      <span className="font-medium text-slate-900">{machine.model}</span>
+                      <span className="text-gray-500">Modelo:</span>
+                      <span className="font-medium text-black">{machine.model}</span>
                     </div>
                   )}
                   {machine.year && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Ano:</span>
-                      <span className="font-mono text-slate-900">{machine.year}</span>
+                      <span className="text-gray-500">Ano:</span>
+                      <span className="font-mono text-black">{machine.year}</span>
                     </div>
                   )}
                 </div>
@@ -292,9 +292,9 @@ export default function MachinesPage() {
         </div>
       ) : (
         <div className="empty-state">
-          <Truck className="text-slate-300 mb-4" size={64} />
-          <p className="text-lg font-medium text-slate-600">Nenhuma máquina encontrada</p>
-          <p className="text-slate-400 mb-4">
+          <Truck className="text-gray-300 mb-4" size={64} />
+          <p className="text-lg font-medium text-gray-600">Nenhuma máquina encontrada</p>
+          <p className="text-gray-400 mb-4">
             {searchTerm ? "Tente uma busca diferente" : "Cadastre sua primeira máquina"}
           </p>
           {!searchTerm && (
@@ -442,7 +442,7 @@ export default function MachinesPage() {
               </Button>
               <Button
                 type="submit"
-                className="bg-slate-900 hover:bg-slate-800"
+                className="bg-black hover:bg-gray-900"
                 disabled={formLoading || !formData.category_id}
                 data-testid="machine-submit-btn"
               >

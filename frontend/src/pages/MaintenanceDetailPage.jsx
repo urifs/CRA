@@ -127,7 +127,7 @@ export default function MaintenanceDetailPage() {
       <Button
         variant="ghost"
         onClick={() => navigate("/maintenances")}
-        className="text-slate-600 hover:text-slate-900"
+        className="text-gray-600 hover:text-black"
         data-testid="back-btn"
       >
         <ArrowLeft size={18} className="mr-2" />
@@ -158,17 +158,17 @@ export default function MaintenanceDetailPage() {
                 }`}>
                   Manutenção {maintenance.maintenance_type}
                 </span>
-                <h1 className="text-2xl font-bold font-heading text-slate-900 mt-2">
+                <h1 className="text-2xl font-bold font-heading text-black mt-2">
                   {maintenance.part_name}
                 </h1>
               </div>
             </div>
             
             <div className="text-right">
-              <p className="text-3xl font-black text-slate-900 font-heading">
+              <p className="text-3xl font-black text-black font-heading">
                 {formatCurrency(maintenance.part_value)}
               </p>
-              <p className="text-sm text-slate-500 flex items-center justify-end gap-1 mt-1">
+              <p className="text-sm text-gray-500 flex items-center justify-end gap-1 mt-1">
                 <Calendar size={14} />
                 {formatDate(maintenance.replacement_date)}
               </p>
@@ -176,28 +176,28 @@ export default function MaintenanceDetailPage() {
           </div>
 
           {/* Machine Info */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
+          <div className="mt-6 pt-6 border-t border-gray-200">
             <div 
-              className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-4 p-4 bg-white rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
               onClick={() => navigate(`/machines/${maintenance.machine_id}`)}
             >
-              <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center">
-                <Truck className="text-slate-600" size={24} />
+              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                <Truck className="text-gray-600" size={24} />
               </div>
               <div>
-                <p className="font-bold text-slate-900">{maintenance.machine_name}</p>
-                <p className="font-mono text-sm text-slate-500">{maintenance.machine_plate}</p>
+                <p className="font-bold text-black">{maintenance.machine_name}</p>
+                <p className="font-mono text-sm text-gray-500">{maintenance.machine_plate}</p>
               </div>
             </div>
           </div>
 
           {/* Description */}
           {maintenance.description && (
-            <div className="mt-6 pt-6 border-t border-slate-200">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
                 Descrição / Observações
               </p>
-              <p className="text-slate-700">{maintenance.description}</p>
+              <p className="text-gray-700">{maintenance.description}</p>
             </div>
           )}
         </CardContent>
@@ -205,7 +205,7 @@ export default function MaintenanceDetailPage() {
 
       {/* Photos Section */}
       <Card>
-        <CardHeader className="border-b border-slate-200">
+        <CardHeader className="border-b border-gray-200">
           <div className="flex items-center justify-between">
             <CardTitle className="font-heading text-xl font-bold">
               Fotos da Manutenção
@@ -220,7 +220,7 @@ export default function MaintenanceDetailPage() {
                 data-testid="photo-input"
               />
               <Button
-                className="bg-slate-900 hover:bg-slate-800"
+                className="bg-black hover:bg-gray-900"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
                 data-testid="add-photo-btn"
@@ -274,9 +274,9 @@ export default function MaintenanceDetailPage() {
             </div>
           ) : (
             <div className="empty-state py-12">
-              <ImagePlus className="text-slate-300 mb-4" size={48} />
-              <p className="text-slate-500">Nenhuma foto anexada</p>
-              <p className="text-sm text-slate-400 mt-1">
+              <ImagePlus className="text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500">Nenhuma foto anexada</p>
+              <p className="text-sm text-gray-400 mt-1">
                 Clique em "Adicionar Foto" para documentar a manutenção
               </p>
             </div>

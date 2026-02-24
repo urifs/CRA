@@ -61,7 +61,7 @@ export default function DashboardPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Visão geral do sistema de manutenção</p>
+          <p className="text-gray-500 mt-1">Visão geral do sistema de manutenção</p>
         </div>
         <Button
           className="bg-[#E31A1A] hover:bg-[#E31A1A] text-white font-bold"
@@ -80,15 +80,15 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Total de Máquinas
                 </p>
-                <p className="text-4xl font-black text-slate-900 mt-2 font-heading">
+                <p className="text-4xl font-black text-black mt-2 font-heading">
                   {stats?.total_machines || 0}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                <Truck className="text-slate-600" size={28} />
+              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                <Truck className="text-gray-600" size={28} />
               </div>
             </div>
           </CardContent>
@@ -99,15 +99,15 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Manutenções
                 </p>
-                <p className="text-4xl font-black text-slate-900 mt-2 font-heading">
+                <p className="text-4xl font-black text-black mt-2 font-heading">
                   {stats?.total_maintenances || 0}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                <Wrench className="text-slate-600" size={28} />
+              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                <Wrench className="text-gray-600" size={28} />
               </div>
             </div>
           </CardContent>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Preventivas
                 </p>
                 <p className="text-4xl font-black text-green-600 mt-2 font-heading">
@@ -137,7 +137,7 @@ export default function DashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Corretivas
                 </p>
                 <p className="text-4xl font-black text-[#E31A1A] mt-2 font-heading">
@@ -182,14 +182,14 @@ export default function DashboardPage() {
 
       {/* Recent Maintenances */}
       <Card data-testid="recent-maintenances-card">
-        <CardHeader className="border-b border-slate-200">
+        <CardHeader className="border-b border-gray-200">
           <div className="flex items-center justify-between">
             <CardTitle className="font-heading text-xl font-bold">
               Manutenções Recentes
             </CardTitle>
             <Button
               variant="ghost"
-              className="text-slate-600 hover:text-slate-900"
+              className="text-gray-600 hover:text-black"
               onClick={() => navigate("/maintenances")}
             >
               Ver Todas
@@ -203,7 +203,7 @@ export default function DashboardPage() {
               {stats.recent_maintenances.map((maintenance) => (
                 <div
                   key={maintenance.id}
-                  className="flex items-center justify-between p-4 hover:bg-slate-50 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-4 hover:bg-white cursor-pointer transition-colors"
                   onClick={() => navigate(`/maintenances/${maintenance.id}`)}
                   data-testid={`maintenance-item-${maintenance.id}`}
                 >
@@ -220,10 +220,10 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-black">
                         {maintenance.part_name}
                       </p>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-gray-500">
                         <span className="font-mono">{maintenance.machine_plate}</span>
                         {" - "}
                         {maintenance.machine_name}
@@ -231,10 +231,10 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-slate-900">
+                    <p className="font-bold text-black">
                       {formatCurrency(maintenance.part_value)}
                     </p>
-                    <p className="text-sm text-slate-500 flex items-center justify-end gap-1">
+                    <p className="text-sm text-gray-500 flex items-center justify-end gap-1">
                       <Calendar size={14} />
                       {formatDate(maintenance.replacement_date)}
                     </p>
@@ -244,8 +244,8 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="empty-state py-12">
-              <Wrench className="text-slate-300 mb-4" size={48} />
-              <p className="text-slate-500">Nenhuma manutenção registrada</p>
+              <Wrench className="text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500">Nenhuma manutenção registrada</p>
               <Button
                 className="mt-4 bg-[#E31A1A] hover:bg-[#E31A1A]"
                 onClick={() => navigate("/maintenances/new")}
@@ -267,12 +267,12 @@ export default function DashboardPage() {
         >
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Truck className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
+                <Truck className="text-gray-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
-                <p className="font-bold text-slate-900">Gerenciar Máquinas</p>
-                <p className="text-sm text-slate-500">Cadastrar e editar máquinas</p>
+                <p className="font-bold text-black">Gerenciar Máquinas</p>
+                <p className="text-sm text-gray-500">Cadastrar e editar máquinas</p>
               </div>
             </div>
           </CardContent>
@@ -285,12 +285,12 @@ export default function DashboardPage() {
         >
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Plus className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
+                <Plus className="text-gray-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
-                <p className="font-bold text-slate-900">Nova Manutenção</p>
-                <p className="text-sm text-slate-500">Registrar ficha de manutenção</p>
+                <p className="font-bold text-black">Nova Manutenção</p>
+                <p className="text-sm text-gray-500">Registrar ficha de manutenção</p>
               </div>
             </div>
           </CardContent>
@@ -303,12 +303,12 @@ export default function DashboardPage() {
         >
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Package className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
+                <Package className="text-gray-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
-                <p className="font-bold text-slate-900">Estoque</p>
-                <p className="text-sm text-slate-500">Controle de peças</p>
+                <p className="font-bold text-black">Estoque</p>
+                <p className="text-sm text-gray-500">Controle de peças</p>
               </div>
             </div>
           </CardContent>
@@ -321,12 +321,12 @@ export default function DashboardPage() {
         >
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                <Wrench className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
+                <Wrench className="text-gray-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
               </div>
               <div>
-                <p className="font-bold text-slate-900">Categorias</p>
-                <p className="text-sm text-slate-500">Tipos de máquinas</p>
+                <p className="font-bold text-black">Categorias</p>
+                <p className="text-sm text-gray-500">Tipos de máquinas</p>
               </div>
             </div>
           </CardContent>

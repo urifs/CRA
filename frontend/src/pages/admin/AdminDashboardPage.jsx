@@ -69,7 +69,7 @@ export default function AdminDashboardPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard Financeiro</h1>
-          <p className="text-slate-500 mt-1">Visão geral financeira e operacional</p>
+          <p className="text-gray-500 mt-1">Visão geral financeira e operacional</p>
         </div>
       </div>
 
@@ -108,9 +108,9 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Total a Pagar</p>
+                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total a Pagar</p>
                     <p className="text-2xl font-bold text-red-600 mt-1">{formatCurrency(stats.totalPagar)}</p>
-                    <p className="text-xs text-slate-400 mt-1">+ {formatCurrency(aPagar.osValor)} em OS</p>
+                    <p className="text-xs text-gray-400 mt-1">+ {formatCurrency(aPagar.osValor)} em OS</p>
                   </div>
                   <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <TrendingDown className="text-red-600" size={24} />
@@ -123,9 +123,9 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Total a Receber</p>
+                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Total a Receber</p>
                     <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalReceber)}</p>
-                    <p className="text-xs text-slate-400 mt-1">+ {formatCurrency(aReceber.osValor)} em OS</p>
+                    <p className="text-xs text-gray-400 mt-1">+ {formatCurrency(aReceber.osValor)} em OS</p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                     <TrendingUp className="text-green-600" size={24} />
@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Saldo Previsto</p>
+                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Saldo Previsto</p>
                     <p className={`text-2xl font-bold mt-1 ${stats.saldoPrevisto >= 0 ? 'text-[#FFC232]' : 'text-red-600'}`}>
                       {formatCurrency(stats.saldoPrevisto)}
                     </p>
@@ -154,7 +154,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">Contas Vencidas</p>
+                    <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Contas Vencidas</p>
                     <p className="text-2xl font-bold text-[#E31A1A] mt-1">{stats.contasVencidas}</p>
                   </div>
                   <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -169,48 +169,48 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <Card className="stat-card">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <FileText className="text-slate-600" size={20} />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <FileText className="text-gray-600" size={20} />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">NF-e Emitidas</p>
-                  <p className="text-lg font-bold text-slate-900">{stats.notasEmitidas || 0}</p>
+                  <p className="text-xs text-gray-500">NF-e Emitidas</p>
+                  <p className="text-lg font-bold text-black">{stats.notasEmitidas || 0}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="stat-card">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <Users className="text-slate-600" size={20} />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Users className="text-gray-600" size={20} />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Fornecedores</p>
-                  <p className="text-lg font-bold text-slate-900">{stats.fornecedores || 0}</p>
+                  <p className="text-xs text-gray-500">Fornecedores</p>
+                  <p className="text-lg font-bold text-black">{stats.fornecedores || 0}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="stat-card">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <Package className="text-slate-600" size={20} />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Package className="text-gray-600" size={20} />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Produtos</p>
-                  <p className="text-lg font-bold text-slate-900">{stats.produtos || 0}</p>
+                  <p className="text-xs text-gray-500">Produtos</p>
+                  <p className="text-lg font-bold text-black">{stats.produtos || 0}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="stat-card">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <ClipboardList className="text-slate-600" size={20} />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <ClipboardList className="text-gray-600" size={20} />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">OS Abertas</p>
-                  <p className="text-lg font-bold text-slate-900">{stats.ordensAbertas || 0}</p>
+                  <p className="text-xs text-gray-500">OS Abertas</p>
+                  <p className="text-lg font-bold text-black">{stats.ordensAbertas || 0}</p>
                 </div>
               </CardContent>
             </Card>
@@ -226,19 +226,19 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               {contasProximas.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
+                <div className="text-center py-8 text-gray-400">
                   <Calendar className="mx-auto mb-2" size={32} />
                   <p>Nenhuma conta próxima ao vencimento</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {contasProximas.map((conta, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full ${conta.tipo === 'pagar' ? 'bg-red-500' : 'bg-green-500'}`} />
                         <div>
-                          <p className="font-medium text-slate-900">{conta.descricao}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="font-medium text-black">{conta.descricao}</p>
+                          <p className="text-xs text-gray-500">
                             Vencimento: {new Date(conta.vencimento).toLocaleDateString('pt-BR')}
                           </p>
                         </div>
@@ -261,7 +261,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-slate-500">Este Mês</p>
+                    <p className="text-sm text-gray-500">Este Mês</p>
                     <p className="text-2xl font-bold text-red-600">{formatCurrency(aPagar.mes)}</p>
                   </div>
                   <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-1 rounded">MÊS</span>
@@ -272,7 +272,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-slate-500">Este Ano</p>
+                    <p className="text-sm text-gray-500">Este Ano</p>
                     <p className="text-2xl font-bold text-red-600">{formatCurrency(aPagar.ano)}</p>
                   </div>
                   <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-1 rounded">ANO</span>
@@ -283,7 +283,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-slate-500">Total Geral</p>
+                    <p className="text-sm text-gray-500">Total Geral</p>
                     <p className="text-2xl font-bold text-red-600">{formatCurrency(aPagar.total)}</p>
                   </div>
                   <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-1 rounded">GERAL</span>
@@ -298,7 +298,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-3">
                   <AlertCircle className="text-[#E31A1A]" size={24} />
                   <div>
-                    <p className="text-sm text-slate-500">Contas Vencidas</p>
+                    <p className="text-sm text-gray-500">Contas Vencidas</p>
                     <p className="text-xl font-bold text-[#E31A1A]">{aPagar.vencidas}</p>
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-3">
                   <ClipboardList className="text-[#FFC232]" size={24} />
                   <div>
-                    <p className="text-sm text-slate-500">Valor em OS (a pagar)</p>
+                    <p className="text-sm text-gray-500">Valor em OS (a pagar)</p>
                     <p className="text-xl font-bold text-[#FFC232]">{formatCurrency(aPagar.osValor)}</p>
                   </div>
                 </div>
@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-slate-500">Este Mês</p>
+                    <p className="text-sm text-gray-500">Este Mês</p>
                     <p className="text-2xl font-bold text-green-600">{formatCurrency(aReceber.mes)}</p>
                   </div>
                   <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">MÊS</span>
@@ -336,7 +336,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-slate-500">Este Ano</p>
+                    <p className="text-sm text-gray-500">Este Ano</p>
                     <p className="text-2xl font-bold text-green-600">{formatCurrency(aReceber.ano)}</p>
                   </div>
                   <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">ANO</span>
@@ -347,7 +347,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm text-slate-500">Total Geral</p>
+                    <p className="text-sm text-gray-500">Total Geral</p>
                     <p className="text-2xl font-bold text-green-600">{formatCurrency(aReceber.total)}</p>
                   </div>
                   <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">GERAL</span>
@@ -362,7 +362,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-3">
                   <AlertCircle className="text-[#E31A1A]" size={24} />
                   <div>
-                    <p className="text-sm text-slate-500">Contas Vencidas</p>
+                    <p className="text-sm text-gray-500">Contas Vencidas</p>
                     <p className="text-xl font-bold text-[#E31A1A]">{aReceber.vencidas}</p>
                   </div>
                 </div>
@@ -373,7 +373,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-3">
                   <ClipboardList className="text-[#FFC232]" size={24} />
                   <div>
-                    <p className="text-sm text-slate-500">Valor em OS (a receber)</p>
+                    <p className="text-sm text-gray-500">Valor em OS (a receber)</p>
                     <p className="text-xl font-bold text-[#FFC232]">{formatCurrency(aReceber.osValor)}</p>
                   </div>
                 </div>
@@ -396,15 +396,15 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                    <span className="text-slate-600">Este Mês</span>
+                    <span className="text-gray-600">Este Mês</span>
                     <span className="font-bold text-red-600">{formatCurrency(quitados.pagar?.mes)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                    <span className="text-slate-600">Este Ano</span>
+                    <span className="text-gray-600">Este Ano</span>
                     <span className="font-bold text-red-600">{formatCurrency(quitados.pagar?.ano)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-red-100 rounded-lg">
-                    <span className="font-medium text-slate-700">Total Geral</span>
+                    <span className="font-medium text-gray-700">Total Geral</span>
                     <span className="font-bold text-red-700">{formatCurrency(quitados.pagar?.total)}</span>
                   </div>
                 </div>
@@ -422,15 +422,15 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="text-slate-600">Este Mês</span>
+                    <span className="text-gray-600">Este Mês</span>
                     <span className="font-bold text-green-600">{formatCurrency(quitados.receber?.mes)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="text-slate-600">Este Ano</span>
+                    <span className="text-gray-600">Este Ano</span>
                     <span className="font-bold text-green-600">{formatCurrency(quitados.receber?.ano)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-100 rounded-lg">
-                    <span className="font-medium text-slate-700">Total Geral</span>
+                    <span className="font-medium text-gray-700">Total Geral</span>
                     <span className="font-bold text-green-700">{formatCurrency(quitados.receber?.total)}</span>
                   </div>
                 </div>
@@ -445,7 +445,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-3">
                   <BadgeDollarSign className="text-[#FFC232]" size={32} />
                   <div>
-                    <p className="text-sm text-slate-500">Saldo Líquido (Recebido - Pago)</p>
+                    <p className="text-sm text-gray-500">Saldo Líquido (Recebido - Pago)</p>
                     <p className={`text-3xl font-bold ${(quitados.receber?.total - quitados.pagar?.total) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency((quitados.receber?.total || 0) - (quitados.pagar?.total || 0))}
                     </p>

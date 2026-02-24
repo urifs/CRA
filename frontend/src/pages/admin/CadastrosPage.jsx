@@ -194,7 +194,7 @@ export default function CadastrosPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Cadastros</h1>
-          <p className="text-slate-500 mt-1">Clientes, Fornecedores, Transportadores</p>
+          <p className="text-gray-500 mt-1">Clientes, Fornecedores, Transportadores</p>
         </div>
         <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]">
           <Plus size={18} className="mr-2" />Novo Cadastro
@@ -204,7 +204,7 @@ export default function CadastrosPage() {
       {/* Filtros */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="relative md:col-span-2">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input
             placeholder="Buscar por nome, CPF/CNPJ, cidade..."
             value={search}
@@ -234,7 +234,7 @@ export default function CadastrosPage() {
       {/* Lista */}
       {filteredCadastros.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-400">
+          <CardContent className="py-12 text-center text-gray-400">
             <Users className="mx-auto mb-4" size={48} />
             <p>Nenhum cadastro encontrado</p>
           </CardContent>
@@ -242,32 +242,32 @@ export default function CadastrosPage() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow">
-            <thead className="bg-slate-100">
+            <thead className="bg-gray-100">
               <tr>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">Cód.</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">Nome/Razão Social</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">Fantasia</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">CPF/CNPJ</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">Telefone</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">Cidade</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">UF</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">Tipo</th>
-                <th className="text-left p-3 text-sm font-medium text-slate-600">Status</th>
-                <th className="text-center p-3 text-sm font-medium text-slate-600">Ações</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Cód.</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Nome/Razão Social</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Fantasia</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">CPF/CNPJ</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Telefone</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Cidade</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">UF</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Tipo</th>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Status</th>
+                <th className="text-center p-3 text-sm font-medium text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredCadastros.map((c) => (
-                <tr key={c.id} className="border-t hover:bg-slate-50">
+                <tr key={c.id} className="border-t hover:bg-white">
                   <td className="p-3 text-sm font-mono">{c.codigo}</td>
                   <td className="p-3 text-sm font-medium">{c.nome_razao}</td>
-                  <td className="p-3 text-sm text-slate-600">{c.apelido_fantasia || "-"}</td>
+                  <td className="p-3 text-sm text-gray-600">{c.apelido_fantasia || "-"}</td>
                   <td className="p-3 text-sm font-mono">{c.cpf_cnpj || "-"}</td>
                   <td className="p-3 text-sm">{c.telefone || c.celular || "-"}</td>
                   <td className="p-3 text-sm">{c.cidade || "-"}</td>
                   <td className="p-3 text-sm">{c.uf || "-"}</td>
                   <td className="p-3 text-sm">
-                    <span className="px-2 py-1 bg-slate-100 rounded text-xs">{getTipoLabel(c.tipo_cadastro)}</span>
+                    <span className="px-2 py-1 bg-gray-100 rounded text-xs">{getTipoLabel(c.tipo_cadastro)}</span>
                   </td>
                   <td className="p-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs ${c.status === 'ativo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

@@ -54,7 +54,7 @@ export default function AuditPage() {
       case "excluir":
         return <Trash2 className="text-red-500" size={16} />;
       default:
-        return <ClipboardList className="text-slate-500" size={16} />;
+        return <ClipboardList className="text-gray-500" size={16} />;
     }
   };
 
@@ -64,7 +64,7 @@ export default function AuditPage() {
       editar: { class: "bg-blue-100 text-[#FFC232] border-blue-200", label: "Editar" },
       excluir: { class: "bg-red-100 text-red-700 border-red-200", label: "Excluir" }
     };
-    const badge = badges[action] || { class: "bg-slate-100 text-slate-700", label: action };
+    const badge = badges[action] || { class: "bg-gray-100 text-gray-700", label: action };
     return (
       <span className={`px-2 py-0.5 text-xs font-bold rounded-full border ${badge.class}`}>
         {badge.label}
@@ -82,7 +82,7 @@ export default function AuditPage() {
       "categoria de estoque": "bg-teal-50 text-teal-700",
       "registro de uso": "bg-cyan-50 text-cyan-700"
     };
-    const colorClass = colors[type] || "bg-slate-50 text-slate-700";
+    const colorClass = colors[type] || "bg-white text-gray-700";
     return (
       <span className={`px-2 py-0.5 text-xs font-medium rounded ${colorClass}`}>
         {type}
@@ -131,10 +131,10 @@ export default function AuditPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Auditoria</h1>
-          <p className="text-slate-500 mt-1">Histórico de alterações realizadas pelos funcionários</p>
+          <p className="text-gray-500 mt-1">Histórico de alterações realizadas pelos funcionários</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-slate-500">{filteredLogs.length} registros</p>
+          <p className="text-sm text-gray-500">{filteredLogs.length} registros</p>
         </div>
       </div>
 
@@ -143,7 +143,7 @@ export default function AuditPage() {
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <Input
                 placeholder="Buscar por funcionário, item ou detalhes..."
                 value={searchTerm}
@@ -189,32 +189,32 @@ export default function AuditPage() {
               {filteredLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="p-4 hover:bg-slate-50 transition-colors"
+                  className="p-4 hover:bg-white transition-colors"
                   data-testid={`audit-log-${log.id}`}
                 >
                   <div className="flex items-start gap-4">
                     {/* Action Icon */}
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                       {getActionIcon(log.action)}
                     </div>
                     
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="font-bold text-slate-900">{log.user_name}</span>
+                        <span className="font-bold text-black">{log.user_name}</span>
                         {getActionBadge(log.action)}
                         {getEntityTypeBadge(log.entity_type)}
                       </div>
                       
-                      <p className="text-slate-700">
+                      <p className="text-gray-700">
                         <span className="font-medium">{log.entity_name}</span>
                       </p>
                       
                       {log.details && (
-                        <p className="text-sm text-slate-500 mt-1">{log.details}</p>
+                        <p className="text-sm text-gray-500 mt-1">{log.details}</p>
                       )}
                       
-                      <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
                         <span className="flex items-center gap-1">
                           <User size={12} />
                           {log.user_email}
@@ -233,9 +233,9 @@ export default function AuditPage() {
         </Card>
       ) : (
         <div className="empty-state">
-          <ClipboardList className="text-slate-300 mb-4" size={64} />
-          <p className="text-lg font-medium text-slate-600">Nenhum registro encontrado</p>
-          <p className="text-slate-400">
+          <ClipboardList className="text-gray-300 mb-4" size={64} />
+          <p className="text-lg font-medium text-gray-600">Nenhum registro encontrado</p>
+          <p className="text-gray-400">
             {searchTerm || filterType !== "all" || filterAction !== "all" 
               ? "Tente ajustar os filtros de busca" 
               : "Os logs de auditoria aparecerão aqui quando houver alterações no sistema"

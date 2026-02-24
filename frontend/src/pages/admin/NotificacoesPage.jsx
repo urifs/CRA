@@ -94,7 +94,7 @@ export default function NotificacoesPage() {
             <Bell className="text-[#E31A1A]" />
             Central de Notificações
           </h1>
-          <p className="text-slate-500 mt-1">Acompanhe vencimentos e prazos importantes</p>
+          <p className="text-gray-500 mt-1">Acompanhe vencimentos e prazos importantes</p>
         </div>
       </div>
 
@@ -103,8 +103,8 @@ export default function NotificacoesPage() {
         <CardContent className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <Calendar className="text-slate-400" size={20} />
-              <span className="text-sm text-slate-600">Mostrar próximos</span>
+              <Calendar className="text-gray-400" size={20} />
+              <span className="text-sm text-gray-600">Mostrar próximos</span>
               <Input 
                 type="number" 
                 value={prazoDias} 
@@ -113,7 +113,7 @@ export default function NotificacoesPage() {
                 min="1" 
                 max="90"
               />
-              <span className="text-sm text-slate-600">dias</span>
+              <span className="text-sm text-gray-600">dias</span>
             </div>
             <Button variant="outline" size="sm" onClick={fetchNotificacoes}>
               <Filter size={16} className="mr-1" />Atualizar
@@ -129,7 +129,7 @@ export default function NotificacoesPage() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="text-red-500" size={20} />
               <div>
-                <p className="text-xs text-slate-500">Vencidas</p>
+                <p className="text-xs text-gray-500">Vencidas</p>
                 <p className="text-xl font-bold text-red-600">{resumo.vencidas || 0}</p>
               </div>
             </div>
@@ -140,7 +140,7 @@ export default function NotificacoesPage() {
             <div className="flex items-center gap-2">
               <TrendingDown className="text-red-500" size={20} />
               <div>
-                <p className="text-xs text-slate-500">A Pagar</p>
+                <p className="text-xs text-gray-500">A Pagar</p>
                 <p className="text-xl font-bold">{resumo.por_tipo?.conta_pagar || 0}</p>
               </div>
             </div>
@@ -151,7 +151,7 @@ export default function NotificacoesPage() {
             <div className="flex items-center gap-2">
               <TrendingUp className="text-green-500" size={20} />
               <div>
-                <p className="text-xs text-slate-500">A Receber</p>
+                <p className="text-xs text-gray-500">A Receber</p>
                 <p className="text-xl font-bold">{resumo.por_tipo?.conta_receber || 0}</p>
               </div>
             </div>
@@ -162,7 +162,7 @@ export default function NotificacoesPage() {
             <div className="flex items-center gap-2">
               <ClipboardList className="text-[#FFC232]" size={20} />
               <div>
-                <p className="text-xs text-slate-500">OS</p>
+                <p className="text-xs text-gray-500">OS</p>
                 <p className="text-xl font-bold">{resumo.por_tipo?.ordem_servico || 0}</p>
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function NotificacoesPage() {
             <div className="flex items-center gap-2">
               <Truck className="text-purple-500" size={20} />
               <div>
-                <p className="text-xs text-slate-500">Aluguéis</p>
+                <p className="text-xs text-gray-500">Aluguéis</p>
                 <p className="text-xl font-bold">{resumo.por_tipo?.aluguel || 0}</p>
               </div>
             </div>
@@ -184,7 +184,7 @@ export default function NotificacoesPage() {
       {/* Filtros */}
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="flex gap-2">
-          <span className="text-sm text-slate-500 self-center">Tipo:</span>
+          <span className="text-sm text-gray-500 self-center">Tipo:</span>
           {[
             { value: "todos", label: "Todos" },
             { value: "conta_pagar", label: "A Pagar" },
@@ -204,7 +204,7 @@ export default function NotificacoesPage() {
           ))}
         </div>
         <div className="flex gap-2">
-          <span className="text-sm text-slate-500 self-center">Urgência:</span>
+          <span className="text-sm text-gray-500 self-center">Urgência:</span>
           {[
             { value: "todas", label: "Todas" },
             { value: "alta", label: "Urgente" },
@@ -227,7 +227,7 @@ export default function NotificacoesPage() {
       {/* Lista de notificações */}
       {filteredNotificacoes.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-400">
+          <CardContent className="py-12 text-center text-gray-400">
             <CheckCircle2 className="mx-auto mb-4 text-green-400" size={48} />
             <p className="font-medium">Nenhuma notificação pendente!</p>
             <p className="text-sm">Não há vencimentos nos próximos {prazoDias} dias</p>
@@ -262,32 +262,32 @@ export default function NotificacoesPage() {
                               style={{ backgroundColor: `${urgInfo.color}20` }}>
                           {urgInfo.label}
                         </span>
-                        <span className="text-xs text-slate-500">{tipoInfo.label}</span>
+                        <span className="text-xs text-gray-500">{tipoInfo.label}</span>
                         {notif.vencida && (
                           <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 font-medium">
                             VENCIDO
                           </span>
                         )}
                       </div>
-                      <h3 className="font-medium text-slate-900 truncate">{notif.titulo}</h3>
+                      <h3 className="font-medium text-black truncate">{notif.titulo}</h3>
                       {notif.subtitulo && (
-                        <p className="text-sm text-slate-500">{notif.subtitulo}</p>
+                        <p className="text-sm text-gray-500">{notif.subtitulo}</p>
                       )}
                     </div>
 
                     {/* Valor e Data */}
                     <div className="text-right flex-shrink-0">
                       {notif.valor > 0 && (
-                        <p className="font-bold text-slate-900">{formatCurrency(notif.valor)}</p>
+                        <p className="font-bold text-black">{formatCurrency(notif.valor)}</p>
                       )}
-                      <p className="text-sm text-slate-500">{formatDate(notif.data)}</p>
-                      <p className={`text-xs ${notif.vencida ? 'text-red-600 font-medium' : 'text-slate-400'}`}>
+                      <p className="text-sm text-gray-500">{formatDate(notif.data)}</p>
+                      <p className={`text-xs ${notif.vencida ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
                         {getDaysLabel(daysUntil)}
                       </p>
                     </div>
 
                     {/* Seta */}
-                    <ChevronRight className="text-slate-300 flex-shrink-0" size={20} />
+                    <ChevronRight className="text-gray-300 flex-shrink-0" size={20} />
                   </div>
                 </CardContent>
               </Card>
@@ -298,7 +298,7 @@ export default function NotificacoesPage() {
 
       {/* Total */}
       {filteredNotificacoes.length > 0 && (
-        <div className="mt-4 text-center text-sm text-slate-500">
+        <div className="mt-4 text-center text-sm text-gray-500">
           Mostrando {filteredNotificacoes.length} de {data.notificacoes.length} notificações
         </div>
       )}

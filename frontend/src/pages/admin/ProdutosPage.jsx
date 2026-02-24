@@ -190,7 +190,7 @@ export default function ProdutosPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Produtos</h1>
-          <p className="text-slate-500 mt-1">Cadastro de produtos e serviços</p>
+          <p className="text-gray-500 mt-1">Cadastro de produtos e serviços</p>
         </div>
         <Button onClick={() => openModal()} className="bg-purple-600 hover:bg-purple-700"><Plus size={18} className="mr-2" />Novo Produto</Button>
       </div>
@@ -198,7 +198,7 @@ export default function ProdutosPage() {
       {/* Filtros */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="relative md:col-span-2">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input placeholder="Buscar por descrição, código, fabricante..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={filterGrupo || "all"} onValueChange={(v) => setFilterGrupo(v === "all" ? "" : v)}>
@@ -231,30 +231,30 @@ export default function ProdutosPage() {
 
       {/* Tabela */}
       {filteredProdutos.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-slate-400"><Package className="mx-auto mb-4" size={48} /><p>Nenhum produto encontrado</p></CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-gray-400"><Package className="mx-auto mb-4" size={48} /><p>Nenhum produto encontrado</p></CardContent></Card>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow text-sm">
-            <thead className="bg-slate-100">
+            <thead className="bg-gray-100">
               <tr>
-                <th className="text-left p-3 font-medium text-slate-600">Cód. Int.</th>
-                <th className="text-left p-3 font-medium text-slate-600">Cód. Fab.</th>
-                <th className="text-left p-3 font-medium text-slate-600">Descrição</th>
-                <th className="text-left p-3 font-medium text-slate-600">UN</th>
-                <th className="text-right p-3 font-medium text-slate-600">Estoque</th>
-                <th className="text-right p-3 font-medium text-slate-600">Custo R$</th>
-                <th className="text-right p-3 font-medium text-slate-600">Venda R$</th>
-                <th className="text-right p-3 font-medium text-slate-600">M.Lucro %</th>
-                <th className="text-left p-3 font-medium text-slate-600">Fabricante</th>
-                <th className="text-left p-3 font-medium text-slate-600">NCM</th>
-                <th className="text-center p-3 font-medium text-slate-600">Ações</th>
+                <th className="text-left p-3 font-medium text-gray-600">Cód. Int.</th>
+                <th className="text-left p-3 font-medium text-gray-600">Cód. Fab.</th>
+                <th className="text-left p-3 font-medium text-gray-600">Descrição</th>
+                <th className="text-left p-3 font-medium text-gray-600">UN</th>
+                <th className="text-right p-3 font-medium text-gray-600">Estoque</th>
+                <th className="text-right p-3 font-medium text-gray-600">Custo R$</th>
+                <th className="text-right p-3 font-medium text-gray-600">Venda R$</th>
+                <th className="text-right p-3 font-medium text-gray-600">M.Lucro %</th>
+                <th className="text-left p-3 font-medium text-gray-600">Fabricante</th>
+                <th className="text-left p-3 font-medium text-gray-600">NCM</th>
+                <th className="text-center p-3 font-medium text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredProdutos.map((p) => {
                 const estoqueBaixo = p.estoque_atual <= p.estoque_minimo;
                 return (
-                  <tr key={p.id} className={`border-t hover:bg-slate-50 ${estoqueBaixo ? 'bg-red-50' : ''} ${p.em_promocao ? 'bg-green-50' : ''}`}>
+                  <tr key={p.id} className={`border-t hover:bg-white ${estoqueBaixo ? 'bg-red-50' : ''} ${p.em_promocao ? 'bg-green-50' : ''}`}>
                     <td className="p-3 font-mono text-xs">{p.codigo_interno || "-"}</td>
                     <td className="p-3 font-mono text-xs">{p.codigo_fabricante || "-"}</td>
                     <td className="p-3 max-w-[200px] truncate font-medium">
@@ -291,7 +291,7 @@ export default function ProdutosPage() {
           <DialogHeader><DialogTitle>{editingProduto ? "Editar Produto" : "Novo Produto"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Identificação */}
-            <div className="border-b pb-2 mb-2"><h3 className="font-medium text-slate-700">Identificação</h3></div>
+            <div className="border-b pb-2 mb-2"><h3 className="font-medium text-gray-700">Identificação</h3></div>
             <div className="grid grid-cols-4 gap-4">
               <div><label className="form-label">Código Interno</label><Input value={formData.codigo_interno} onChange={(e) => setFormData({...formData, codigo_interno: e.target.value})} placeholder="Auto" /></div>
               <div><label className="form-label">Código Fabricante</label><Input value={formData.codigo_fabricante} onChange={(e) => setFormData({...formData, codigo_fabricante: e.target.value})} /></div>
@@ -309,7 +309,7 @@ export default function ProdutosPage() {
             <div><label className="form-label">Descrição *</label><Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} required /></div>
             
             {/* Classificação */}
-            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-slate-700">Classificação</h3></div>
+            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-gray-700">Classificação</h3></div>
             <div className="grid grid-cols-4 gap-4">
               <div><label className="form-label">Fabricante</label><Input value={formData.fabricante} onChange={(e) => setFormData({...formData, fabricante: e.target.value})} /></div>
               <div><label className="form-label">Aplicação</label><Input value={formData.aplicacao} onChange={(e) => setFormData({...formData, aplicacao: e.target.value})} /></div>
@@ -318,7 +318,7 @@ export default function ProdutosPage() {
             </div>
 
             {/* Unidades e Preços */}
-            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-slate-700">Unidades e Preços</h3></div>
+            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-gray-700">Unidades e Preços</h3></div>
             <div className="grid grid-cols-6 gap-4">
               <div><label className="form-label">Un. Comercial</label>
                 <Select value={formData.unidade_comercial} onValueChange={(v) => setFormData({...formData, unidade_comercial: v})}>
@@ -336,7 +336,7 @@ export default function ProdutosPage() {
             </div>
 
             {/* Estoque */}
-            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-slate-700">Estoque</h3></div>
+            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-gray-700">Estoque</h3></div>
             <div className="grid grid-cols-3 gap-4">
               <div><label className="form-label">Estoque Atual</label><Input type="number" step="0.01" value={formData.estoque_atual} onChange={(e) => setFormData({...formData, estoque_atual: e.target.value})} /></div>
               <div><label className="form-label">Estoque Mínimo</label><Input type="number" step="0.01" value={formData.estoque_minimo} onChange={(e) => setFormData({...formData, estoque_minimo: e.target.value})} /></div>
@@ -344,7 +344,7 @@ export default function ProdutosPage() {
             </div>
 
             {/* Dados Fiscais */}
-            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-slate-700">Dados Fiscais</h3></div>
+            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-gray-700">Dados Fiscais</h3></div>
             <div className="grid grid-cols-6 gap-4">
               <div><label className="form-label">NCM</label><Input value={formData.ncm} onChange={(e) => setFormData({...formData, ncm: e.target.value})} maxLength={8} /></div>
               <div><label className="form-label">CST</label><Input value={formData.cst} onChange={(e) => setFormData({...formData, cst: e.target.value})} /></div>
@@ -367,7 +367,7 @@ export default function ProdutosPage() {
             </div>
 
             {/* Promoção */}
-            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-slate-700">Promoção</h3></div>
+            <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-gray-700">Promoção</h3></div>
             <div className="grid grid-cols-3 gap-4">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={formData.em_promocao} onChange={(e) => setFormData({...formData, em_promocao: e.target.checked})} className="rounded" />

@@ -74,17 +74,17 @@ export default function BalancePage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Balanço Financeiro</h1>
-          <p className="text-slate-500 mt-1">Análise de gastos com manutenções</p>
+          <p className="text-gray-500 mt-1">Análise de gastos com manutenções</p>
         </div>
       </div>
 
       {/* Main Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-slate-900 text-white">
+        <Card className="bg-black text-white">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
                   Total Investido
                 </p>
                 <p className="text-3xl font-black mt-2 font-heading">
@@ -102,15 +102,15 @@ export default function BalancePage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Total Manutenções
                 </p>
-                <p className="text-3xl font-black text-slate-900 mt-2 font-heading">
+                <p className="text-3xl font-black text-black mt-2 font-heading">
                   {balance?.total_maintenances || 0}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center">
-                <BarChart3 className="text-slate-600" size={28} />
+              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center">
+                <BarChart3 className="text-gray-600" size={28} />
               </div>
             </div>
           </CardContent>
@@ -120,13 +120,13 @@ export default function BalancePage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Preventivas
                 </p>
                 <p className="text-3xl font-black text-green-600 mt-2 font-heading">
                   {formatCurrency(balance?.preventive_total || 0)}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   {balance?.preventive_count || 0} manutenções
                 </p>
               </div>
@@ -141,13 +141,13 @@ export default function BalancePage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Corretivas
                 </p>
                 <p className="text-3xl font-black text-[#E31A1A] mt-2 font-heading">
                   {formatCurrency(balance?.corrective_total || 0)}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   {balance?.corrective_count || 0} manutenções
                 </p>
               </div>
@@ -164,14 +164,14 @@ export default function BalancePage() {
         <CardContent className="py-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-bold text-slate-900">Proporção Preventiva vs Corretiva</h3>
-              <p className="text-sm text-slate-500">
+              <h3 className="font-bold text-black">Proporção Preventiva vs Corretiva</h3>
+              <p className="text-sm text-gray-500">
                 {preventivePercentage.toFixed(1)}% das manutenções são preventivas
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-slate-500">Média por manutenção</p>
-              <p className="font-bold text-slate-900">
+              <p className="text-sm text-gray-500">Média por manutenção</p>
+              <p className="font-bold text-black">
                 {formatCurrency(balance?.average_per_maintenance || 0)}
               </p>
             </div>
@@ -230,24 +230,24 @@ export default function BalancePage() {
                   <CardContent className="py-4">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        index === 0 ? "bg-orange-100" : "bg-slate-100"
+                        index === 0 ? "bg-orange-100" : "bg-gray-100"
                       }`}>
-                        <span className={`font-bold ${index === 0 ? "text-[#E31A1A]" : "text-slate-600"}`}>
+                        <span className={`font-bold ${index === 0 ? "text-[#E31A1A]" : "text-gray-600"}`}>
                           #{index + 1}
                         </span>
                       </div>
                       
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-slate-900">{machine.machine_name}</h3>
-                          <span className="font-mono text-sm text-slate-500">({machine.machine_plate})</span>
+                          <h3 className="font-bold text-black">{machine.machine_name}</h3>
+                          <span className="font-mono text-sm text-gray-500">({machine.machine_plate})</span>
                           {machine.category_name && (
-                            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                               {machine.category_name}
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                           <span>{machine.total_maintenances} manutenções</span>
                           <span>•</span>
                           <span>Última: {formatDate(machine.last_maintenance_date)}</span>
@@ -255,7 +255,7 @@ export default function BalancePage() {
                       </div>
                       
                       <div className="text-right">
-                        <p className="text-xl font-black text-slate-900">
+                        <p className="text-xl font-black text-black">
                           {formatCurrency(machine.total_spent)}
                         </p>
                         <div className="flex gap-3 mt-1 text-xs">
@@ -270,13 +270,13 @@ export default function BalancePage() {
                         </div>
                       </div>
                       
-                      <ArrowRight className="text-slate-400" size={20} />
+                      <ArrowRight className="text-gray-400" size={20} />
                     </div>
                     
                     {/* Progress bar showing preventive vs corrective */}
                     {machine.total_spent > 0 && (
                       <div className="mt-3">
-                        <div className="h-1.5 rounded-full overflow-hidden bg-slate-100 flex">
+                        <div className="h-1.5 rounded-full overflow-hidden bg-gray-100 flex">
                           <div 
                             className="h-full bg-green-500"
                             style={{ width: `${(machine.preventive_spent / machine.total_spent) * 100}%` }}
@@ -294,9 +294,9 @@ export default function BalancePage() {
             </div>
           ) : (
             <div className="empty-state py-12">
-              <Truck className="text-slate-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-slate-600">Nenhuma manutenção registrada</p>
-              <p className="text-slate-400">Os gastos por máquina aparecerão aqui</p>
+              <Truck className="text-gray-300 mb-4" size={64} />
+              <p className="text-lg font-medium text-gray-600">Nenhuma manutenção registrada</p>
+              <p className="text-gray-400">Os gastos por máquina aparecerão aqui</p>
             </div>
           )}
         </TabsContent>
@@ -320,17 +320,17 @@ export default function BalancePage() {
                     <tbody>
                       {balance.expenses_by_month.map((month, index) => (
                         <tr key={`${month.year}-${month.month}`} data-testid={`month-expense-${index}`}>
-                          <td className="font-medium text-slate-900">{month.month}</td>
-                          <td className="font-mono text-slate-500">{month.year}</td>
+                          <td className="font-medium text-black">{month.month}</td>
+                          <td className="font-mono text-gray-500">{month.year}</td>
                           <td>
-                            <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-sm font-medium">
+                            <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm font-medium">
                               {month.maintenance_count}
                             </span>
                           </td>
-                          <td className="font-bold text-slate-900">
+                          <td className="font-bold text-black">
                             {formatCurrency(month.total_spent)}
                           </td>
-                          <td className="text-slate-600">
+                          <td className="text-gray-600">
                             {formatCurrency(month.total_spent / month.maintenance_count)}
                           </td>
                         </tr>
@@ -342,24 +342,24 @@ export default function BalancePage() {
             </Card>
           ) : (
             <div className="empty-state py-12">
-              <Calendar className="text-slate-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-slate-600">Nenhuma manutenção registrada</p>
-              <p className="text-slate-400">Os gastos mensais aparecerão aqui</p>
+              <Calendar className="text-gray-300 mb-4" size={64} />
+              <p className="text-lg font-medium text-gray-600">Nenhuma manutenção registrada</p>
+              <p className="text-gray-400">Os gastos mensais aparecerão aqui</p>
             </div>
           )}
         </TabsContent>
       </Tabs>
 
       {/* Tips Card */}
-      <Card className="bg-slate-50 border-slate-200">
+      <Card className="bg-white border-gray-200">
         <CardContent className="py-6">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <TrendingUp className="text-green-600" size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900">Dica de Economia</h3>
-              <p className="text-sm text-slate-600 mt-1">
+              <h3 className="font-bold text-black">Dica de Economia</h3>
+              <p className="text-sm text-gray-600 mt-1">
                 Manutenções preventivas costumam ser mais baratas e evitam problemas maiores. 
                 {preventivePercentage < 50 ? (
                   <span className="text-[#E31A1A] font-medium">

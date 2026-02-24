@@ -138,7 +138,7 @@ export default function FornecedoresPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Fornecedores</h1>
-          <p className="text-slate-500 mt-1">Cadastro de fornecedores</p>
+          <p className="text-gray-500 mt-1">Cadastro de fornecedores</p>
         </div>
         <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-fornecedor-btn">
           <Plus size={18} className="mr-2" />
@@ -148,7 +148,7 @@ export default function FornecedoresPage() {
 
       {/* Search */}
       <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
         <Input
           placeholder="Buscar por nome, CNPJ ou cidade..."
           value={search}
@@ -161,7 +161,7 @@ export default function FornecedoresPage() {
       {/* Lista */}
       {filteredFornecedores.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-400">
+          <CardContent className="py-12 text-center text-gray-400">
             <Users className="mx-auto mb-4" size={48} />
             <p className="font-medium">Nenhum fornecedor encontrado</p>
             <p className="text-sm">Cadastre um novo fornecedor</p>
@@ -178,30 +178,30 @@ export default function FornecedoresPage() {
                       <Building className="text-[#FFC232]" size={20} />
                     </div>
                     <div>
-                      <h3 className="font-medium text-slate-900">{fornecedor.nome}</h3>
+                      <h3 className="font-medium text-black">{fornecedor.nome}</h3>
                       {fornecedor.cnpj && (
-                        <p className="text-xs text-slate-500">CNPJ: {fornecedor.cnpj}</p>
+                        <p className="text-xs text-gray-500">CNPJ: {fornecedor.cnpj}</p>
                       )}
                     </div>
                   </div>
                 </div>
                 
-                <div className="space-y-1 text-sm text-slate-600 mb-3">
+                <div className="space-y-1 text-sm text-gray-600 mb-3">
                   {fornecedor.telefone && (
                     <p className="flex items-center gap-2">
-                      <Phone size={14} className="text-slate-400" />
+                      <Phone size={14} className="text-gray-400" />
                       {fornecedor.telefone}
                     </p>
                   )}
                   {fornecedor.email && (
                     <p className="flex items-center gap-2">
-                      <Mail size={14} className="text-slate-400" />
+                      <Mail size={14} className="text-gray-400" />
                       {fornecedor.email}
                     </p>
                   )}
                   {(fornecedor.cidade || fornecedor.estado) && (
                     <p className="flex items-center gap-2">
-                      <MapPin size={14} className="text-slate-400" />
+                      <MapPin size={14} className="text-gray-400" />
                       {[fornecedor.cidade, fornecedor.estado].filter(Boolean).join(" - ")}
                     </p>
                   )}

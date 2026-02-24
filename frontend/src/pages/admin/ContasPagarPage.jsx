@@ -170,7 +170,7 @@ export default function ContasPagarPage() {
 
   const getStatusInfo = (conta) => {
     if (conta.status === "quitada") return { label: "Quitada", color: "bg-green-100 text-green-700", icon: CheckCircle2 };
-    if (conta.status === "cancelada") return { label: "Cancelada", color: "bg-slate-100 text-slate-700", icon: X };
+    if (conta.status === "cancelada") return { label: "Cancelada", color: "bg-gray-100 text-gray-700", icon: X };
     const hoje = new Date().toISOString().split("T")[0];
     if (conta.data_vencimento < hoje) return { label: "Vencida", color: "bg-red-100 text-red-700", icon: AlertCircle };
     if (conta.data_vencimento === hoje) return { label: "Vence Hoje", color: "bg-orange-100 text-[#E31A1A]", icon: Clock };
@@ -206,7 +206,7 @@ export default function ContasPagarPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Contas a Pagar</h1>
-          <p className="text-slate-500 mt-1">Gestão de despesas e pagamentos</p>
+          <p className="text-gray-500 mt-1">Gestão de despesas e pagamentos</p>
         </div>
         <Button onClick={() => openModal()} className="bg-red-600 hover:bg-red-700"><Plus size={18} className="mr-2" />Nova Conta</Button>
       </div>
@@ -214,23 +214,23 @@ export default function ContasPagarPage() {
       {/* Resumo */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card className="border-l-4 border-l-blue-500"><CardContent className="p-4">
-          <p className="text-sm text-slate-500">Total Em Aberto</p>
+          <p className="text-sm text-gray-500">Total Em Aberto</p>
           <p className="text-xl font-bold text-[#FFC232]">{formatCurrency(totalEmAberto)}</p>
         </CardContent></Card>
         <Card className="border-l-4 border-l-red-500"><CardContent className="p-4">
-          <p className="text-sm text-slate-500">Total Vencidas</p>
+          <p className="text-sm text-gray-500">Total Vencidas</p>
           <p className="text-xl font-bold text-red-600">{formatCurrency(totalVencidas)}</p>
         </CardContent></Card>
         <Card className="border-l-4 border-l-slate-500"><CardContent className="p-4">
-          <p className="text-sm text-slate-500">Registros</p>
-          <p className="text-xl font-bold text-slate-600">{totalRegistros}</p>
+          <p className="text-sm text-gray-500">Registros</p>
+          <p className="text-xl font-bold text-gray-600">{totalRegistros}</p>
         </CardContent></Card>
       </div>
 
       {/* Filtros */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="relative md:col-span-2">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -262,22 +262,22 @@ export default function ContasPagarPage() {
 
       {/* Tabela */}
       {filteredContas.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-slate-400"><CreditCard className="mx-auto mb-4" size={48} /><p>Nenhuma conta encontrada</p></CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-gray-400"><CreditCard className="mx-auto mb-4" size={48} /><p>Nenhuma conta encontrada</p></CardContent></Card>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow text-sm">
-            <thead className="bg-slate-100">
+            <thead className="bg-gray-100">
               <tr>
-                <th className="text-left p-3 font-medium text-slate-600">Núm.</th>
-                <th className="text-left p-3 font-medium text-slate-600">Fornecedor</th>
-                <th className="text-left p-3 font-medium text-slate-600">Descrição</th>
-                <th className="text-left p-3 font-medium text-slate-600">Documento</th>
-                <th className="text-left p-3 font-medium text-slate-600">Emissão</th>
-                <th className="text-left p-3 font-medium text-slate-600">Vencimento</th>
-                <th className="text-right p-3 font-medium text-slate-600">Valor R$</th>
-                <th className="text-left p-3 font-medium text-slate-600">Forma Pag.</th>
-                <th className="text-left p-3 font-medium text-slate-600">Status</th>
-                <th className="text-center p-3 font-medium text-slate-600">Ações</th>
+                <th className="text-left p-3 font-medium text-gray-600">Núm.</th>
+                <th className="text-left p-3 font-medium text-gray-600">Fornecedor</th>
+                <th className="text-left p-3 font-medium text-gray-600">Descrição</th>
+                <th className="text-left p-3 font-medium text-gray-600">Documento</th>
+                <th className="text-left p-3 font-medium text-gray-600">Emissão</th>
+                <th className="text-left p-3 font-medium text-gray-600">Vencimento</th>
+                <th className="text-right p-3 font-medium text-gray-600">Valor R$</th>
+                <th className="text-left p-3 font-medium text-gray-600">Forma Pag.</th>
+                <th className="text-left p-3 font-medium text-gray-600">Status</th>
+                <th className="text-center p-3 font-medium text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -285,7 +285,7 @@ export default function ContasPagarPage() {
                 const status = getStatusInfo(c);
                 const StatusIcon = status.icon;
                 return (
-                  <tr key={c.id} className="border-t hover:bg-slate-50">
+                  <tr key={c.id} className="border-t hover:bg-white">
                     <td className="p-3 font-mono">{c.numero}</td>
                     <td className="p-3">{c.fornecedor_nome || "-"}</td>
                     <td className="p-3 max-w-[200px] truncate">{c.descricao}</td>

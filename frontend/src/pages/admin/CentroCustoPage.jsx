@@ -90,7 +90,7 @@ export default function CentroCustoPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Centros de Custo</h1>
-          <p className="text-slate-500 mt-1">Gerencie os centros de custo da empresa</p>
+          <p className="text-gray-500 mt-1">Gerencie os centros de custo da empresa</p>
         </div>
         <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-centro-btn">
           <Plus size={18} className="mr-2" />Novo Centro
@@ -100,7 +100,7 @@ export default function CentroCustoPage() {
       {/* Busca */}
       <div className="mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input 
             placeholder="Buscar por código, nome ou descrição..." 
             value={search} 
@@ -118,7 +118,7 @@ export default function CentroCustoPage() {
               <Building2 className="text-[#FFC232]" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total de Centros</p>
+              <p className="text-xs text-gray-500">Total de Centros</p>
               <p className="text-lg font-bold text-[#FFC232]">{centros.length}</p>
             </div>
           </CardContent>
@@ -129,7 +129,7 @@ export default function CentroCustoPage() {
               <CheckCircle2 className="text-green-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Ativos</p>
+              <p className="text-xs text-gray-500">Ativos</p>
               <p className="text-lg font-bold text-green-600">{centros.filter(c => c.status === "ativo").length}</p>
             </div>
           </CardContent>
@@ -139,7 +139,7 @@ export default function CentroCustoPage() {
       {/* Lista */}
       {filteredCentros.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-400">
+          <CardContent className="py-12 text-center text-gray-400">
             <Building2 className="mx-auto mb-4" size={48} />
             <p>Nenhum centro de custo encontrado</p>
           </CardContent>
@@ -147,28 +147,28 @@ export default function CentroCustoPage() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow text-sm">
-            <thead className="bg-slate-100">
+            <thead className="bg-gray-100">
               <tr>
-                <th className="text-left p-3 font-medium text-slate-600">Código</th>
-                <th className="text-left p-3 font-medium text-slate-600">Nome</th>
-                <th className="text-left p-3 font-medium text-slate-600">Descrição</th>
-                <th className="text-left p-3 font-medium text-slate-600">Status</th>
-                <th className="text-center p-3 font-medium text-slate-600">Ações</th>
+                <th className="text-left p-3 font-medium text-gray-600">Código</th>
+                <th className="text-left p-3 font-medium text-gray-600">Nome</th>
+                <th className="text-left p-3 font-medium text-gray-600">Descrição</th>
+                <th className="text-left p-3 font-medium text-gray-600">Status</th>
+                <th className="text-center p-3 font-medium text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredCentros.map((c) => (
-                <tr key={c.id} className="border-t hover:bg-slate-50" data-testid={`centro-${c.id}`}>
+                <tr key={c.id} className="border-t hover:bg-white" data-testid={`centro-${c.id}`}>
                   <td className="p-3 font-mono">{c.codigo || "-"}</td>
                   <td className="p-3 font-medium">{c.nome}</td>
-                  <td className="p-3 text-slate-500 max-w-[200px] truncate">{c.descricao || "-"}</td>
+                  <td className="p-3 text-gray-500 max-w-[200px] truncate">{c.descricao || "-"}</td>
                   <td className="p-3">
                     {c.status === "ativo" ? (
                       <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-700">
                         <CheckCircle2 className="inline mr-1" size={12} />Ativo
                       </span>
                     ) : (
-                      <span className="px-2 py-1 rounded text-xs bg-slate-100 text-slate-600">
+                      <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
                         <XCircle className="inline mr-1" size={12} />Inativo
                       </span>
                     )}

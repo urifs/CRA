@@ -35,12 +35,12 @@ export default function MorePage() {
       {/* User Info */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-slate-900 rounded-full flex items-center justify-center">
+          <div className="w-14 h-14 bg-black rounded-full flex items-center justify-center">
             <User className="text-white" size={24} />
           </div>
           <div>
-            <h2 className="font-bold text-lg text-slate-900">{user.name || "Usuário"}</h2>
-            <p className="text-slate-500 text-sm">{user.email || ""}</p>
+            <h2 className="font-bold text-lg text-black">{user.name || "Usuário"}</h2>
+            <p className="text-gray-500 text-sm">{user.email || ""}</p>
           </div>
         </div>
       </div>
@@ -52,18 +52,18 @@ export default function MorePage() {
             key={item.path}
             to={item.path}
             className={`flex items-center gap-4 p-4 touch-feedback ${
-              index < menuItems.length - 1 ? "border-b border-slate-100" : ""
+              index < menuItems.length - 1 ? "border-b border-gray-100" : ""
             }`}
             data-testid={`more-menu-${item.path.replace("/", "")}`}
           >
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-              <item.icon className="text-slate-600" size={20} />
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <item.icon className="text-gray-600" size={20} />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-slate-900">{item.label}</p>
-              <p className="text-sm text-slate-500">{item.description}</p>
+              <p className="font-medium text-black">{item.label}</p>
+              <p className="text-sm text-gray-500">{item.description}</p>
             </div>
-            <ChevronRight className="text-slate-400" size={20} />
+            <ChevronRight className="text-gray-400" size={20} />
           </Link>
         ))}
       </div>
@@ -80,15 +80,15 @@ export default function MorePage() {
           </div>
           <div className="flex-1">
             <p className="font-medium text-red-600">Sair</p>
-            <p className="text-sm text-slate-500">Encerrar sessão</p>
+            <p className="text-sm text-gray-500">Encerrar sessão</p>
           </div>
         </button>
       </div>
 
       {/* App Info */}
       <div className="text-center py-4">
-        <p className="text-sm text-slate-400">CRA Construtora v1.0</p>
-        <p className="text-xs text-slate-300 mt-1">Sistema de Gerenciamento de Manutenção</p>
+        <p className="text-sm text-gray-400">CRA Construtora v1.0</p>
+        <p className="text-xs text-gray-300 mt-1">Sistema de Gerenciamento de Manutenção</p>
       </div>
     </div>
   );

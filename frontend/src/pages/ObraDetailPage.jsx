@@ -168,7 +168,7 @@ export default function ObraDetailPage() {
   if (!obra) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-600">Obra não encontrada</p>
+        <p className="text-gray-600">Obra não encontrada</p>
         <Button variant="outline" onClick={() => navigate("/obras")} className="mt-4">
           Voltar para Obras
         </Button>
@@ -194,7 +194,7 @@ export default function ObraDetailPage() {
             <div>
               <h1 className="page-title font-heading">{obra.name}</h1>
               {obra.location && (
-                <p className="text-slate-500 flex items-center gap-1">
+                <p className="text-gray-500 flex items-center gap-1">
                   <MapPin size={14} />
                   {obra.location}
                 </p>
@@ -211,8 +211,8 @@ export default function ObraDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Máquinas</p>
-                <p className="text-2xl font-bold text-slate-900">{obra.machines.length}</p>
+                <p className="text-sm text-gray-500">Máquinas</p>
+                <p className="text-2xl font-bold text-black">{obra.machines.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Truck className="text-[#FFC232]" size={24} />
@@ -225,8 +225,8 @@ export default function ObraDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Manutenções</p>
-                <p className="text-2xl font-bold text-slate-900">{obra.maintenances.length}</p>
+                <p className="text-sm text-gray-500">Manutenções</p>
+                <p className="text-2xl font-bold text-black">{obra.maintenances.length}</p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <Wrench className="text-[#E31A1A]" size={24} />
@@ -239,8 +239,8 @@ export default function ObraDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Gasto</p>
-                <p className="text-2xl font-bold font-mono text-slate-900">{formatCurrency(obra.total_maintenance_cost)}</p>
+                <p className="text-sm text-gray-500">Total Gasto</p>
+                <p className="text-2xl font-bold font-mono text-black">{formatCurrency(obra.total_maintenance_cost)}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <DollarSign className="text-green-600" size={24} />
@@ -253,8 +253,8 @@ export default function ObraDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Período</p>
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm text-gray-500">Período</p>
+                <p className="text-sm font-medium text-black">
                   {formatDate(obra.start_date)} - {formatDate(obra.end_date)}
                 </p>
               </div>
@@ -274,9 +274,9 @@ export default function ObraDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-slate-50 rounded-lg">
-                <p className="text-sm text-slate-500">Total</p>
-                <p className="text-xl font-bold font-mono text-slate-900">{formatCurrency(obra.total_maintenance_cost)}</p>
+              <div className="text-center p-4 bg-white rounded-lg">
+                <p className="text-sm text-gray-500">Total</p>
+                <p className="text-xl font-bold font-mono text-black">{formatCurrency(obra.total_maintenance_cost)}</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-[#FFC232]">Preventiva</p>
@@ -297,7 +297,7 @@ export default function ObraDetailPage() {
           <CardTitle className="text-lg font-bold">Máquinas na Obra</CardTitle>
           <Button
             size="sm"
-            className="bg-slate-900 hover:bg-slate-800"
+            className="bg-black hover:bg-gray-900"
             onClick={() => setShowAddMachineDialog(true)}
             data-testid="add-machine-btn"
           >
@@ -311,15 +311,15 @@ export default function ObraDetailPage() {
               {obra.machines.map((machine) => (
                 <div
                   key={machine.id}
-                  className="border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
+                  className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
                   data-testid={`obra-machine-${machine.id}`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Truck className="text-slate-400" size={20} />
+                      <Truck className="text-gray-400" size={20} />
                       <div>
-                        <p className="font-bold text-slate-900">{machine.name}</p>
-                        <p className="text-sm font-mono text-slate-500">{machine.plate}</p>
+                        <p className="font-bold text-black">{machine.name}</p>
+                        <p className="text-sm font-mono text-gray-500">{machine.plate}</p>
                       </div>
                     </div>
                     {getMachineStatusBadge(machine.status)}
@@ -353,8 +353,8 @@ export default function ObraDetailPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-slate-500">
-              <Truck className="mx-auto mb-2 text-slate-300" size={48} />
+            <div className="text-center py-8 text-gray-500">
+              <Truck className="mx-auto mb-2 text-gray-300" size={48} />
               <p>Nenhuma máquina vinculada a esta obra</p>
               <Button
                 variant="outline"
@@ -381,17 +381,17 @@ export default function ObraDetailPage() {
               {obra.maintenances.slice(0, 10).map((maintenance) => (
                 <div
                   key={maintenance.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                   onClick={() => navigate(`/maintenances/${maintenance.id}`)}
                   data-testid={`obra-maintenance-${maintenance.id}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border">
-                      <Wrench className="text-slate-600" size={18} />
+                      <Wrench className="text-gray-600" size={18} />
                     </div>
                     <div>
-                      <p className="font-medium text-slate-900">{maintenance.part_name}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className="font-medium text-black">{maintenance.part_name}</p>
+                      <p className="text-sm text-gray-500">
                         {maintenance.machine_name} • {maintenance.machine_plate}
                       </p>
                     </div>
@@ -399,21 +399,21 @@ export default function ObraDetailPage() {
                   <div className="text-right flex items-center gap-3">
                     {getMaintenanceTypeBadge(maintenance.maintenance_type)}
                     <div>
-                      <p className="font-mono font-bold text-slate-900">{formatCurrency(maintenance.part_value)}</p>
-                      <p className="text-xs text-slate-500">{formatDate(maintenance.replacement_date)}</p>
+                      <p className="font-mono font-bold text-black">{formatCurrency(maintenance.part_value)}</p>
+                      <p className="text-xs text-gray-500">{formatDate(maintenance.replacement_date)}</p>
                     </div>
                   </div>
                 </div>
               ))}
               {obra.maintenances.length > 10 && (
-                <p className="text-center text-sm text-slate-500 pt-2">
+                <p className="text-center text-sm text-gray-500 pt-2">
                   E mais {obra.maintenances.length - 10} manutenções...
                 </p>
               )}
             </div>
           ) : (
-            <div className="text-center py-8 text-slate-500">
-              <Wrench className="mx-auto mb-2 text-slate-300" size={48} />
+            <div className="text-center py-8 text-gray-500">
+              <Wrench className="mx-auto mb-2 text-gray-300" size={48} />
               <p>Nenhuma manutenção registrada para as máquinas desta obra</p>
             </div>
           )}
@@ -443,11 +443,11 @@ export default function ObraDetailPage() {
                   availableMachines.map((machine) => (
                     <SelectItem key={machine.id} value={machine.id}>
                       {machine.name} ({machine.plate})
-                      {machine.obra_name && <span className="text-slate-400 ml-2">• Em: {machine.obra_name}</span>}
+                      {machine.obra_name && <span className="text-gray-400 ml-2">• Em: {machine.obra_name}</span>}
                     </SelectItem>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-sm text-slate-500">
+                  <div className="px-3 py-2 text-sm text-gray-500">
                     Todas as máquinas já estão nesta obra
                   </div>
                 )}
@@ -466,7 +466,7 @@ export default function ObraDetailPage() {
               Cancelar
             </Button>
             <Button
-              className="bg-slate-900 hover:bg-slate-800"
+              className="bg-black hover:bg-gray-900"
               onClick={handleAddMachine}
               disabled={!selectedMachineId || addingMachine}
               data-testid="confirm-add-machine-btn"

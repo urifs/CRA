@@ -8,7 +8,7 @@ export default function NFEPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Notas Fiscais Eletrônicas</h1>
-          <p className="text-slate-500 mt-1">Emissão e gerenciamento de NF-e</p>
+          <p className="text-gray-500 mt-1">Emissão e gerenciamento de NF-e</p>
         </div>
       </div>
 
@@ -18,8 +18,8 @@ export default function NFEPage() {
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="text-[#FFC232]" size={32} />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Módulo de NF-e</h2>
-          <p className="text-slate-500 mb-4 max-w-md mx-auto">
+          <h2 className="text-xl font-bold text-black mb-2">Módulo de NF-e</h2>
+          <p className="text-gray-500 mb-4 max-w-md mx-auto">
             A emissão de Notas Fiscais Eletrônicas requer integração com a SEFAZ e certificado digital A1.
           </p>
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md mx-auto">

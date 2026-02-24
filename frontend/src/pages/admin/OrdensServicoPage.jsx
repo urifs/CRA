@@ -184,7 +184,7 @@ export default function OrdensServicoPage() {
       case "a_receber":
         return { label: "A Receber", color: "bg-green-50 text-green-600", icon: TrendingUp };
       default:
-        return { label: "-", color: "bg-slate-50 text-slate-400", icon: Minus };
+        return { label: "-", color: "bg-white text-gray-400", icon: Minus };
     }
   };
 
@@ -218,7 +218,7 @@ export default function OrdensServicoPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Ordens de Serviço</h1>
-          <p className="text-slate-500 mt-1">Gerenciamento de OS</p>
+          <p className="text-gray-500 mt-1">Gerenciamento de OS</p>
         </div>
         <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-os-btn">
           <Plus size={18} className="mr-2" />
@@ -234,7 +234,7 @@ export default function OrdensServicoPage() {
               <ClipboardList className="text-[#FFC232]" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total OS</p>
+              <p className="text-xs text-gray-500">Total OS</p>
               <p className="text-lg font-bold text-[#FFC232]">{totalOS}</p>
             </div>
           </CardContent>
@@ -245,7 +245,7 @@ export default function OrdensServicoPage() {
               <TrendingDown className="text-red-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total A Pagar</p>
+              <p className="text-xs text-gray-500">Total A Pagar</p>
               <p className="text-lg font-bold text-red-600">{formatCurrency(totalAPagar)}</p>
             </div>
           </CardContent>
@@ -256,7 +256,7 @@ export default function OrdensServicoPage() {
               <TrendingUp className="text-green-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total A Receber</p>
+              <p className="text-xs text-gray-500">Total A Receber</p>
               <p className="text-lg font-bold text-green-600">{formatCurrency(totalAReceber)}</p>
             </div>
           </CardContent>
@@ -266,7 +266,7 @@ export default function OrdensServicoPage() {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input
             placeholder="Buscar por número, cliente, obra ou descrição..."
             value={search}
@@ -298,7 +298,7 @@ export default function OrdensServicoPage() {
       {/* Lista */}
       {filteredOrdens.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-400">
+          <CardContent className="py-12 text-center text-gray-400">
             <ClipboardList className="mx-auto mb-4" size={48} />
             <p className="font-medium">Nenhuma ordem encontrada</p>
             <p className="text-sm">Crie uma nova ordem de serviço</p>
@@ -329,17 +329,17 @@ export default function OrdensServicoPage() {
                           </span>
                         )}
                       </div>
-                      <h3 className="font-medium text-slate-900 truncate">{ordem.descricao || "Sem descrição"}</h3>
+                      <h3 className="font-medium text-black truncate">{ordem.descricao || "Sem descrição"}</h3>
                       {(ordem.cliente_nome || ordem.cliente_fantasia) && (
-                        <p className="text-sm text-slate-500 flex items-center gap-1">
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
                           <User size={14} />
                           {ordem.cliente_fantasia || ordem.cliente_nome}
                         </p>
                       )}
                       {ordem.obra && (
-                        <p className="text-sm text-slate-500">Obra: {ordem.obra}</p>
+                        <p className="text-sm text-gray-500">Obra: {ordem.obra}</p>
                       )}
-                      <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <p className="text-sm text-gray-500 flex items-center gap-1">
                         <Calendar size={14} />
                         Abertura: {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
                         {ordem.data_previsao_entrega && ` | Previsão: ${new Date(ordem.data_previsao_entrega).toLocaleDateString('pt-BR')}`}
@@ -347,10 +347,10 @@ export default function OrdensServicoPage() {
                     </div>
                     <div className="text-right">
                       {ordem.valor_total > 0 && (
-                        <p className="text-lg font-bold text-slate-900">{formatCurrency(ordem.valor_total)}</p>
+                        <p className="text-lg font-bold text-black">{formatCurrency(ordem.valor_total)}</p>
                       )}
                       {ordem.valor_restante > 0 && ordem.valor_antecipado > 0 && (
-                        <p className="text-xs text-slate-500">Restante: {formatCurrency(ordem.valor_restante)}</p>
+                        <p className="text-xs text-gray-500">Restante: {formatCurrency(ordem.valor_restante)}</p>
                       )}
                       <div className="flex gap-1 mt-2">
                         {ordem.status === "em_aberto" && (

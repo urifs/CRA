@@ -295,7 +295,7 @@ export default function StockPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Controle de Estoque</h1>
-          <p className="text-slate-500 mt-1">Gerencie peças e materiais de reposição</p>
+          <p className="text-gray-500 mt-1">Gerencie peças e materiais de reposição</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -307,7 +307,7 @@ export default function StockPage() {
             Categorias
           </Button>
           <Button
-            className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+            className="bg-black hover:bg-gray-900 text-white font-bold"
             onClick={() => {
               resetItemForm();
               setShowItemDialog(true);
@@ -364,7 +364,7 @@ export default function StockPage() {
           {/* Search */}
           <div className="flex gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <Input
                 placeholder="Buscar por nome, código ou categoria..."
                 value={searchTerm}
@@ -396,14 +396,14 @@ export default function StockPage() {
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                          item.is_low_stock ? "bg-orange-100" : "bg-slate-100"
+                          item.is_low_stock ? "bg-orange-100" : "bg-gray-100"
                         }`}>
-                          <Package className={item.is_low_stock ? "text-[#E31A1A]" : "text-slate-600"} size={24} />
+                          <Package className={item.is_low_stock ? "text-[#E31A1A]" : "text-gray-600"} size={24} />
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-900">{item.name}</h3>
+                          <h3 className="font-bold text-black">{item.name}</h3>
                           {item.code && (
-                            <p className="font-mono text-xs text-slate-500">{item.code}</p>
+                            <p className="font-mono text-xs text-gray-500">{item.code}</p>
                           )}
                         </div>
                       </div>
@@ -416,37 +416,37 @@ export default function StockPage() {
 
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Quantidade:</span>
-                        <span className={`font-bold ${item.is_low_stock ? "text-[#E31A1A]" : "text-slate-900"}`}>
+                        <span className="text-gray-500">Quantidade:</span>
+                        <span className={`font-bold ${item.is_low_stock ? "text-[#E31A1A]" : "text-black"}`}>
                           {item.quantity} {item.unit}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Mínimo:</span>
-                        <span className="font-medium text-slate-700">{item.min_quantity} {item.unit}</span>
+                        <span className="text-gray-500">Mínimo:</span>
+                        <span className="font-medium text-gray-700">{item.min_quantity} {item.unit}</span>
                       </div>
                       {item.category && (
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Categoria:</span>
-                          <span className="font-medium text-slate-700">{item.category}</span>
+                          <span className="text-gray-500">Categoria:</span>
+                          <span className="font-medium text-gray-700">{item.category}</span>
                         </div>
                       )}
                       {item.unit_price > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Preço Unit.:</span>
-                          <span className="font-medium text-slate-700">{formatCurrency(item.unit_price)}</span>
+                          <span className="text-gray-500">Preço Unit.:</span>
+                          <span className="font-medium text-gray-700">{formatCurrency(item.unit_price)}</span>
                         </div>
                       )}
                       {item.location && (
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Local:</span>
-                          <span className="font-medium text-slate-700">{item.location}</span>
+                          <span className="text-gray-500">Local:</span>
+                          <span className="font-medium text-gray-700">{item.location}</span>
                         </div>
                       )}
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200">
+                    <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
                       <Button
                         size="sm"
                         className="flex-1 bg-green-600 hover:bg-green-700"
@@ -490,9 +490,9 @@ export default function StockPage() {
             </div>
           ) : (
             <div className="empty-state">
-              <Package className="text-slate-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-slate-600">Nenhum item encontrado</p>
-              <p className="text-slate-400 mb-4">
+              <Package className="text-gray-300 mb-4" size={64} />
+              <p className="text-lg font-medium text-gray-600">Nenhum item encontrado</p>
+              <p className="text-gray-400 mb-4">
                 {searchTerm || showLowStockOnly ? "Tente ajustar os filtros" : "Cadastre seu primeiro item"}
               </p>
               {!searchTerm && !showLowStockOnly && (
@@ -540,16 +540,16 @@ export default function StockPage() {
                               )}
                             </div>
                           </td>
-                          <td className="font-medium text-slate-900">{mov.item_name}</td>
+                          <td className="font-medium text-black">{mov.item_name}</td>
                           <td className={`font-bold ${
                             mov.movement_type === "entrada" ? "text-green-600" : "text-red-600"
                           }`}>
                             {mov.movement_type === "entrada" ? "+" : "-"}{mov.quantity}
                           </td>
-                          <td className="font-mono text-slate-500">{mov.previous_quantity}</td>
-                          <td className="font-mono text-slate-900">{mov.new_quantity}</td>
-                          <td className="text-slate-600">{mov.reason || "-"}</td>
-                          <td className="text-sm text-slate-500">{formatDate(mov.created_at)}</td>
+                          <td className="font-mono text-gray-500">{mov.previous_quantity}</td>
+                          <td className="font-mono text-black">{mov.new_quantity}</td>
+                          <td className="text-gray-600">{mov.reason || "-"}</td>
+                          <td className="text-sm text-gray-500">{formatDate(mov.created_at)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -559,9 +559,9 @@ export default function StockPage() {
             </Card>
           ) : (
             <div className="empty-state">
-              <History className="text-slate-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-slate-600">Nenhuma movimentação registrada</p>
-              <p className="text-slate-400">As movimentações aparecerão aqui</p>
+              <History className="text-gray-300 mb-4" size={64} />
+              <p className="text-lg font-medium text-gray-600">Nenhuma movimentação registrada</p>
+              <p className="text-gray-400">As movimentações aparecerão aqui</p>
             </div>
           )}
         </TabsContent>
@@ -605,12 +605,12 @@ export default function StockPage() {
               categories.map((cat) => (
                 <div
                   key={cat.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-white rounded-lg"
                   data-testid={`category-item-${cat.id}`}
                 >
                   <div className="flex items-center gap-2">
-                    <Tags className="text-slate-400" size={16} />
-                    <span className="font-medium text-slate-900">{cat.name}</span>
+                    <Tags className="text-gray-400" size={16} />
+                    <span className="font-medium text-black">{cat.name}</span>
                   </div>
                   <Button
                     variant="ghost"
@@ -624,7 +624,7 @@ export default function StockPage() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-8 text-gray-400">
                 <Tags className="mx-auto mb-2" size={32} />
                 <p>Nenhuma categoria cadastrada</p>
               </div>
@@ -823,7 +823,7 @@ export default function StockPage() {
               </Button>
               <Button
                 type="submit"
-                className="bg-slate-900 hover:bg-slate-800"
+                className="bg-black hover:bg-gray-900"
                 disabled={formLoading}
                 data-testid="item-submit-btn"
               >

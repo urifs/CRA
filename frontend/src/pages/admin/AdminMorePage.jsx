@@ -82,7 +82,7 @@ export default function AdminMorePage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Mais Opções</h1>
-          <p className="text-slate-500 mt-1">Funcionalidades adicionais</p>
+          <p className="text-gray-500 mt-1">Funcionalidades adicionais</p>
         </div>
       </div>
 
@@ -96,10 +96,10 @@ export default function AdminMorePage() {
                   <item.icon className="text-[#FFC232]" size={24} />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-slate-900">{item.label}</p>
-                  <p className="text-sm text-slate-500">{item.description}</p>
+                  <p className="font-medium text-black">{item.label}</p>
+                  <p className="text-sm text-gray-500">{item.description}</p>
                 </div>
-                <ChevronRight className="text-slate-400" size={20} />
+                <ChevronRight className="text-gray-400" size={20} />
               </CardContent>
             </Card>
           </NavLink>
@@ -116,10 +116,10 @@ export default function AdminMorePage() {
             <ArrowLeft className="text-[#E31A1A]" size={24} />
           </div>
           <div className="flex-1">
-            <p className="font-medium text-slate-900">Trocar Sistema</p>
-            <p className="text-sm text-slate-500">Voltar para seleção de sistemas</p>
+            <p className="font-medium text-black">Trocar Sistema</p>
+            <p className="text-sm text-gray-500">Voltar para seleção de sistemas</p>
           </div>
-          <ChevronRight className="text-slate-400" size={20} />
+          <ChevronRight className="text-gray-400" size={20} />
         </CardContent>
       </Card>
 
@@ -128,8 +128,8 @@ export default function AdminMorePage() {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-slate-900">{user?.name}</p>
-              <p className="text-sm text-slate-500">{user?.email}</p>
+              <p className="font-medium text-black">{user?.name}</p>
+              <p className="text-sm text-gray-500">{user?.email}</p>
             </div>
             <button
               onClick={handleLogout}

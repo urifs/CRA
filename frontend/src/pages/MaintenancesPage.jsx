@@ -112,7 +112,7 @@ export default function MaintenancesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Manutenções</h1>
-          <p className="text-slate-500 mt-1">Histórico de todas as manutenções</p>
+          <p className="text-gray-500 mt-1">Histórico de todas as manutenções</p>
         </div>
         <Button
           className="bg-[#E31A1A] hover:bg-[#E31A1A] text-white font-bold"
@@ -127,7 +127,7 @@ export default function MaintenancesPage() {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <Input
             placeholder="Buscar por peça, máquina ou placa..."
             value={searchTerm}
@@ -203,23 +203,23 @@ export default function MaintenancesPage() {
                           )}
                         </div>
                       </td>
-                      <td className="font-medium text-slate-900">{maintenance.part_name}</td>
+                      <td className="font-medium text-black">{maintenance.part_name}</td>
                       <td>
                         <div>
-                          <span className="font-mono text-slate-600">{maintenance.machine_plate}</span>
+                          <span className="font-mono text-gray-600">{maintenance.machine_plate}</span>
                           <br />
-                          <span className="text-xs text-slate-400">{maintenance.machine_name}</span>
+                          <span className="text-xs text-gray-400">{maintenance.machine_name}</span>
                         </div>
                       </td>
                       <td className="font-mono">{formatDate(maintenance.replacement_date)}</td>
                       <td className="font-bold">{formatCurrency(maintenance.part_value)}</td>
                       <td>
                         {maintenance.photos?.length > 0 ? (
-                          <span className="text-sm text-slate-600">
+                          <span className="text-sm text-gray-600">
                             {maintenance.photos.length} foto(s)
                           </span>
                         ) : (
-                          <span className="text-sm text-slate-400">-</span>
+                          <span className="text-sm text-gray-400">-</span>
                         )}
                       </td>
                       <td>
@@ -255,9 +255,9 @@ export default function MaintenancesPage() {
         </Card>
       ) : (
         <div className="empty-state">
-          <Wrench className="text-slate-300 mb-4" size={64} />
-          <p className="text-lg font-medium text-slate-600">Nenhuma manutenção encontrada</p>
-          <p className="text-slate-400 mb-4">
+          <Wrench className="text-gray-300 mb-4" size={64} />
+          <p className="text-lg font-medium text-gray-600">Nenhuma manutenção encontrada</p>
+          <p className="text-gray-400 mb-4">
             {searchTerm || filterType !== "all" || filterMachine !== "all"
               ? "Tente ajustar os filtros"
               : "Registre sua primeira manutenção"

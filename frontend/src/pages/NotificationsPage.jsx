@@ -70,7 +70,7 @@ export default function NotificationsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Notificações</h1>
-          <p className="text-slate-500 mt-1">Alertas de troca de óleo e manutenções</p>
+          <p className="text-gray-500 mt-1">Alertas de troca de óleo e manutenções</p>
         </div>
       </div>
 
@@ -80,15 +80,15 @@ export default function NotificationsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Total de Alertas
                 </p>
-                <p className="text-4xl font-black text-slate-900 mt-2 font-heading">
+                <p className="text-4xl font-black text-black mt-2 font-heading">
                   {notifications.length}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center">
-                <Bell className="text-slate-600" size={28} />
+              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center">
+                <Bell className="text-gray-600" size={28} />
               </div>
             </div>
           </CardContent>
@@ -98,7 +98,7 @@ export default function NotificationsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Urgentes
                 </p>
                 <p className="text-4xl font-black text-red-600 mt-2 font-heading">
@@ -116,7 +116,7 @@ export default function NotificationsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Avisos
                 </p>
                 <p className="text-4xl font-black text-[#E31A1A] mt-2 font-heading">
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
                       }`}>
                         {notification.notification_type.includes("urgent") || notification.notification_type.includes("empty") ? "URGENTE" : "AVISO"}
                       </span>
-                      <span className="text-sm text-slate-500">
+                      <span className="text-sm text-gray-500">
                         {notification.notification_type.includes("stock") ? "Estoque" : 
                          notification.notification_type.includes("time") ? "Tempo" : "Horas de Uso"}
                       </span>
@@ -165,19 +165,19 @@ export default function NotificationsPage() {
                     
                     <div className="flex items-center gap-2 mb-2">
                       {notification.notification_type.includes("stock") ? (
-                        <Package className="text-slate-400" size={16} />
+                        <Package className="text-gray-400" size={16} />
                       ) : (
-                        <Truck className="text-slate-400" size={16} />
+                        <Truck className="text-gray-400" size={16} />
                       )}
-                      <span className="font-bold text-slate-900">{notification.machine_name}</span>
+                      <span className="font-bold text-black">{notification.machine_name}</span>
                       {notification.machine_plate && (
-                        <span className="font-mono text-sm text-slate-500">({notification.machine_plate})</span>
+                        <span className="font-mono text-sm text-gray-500">({notification.machine_plate})</span>
                       )}
                     </div>
                     
-                    <p className="text-slate-700">{notification.message}</p>
+                    <p className="text-gray-700">{notification.message}</p>
                     
-                    <div className="flex items-center gap-4 mt-3 text-sm text-slate-500">
+                    <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
                       {notification.hours_remaining !== null && (
                         <span className="flex items-center gap-1">
                           <Clock size={14} />
@@ -226,8 +226,8 @@ export default function NotificationsPage() {
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="text-green-600" size={40} />
               </div>
-              <p className="text-lg font-medium text-slate-900">Tudo em dia!</p>
-              <p className="text-slate-500 mt-1">
+              <p className="text-lg font-medium text-black">Tudo em dia!</p>
+              <p className="text-gray-500 mt-1">
                 Não há alertas no momento
               </p>
               <Button
@@ -244,18 +244,18 @@ export default function NotificationsPage() {
       )}
 
       {/* Info Card */}
-      <Card className="bg-slate-50 border-slate-200">
+      <Card className="bg-white border-gray-200">
         <CardContent className="py-6">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Bell className="text-slate-600" size={20} />
+            <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Bell className="text-gray-600" size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900">Sobre as Notificações</h3>
-              <p className="text-sm text-slate-600 mt-1">
+              <h3 className="font-bold text-black">Sobre as Notificações</h3>
+              <p className="text-sm text-gray-600 mt-1">
                 O sistema alerta automaticamente quando:
               </p>
-              <ul className="text-sm text-slate-600 mt-2 space-y-1 list-disc list-inside">
+              <ul className="text-sm text-gray-600 mt-2 space-y-1 list-disc list-inside">
                 <li><strong>Troca de Óleo:</strong> Restam 50 horas ou menos para atingir 500h de uso</li>
                 <li><strong>Troca de Óleo:</strong> Faltam 2 meses ou menos para completar 1 ano</li>
                 <li><strong>Estoque:</strong> Quantidade de um item está abaixo de 5 unidades</li>

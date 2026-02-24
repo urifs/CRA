@@ -131,10 +131,10 @@ export default function CategoriesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Categorias</h1>
-          <p className="text-slate-500 mt-1">Gerencie os tipos de máquinas</p>
+          <p className="text-gray-500 mt-1">Gerencie os tipos de máquinas</p>
         </div>
         <Button
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+          className="bg-black hover:bg-gray-900 text-white font-bold"
           onClick={() => {
             resetForm();
             setShowDialog(true);
@@ -158,19 +158,19 @@ export default function CategoriesPage() {
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                      <Tags className="text-slate-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
+                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
+                      <Tags className="text-gray-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-900 truncate">{category.name}</h3>
-                      <p className="text-sm text-slate-500 truncate">{category.description || "Sem descrição"}</p>
+                      <h3 className="font-bold text-black truncate">{category.name}</h3>
+                      <p className="text-sm text-gray-500 truncate">{category.description || "Sem descrição"}</p>
                     </div>
                   </div>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                      className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                       onClick={() => openEditDialog(category)}
                       data-testid={`edit-category-${category.id}`}
                     >
@@ -179,7 +179,7 @@ export default function CategoriesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
                       onClick={() => setDeleteId(category.id)}
                       data-testid={`delete-category-${category.id}`}
                     >
@@ -195,15 +195,15 @@ export default function CategoriesPage() {
         <Card>
           <CardContent className="py-12">
             <div className="empty-state">
-              <Tags className="text-slate-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-slate-600">Nenhuma categoria cadastrada</p>
-              <p className="text-slate-400 mb-6">
+              <Tags className="text-gray-300 mb-4" size={64} />
+              <p className="text-lg font-medium text-gray-600">Nenhuma categoria cadastrada</p>
+              <p className="text-gray-400 mb-6">
                 Crie categorias para organizar suas máquinas
               </p>
               
               {/* Quick add default categories */}
               <div className="space-y-4">
-                <p className="text-sm text-slate-500 font-medium">Sugestões rápidas:</p>
+                <p className="text-sm text-gray-500 font-medium">Sugestões rápidas:</p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {defaultCategories.map((cat) => (
                     <Button
@@ -226,15 +226,15 @@ export default function CategoriesPage() {
       )}
 
       {/* Info Card */}
-      <Card className="bg-slate-50 border-slate-200">
+      <Card className="bg-white border-gray-200">
         <CardContent className="py-6">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <Construction className="text-[#E31A1A]" size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900">Sobre Categorias</h3>
-              <p className="text-sm text-slate-600 mt-1">
+              <h3 className="font-bold text-black">Sobre Categorias</h3>
+              <p className="text-sm text-gray-600 mt-1">
                 As categorias ajudam a organizar sua frota por tipo de máquina. 
                 Você pode criar categorias personalizadas como "Escavadeira", "Retroescavadeira", 
                 "Caminhão", ou qualquer outro tipo de equipamento.
@@ -293,7 +293,7 @@ export default function CategoriesPage() {
               </Button>
               <Button
                 type="submit"
-                className="bg-slate-900 hover:bg-slate-800"
+                className="bg-black hover:bg-gray-900"
                 disabled={formLoading}
                 data-testid="category-submit-btn"
               >

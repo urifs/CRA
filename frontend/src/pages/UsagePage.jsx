@@ -127,7 +127,7 @@ export default function UsagePage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Tempo de Uso</h1>
-          <p className="text-slate-500 mt-1">Controle de horas de uso e troca de óleo</p>
+          <p className="text-gray-500 mt-1">Controle de horas de uso e troca de óleo</p>
         </div>
         <Button
           className="bg-[#E31A1A] hover:bg-[#E31A1A] text-white font-bold"
@@ -186,13 +186,13 @@ export default function UsagePage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                          status.needs_alert ? "bg-orange-100" : "bg-slate-100"
+                          status.needs_alert ? "bg-orange-100" : "bg-gray-100"
                         }`}>
-                          <Truck className={status.needs_alert ? "text-[#E31A1A]" : "text-slate-600"} size={24} />
+                          <Truck className={status.needs_alert ? "text-[#E31A1A]" : "text-gray-600"} size={24} />
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-900">{status.machine_name}</h3>
-                          <p className="font-mono text-sm text-slate-500">{status.machine_plate}</p>
+                          <h3 className="font-bold text-black">{status.machine_name}</h3>
+                          <p className="font-mono text-sm text-gray-500">{status.machine_plate}</p>
                         </div>
                       </div>
                       {status.needs_alert && (
@@ -206,7 +206,7 @@ export default function UsagePage() {
                     {/* Hours progress */}
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Horas de Uso</span>
+                        <span className="text-gray-500">Horas de Uso</span>
                         <span className="font-bold">
                           {status.hours_since_change.toFixed(0)}h / 500h
                         </span>
@@ -216,7 +216,7 @@ export default function UsagePage() {
                         className="h-2"
                       />
                       <div className="flex justify-between text-xs">
-                        <span className={`font-medium ${status.hours_remaining <= 50 ? "text-[#E31A1A]" : "text-slate-500"}`}>
+                        <span className={`font-medium ${status.hours_remaining <= 50 ? "text-[#E31A1A]" : "text-gray-500"}`}>
                           {status.hours_remaining > 0 
                             ? `Restam ${status.hours_remaining.toFixed(0)}h`
                             : "Limite atingido!"
@@ -228,7 +228,7 @@ export default function UsagePage() {
                     {/* Time progress */}
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Tempo desde última troca</span>
+                        <span className="text-gray-500">Tempo desde última troca</span>
                         <span className="font-bold">
                           {status.days_since_change} dias / 365 dias
                         </span>
@@ -238,7 +238,7 @@ export default function UsagePage() {
                         className="h-2"
                       />
                       <div className="flex justify-between text-xs">
-                        <span className={`font-medium ${status.days_remaining <= 60 ? "text-[#E31A1A]" : "text-slate-500"}`}>
+                        <span className={`font-medium ${status.days_remaining <= 60 ? "text-[#E31A1A]" : "text-gray-500"}`}>
                           {status.days_remaining > 0 
                             ? `Restam ${status.days_remaining} dias`
                             : "1 ano atingido!"
@@ -248,9 +248,9 @@ export default function UsagePage() {
                     </div>
 
                     {/* Info */}
-                    <div className="pt-4 border-t border-slate-200 space-y-2 text-sm">
+                    <div className="pt-4 border-t border-gray-200 space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-slate-500 flex items-center gap-1">
+                        <span className="text-gray-500 flex items-center gap-1">
                           <Calendar size={14} />
                           Última troca:
                         </span>
@@ -272,9 +272,9 @@ export default function UsagePage() {
             </div>
           ) : (
             <div className="empty-state">
-              <Truck className="text-slate-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-slate-600">Nenhuma máquina cadastrada</p>
-              <p className="text-slate-400">Cadastre máquinas para controlar o tempo de uso</p>
+              <Truck className="text-gray-300 mb-4" size={64} />
+              <p className="text-lg font-medium text-gray-600">Nenhuma máquina cadastrada</p>
+              <p className="text-gray-400">Cadastre máquinas para controlar o tempo de uso</p>
             </div>
           )}
         </TabsContent>
@@ -298,13 +298,13 @@ export default function UsagePage() {
                     <tbody>
                       {usageLogs.map((log) => (
                         <tr key={log.id} data-testid={`usage-log-${log.id}`}>
-                          <td className="font-medium text-slate-900">{log.machine_name}</td>
-                          <td className="font-mono text-slate-500">{log.machine_plate}</td>
+                          <td className="font-medium text-black">{log.machine_name}</td>
+                          <td className="font-mono text-gray-500">{log.machine_plate}</td>
                           <td>
                             <span className="font-bold text-[#E31A1A]">+{log.hours}h</span>
                           </td>
-                          <td className="text-slate-600">{log.notes || "-"}</td>
-                          <td className="text-sm text-slate-500">{formatDateTime(log.created_at)}</td>
+                          <td className="text-gray-600">{log.notes || "-"}</td>
+                          <td className="text-sm text-gray-500">{formatDateTime(log.created_at)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -314,9 +314,9 @@ export default function UsagePage() {
             </Card>
           ) : (
             <div className="empty-state">
-              <Clock className="text-slate-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-slate-600">Nenhum registro de uso</p>
-              <p className="text-slate-400 mb-4">Registre as horas de uso das máquinas</p>
+              <Clock className="text-gray-300 mb-4" size={64} />
+              <p className="text-lg font-medium text-gray-600">Nenhum registro de uso</p>
+              <p className="text-gray-400 mb-4">Registre as horas de uso das máquinas</p>
               <Button
                 className="bg-[#E31A1A] hover:bg-[#E31A1A]"
                 onClick={() => setShowLogDialog(true)}
@@ -375,7 +375,7 @@ export default function UsagePage() {
                 className="form-input font-mono text-lg"
                 data-testid="usage-hours-input"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-gray-500">
                 Informe quantas horas a máquina foi utilizada
               </p>
             </div>

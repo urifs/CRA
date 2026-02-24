@@ -206,7 +206,7 @@ export default function AlugueisPage() {
       case "ativo": return { label: "Ativo", color: "bg-green-100 text-green-700", icon: Clock };
       case "finalizado": return { label: "Finalizado", color: "bg-blue-100 text-[#FFC232]", icon: CheckCircle2 };
       case "cancelado": return { label: "Cancelado", color: "bg-red-100 text-red-700", icon: XCircle };
-      default: return { label: status, color: "bg-slate-100 text-slate-700", icon: Clock };
+      default: return { label: status, color: "bg-gray-100 text-gray-700", icon: Clock };
     }
   };
 
@@ -239,7 +239,7 @@ export default function AlugueisPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Aluguéis de Máquinas</h1>
-          <p className="text-slate-500 mt-1">Controle de locação de equipamentos</p>
+          <p className="text-gray-500 mt-1">Controle de locação de equipamentos</p>
         </div>
         <Button onClick={() => openModal()} className="bg-[#FFC232] hover:bg-[#FFC232]" data-testid="new-aluguel-btn">
           <Plus size={18} className="mr-2" />Novo Aluguel
@@ -254,7 +254,7 @@ export default function AlugueisPage() {
               <Truck className="text-[#FFC232]" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total de Aluguéis</p>
+              <p className="text-xs text-gray-500">Total de Aluguéis</p>
               <p className="text-lg font-bold text-[#FFC232]">{alugueis.length}</p>
             </div>
           </CardContent>
@@ -265,7 +265,7 @@ export default function AlugueisPage() {
               <Clock className="text-green-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Ativos</p>
+              <p className="text-xs text-gray-500">Ativos</p>
               <p className="text-lg font-bold text-green-600">{totalAtivos}</p>
             </div>
           </CardContent>
@@ -276,7 +276,7 @@ export default function AlugueisPage() {
               <DollarSign className="text-emerald-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500">Valor Ativos</p>
+              <p className="text-xs text-gray-500">Valor Ativos</p>
               <p className="text-lg font-bold text-emerald-600">{formatCurrency(valorTotalAtivos)}</p>
             </div>
           </CardContent>
@@ -286,7 +286,7 @@ export default function AlugueisPage() {
       {/* Filtros */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input 
             placeholder="Buscar por número, cliente ou máquina..." 
             value={search} 
@@ -317,7 +317,7 @@ export default function AlugueisPage() {
       {/* Lista */}
       {filteredAlugueis.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-slate-400">
+          <CardContent className="py-12 text-center text-gray-400">
             <Truck className="mx-auto mb-4" size={48} />
             <p>Nenhum aluguel encontrado</p>
           </CardContent>
@@ -339,19 +339,19 @@ export default function AlugueisPage() {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
                           <StatusIcon className="inline mr-1" size={12} />{statusInfo.label}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
+                        <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
                           {getPeriodoLabel(aluguel.tipo_periodo, aluguel.periodo_especificado)}
                         </span>
                         {isVencido && (
                           <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 font-medium">VENCIDO</span>
                         )}
                       </div>
-                      <h3 className="font-medium text-slate-900 flex items-center gap-2">
-                        <Truck size={16} className="text-slate-400" />
+                      <h3 className="font-medium text-black flex items-center gap-2">
+                        <Truck size={16} className="text-gray-400" />
                         {aluguel.maquina_nome}
-                        {aluguel.maquina_placa && <span className="text-xs text-slate-500">({aluguel.maquina_placa})</span>}
+                        {aluguel.maquina_placa && <span className="text-xs text-gray-500">({aluguel.maquina_placa})</span>}
                       </h3>
-                      <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <p className="text-sm text-gray-500 flex items-center gap-1">
                         <User size={14} />{aluguel.cliente_nome}
                         {aluguel.cliente_telefone && (
                           <span className="flex items-center gap-1 ml-2">
@@ -360,20 +360,20 @@ export default function AlugueisPage() {
                         )}
                       </p>
                       {aluguel.local_entrega && (
-                        <p className="text-sm text-slate-500 flex items-center gap-1">
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
                           <MapPin size={14} />{aluguel.local_entrega}
                         </p>
                       )}
-                      <p className="text-sm text-slate-500 flex items-center gap-1">
+                      <p className="text-sm text-gray-500 flex items-center gap-1">
                         <Calendar size={14} />
                         Entrega: {new Date(aluguel.data_entrega).toLocaleDateString('pt-BR')} | 
                         Vencimento: {new Date(aluguel.data_vencimento).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-slate-900">{formatCurrency(aluguel.valor)}</p>
+                      <p className="text-lg font-bold text-black">{formatCurrency(aluguel.valor)}</p>
                       {aluguel.valor_caucao > 0 && (
-                        <p className="text-xs text-slate-500">Caução: {formatCurrency(aluguel.valor_caucao)}</p>
+                        <p className="text-xs text-gray-500">Caução: {formatCurrency(aluguel.valor_caucao)}</p>
                       )}
                       <div className="flex gap-1 mt-2 justify-end">
                         {aluguel.status === "ativo" && (
