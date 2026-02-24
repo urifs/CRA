@@ -362,6 +362,30 @@ export default function PainelAdminPage() {
     }
   };
 
+  const openEditRoleModal = (userToEdit) => {
+    setEditingUser(userToEdit);
+    setNewRole(userToEdit.role || "gerenciamento");
+    setShowEditRoleModal(true);
+  };
+
+  const handleUpdateRole = async () => {
+    if (!editingUser) return;
+    setUpdatingRole(true);
+    try {
+      await axios.patch(`${API}/admin-panel/users/${editingUser.id}/role`, 
+        { role: newRole },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`Permissão de ${editingUser.name} atualizada para ${newRole}!`);
+      setShowEditRoleModal(false);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao atualizar permissão");
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+
   const handleViewDoc = (doc) => {
     setSelectedDoc(doc);
     setDocJson(JSON.stringify(doc, null, 2));
