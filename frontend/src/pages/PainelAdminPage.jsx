@@ -141,6 +141,21 @@ export default function PainelAdminPage() {
   const [showAddDocModal, setShowAddDocModal] = useState(false);
   const [newDocJson, setNewDocJson] = useState("{\n  \n}");
 
+  // Task states
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    target_system: "gerenciamento",
+    priority: "media",
+    title: "",
+    message: ""
+  });
+  const [taskAttachments, setTaskAttachments] = useState([]);
+  const [uploadingTask, setUploadingTask] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+
   useEffect(() => {
     fetchUsers();
     fetchAuditLogs();
