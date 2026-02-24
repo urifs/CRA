@@ -200,9 +200,17 @@ export default function UsagePage() {
 
         {/* Status Tab */}
         <TabsContent value="status" className="space-y-4">
-          {oilStatus.length > 0 ? (
+          {oilStatus.filter(s => 
+            s.machine_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (s.machine_plate || "").toLowerCase().includes(searchTerm.toLowerCase())
+          ).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {oilStatus.map((status) => (
+              {oilStatus
+                .filter(s => 
+                  s.machine_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (s.machine_plate || "").toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map((status) => (
                 <Card 
                   key={status.machine_id}
                   className={`${status.needs_alert ? "border-orange-300 bg-orange-50/50" : ""}`}
