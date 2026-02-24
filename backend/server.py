@@ -3608,18 +3608,30 @@ async def get_all_users(current_user: dict = Depends(get_current_user)):
             "id": user.get("id"),
             "name": user.get("name"),
             "email": user.get("email"),
+            "role": user.get("role", "gerenciamento"),
             "created_at": user.get("created_at"),
             "last_login": user.get("last_login")
         })
     return users
 
+class UserCreateAdmin(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    role: str = "gerenciamento"  # gerenciamento, administrativo, ambos, admin
+
 @api_router.post("/admin-panel/users")
-async def create_user_admin(data: UserCreate, current_user: dict = Depends(get_current_user)):
+async def create_user_admin(data: UserCreateAdmin, current_user: dict = Depends(get_current_user)):
     """Cria um novo usuário (apenas via painel admin)"""
     # Check if email already exists
     existing = await db.users.find_one({"email": data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
+    
+    # Validate role
+    valid_roles = ["gerenciamento", "administrativo", "ambos", "admin"]
+    if data.role not in valid_roles:
+        raise HTTPException(status_code=400, detail="Tipo de acesso inválido")
     
     # Hash password
     hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt())
@@ -3630,11 +3642,20 @@ async def create_user_admin(data: UserCreate, current_user: dict = Depends(get_c
         "name": data.name,
         "email": data.email,
         "password": hashed_password.decode('utf-8'),
+        "role": data.role,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "last_login": None
     }
     
     await db.users.insert_one(user_doc)
+    
+    # Traduzir role para português
+    role_labels = {
+        "gerenciamento": "Gerenciamento Geral",
+        "administrativo": "Administrativo",
+        "ambos": "Gerenciamento + Administrativo",
+        "admin": "Administrador"
+    }
     
     # Registrar na auditoria
     await db.audit_logs.insert_one({
@@ -3642,7 +3663,7 @@ async def create_user_admin(data: UserCreate, current_user: dict = Depends(get_c
         "user_id": current_user["id"],
         "user_name": current_user["name"],
         "action": f"Criou usuário: {data.name}",
-        "details": f"Email: {data.email}",
+        "details": f"Email: {data.email}\nTipo de Acesso: {role_labels.get(data.role, data.role)}",
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
