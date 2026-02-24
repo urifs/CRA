@@ -158,13 +158,15 @@ Como posso ajudar?`
 
   // Posição do chatbot - acima da barra de navegação no mobile
   const bottomPosition = isMobile ? 'calc(90px + env(safe-area-inset-bottom))' : '24px';
+  // Quando há FAB, posiciona o botão mais à esquerda no mobile
+  const rightPosition = isMobile && hasFab && !isOpen ? 'calc(16px + 56px + 16px)' : (isMobile ? '16px' : '24px');
 
   if (!isOpen) {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed right-4 md:right-6 w-14 h-14 rounded-full shadow-lg z-40 flex items-center justify-center hover:scale-110 transition-transform"
-        style={{ backgroundColor: accentColor, bottom: bottomPosition }}
+        className="fixed w-14 h-14 rounded-full shadow-lg z-40 flex items-center justify-center hover:scale-110 transition-transform"
+        style={{ backgroundColor: accentColor, bottom: bottomPosition, right: rightPosition }}
         data-testid="chatbot-toggle-btn"
       >
         <MessageCircle size={24} className="text-white" />
