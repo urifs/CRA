@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { API } from "@/App";
+import { API, useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, Search, CreditCard, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Filter
+  Plus, Search, CreditCard, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Filter, Paperclip
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AttachmentsSection from "@/components/AttachmentsSection";
 
 const formasPagamento = [
   { value: "dinheiro", label: "Dinheiro" },
