@@ -281,19 +281,34 @@ export default function PainelAdminPage() {
   const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString("pt-BR") : "-";
   const formatDateShort = (dateStr) => dateStr ? new Date(dateStr).toLocaleDateString("pt-BR") : "-";
 
-  const getActionIcon = (action) => {
-    if (action?.includes("manutenção")) return <Wrench size={14} />;
-    if (action?.includes("estoque")) return <Package size={14} />;
-    if (action?.includes("conta")) return <DollarSign size={14} />;
-    if (action?.includes("usuário") || action?.includes("Criou") || action?.includes("Excluiu")) return <User size={14} />;
-    return <FileText size={14} />;
+  const getActionIcon = (action, entityType) => {
+    const text = (action || "").toLowerCase() + (entityType || "").toLowerCase();
+    if (text.includes("manutenção") || text.includes("manutencao") || text.includes("máquina") || text.includes("maquina")) return <Wrench size={14} />;
+    if (text.includes("estoque") || text.includes("produto")) return <Package size={14} />;
+    if (text.includes("conta") || text.includes("financ") || text.includes("pagamento")) return <DollarSign size={14} />;
+    if (text.includes("usuário") || text.includes("usuario") || text.includes("user")) return <User size={14} />;
+    if (text.includes("obra") || text.includes("cadastro")) return <Building2 size={14} />;
+    if (text.includes("ordem") || text.includes("serviço")) return <FileText size={14} />;
+    if (text.includes("aluguel")) return <Calendar size={14} />;
+    return <Activity size={14} />;
   };
 
   const getActionColor = (action) => {
-    if (action?.includes("criou") || action?.includes("Criou")) return "bg-green-500/20 text-green-400";
-    if (action?.includes("editou") || action?.includes("Atualizou")) return "bg-blue-500/20 text-blue-400";
-    if (action?.includes("excluiu") || action?.includes("Excluiu")) return "bg-red-500/20 text-red-400";
+    const text = (action || "").toLowerCase();
+    if (text.includes("criou") || text.includes("create") || text.includes("criar")) return "bg-green-500/20 text-green-400";
+    if (text.includes("editou") || text.includes("atualizou") || text.includes("update") || text.includes("editar")) return "bg-blue-500/20 text-blue-400";
+    if (text.includes("excluiu") || text.includes("delete") || text.includes("excluir")) return "bg-red-500/20 text-red-400";
     return "bg-gray-500/20 text-gray-400";
+  };
+
+  const getModuleBadge = (module) => {
+    const moduleColors = {
+      "Gerenciamento Geral": "bg-[#E31A1A] text-white",
+      "Administrativo": "bg-[#D4A000] text-white",
+      "Painel Admin": "bg-purple-600 text-white",
+      "Sistema": "bg-gray-600 text-white"
+    };
+    return <Badge className={`${moduleColors[module] || moduleColors["Sistema"]} text-xs`}>{module || "Sistema"}</Badge>;
   };
 
   const getRoleBadge = (role) => {
@@ -303,7 +318,12 @@ export default function PainelAdminPage() {
   };
 
   const filteredUsers = users.filter(u => u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase()));
-  const filteredLogs = auditLogs.filter(log => log.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || log.action?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredLogs = auditLogs.filter(log => 
+    log.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    log.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.module?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.entity_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#E31A1A]" /></div>;
