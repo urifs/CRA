@@ -1048,6 +1048,96 @@ export default function PainelAdminPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Task Detail Modal */}
+      <Dialog open={showTaskDetailModal} onOpenChange={setShowTaskDetailModal}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          {selectedTask && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-full ${PRIORITIES[selectedTask.priority]?.color} shrink-0`}>
+                    {(() => {
+                      const PriorityIcon = PRIORITIES[selectedTask.priority]?.icon || Info;
+                      return <PriorityIcon size={20} className="text-white" />;
+                    })()}
+                  </div>
+                  <div className="flex-1">
+                    <DialogTitle className="text-lg">{selectedTask.title}</DialogTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className={`${TARGET_SYSTEMS[selectedTask.target_system]?.color} text-white`}>
+                        {TARGET_SYSTEMS[selectedTask.target_system]?.label}
+                      </Badge>
+                      <Badge className={PRIORITIES[selectedTask.priority]?.color}>
+                        Prioridade {PRIORITIES[selectedTask.priority]?.label}
+                      </Badge>
+                      {selectedTask.read && (
+                        <Badge variant="outline" className="text-green-400 border-green-600">Lida</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto space-y-4 py-4">
+                {/* Message */}
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <p className="whitespace-pre-wrap text-gray-300">{selectedTask.message}</p>
+                </div>
+
+                {/* Attachments */}
+                {selectedTask.attachments?.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2 text-white">
+                      <Paperclip size={18} />
+                      Anexos ({selectedTask.attachments.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedTask.attachments.map((att) => (
+                        <div
+                          key={att.id}
+                          className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-gray-700"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Paperclip size={18} className="text-gray-400" />
+                            <div>
+                              <p className="font-medium text-sm text-white">{att.original_name}</p>
+                              <p className="text-xs text-gray-500">{formatFileSize(att.size)}</p>
+                            </div>
+                          </div>
+                          <a
+                            href={`${API}/tasks/${selectedTask.id}/attachments/${att.filename}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-purple-400 hover:text-purple-300 text-sm"
+                          >
+                            <Download size={16} />
+                            Baixar
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Meta info */}
+                <div className="text-xs text-gray-500 border-t border-gray-700 pt-3 space-y-1">
+                  <p>Criada em: {new Date(selectedTask.created_at).toLocaleString("pt-BR")}</p>
+                  {selectedTask.read && selectedTask.read_at && (
+                    <p className="text-green-400">Lida por {selectedTask.read_by} em {new Date(selectedTask.read_at).toLocaleString("pt-BR")}</p>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowTaskDetailModal(false)} className="bg-transparent border-gray-700 text-gray-400">
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Chatbot Widget */}
       <ChatbotWidget module="admin" accentColor="#9333ea" />
     </div>
