@@ -13,7 +13,8 @@ import {
   Users,
   ArrowRight,
   Shield,
-  Lock
+  Lock,
+  HardHat
 } from "lucide-react";
 
 export default function SystemSelectPage() {
@@ -32,7 +33,8 @@ export default function SystemSelectPage() {
       id: "gerenciamento",
       title: "Gerenciamento Geral",
       description: "Sistema de manutenção de máquinas, obras e estoque de peças",
-      icon: Landmark,
+      icon: HardHat,
+      useLogo: true,
       color: "bg-[#E31A1A]",
       hoverColor: "hover:border-[#E31A1A]",
       textColor: "text-[#E31A1A]",
@@ -49,6 +51,7 @@ export default function SystemSelectPage() {
       title: "Administrativo",
       description: "Sistema financeiro, notas fiscais, fornecedores e ordens de serviço",
       icon: Building2,
+      useLogo: false,
       color: "bg-[#FFC232]",
       hoverColor: "hover:border-[#FFC232]",
       textColor: "text-[#FFC232]",
