@@ -149,10 +149,39 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Input
+          type="text"
+          placeholder="Pesquisar categorias..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-10 h-10 bg-white border-gray-200"
+          data-testid="search-categories"
+        />
+        {searchTerm && (
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            onClick={() => setSearchTerm("")}
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
       {/* Categories List */}
-      {categories.length > 0 ? (
+      {categories.filter(c => 
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+      ).length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map((category) => (
+          {categories
+            .filter(c => 
+              c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (c.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((category) => (
             <Card 
               key={category.id} 
               className="stat-card group"
