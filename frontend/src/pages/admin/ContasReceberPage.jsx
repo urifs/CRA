@@ -361,21 +361,27 @@ export default function ContasReceberPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Plano de Contas</label>
-                <Select value={formData.plano_conta_id} onValueChange={(value) => {
-                  const pc = planoContas.find(p => p.id === value);
-                  setFormData({...formData, plano_conta_id: value, plano_conta_nome: pc?.nome || ""});
+                <Select value={formData.plano_conta_id || "none"} onValueChange={(value) => {
+                  if (value === "none") {
+                    setFormData({...formData, plano_conta_id: "", plano_conta_nome: ""});
+                  } else {
+                    const pc = planoContas.find(p => p.id === value);
+                    setFormData({...formData, plano_conta_id: value, plano_conta_nome: pc?.nome || ""});
+                  }
                 }}>
                   <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {planoContas.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo ? `${p.codigo} - ` : ""}{p.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="form-label">Centro de Custo</label>
-                <Select value={formData.centro_custo} onValueChange={(value) => setFormData({...formData, centro_custo: value})}>
+                <Select value={formData.centro_custo || "none"} onValueChange={(value) => setFormData({...formData, centro_custo: value === "none" ? "" : value})}>
                   <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {centrosCusto.map(c => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
