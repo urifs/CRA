@@ -18,7 +18,8 @@ import {
   ClipboardList,
   MoreHorizontal,
   ArrowLeft,
-  HardHat
+  HardHat,
+  FileDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatbotWidget from "@/components/ChatbotWidget";
