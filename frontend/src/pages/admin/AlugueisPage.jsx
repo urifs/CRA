@@ -116,13 +116,33 @@ export default function AlugueisPage() {
         valor_caucao: parseFloat(formData.valor_caucao) || 0
       };
 
+      let aluguelId = editingAluguel?.id;
+      
       if (editingAluguel) {
         await axios.put(`${API}/admin/alugueis/${editingAluguel.id}`, dataToSend);
         toast.success("Aluguel atualizado!");
       } else {
-        await axios.post(`${API}/admin/alugueis`, dataToSend);
+        const response = await axios.post(`${API}/admin/alugueis`, dataToSend);
+        aluguelId = response.data.id;
         toast.success("Aluguel registrado!");
       }
+      
+      // Upload contract file if exists
+      if (contractFile && aluguelId) {
+        setUploadingFile(true);
+        const fileFormData = new FormData();
+        fileFormData.append("file", contractFile);
+        try {
+          await axios.post(`${API}/admin/alugueis/${aluguelId}/contrato`, fileFormData, {
+            headers: { "Content-Type": "multipart/form-data" }
+          });
+          toast.success("Contrato anexado!");
+        } catch (err) {
+          toast.error("Erro ao anexar contrato");
+        }
+        setUploadingFile(false);
+      }
+      
       fetchAlugueis();
       closeModal();
     } catch (error) {
