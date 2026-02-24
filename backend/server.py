@@ -381,7 +381,7 @@ async def create_audit_log(
         if any(e in entity_lower for e in admin_entities):
             module = "Administrativo"
         elif any(e in entity_lower for e in gerenciamento_entities) or "estoque" in entity_lower:
-            module = "Gerenciamento Geral"
+            module = "Gerenciamento"
         elif any(e in entity_lower for e in admin_panel_entities) or "documento" in entity_lower:
             module = "Painel Admin"
         else:
@@ -3798,7 +3798,7 @@ async def create_user_admin(data: UserCreateAdmin, current_user: dict = Depends(
     
     # Traduzir role para português
     role_labels = {
-        "gerenciamento": "Gerenciamento Geral",
+        "gerenciamento": "Gerenciamento",
         "administrativo": "Administrativo",
         "ambos": "Gerenciamento + Administrativo",
         "admin": "Administrador"
