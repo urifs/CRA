@@ -56,7 +56,14 @@ import {
   RefreshCw,
   Edit,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Send,
+  Inbox,
+  AlertTriangle,
+  AlertCircle,
+  Paperclip,
+  X as XIcon,
+  Download
 } from "lucide-react";
 
 // Tipos de usuário
@@ -65,6 +72,19 @@ const USER_ROLES = {
   administrativo: { label: "Administrativo", icon: Building2, color: "bg-[#D4A000]" },
   ambos: { label: "Gerenciamento + Administrativo", icon: Users, color: "bg-purple-500" },
   admin: { label: "Administrador", icon: Crown, color: "bg-green-500" }
+};
+
+// Prioridades
+const PRIORITIES = {
+  baixa: { label: "Baixa", color: "bg-blue-500", icon: Info },
+  media: { label: "Média", color: "bg-yellow-500", icon: AlertCircle },
+  alta: { label: "Alta", color: "bg-red-500", icon: AlertTriangle }
+};
+
+// Sistemas alvo
+const TARGET_SYSTEMS = {
+  gerenciamento: { label: "Gerenciamento Geral", color: "bg-[#E31A1A]" },
+  administrativo: { label: "Administrativo", color: "bg-[#D4A000]" }
 };
 
 // Coleções disponíveis
