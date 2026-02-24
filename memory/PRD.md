@@ -47,6 +47,15 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - [x] Busca e filtros
 - [x] Removido link "Cadastre-se" da tela de login
 - [x] Registro de último login dos usuários
+- [x] **Gerenciador de Banco de Dados** (novo - 24/02/2026):
+  - [x] Visualização de todas as coleções do MongoDB
+  - [x] Busca de documentos por nome, email, título, etc
+  - [x] Paginação de resultados
+  - [x] Visualização de documentos em JSON formatado
+  - [x] Edição de documentos diretamente
+  - [x] Criação de novos documentos
+  - [x] Exclusão de documentos
+  - [x] Proteção: apenas usuários com role "admin" podem acessar
 
 ### Módulo Gerenciamento Geral ✅
 - [x] Autenticação (login/registro)
