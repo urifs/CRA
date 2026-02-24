@@ -225,6 +225,8 @@ export default function AlugueisPage() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingAluguel(null);
+    setContractFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const formatCurrency = (value) => {
