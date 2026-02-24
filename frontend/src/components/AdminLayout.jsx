@@ -22,6 +22,7 @@ import {
   CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ChatbotWidget from "@/components/ChatbotWidget";
 
 export const AdminLayout = () => {
   const { user, logout } = useAuth();
