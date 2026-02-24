@@ -385,7 +385,7 @@ export default function ArmazenamentoPage() {
               <Card
                 key={item.path}
                 className="hover:shadow-lg cursor-pointer transition-all group"
-                onDoubleClick={() => handleNavigate(item.path)}
+                onClick={() => handleNavigate(item.path)}
               >
                 <CardContent className="p-4 text-center relative">
                   <DropdownMenu>
