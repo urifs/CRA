@@ -60,7 +60,7 @@ export default function SystemSelectPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Construction className="text-[#E31A1A]" size={40} />
+            <HardHat className="text-[#E31A1A]" size={40} />
             <h1 className="text-3xl md:text-4xl font-heading font-black text-white">
               CRA Construtora
             </h1>
