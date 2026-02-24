@@ -86,34 +86,34 @@ export const AdminLayout = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       {/* Mobile header */}
       <header 
-        className="fixed top-0 left-0 right-0 z-40 md:hidden bg-blue-900 text-white"
+        className="fixed top-0 left-0 right-0 z-40 md:hidden bg-black text-white"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Building2 className="text-blue-300" size={24} />
+            <Building2 className="text-[#FFC232]" size={24} />
             <span className="font-heading font-bold">Administrativo</span>
           </div>
           <div className="flex items-center gap-2">
             {/* Notification bell for mobile header */}
             <button
               data-testid="admin-mobile-notif-btn"
-              className="p-2 hover:bg-blue-800 rounded-lg relative"
+              className="p-2 hover:bg-gray-900 rounded-lg relative"
               onClick={() => navigate("/administrativo/notificacoes")}
             >
               <Bell size={22} />
               {notifCount.total > 0 && (
-                <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-xs font-bold rounded-full ${notifCount.vencidas > 0 ? 'bg-red-500' : 'bg-orange-500'} text-white`}>
+                <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-xs font-bold rounded-full ${notifCount.vencidas > 0 ? 'bg-[#E31A1A]' : 'bg-[#FFC232] text-black'} text-white`}>
                   {notifCount.total > 99 ? '99+' : notifCount.total}
                 </span>
               )}
             </button>
             <button
               data-testid="admin-mobile-menu-btn"
-              className="p-2 hover:bg-blue-800 rounded-lg"
+              className="p-2 hover:bg-gray-900 rounded-lg"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -132,7 +132,7 @@ export const AdminLayout = () => {
         {/* Back button */}
         <button
           onClick={handleBackToSelect}
-          className="w-full flex items-center gap-2 px-4 py-3 text-blue-300 hover:bg-blue-800 transition-colors border-b border-blue-800"
+          className="w-full flex items-center gap-2 px-4 py-3 text-gray-400 hover:bg-gray-900 transition-colors border-b border-gray-800"
           data-testid="back-to-select"
         >
           <ArrowLeft size={18} />
@@ -140,12 +140,12 @@ export const AdminLayout = () => {
         </button>
 
         {/* Logo */}
-        <div className="p-5 border-b border-blue-800" style={{ flexShrink: 0 }}>
+        <div className="p-5 border-b border-gray-800" style={{ flexShrink: 0 }}>
           <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-            <Building2 className="text-blue-300" size={28} />
+            <Building2 className="text-[#FFC232]" size={28} />
             <span>Administrativo</span>
           </h1>
-          <p className="text-xs text-blue-400 mt-1">Sistema Financeiro</p>
+          <p className="text-xs text-gray-400 mt-1">Sistema Financeiro</p>
         </div>
 
         {/* Navigation - Scrollable */}
@@ -155,20 +155,20 @@ export const AdminLayout = () => {
             to="/administrativo/notificacoes"
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
-              `admin-sidebar-link ${isActive ? "active" : ""} ${notifCount.vencidas > 0 ? "text-orange-300" : ""}`
+              `admin-sidebar-link ${isActive ? "active" : ""} ${notifCount.vencidas > 0 ? "text-[#FFC232]" : ""}`
             }
             data-testid="admin-nav-notificacoes"
           >
             <Bell size={20} />
             <span className="flex-1">Notificações</span>
             {notifCount.total > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${notifCount.vencidas > 0 ? 'bg-red-500' : 'bg-orange-500'} text-white`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${notifCount.vencidas > 0 ? 'bg-[#E31A1A]' : 'bg-[#FFC232] text-black'} text-white`}>
                 {notifCount.total}
               </span>
             )}
           </NavLink>
 
-          <div className="border-b border-blue-800 my-2" />
+          <div className="border-b border-gray-800 my-2" />
 
           {navItems.map((item) => (
             <NavLink
@@ -187,18 +187,18 @@ export const AdminLayout = () => {
         </div>
 
         {/* User info */}
-        <div className="p-3 border-t border-blue-800" style={{ flexShrink: 0 }}>
+        <div className="p-3 border-t border-gray-800" style={{ flexShrink: 0 }}>
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate" data-testid="admin-user-name">
                 {user?.name}
               </p>
-              <p className="text-xs text-blue-400 truncate">{user?.email}</p>
+              <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
             <button
               data-testid="admin-logout-btn"
               onClick={handleLogout}
-              className="ml-2 p-2 text-blue-400 hover:text-white hover:bg-blue-800 rounded-md transition-colors"
+              className="ml-2 p-2 text-gray-400 hover:text-white hover:bg-gray-900 rounded-md transition-colors"
               title="Sair"
             >
               <LogOut size={20} />
@@ -242,7 +242,7 @@ export const AdminLayout = () => {
               <div className="relative">
                 <item.icon size={22} />
                 {item.badge > 0 && (
-                  <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[10px] font-bold rounded-full bg-red-500 text-white">
+                  <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] flex items-center justify-center text-[10px] font-bold rounded-full bg-[#E31A1A] text-white">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
