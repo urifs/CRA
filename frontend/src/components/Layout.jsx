@@ -142,7 +142,7 @@ export const Layout = () => {
               <TasksInbox system="gerenciamento" accentColor="#E31A1A" />
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-1">Gerenciamento Geral</p>
+          <p className="text-xs text-gray-400 mt-1">Gerenciamento</p>
         </div>
 
         {/* Navigation - Scrollable */}

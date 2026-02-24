@@ -80,7 +80,7 @@ export default function AlugueisPage() {
       const response = await axios.get(`${API}/admin/maquinas-disponiveis`);
       setMaquinas(response.data);
       if (response.data.length === 0) {
-        console.warn("Nenhuma máquina cadastrada no sistema de Gerenciamento Geral");
+        console.warn("Nenhuma máquina cadastrada no sistema de Gerenciamento");
       }
     } catch (error) {
       console.error("Erro ao carregar máquinas:", error);
@@ -435,7 +435,7 @@ export default function AlugueisPage() {
               </Select>
               {maquinas.length === 0 && (
                 <p className="text-xs text-[#E31A1A] mt-1">
-                  Nenhuma máquina cadastrada. Cadastre máquinas no módulo de Gerenciamento Geral.
+                  Nenhuma máquina cadastrada. Cadastre máquinas no módulo de Gerenciamento.
                 </p>
               )}
             </div>

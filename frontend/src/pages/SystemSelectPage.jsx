@@ -47,7 +47,7 @@ export default function SystemSelectPage() {
   const systems = [
     {
       id: "gerenciamento",
-      title: "Gerenciamento Geral",
+      title: "Gerenciamento",
       description: "Sistema de manutenção de máquinas, obras e estoque de peças",
       icon: HardHat,
       useLogo: true,

@@ -68,7 +68,7 @@ import {
 
 // Tipos de usuário
 const USER_ROLES = {
-  gerenciamento: { label: "Gerenciamento Geral", icon: Wrench, color: "bg-[#E31A1A]" },
+  gerenciamento: { label: "Gerenciamento", icon: Wrench, color: "bg-[#E31A1A]" },
   administrativo: { label: "Administrativo", icon: Building2, color: "bg-[#D4A000]" },
   ambos: { label: "Gerenciamento + Administrativo", icon: Users, color: "bg-purple-500" },
   admin: { label: "Administrador", icon: Crown, color: "bg-green-500" }
@@ -83,7 +83,7 @@ const PRIORITIES = {
 
 // Sistemas alvo
 const TARGET_SYSTEMS = {
-  gerenciamento: { label: "Gerenciamento Geral", color: "bg-[#E31A1A]" },
+  gerenciamento: { label: "Gerenciamento", color: "bg-[#E31A1A]" },
   administrativo: { label: "Administrativo", color: "bg-[#D4A000]" }
 };
 
@@ -464,7 +464,7 @@ export default function PainelAdminPage() {
 
   const getModuleBadge = (module) => {
     const moduleColors = {
-      "Gerenciamento Geral": "bg-[#E31A1A] text-white",
+      "Gerenciamento": "bg-[#E31A1A] text-white",
       "Administrativo": "bg-[#D4A000] text-white",
       "Painel Admin": "bg-purple-600 text-white",
       "Sistema": "bg-gray-600 text-white"
@@ -962,7 +962,7 @@ export default function PainelAdminPage() {
                     <SelectItem value="gerenciamento" className="text-white">
                       <span className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[#E31A1A]"></span>
-                        Gerenciamento Geral
+                        Gerenciamento
                       </span>
                     </SelectItem>
                     <SelectItem value="administrativo" className="text-white">
@@ -1013,7 +1013,7 @@ export default function PainelAdminPage() {
               <Select value={createForm.role} onValueChange={(v) => setCreateForm({...createForm, role: v})}>
                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-700">
-                  <SelectItem value="gerenciamento" className="text-white">Gerenciamento Geral</SelectItem>
+                  <SelectItem value="gerenciamento" className="text-white">Gerenciamento</SelectItem>
                   <SelectItem value="administrativo" className="text-white">Administrativo</SelectItem>
                   <SelectItem value="ambos" className="text-white">Gerenciamento + Administrativo</SelectItem>
                   <SelectItem value="admin" className="text-white">Administrador (Acesso Total)</SelectItem>
