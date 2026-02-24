@@ -526,6 +526,50 @@ export default function AlugueisPage() {
               />
             </div>
 
+            {/* Contrato */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Nº do Contrato</label>
+                <Input 
+                  value={formData.numero_contrato} 
+                  onChange={(e) => setFormData({...formData, numero_contrato: e.target.value})} 
+                  placeholder="Ex: CONT-2026-001" 
+                />
+              </div>
+              <div>
+                <label className="form-label">Anexo do Contrato</label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    ref={fileInputRef}
+                    type="file" 
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setContractFile(e.target.files?.[0] || null)}
+                    className="flex-1"
+                  />
+                  {contractFile && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => { setContractFile(null); if(fileInputRef.current) fileInputRef.current.value = ""; }}
+                    >
+                      <X size={16} />
+                    </Button>
+                  )}
+                </div>
+                {contractFile && (
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <Paperclip size={12} /> {contractFile.name}
+                  </p>
+                )}
+                {editingAluguel?.contrato_arquivo && !contractFile && (
+                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <FileText size={12} /> Contrato já anexado: {editingAluguel.contrato_nome}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Período */}
             <div className="grid grid-cols-2 gap-4">
               <div>
