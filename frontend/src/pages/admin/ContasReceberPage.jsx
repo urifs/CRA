@@ -390,6 +390,18 @@ export default function ContasReceberPage() {
               </div>
             </div>
             <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
+            
+            {/* Seção de Anexos */}
+            {editingConta && (
+              <div className="border-t pt-4 mt-2">
+                <AttachmentsSection 
+                  entityType="contas_receber" 
+                  entityId={editingConta.id}
+                  accentColor="#22c55e"
+                />
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">{editingConta ? "Atualizar" : "Cadastrar"}</Button>
