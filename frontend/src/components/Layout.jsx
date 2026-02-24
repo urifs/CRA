@@ -243,14 +243,18 @@ export const Layout = () => {
           onClick={() => navigate("/maintenances/new")}
           className="fab bg-[#E31A1A] hover:bg-red-700 text-white flex items-center justify-center shadow-lg"
           data-testid="fab-new-maintenance"
-          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(90px + env(safe-area-inset-bottom))' }}
         >
           <Plus size={28} />
         </button>
       )}
 
-      {/* Chatbot Widget */}
-      <ChatbotWidget module="gerenciamento" accentColor="#E31A1A" />
+      {/* Chatbot Widget - positioned to the left of FAB on mobile */}
+      <ChatbotWidget 
+        module="gerenciamento" 
+        accentColor="#E31A1A" 
+        hasFab={isMobile && location.pathname !== "/maintenances/new"}
+      />
     </div>
   );
 };
