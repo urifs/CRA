@@ -354,7 +354,7 @@ export default function ArmazenamentoPage() {
               {index > 0 && <ChevronRight size={14} className="text-gray-400" />}
               <button
                 onClick={() => handleNavigate(crumb.path)}
-                className={`hover:text-blue-600 ${index === breadcrumbs.length - 1 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}
+                className={`hover:text-[#E31A1A] ${index === breadcrumbs.length - 1 ? 'text-[#E31A1A] font-medium' : 'text-gray-600'}`}
               >
                 {index === 0 ? <Home size={16} /> : crumb.name}
               </button>
