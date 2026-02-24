@@ -50,7 +50,7 @@ export default function LoginPage() {
             <Construction className="text-white" size={32} />
           </div>
           <CardTitle className="font-heading text-3xl font-black tracking-tight text-black">
-            RA Locadora
+            CRA Construtora
           </CardTitle>
           <CardDescription className="text-gray-500">
             Sistema de Gerenciamento de Manutenção

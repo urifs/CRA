@@ -62,7 +62,7 @@ export default function SystemSelectPage() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Construction className="text-[#E31A1A]" size={40} />
             <h1 className="text-3xl md:text-4xl font-heading font-black text-white">
-              RA Locadora
+              CRA Construtora
             </h1>
           </div>
           <p className="text-gray-400">
@@ -113,7 +113,7 @@ export default function SystemSelectPage() {
 
         {/* Footer */}
         <p className="text-center text-gray-500 text-sm mt-8">
-          RA Locadora © 2026 - Sistema de Gestão Empresarial
+          CRA Construtora © 2026 - Sistema de Gestão Empresarial
         </p>
       </div>
     </div>
