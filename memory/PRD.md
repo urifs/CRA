@@ -1,4 +1,4 @@
-# CRA Construtora - Sistema de Gestão Empresarial
+# RA Locadora - Sistema de Gestão Empresarial
 
 ## Problema Original
 Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de manutenções, expandido para incluir:
@@ -12,6 +12,12 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Sistema Compartilhado com Auditoria
 - **Módulo Administrativo** (financeiro, fornecedores, produtos, OS, NF-e, aluguéis, notificações)
 
+## Paleta de Cores (Atualizada 24/02/2026)
+- **Vermelho**: #E31A1A (cor primária, botões de ação, links)
+- **Amarelo**: #FFC232 (cor secundária, módulo administrativo)
+- **Preto**: #000000 (sidebars, fundos de login/seleção)
+- **Branco**: #FFFFFF (fundos de conteúdo principal)
+
 ## Arquitetura Atual
 
 ### Backend (FastAPI + MongoDB)
@@ -21,8 +27,8 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 
 ### Frontend (React + Shadcn UI)
 - **Dois Módulos**:
-  1. **Gerenciamento Geral** (laranja): Máquinas, Manutenções, Estoque, Obras
-  2. **Administrativo** (azul): Financeiro, Fornecedores, Produtos, OS, NF-e, Aluguéis, Notificações
+  1. **Gerenciamento Geral** (vermelho #E31A1A): Máquinas, Manutenções, Estoque, Obras
+  2. **Administrativo** (amarelo #FFC232): Financeiro, Fornecedores, Produtos, OS, NF-e, Aluguéis, Notificações
 - **PWA**: Instalável em dispositivos móveis (Service Worker desativado para debug)
 - **Design Responsivo**: Navegação inferior no mobile
 
