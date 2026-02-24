@@ -336,13 +336,13 @@ export default function ArmazenamentoPage() {
 
         {/* Upload Progress */}
         {uploading && (
-          <div className="mb-4 bg-blue-50 rounded-lg p-4">
+          <div className="mb-4 bg-red-50 rounded-lg p-4">
             <div className="flex items-center gap-3">
-              <Loader2 className="animate-spin text-blue-600" size={20} />
-              <span className="text-blue-700">Enviando... {uploadProgress}%</span>
+              <Loader2 className="animate-spin text-[#E31A1A]" size={20} />
+              <span className="text-red-700">Enviando... {uploadProgress}%</span>
             </div>
-            <div className="mt-2 bg-blue-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+            <div className="mt-2 bg-red-200 rounded-full h-2">
+              <div className="bg-[#E31A1A] h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
             </div>
           </div>
         )}
