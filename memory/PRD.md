@@ -37,6 +37,16 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 
 ## O Que Foi Implementado
 
+### Exportação de Relatórios PDF ✅ (24/02/2026)
+- [x] Página de exportação em ambos os módulos (Gerenciamento e Administrativo)
+- [x] 16 categorias de dados exportáveis total
+- [x] Gerenciamento: Máquinas, Manutenções, Categorias, Estoque, Movimentações, Obras, Registros de Uso
+- [x] Administrativo: Contas a Pagar/Receber, Cadastros, Produtos, OS, Aluguéis, Plano de Contas, Centros de Custo, Formas de Pagamento
+- [x] PDFs formatados com logo da CRA Construtora
+- [x] Tabelas organizadas com cabeçalho vermelho
+- [x] Seleção múltipla para exportar várias categorias de uma vez
+- [x] Download automático após geração
+
 ### Chatbot IA com Gemini ✅ (24/02/2026)
 - [x] **Chatbot flutuante** em ambas as plataformas (Gerenciamento e Administrativo)
 - [x] Integrado com **Gemini 2.0 Flash** via Emergent LLM Key
