@@ -234,6 +234,32 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Arquivos**: `ContasPagarPage.jsx`, `ContasReceberPage.jsx`
 - **Testes**: 100% aprovados (iteration_9.json)
 
+## Refatoração do Backend (24/02/2026)
+
+### O que foi feito:
+- **Índice navegável**: Adicionado índice completo no início do `server.py` com número de linhas para cada seção
+- **Estrutura modular criada**: Pasta `/routes`, `/models`, `/utils` com arquivos de exemplo
+- **Documentação**: README.md explicando a estrutura proposta e como migrar
+- **Backup**: Arquivo `server_backup.py` preservando o original
+
+### Estrutura de Arquivos Criada:
+```
+/app/backend/
+├── server.py           # ~5400 linhas com índice navegável
+├── server_backup.py    # Backup original
+├── README.md           # Documentação da refatoração
+├── routes/
+│   ├── auth.py         # Rotas de autenticação (exemplo)
+│   └── categories.py   # Rotas de categorias (exemplo)
+├── models/
+│   ├── core.py         # Modelos principais
+│   └── admin.py        # Modelos administrativos
+└── utils/
+    ├── database.py     # Conexão MongoDB
+    ├── auth.py         # JWT e autenticação
+    └── audit.py        # Log de auditoria
+```
+
 ### Sistema de Tarefas/Mensagens ✅ (24/02/2026)
 - [x] **Lançar Tarefa no Painel Admin**: Nova aba para criar tarefas/mensagens
 - [x] **Seletor de Sistema Destino**: Gerenciamento Geral ou Administrativo
