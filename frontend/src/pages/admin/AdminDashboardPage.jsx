@@ -296,6 +296,56 @@ export default function AdminDashboardPage() {
 
         {/* Tab: A Pagar */}
         <TabsContent value="pagar" className="mt-6">
+          {/* Filters */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <Input
+                    placeholder="Buscar por descrição..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={filterCentroCusto} onValueChange={setFilterCentroCusto}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Centro de Custo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos</SelectItem>
+                    {centrosCusto.map(cc => (
+                      <SelectItem key={cc.id} value={cc.id}>{cc.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterPlanoContas} onValueChange={setFilterPlanoContas}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Plano de Contas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos</SelectItem>
+                    {planosContas.map(pc => (
+                      <SelectItem key={pc.id} value={pc.id}>{pc.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="vencido">Vencido</SelectItem>
+                    <SelectItem value="pago">Pago</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="border-l-4 border-l-red-400">
               <CardContent className="p-6">
@@ -332,7 +382,57 @@ export default function AdminDashboardPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Lista de Contas */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Contas a Pagar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {contasPagar.filter(c => {
+                if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+                if (filterCentroCusto && c.centro_custo_id !== filterCentroCusto) return false;
+                if (filterPlanoContas && c.plano_contas_id !== filterPlanoContas) return false;
+                if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
+                if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;
+                if (filterStatus === "pago" && c.status !== "pago") return false;
+                return c.status !== "pago";
+              }).length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Nenhuma conta encontrada</p>
+              ) : (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {contasPagar.filter(c => {
+                    if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+                    if (filterCentroCusto && c.centro_custo_id !== filterCentroCusto) return false;
+                    if (filterPlanoContas && c.plano_contas_id !== filterPlanoContas) return false;
+                    if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
+                    if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;
+                    if (filterStatus === "pago" && c.status !== "pago") return false;
+                    return c.status !== "pago";
+                  }).map(conta => {
+                    const isVencida = conta.data_vencimento < new Date().toISOString().split("T")[0];
+                    return (
+                      <div key={conta.id} className={`p-3 rounded-lg flex justify-between items-center ${isVencida ? 'bg-red-50 border border-red-200' : 'bg-gray-50'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${isVencida ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                          <div>
+                            <p className="font-medium text-black text-sm">{conta.descricao}</p>
+                            <p className="text-xs text-gray-500">
+                              {conta.fornecedor_nome && <span className="mr-2">{conta.fornecedor_nome}</span>}
+                              Venc: {new Date(conta.data_vencimento).toLocaleDateString('pt-BR')}
+                              {conta.centro_custo_nome && <span className="ml-2 text-blue-600">• {conta.centro_custo_nome}</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-bold text-red-600">{formatCurrency(conta.valor)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-4 mt-6">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
