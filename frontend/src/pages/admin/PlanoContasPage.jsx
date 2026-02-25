@@ -199,12 +199,12 @@ export default function PlanoContasPage() {
           </div>
           <div className="flex gap-1">
             {conta.nivel === 1 && (
-              <Button size="sm" variant="outline" onClick={() => openModal(null, true, conta.id, conta.tipo)} title="Adicionar Subconta">
+              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openModal(null, true, conta.id, conta.tipo); }} title="Adicionar Subconta">
                 <Plus size={14} />
               </Button>
             )}
-            <Button size="sm" variant="ghost" onClick={() => openModal(conta)}><Edit size={14} /></Button>
-            <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleDelete(conta.id)}><Trash2 size={14} /></Button>
+            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); openModal(conta); }}><Edit size={14} /></Button>
+            <Button size="sm" variant="ghost" className="text-red-600" onClick={(e) => { e.stopPropagation(); handleDelete(conta.id); }}><Trash2 size={14} /></Button>
           </div>
         </div>
         {isExpanded && subcontas.map(sub => renderConta(sub, level + 1))}

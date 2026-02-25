@@ -436,7 +436,6 @@ export default function ContasReceberPage() {
               </div>
               <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
             </div>
-            <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
             
             {/* Seção de Anexos */}
             {editingConta && (
