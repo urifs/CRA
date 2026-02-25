@@ -3,7 +3,15 @@ import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -17,7 +25,9 @@ import {
   CheckCircle2,
   Clock,
   Wallet,
-  BadgeDollarSign
+  BadgeDollarSign,
+  Search,
+  Filter
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
