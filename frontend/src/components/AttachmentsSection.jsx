@@ -145,23 +145,41 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
     }
   };
 
+  const [previewName, setPreviewName] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
   const handlePreview = async (attachment) => {
-    if (attachment.file_type?.startsWith("image/")) {
-      try {
-        const response = await axios.get(`${API}/attachments/download/${attachment.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: 'blob'
-        });
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        setPreviewUrl(url);
+    setLoadingPreview(true);
+    try {
+      const response = await axios.get(`${API}/attachments/download/${attachment.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: attachment.file_type });
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      setPreviewName(attachment.filename);
+      
+      if (attachment.file_type?.startsWith("image/")) {
         setPreviewType("image");
-      } catch (error) {
-        toast.error("Erro ao carregar preview");
+      } else if (attachment.file_type?.includes("pdf")) {
+        setPreviewType("pdf");
       }
-    } else if (attachment.file_type?.includes("pdf")) {
-      // Para PDFs, fazer download
-      handleDownload(attachment.id, attachment.filename);
+    } catch (error) {
+      toast.error("Erro ao carregar visualização");
+    } finally {
+      setLoadingPreview(false);
     }
+  };
+
+  const closePreview = () => {
+    if (previewUrl) {
+      window.URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    setPreviewType(null);
+    setPreviewName(null);
   };
 
   if (!entityId) {
