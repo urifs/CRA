@@ -11,7 +11,18 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Última sessão (25/02/2026)
+### Sessão Atual (25/02/2026)
+- ✅ **Aba "Vencidas" no Dashboard Financeiro**:
+  - Nova aba com badge indicador de quantidade de contas vencidas
+  - Cards de resumo: Total Vencido, A Pagar Vencido, A Receber Vencido
+  - Listas detalhadas de contas vencidas com:
+    - Descrição, fornecedor/cliente, centro de custo
+    - Data de vencimento e dias de atraso
+    - Valor da conta
+  - Estados vazios amigáveis quando não há contas vencidas
+  - Backend atualizado para retornar lista completa de contas vencidas
+
+### Sessão Anterior (25/02/2026)
 - ✅ **Plano de Contas Refatorado**:
   - Removida separação Receitas/Despesas - cadastro livre
   - Lista única com subcontas em dropdown
@@ -48,6 +59,8 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - **Email**: test@test.com | **Password**: password | **Role**: admin
 
 ## Arquivos Modificados
+- `/app/frontend/src/pages/admin/AdminDashboardPage.jsx` - Nova aba Vencidas
+- `/app/backend/server.py` - Endpoint dashboard com lista de contas vencidas
 - `/app/frontend/src/pages/admin/PlanoContasPage.jsx`
 - `/app/frontend/src/pages/admin/ContasPagarPage.jsx`
 - `/app/frontend/src/pages/admin/ContasReceberPage.jsx`
