@@ -46,7 +46,9 @@ import {
   Edit,
   Eye,
   HardDrive,
-  LogOut
+  LogOut,
+  RotateCcw,
+  Trash
 } from "lucide-react";
 
 const getFileIcon = (filename) => {
