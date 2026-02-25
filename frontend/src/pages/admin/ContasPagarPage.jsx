@@ -43,6 +43,7 @@ export default function ContasPagarPage() {
   const [subcontas, setSubcontas] = useState([]);
   const [centrosCusto, setCentrosCusto] = useState([]);
   const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
+  const [cadastros, setCadastros] = useState([]);
   
   const [formData, setFormData] = useState({
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
