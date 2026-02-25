@@ -327,6 +327,10 @@ export default function ArmazenamentoPage() {
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredTrashItems = trashItems.filter(item =>
+    item.original_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const folders = filteredItems.filter(i => i.type === "folder");
   const files = filteredItems.filter(i => i.type === "file");
 
