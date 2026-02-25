@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,9 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Package, Edit, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
+import { Plus, Search, Package, Edit, Trash2, AlertTriangle, ExternalLink, Paperclip, Eye, Download, FileText, Image as ImageIcon, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const unidades = [
   { value: "UN", label: "UN - Unidade" },
