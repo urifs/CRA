@@ -378,6 +378,7 @@ export default function UsagePage() {
                         <th>Horas</th>
                         <th>Observações</th>
                         <th>Data</th>
+                        <th className="text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -390,6 +391,17 @@ export default function UsagePage() {
                           </td>
                           <td className="text-gray-600">{log.notes || "-"}</td>
                           <td className="text-sm text-gray-500">{formatDateTime(log.created_at)}</td>
+                          <td className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => openDeleteDialog(log)}
+                              data-testid={`delete-log-${log.id}`}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
