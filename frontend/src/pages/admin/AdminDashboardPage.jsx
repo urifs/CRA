@@ -314,7 +314,7 @@ export default function AdminDashboardPage() {
                     <SelectValue placeholder="Centro de Custo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {centrosCusto.map(cc => (
                       <SelectItem key={cc.id} value={cc.id}>{cc.nome}</SelectItem>
                     ))}
@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
                     <SelectValue placeholder="Plano de Contas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {planosContas.map(pc => (
                       <SelectItem key={pc.id} value={pc.id}>{pc.nome}</SelectItem>
                     ))}
@@ -336,7 +336,7 @@ export default function AdminDashboardPage() {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="pendente">Pendente</SelectItem>
                     <SelectItem value="vencido">Vencido</SelectItem>
                     <SelectItem value="pago">Pago</SelectItem>
