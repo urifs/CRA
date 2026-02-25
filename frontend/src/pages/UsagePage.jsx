@@ -68,6 +68,14 @@ export default function UsagePage() {
     notes: ""
   });
 
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    logId: null,
+    machineName: "",
+    hours: 0
+  });
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
