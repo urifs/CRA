@@ -123,7 +123,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
   };
 
   const exportPDF = async (itemId) => {
-    setExporting(itemId);
+    setExporting(`pdf-${itemId}`);
     try {
       const response = await axios.get(`${API}/export/pdf/${itemId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -157,6 +157,84 @@ export default function ExportPage({ module = "gerenciamento" }) {
       setExporting(null);
     }
   };
+
+  const exportExcel = async (itemId) => {
+    setExporting(`excel-${itemId}`);
+    try {
+      const response = await axios.get(`${API}/export/excel/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `CRA_${itemId}.xlsx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/"/g, '');
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Excel exportado!");
+    } catch (error) {
+      console.error("Erro ao exportar Excel:", error);
+      toast.error(error.response?.data?.detail || "Erro ao exportar Excel");
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const exportOFX = async (itemId) => {
+    setExporting(`ofx-${itemId}`);
+    try {
+      const response = await axios.get(`${API}/export/ofx/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `CRA_${itemId}.ofx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/"/g, '');
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("OFX exportado!");
+    } catch (error) {
+      console.error("Erro ao exportar OFX:", error);
+      toast.error(error.response?.data?.detail || "OFX só disponível para contas financeiras");
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  // Categorias que suportam Excel
+  const excelCategories = ["machines", "maintenances", "stock_items", "obras", "contas_pagar", "contas_pagar_pendente", "contas_receber", "contas_receber_pendente", "cadastros", "cadastros_clientes", "cadastros_fornecedores", "produtos_admin", "alugueis", "medicoes"];
+  
+  // Categorias que suportam OFX
+  const ofxCategories = ["contas_pagar", "contas_pagar_pendente", "contas_receber", "contas_receber_pendente"];
 
   const exportSelected = async () => {
     if (selectedItems.length === 0) {
