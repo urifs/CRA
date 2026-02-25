@@ -29,6 +29,14 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
   - Endpoint DELETE `/api/usage-logs/{log_id}` implementado no backend
   - Atualização automática das horas da máquina ao excluir
 
+- ✅ **Função de Excluir Máquinas (Cards de Status)**:
+  - Botão de excluir aparece ao passar o mouse sobre cada card de máquina
+  - Modal de confirmação com aviso detalhado sobre as consequências:
+    - Remoção da máquina do sistema
+    - Exclusão de todas as manutenções associadas
+    - Alerta de que a ação não pode ser desfeita
+  - Usa o endpoint existente DELETE `/api/machines/{machine_id}`
+
 ### Sessão Anterior (25/02/2026)
 - ✅ **Plano de Contas Refatorado**:
   - Removida separação Receitas/Despesas - cadastro livre
