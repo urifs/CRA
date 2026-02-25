@@ -206,6 +206,24 @@ export default function ObraDetailPage() {
         {getStatusBadge(obra.status)}
       </div>
 
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          className="bg-[#D4A000] hover:bg-yellow-600"
+          onClick={() => navigate(`/obras/${id}/medicoes`)}
+        >
+          <BarChart3 size={18} className="mr-2" />
+          Medições de Máquinas
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => setShowAddMachineDialog(true)}
+        >
+          <Plus size={18} className="mr-2" />
+          Vincular Máquina
+        </Button>
+      </div>
+
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="stat-card">
