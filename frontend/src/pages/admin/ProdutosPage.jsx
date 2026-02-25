@@ -322,7 +322,11 @@ export default function ProdutosPage() {
               {filteredProdutos.map((p) => {
                 const estoqueBaixo = p.estoque_atual <= p.estoque_minimo;
                 return (
-                  <tr key={p.id} className={`border-t hover:bg-white ${estoqueBaixo ? 'bg-red-50' : ''} ${p.em_promocao ? 'bg-green-50' : ''}`}>
+                  <tr 
+                    key={p.id} 
+                    className={`border-t hover:bg-gray-50 cursor-pointer transition-colors ${estoqueBaixo ? 'bg-red-50' : ''} ${p.em_promocao ? 'bg-green-50' : ''}`}
+                    onClick={() => openModal(p)}
+                  >
                     <td className="p-3 font-mono text-xs">{p.codigo_interno || "-"}</td>
                     <td className="p-3 font-mono text-xs">{p.codigo_fabricante || "-"}</td>
                     <td className="p-3 max-w-[200px] truncate font-medium">
@@ -336,7 +340,7 @@ export default function ProdutosPage() {
                     <td className="p-3 text-right">{p.margem_lucro?.toFixed(1) || 0}%</td>
                     <td className="p-3 text-xs">{p.fabricante || "-"}</td>
                     <td className="p-3 font-mono text-xs">{p.ncm || "-"}</td>
-                    <td className="p-3 text-center">
+                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-1">
                         <Button size="sm" variant="outline" onClick={() => handleGoogleSearch(p)} title="Buscar no Google" className="text-[#D4A000]">
                           <ExternalLink size={14} />
