@@ -239,6 +239,8 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
           {attachments.map((attachment) => {
             const FileIcon = getFileIcon(attachment.file_type);
             const isImage = attachment.file_type?.startsWith("image/");
+            const isPdf = attachment.file_type?.includes("pdf");
+            const canPreview = isImage || isPdf;
 
             return (
               <div 
@@ -260,12 +262,13 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {isImage && (
+                  {canPreview && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600"
                       onClick={() => handlePreview(attachment)}
+                      title="Visualizar"
                     >
                       <Eye size={14} />
                     </Button>
@@ -275,6 +278,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                     size="sm"
                     className="h-7 w-7 p-0 text-gray-400 hover:text-blue-600"
                     onClick={() => handleDownload(attachment.id, attachment.filename)}
+                    title="Baixar"
                   >
                     <Download size={14} />
                   </Button>
@@ -283,6 +287,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                     size="sm"
                     className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
                     onClick={() => handleDelete(attachment.id, attachment.filename)}
+                    title="Excluir"
                   >
                     <Trash2 size={14} />
                   </Button>
