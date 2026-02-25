@@ -325,7 +325,16 @@ export default function ArmazenamentoPage() {
 
   const isPreviewable = (filename) => {
     const ext = filename.split('.').pop()?.toLowerCase();
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf'].includes(ext);
+    // Imagens, PDFs e vídeos podem ser visualizados
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'mp4', 'webm', 'ogg'].includes(ext);
+  };
+
+  const getPreviewType = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+    if (ext === 'pdf') return 'pdf';
+    if (['mp4', 'webm', 'ogg'].includes(ext)) return 'video';
+    return 'other';
   };
 
   const filteredItems = items.filter(item =>
