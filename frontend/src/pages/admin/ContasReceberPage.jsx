@@ -111,7 +111,7 @@ export default function ContasReceberPage() {
 
   const handleNovoCadastro = async (e) => {
     e.preventDefault();
-    if (!novoCadastroData.nome.trim()) {
+    if (!novoCadastroData.nome_razao.trim()) {
       toast.error("Nome é obrigatório");
       return;
     }
@@ -121,9 +121,9 @@ export default function ContasReceberPage() {
         tipo: "cliente"
       });
       toast.success("Cliente cadastrado!");
-      setFormData({ ...formData, cliente_nome: novoCadastroData.nome });
+      setFormData({ ...formData, cliente_nome: novoCadastroData.nome_razao });
       setShowNovoCadastro(false);
-      setNovoCadastroData({ nome: "", cnpj_cpf: "", telefone: "", email: "" });
+      setNovoCadastroData({ nome_razao: "", cnpj_cpf: "", telefone: "", email: "" });
       fetchCadastros();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao cadastrar");
