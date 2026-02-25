@@ -2962,7 +2962,21 @@ async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
                 "ano": total_receber_quitado_ano
             }
         },
-        "contasProximas": contas_proximas[:10]
+        "contasProximas": contas_proximas[:10],
+        "vencidas": {
+            "pagar": {
+                "quantidade": contas_pagar_vencidas,
+                "valor": total_pagar_vencidas_valor,
+                "lista": sorted(lista_pagar_vencidas, key=lambda x: x.get("data_vencimento", ""))[:50]
+            },
+            "receber": {
+                "quantidade": contas_receber_vencidas,
+                "valor": total_receber_vencidas_valor,
+                "lista": sorted(lista_receber_vencidas, key=lambda x: x.get("data_vencimento", ""))[:50]
+            },
+            "totalQuantidade": contas_pagar_vencidas + contas_receber_vencidas,
+            "totalValor": total_pagar_vencidas_valor + total_receber_vencidas_valor
+        }
     }
 
 # --- Consulta de CNPJ via BrasilAPI (Receita Federal) ---
