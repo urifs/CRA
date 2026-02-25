@@ -298,9 +298,20 @@ export default function UsagePage() {
                 .map((status) => (
                 <Card 
                   key={status.machine_id}
-                  className={`${status.needs_alert ? "border-orange-300 bg-orange-50/50" : ""}`}
+                  className={`${status.needs_alert ? "border-orange-300 bg-orange-50/50" : ""} relative group`}
                   data-testid={`oil-status-${status.machine_id}`}
                 >
+                  {/* Botão de excluir no canto superior direito */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 hover:bg-red-50"
+                    onClick={() => openDeleteMachineDialog(status)}
+                    data-testid={`delete-machine-${status.machine_id}`}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                  
                   <CardContent className="pt-6">
                     {/* Machine header */}
                     <div className="flex items-center justify-between mb-4">
