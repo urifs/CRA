@@ -144,6 +144,24 @@ export default function ArmazenamentoPage() {
     }
   };
 
+  const fetchTrashItems = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API}/storage/trash`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTrashItems(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar lixeira:", error);
+      if (error.response?.status === 401) {
+        toast.error("Sessão expirada");
+        navigate("/login");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleNavigate = (path) => {
     setCurrentPath(path);
     setSearchParams({ path });
