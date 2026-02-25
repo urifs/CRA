@@ -12,6 +12,8 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - Sistema Compartilhado com Auditoria
 - **Módulo Administrativo** (financeiro, fornecedores, produtos, OS, NF-e, aluguéis, notificações)
 - **Painel Administrativo** (gestão de usuários e auditoria)
+- **Sistema de Medições de Máquinas** (horímetro, km, combustível, produção)
+- **Sistema de Armazenamento** (estilo Google Drive)
 
 ## Paleta de Cores (Atualizada 24/02/2026)
 - **Vermelho**: #E31A1A (cor primária, botões de ação, links)
@@ -23,19 +25,45 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 
 ### Backend (FastAPI + MongoDB)
 - **Auth**: JWT com bcrypt
-- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, audit_logs, contas_pagar, contas_receber, cadastros, produtos_admin, ordens_servico, plano_contas, centros_custo, formas_pagamento, **alugueis**
+- **Collections**: users, categories, machines, maintenances, stock_items, stock_movements, stock_categories, usage_logs, obras, audit_logs, contas_pagar, contas_receber, cadastros, produtos_admin, ordens_servico, plano_contas, centros_custo, formas_pagamento, **alugueis**, **medicoes**, **storage_trash**
 - **Sistema Compartilhado**: Dados globais com auditoria
 - **Painel Admin**: Endpoints para gestão de usuários e auditoria
 
 ### Frontend (React + Shadcn UI)
-- **Três Módulos**:
-  1. **Gerenciamento Geral** (vermelho #E31A1A): Máquinas, Manutenções, Estoque, Obras
+- **Quatro Módulos**:
+  1. **Gerenciamento** (vermelho #E31A1A): Máquinas, Manutenções, Estoque, Obras, Medições
   2. **Administrativo** (amarelo #FFC232): Financeiro, Fornecedores, Produtos, OS, NF-e, Aluguéis, Notificações
   3. **Painel Administrativo** (vermelho #E31A1A): Gestão de Usuários, Auditoria, Criação de Contas
+  4. **Armazenamento** (fundo escuro): Gerenciador de arquivos estilo Google Drive
 - **PWA**: Instalável em dispositivos móveis (Service Worker desativado para debug)
 - **Design Responsivo**: Navegação inferior no mobile
 
 ## O Que Foi Implementado
+
+### Sistema de Medições de Máquinas ✅ (25/02/2026)
+- [x] Página dedicada `/obras/:obraId/medicoes`
+- [x] Registro de medições: Horímetro, Km, Combustível, Produção, Outro
+- [x] Valor anterior preenchido automaticamente
+- [x] Cálculo automático de diferença
+- [x] Filtros por máquina, tipo, data
+- [x] Resumo consolidado por máquina
+- [x] Cards de estatísticas (horas totais, km totais)
+- [x] Botão de acesso na página de detalhes da obra
+
+### Filtros no Dashboard Financeiro ✅ (25/02/2026)
+- [x] Pesquisa por descrição
+- [x] Filtro por Centro de Custo
+- [x] Filtro por Plano de Contas
+- [x] Filtro por Status (Pendente, Vencido, Pago)
+- [x] Lista de contas com indicador visual de vencimento
+
+### Textos em Português no Painel Admin ✅ (25/02/2026)
+- [x] Corrigido abreviações em inglês (Users→Usuários, Audit→Auditoria, DB→Banco)
+
+### Visualização de Arquivos no Armazenamento ✅ (25/02/2026)
+- [x] Clique simples em imagens/PDFs abre preview
+- [x] Indicador "Clique para visualizar" em arquivos suportados
+- [x] Modal de preview com opção de download
 
 ### Anexos em Transações Financeiras ✅ (24/02/2026)
 - [x] Componente reutilizável AttachmentsSection
