@@ -225,16 +225,54 @@ export default function ArmazenamentoPage() {
   };
 
   const handleDelete = async (item) => {
-    if (!confirm(`Excluir "${item.name}"?`)) return;
+    if (!confirm(`Mover "${item.name}" para a lixeira?`)) return;
     try {
       await axios.delete(`${API}/storage/delete`, {
         params: { path: item.path },
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success("Item excluído!");
+      toast.success("Item movido para lixeira!");
       fetchItems();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao excluir");
+    }
+  };
+
+  const handleRestore = async (item) => {
+    try {
+      await axios.post(`${API}/storage/trash/${item.id}/restore`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Item restaurado!");
+      fetchTrashItems();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao restaurar");
+    }
+  };
+
+  const handleDeletePermanently = async (item) => {
+    if (!confirm(`Excluir "${item.original_name}" permanentemente? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await axios.delete(`${API}/storage/trash/${item.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Item excluído permanentemente!");
+      fetchTrashItems();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao excluir");
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    if (!confirm("Esvaziar toda a lixeira? Esta ação não pode ser desfeita.")) return;
+    try {
+      await axios.delete(`${API}/storage/trash`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Lixeira esvaziada!");
+      fetchTrashItems();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao esvaziar lixeira");
     }
   };
 
