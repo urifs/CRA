@@ -72,7 +72,7 @@ export default function ContasReceberPage() {
 
   const fetchPlanoContas = async () => {
     try {
-      const response = await axios.get(`${API}/admin/plano-contas?tipo=receita`);
+      const response = await axios.get(`${API}/admin/plano-contas`);
       // Separar contas principais (nível 1) e subcontas (nível 2)
       const todas = response.data;
       setPlanoContas(todas.filter(p => p.nivel === 1));
