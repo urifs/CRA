@@ -28,6 +28,13 @@ export default function CadastrosPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCadastro, setEditingCadastro] = useState(null);
+  
+  // Anexos
+  const [anexos, setAnexos] = useState([]);
+  const [uploadingAnexo, setUploadingAnexo] = useState(false);
+  const [previewModal, setPreviewModal] = useState({ open: false, url: null, name: null, type: null });
+  const fileInputRef = useRef(null);
+  
   const [formData, setFormData] = useState({
     tipo_cadastro: "cliente",
     tipo_pessoa: "PF",
