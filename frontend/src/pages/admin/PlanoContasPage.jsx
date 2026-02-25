@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API } from "@/App";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -12,8 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, DollarSign, FolderTree, ChevronRight, ChevronDown, Edit, Trash2, 
-  TrendingUp, TrendingDown, FileText, Download
+  Plus, ChevronRight, ChevronDown, Edit, Trash2, 
+  FileText, Download, FolderOpen, Receipt, Search,
+  ArrowUpRight, ArrowDownLeft, Calendar
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,10 +24,16 @@ export default function PlanoContasPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
-  const [expandedGroups, setExpandedGroups] = useState(new Set(["receitas", "despesas"]));
+  const [expandedContas, setExpandedContas] = useState(new Set());
+  const [expandedSubcontas, setExpandedSubcontas] = useState(new Set());
+  const [expandedExtratos, setExpandedExtratos] = useState(new Set());
+  const [extratos, setExtratos] = useState({});
+  const [loadingExtrato, setLoadingExtrato] = useState({});
   const [selectedForReport, setSelectedForReport] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  
   const [formData, setFormData] = useState({
-    codigo: "", nome: "", tipo: "despesa", nivel: 1, pai_id: "", descricao: ""
+    codigo: "", nome: "", nivel: 1, pai_id: "", descricao: ""
   });
 
   useEffect(() => { fetchContas(); }, []);
@@ -39,14 +46,44 @@ export default function PlanoContasPage() {
     finally { setLoading(false); }
   };
 
+  // Buscar extrato (contas a pagar e receber vinculadas)
+  const fetchExtrato = async (contaId, isSubconta = false) => {
+    const key = `${contaId}-${isSubconta ? 'sub' : 'main'}`;
+    if (extratos[key]) return; // Já carregado
+    
+    setLoadingExtrato(prev => ({ ...prev, [key]: true }));
+    try {
+      // Buscar contas a pagar vinculadas
+      const [pagarRes, receberRes] = await Promise.all([
+        axios.get(`${API}/admin/contas-pagar`),
+        axios.get(`${API}/admin/contas-receber`)
+      ]);
+      
+      // Filtrar por plano_conta_id ou subconta_id
+      const filterField = isSubconta ? 'subconta_id' : 'plano_conta_id';
+      const contasPagar = pagarRes.data.filter(c => c[filterField] === contaId);
+      const contasReceber = receberRes.data.filter(c => c[filterField] === contaId);
+      
+      setExtratos(prev => ({
+        ...prev,
+        [key]: { pagar: contasPagar, receber: contasReceber }
+      }));
+    } catch (error) {
+      toast.error("Erro ao carregar extrato");
+    } finally {
+      setLoadingExtrato(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const dataToSend = { ...formData, tipo: "geral" }; // Tipo fixo como geral
       if (editingConta) {
-        await axios.put(`${API}/admin/plano-contas/${editingConta.id}`, formData);
+        await axios.put(`${API}/admin/plano-contas/${editingConta.id}`, dataToSend);
         toast.success("Conta atualizada!");
       } else {
-        await axios.post(`${API}/admin/plano-contas`, formData);
+        await axios.post(`${API}/admin/plano-contas`, dataToSend);
         toast.success("Conta cadastrada!");
       }
       fetchContas(); closeModal();
@@ -70,13 +107,12 @@ export default function PlanoContasPage() {
     } catch (error) { toast.error(error.response?.data?.detail || "Erro ao excluir"); }
   };
 
-  const openModal = (conta = null, isSubconta = false, paiId = null, paiTipo = null) => {
+  const openModal = (conta = null, isSubconta = false, paiId = null) => {
     if (conta) {
       setEditingConta(conta);
       setFormData({
         codigo: conta.codigo || "",
         nome: conta.nome,
-        tipo: conta.tipo,
         nivel: conta.nivel,
         pai_id: conta.pai_id || "",
         descricao: conta.descricao || ""
@@ -86,7 +122,6 @@ export default function PlanoContasPage() {
       setFormData({
         codigo: "",
         nome: "",
-        tipo: paiTipo || "despesa",
         nivel: isSubconta ? 2 : 1,
         pai_id: paiId || "",
         descricao: ""
@@ -97,11 +132,30 @@ export default function PlanoContasPage() {
 
   const closeModal = () => { setIsModalOpen(false); setEditingConta(null); };
 
-  const toggleGroup = (group) => {
-    const newExpanded = new Set(expandedGroups);
-    if (newExpanded.has(group)) newExpanded.delete(group);
-    else newExpanded.add(group);
-    setExpandedGroups(newExpanded);
+  const toggleConta = (contaId) => {
+    const newExpanded = new Set(expandedContas);
+    if (newExpanded.has(contaId)) newExpanded.delete(contaId);
+    else newExpanded.add(contaId);
+    setExpandedContas(newExpanded);
+  };
+
+  const toggleSubconta = (subcontaId) => {
+    const newExpanded = new Set(expandedSubcontas);
+    if (newExpanded.has(subcontaId)) newExpanded.delete(subcontaId);
+    else newExpanded.add(subcontaId);
+    setExpandedSubcontas(newExpanded);
+  };
+
+  const toggleExtrato = (contaId, isSubconta = false) => {
+    const key = `${contaId}-${isSubconta ? 'sub' : 'main'}`;
+    const newExpanded = new Set(expandedExtratos);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
+    } else {
+      newExpanded.add(key);
+      fetchExtrato(contaId, isSubconta);
+    }
+    setExpandedExtratos(newExpanded);
   };
 
   const exportToPDF = async () => {
@@ -113,7 +167,6 @@ export default function PlanoContasPage() {
     const conta = contas.find(c => c.id === selectedForReport);
     const subcontas = contas.filter(c => c.pai_id === selectedForReport);
     
-    // Criar conteúdo do relatório
     let content = `
       <html>
       <head>
@@ -124,247 +177,381 @@ export default function PlanoContasPage() {
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
           th { background: #f3f4f6; }
-          .tipo-receita { color: #16a34a; }
-          .tipo-despesa { color: #dc2626; }
-          .total { font-weight: bold; background: #f9fafb; }
         </style>
       </head>
       <body>
         <h1>Relatório do Plano de Contas</h1>
         <p><strong>Conta:</strong> ${conta?.codigo || ''} - ${conta?.nome}</p>
-        <p><strong>Tipo:</strong> <span class="tipo-${conta?.tipo}">${conta?.tipo === 'receita' ? 'Receita' : 'Despesa'}</span></p>
         <p><strong>Descrição:</strong> ${conta?.descricao || '-'}</p>
         
         ${subcontas.length > 0 ? `
           <h2>Subcontas</h2>
           <table>
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Nome</th>
-                <th>Descrição</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Código</th><th>Nome</th><th>Descrição</th></tr></thead>
             <tbody>
-              ${subcontas.map(s => `
-                <tr>
-                  <td>${s.codigo || '-'}</td>
-                  <td>${s.nome}</td>
-                  <td>${s.descricao || '-'}</td>
-                </tr>
-              `).join('')}
+              ${subcontas.map(s => `<tr><td>${s.codigo || '-'}</td><td>${s.nome}</td><td>${s.descricao || '-'}</td></tr>`).join('')}
             </tbody>
           </table>
         ` : '<p>Nenhuma subconta cadastrada.</p>'}
         
-        <p style="margin-top: 30px; color: #666; font-size: 12px;">
-          Gerado em: ${new Date().toLocaleString('pt-BR')}
-        </p>
+        <p style="margin-top: 30px; color: #666; font-size: 12px;">Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
       </body>
       </html>
     `;
     
-    // Abrir em nova janela para impressão
     const printWindow = window.open('', '_blank');
     printWindow.document.write(content);
     printWindow.document.close();
     printWindow.print();
   };
 
-  // Agrupar por tipo
-  const receitas = contas.filter(c => c.tipo === "receita" && c.nivel === 1);
-  const despesas = contas.filter(c => c.tipo === "despesa" && c.nivel === 1);
+  const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '-';
 
+  // Filtrar contas de nível 1
+  const contasNivel1 = contas.filter(c => c.nivel === 1);
   const getSubcontas = (paiId) => contas.filter(c => c.pai_id === paiId);
 
-  if (loading) return <div className="flex items-center justify-center min-h-[400px]"><div className="spinner w-12 h-12"></div></div>;
+  // Filtro de busca
+  const filteredContas = contasNivel1.filter(c => 
+    c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.codigo && c.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-  const renderConta = (conta, level = 0) => {
-    const subcontas = getSubcontas(conta.id);
-    const isExpanded = expandedGroups.has(conta.id);
+  // Renderizar extrato
+  const renderExtrato = (contaId, isSubconta = false) => {
+    const key = `${contaId}-${isSubconta ? 'sub' : 'main'}`;
+    const extrato = extratos[key];
+    const isLoading = loadingExtrato[key];
+    
+    if (isLoading) {
+      return <div className="p-4 text-center text-gray-500">Carregando extrato...</div>;
+    }
+    
+    if (!extrato) return null;
+    
+    const { pagar, receber } = extrato;
+    const totalPagar = pagar.reduce((sum, c) => sum + (c.valor_final || c.valor || 0), 0);
+    const totalReceber = receber.reduce((sum, c) => sum + (c.valor_final || c.valor || 0), 0);
+    const todos = [
+      ...pagar.map(c => ({ ...c, tipo_conta: 'pagar' })),
+      ...receber.map(c => ({ ...c, tipo_conta: 'receber' }))
+    ].sort((a, b) => new Date(b.data_vencimento) - new Date(a.data_vencimento));
     
     return (
-      <div key={conta.id}>
-        <div className={`flex items-center justify-between p-3 hover:bg-gray-100 rounded-lg ${level > 0 ? 'ml-6 border-l-2 border-gray-200' : ''}`}>
-          <div className="flex items-center gap-2">
-            {subcontas.length > 0 && (
-              <button onClick={() => toggleGroup(conta.id)} className="p-1 hover:bg-gray-200 rounded">
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </button>
-            )}
-            {subcontas.length === 0 && <span className="w-6" />}
-            {conta.codigo && <span className="text-xs font-mono bg-gray-200 px-2 py-0.5 rounded">{conta.codigo}</span>}
-            <span className="font-medium">{conta.nome}</span>
-            {conta.nivel === 1 && <span className="text-xs text-gray-500">({subcontas.length} subcontas)</span>}
+      <div className="bg-gray-50 rounded-lg p-4 mt-2 border">
+        {/* Resumo */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="bg-white p-3 rounded border">
+            <p className="text-xs text-gray-500">Total a Pagar</p>
+            <p className="text-lg font-bold text-red-600">{formatCurrency(totalPagar)}</p>
+            <p className="text-xs text-gray-400">{pagar.length} registro(s)</p>
           </div>
-          <div className="flex gap-1">
-            {conta.nivel === 1 && (
-              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openModal(null, true, conta.id, conta.tipo); }} title="Adicionar Subconta">
-                <Plus size={14} />
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); openModal(conta); }}><Edit size={14} /></Button>
-            <Button size="sm" variant="ghost" className="text-red-600" onClick={(e) => { e.stopPropagation(); handleDelete(conta.id); }}><Trash2 size={14} /></Button>
+          <div className="bg-white p-3 rounded border">
+            <p className="text-xs text-gray-500">Total a Receber</p>
+            <p className="text-lg font-bold text-green-600">{formatCurrency(totalReceber)}</p>
+            <p className="text-xs text-gray-400">{receber.length} registro(s)</p>
+          </div>
+          <div className="bg-white p-3 rounded border">
+            <p className="text-xs text-gray-500">Saldo</p>
+            <p className={`text-lg font-bold ${totalReceber - totalPagar >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(totalReceber - totalPagar)}
+            </p>
           </div>
         </div>
-        {isExpanded && subcontas.map(sub => renderConta(sub, level + 1))}
+        
+        {/* Lista de movimentações */}
+        {todos.length === 0 ? (
+          <p className="text-center text-gray-400 py-4">Nenhuma movimentação registrada</p>
+        ) : (
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {todos.map((item, idx) => (
+              <div key={`${item.tipo_conta}-${item.id || idx}`} className="flex items-center justify-between bg-white p-3 rounded border text-sm">
+                <div className="flex items-center gap-3">
+                  {item.tipo_conta === 'pagar' ? (
+                    <ArrowUpRight className="text-red-500" size={18} />
+                  ) : (
+                    <ArrowDownLeft className="text-green-500" size={18} />
+                  )}
+                  <div>
+                    <p className="font-medium">{item.descricao || item.fornecedor_nome || item.cliente_nome || '-'}</p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      <Calendar size={12} />
+                      {formatDate(item.data_vencimento)}
+                      <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${
+                        item.status === 'quitada' ? 'bg-green-100 text-green-700' :
+                        item.status === 'cancelada' ? 'bg-gray-100 text-gray-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {item.status === 'quitada' ? 'Quitada' : item.status === 'cancelada' ? 'Cancelada' : 'Em Aberto'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <p className={`font-bold ${item.tipo_conta === 'pagar' ? 'text-red-600' : 'text-green-600'}`}>
+                  {item.tipo_conta === 'pagar' ? '-' : '+'} {formatCurrency(item.valor_final || item.valor)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
-  const renderGroup = (title, items, color, icon) => {
-    const Icon = icon;
-    const isExpanded = expandedGroups.has(title.toLowerCase());
-    
-    return (
-      <Card className={`border-l-4 ${color}`}>
-        <CardHeader className="cursor-pointer hover:bg-white" onClick={() => toggleGroup(title.toLowerCase())}>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon size={20} />
-              <span>{title}</span>
-              <span className="text-sm font-normal text-gray-500">({items.length} contas)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openModal(null, false, null, title.toLowerCase() === 'receitas' ? 'receita' : 'despesa'); }}>
-                <Plus size={14} className="mr-1" /> Nova Conta
-              </Button>
-              {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-            </div>
-          </CardTitle>
-        </CardHeader>
-        {isExpanded && (
-          <CardContent className="pt-0">
-            {items.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">Nenhuma conta cadastrada</p>
-            ) : (
-              items.map(conta => renderConta(conta))
-            )}
-          </CardContent>
-        )}
-      </Card>
-    );
-  };
-
-  // Contas de nível 1 para o select de relatório
-  const contasNivel1 = contas.filter(c => c.nivel === 1);
+  if (loading) return <div className="flex items-center justify-center min-h-[400px]"><div className="spinner w-12 h-12"></div></div>;
 
   return (
     <div data-testid="plano-contas-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Plano de Contas</h1>
-          <p className="text-gray-500 mt-1">Categorias financeiras com subcontas</p>
+          <p className="text-gray-500 mt-1">Gerencie suas categorias financeiras</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#D4A000] hover:bg-[#D4A000]">
-          <Plus size={18} className="mr-2" />Nova Conta
+        <Button onClick={() => openModal()} className="bg-[#D4A000] hover:bg-[#b38900]">
+          <Plus size={18} className="mr-2" />Novo Plano de Conta
         </Button>
       </div>
 
-      {/* Exportar Relatório */}
+      {/* Barra de busca e exportação */}
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
-            <FileText className="text-gray-500" size={24} />
-            <div className="flex-1">
-              <label className="form-label">Exportar Relatório</label>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Input 
+                placeholder="Buscar plano de contas..." 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)} 
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
               <Select value={selectedForReport} onValueChange={setSelectedForReport}>
-                <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione uma conta..." /></SelectTrigger>
+                <SelectTrigger className="w-[250px] h-11">
+                  <SelectValue placeholder="Selecione para exportar..." />
+                </SelectTrigger>
                 <SelectContent className="z-[9999]">
                   {contasNivel1.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome} ({c.tipo})</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <Button onClick={exportToPDF} disabled={!selectedForReport} variant="outline">
+                <Download size={16} className="mr-2" />PDF
+              </Button>
             </div>
-            <Button onClick={exportToPDF} disabled={!selectedForReport} className="bg-green-600 hover:bg-green-700">
-              <Download size={18} className="mr-2" />Exportar PDF
-            </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Resumo */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <Card className="stat-card">
+        <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="text-green-600" size={20} />
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <FolderOpen className="text-blue-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Receitas</p>
-              <p className="text-lg font-bold text-green-600">{receitas.length} contas</p>
+              <p className="text-xs text-gray-500">Planos de Conta</p>
+              <p className="text-lg font-bold text-blue-600">{contasNivel1.length}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="stat-card">
+        <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <TrendingDown className="text-red-600" size={20} />
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Receipt className="text-purple-600" size={20} />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Despesas</p>
-              <p className="text-lg font-bold text-red-600">{despesas.length} contas</p>
+              <p className="text-xs text-gray-500">Total de Subcontas</p>
+              <p className="text-lg font-bold text-purple-600">{contas.filter(c => c.nivel === 2).length}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Árvore de contas */}
-      <div className="space-y-4">
-        {renderGroup("Receitas", receitas, "border-l-green-500", TrendingUp)}
-        {renderGroup("Despesas", despesas, "border-l-red-500", TrendingDown)}
-      </div>
+      {/* Lista de Planos de Conta */}
+      <Card>
+        <CardContent className="p-0">
+          {filteredContas.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              <FolderOpen className="mx-auto mb-4" size={48} />
+              <p>Nenhum plano de conta encontrado</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredContas.map(conta => {
+                const subcontas = getSubcontas(conta.id);
+                const isExpanded = expandedContas.has(conta.id);
+                const extratoKey = `${conta.id}-main`;
+                const isExtratoExpanded = expandedExtratos.has(extratoKey);
+                
+                return (
+                  <div key={conta.id} className="p-4">
+                    {/* Linha principal do Plano de Conta */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => toggleConta(conta.id)} 
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title={subcontas.length > 0 ? "Expandir subcontas" : "Sem subcontas"}
+                        >
+                          {subcontas.length > 0 ? (
+                            isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />
+                          ) : (
+                            <span className="w-[18px]" />
+                          )}
+                        </button>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            {conta.codigo && (
+                              <span className="text-xs font-mono bg-gray-200 px-2 py-0.5 rounded">{conta.codigo}</span>
+                            )}
+                            <span className="font-semibold text-gray-800">{conta.nome}</span>
+                            <span className="text-xs text-gray-400">({subcontas.length} subcontas)</span>
+                          </div>
+                          {conta.descricao && (
+                            <p className="text-xs text-gray-500 mt-0.5">{conta.descricao}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          size="sm" 
+                          variant={isExtratoExpanded ? "default" : "outline"}
+                          onClick={() => toggleExtrato(conta.id, false)} 
+                          title="Ver extrato"
+                          className={isExtratoExpanded ? "bg-blue-600 hover:bg-blue-700" : ""}
+                        >
+                          <FileText size={14} className="mr-1" />
+                          Extrato
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openModal(null, true, conta.id); }} title="Adicionar Subconta">
+                          <Plus size={14} />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openModal(conta)}>
+                          <Edit size={14} />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleDelete(conta.id)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Extrato do Plano de Conta */}
+                    {isExtratoExpanded && renderExtrato(conta.id, false)}
+                    
+                    {/* Subcontas (dropdown) */}
+                    {isExpanded && subcontas.length > 0 && (
+                      <div className="ml-8 mt-3 border-l-2 border-gray-200 pl-4 space-y-2">
+                        {subcontas.map(sub => {
+                          const subExtratoKey = `${sub.id}-sub`;
+                          const isSubExtratoExpanded = expandedExtratos.has(subExtratoKey);
+                          
+                          return (
+                            <div key={sub.id} className="bg-gray-50 rounded-lg p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {sub.codigo && (
+                                    <span className="text-xs font-mono bg-white px-2 py-0.5 rounded border">{sub.codigo}</span>
+                                  )}
+                                  <span className="font-medium text-gray-700">{sub.nome}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    variant={isSubExtratoExpanded ? "default" : "outline"}
+                                    onClick={() => toggleExtrato(sub.id, true)} 
+                                    title="Ver extrato da subconta"
+                                    className={`text-xs ${isSubExtratoExpanded ? "bg-purple-600 hover:bg-purple-700" : ""}`}
+                                  >
+                                    <FileText size={12} className="mr-1" />
+                                    Extrato
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => openModal(sub)}>
+                                    <Edit size={12} />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleDelete(sub.id)}>
+                                    <Trash2 size={12} />
+                                  </Button>
+                                </div>
+                              </div>
+                              {sub.descricao && (
+                                <p className="text-xs text-gray-500 mt-1">{sub.descricao}</p>
+                              )}
+                              
+                              {/* Extrato da Subconta */}
+                              {isSubExtratoExpanded && renderExtrato(sub.id, true)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingConta ? "Editar Conta" : formData.nivel === 2 ? "Nova Subconta" : "Nova Conta"}
+              {editingConta ? "Editar" : formData.nivel === 2 ? "Nova Subconta" : "Novo Plano de Conta"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">Código</label>
-                <Input value={formData.codigo} onChange={(e) => setFormData({...formData, codigo: e.target.value})} placeholder="Ex: 1.1.01" />
-              </div>
-              <div>
-                <label className="form-label">Tipo *</label>
-                <Select value={formData.tipo} onValueChange={(v) => setFormData({...formData, tipo: v})} disabled={formData.nivel === 2}>
-                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[9999]">
-                    <SelectItem value="receita">Receita</SelectItem>
-                    <SelectItem value="despesa">Despesa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <label className="form-label">Código</label>
+              <Input 
+                value={formData.codigo} 
+                onChange={(e) => setFormData({...formData, codigo: e.target.value})} 
+                placeholder="Ex: 1.1.01" 
+              />
             </div>
+            
             {formData.nivel === 2 && (
               <div>
-                <label className="form-label">Conta Pai</label>
+                <label className="form-label">Plano de Conta Pai *</label>
                 <Select value={formData.pai_id} onValueChange={(v) => setFormData({...formData, pai_id: v})}>
                   <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent className="z-[9999]">
-                    {contasNivel1.filter(c => c.tipo === formData.tipo).map(c => (
+                    {contasNivel1.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
+            
             <div>
-              <label className="form-label">Nome da Conta *</label>
-              <Input value={formData.nome} onChange={(e) => setFormData({...formData, nome: e.target.value})} required />
+              <label className="form-label">Nome *</label>
+              <Input 
+                value={formData.nome} 
+                onChange={(e) => setFormData({...formData, nome: e.target.value})} 
+                required 
+                placeholder={formData.nivel === 2 ? "Nome da subconta" : "Nome do plano de conta"}
+              />
             </div>
+            
             <div>
               <label className="form-label">Descrição</label>
-              <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} />
+              <Input 
+                value={formData.descricao} 
+                onChange={(e) => setFormData({...formData, descricao: e.target.value})} 
+                placeholder="Descrição opcional"
+              />
             </div>
+            
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingConta ? "Atualizar" : "Cadastrar"}</Button>
+              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#b38900]">
+                {editingConta ? "Atualizar" : "Cadastrar"}
+              </Button>
             </div>
           </form>
         </DialogContent>
