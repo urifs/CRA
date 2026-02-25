@@ -5691,12 +5691,17 @@ async def download_storage_file(
         media_type=content_type
     )
 
+# Trash directory for storage system
+STORAGE_TRASH_DIR = ROOT_DIR / "storage_trash"
+STORAGE_TRASH_DIR.mkdir(exist_ok=True)
+
 @api_router.delete("/storage/delete")
 async def delete_storage_item(
     path: str,
+    permanent: bool = False,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Delete a file or folder from storage"""
+    """Move a file or folder to trash (or delete permanently if permanent=True)"""
     current_user = await get_current_user(credentials)
     
     # Normalize path
@@ -5713,27 +5718,209 @@ async def delete_storage_item(
     is_folder = abs_path.is_dir()
     
     try:
-        if is_folder:
-            import shutil
-            shutil.rmtree(abs_path)
+        if permanent:
+            # Delete permanently
+            if is_folder:
+                import shutil
+                shutil.rmtree(abs_path)
+            else:
+                abs_path.unlink()
+            action = "excluir permanentemente"
         else:
-            abs_path.unlink()
+            # Move to trash
+            import shutil
+            trash_item_id = str(uuid.uuid4())
+            trash_path = STORAGE_TRASH_DIR / trash_item_id
+            
+            # Move the item
+            shutil.move(str(abs_path), str(trash_path))
+            
+            # Save metadata to database
+            trash_record = {
+                "id": trash_item_id,
+                "original_name": item_name,
+                "original_path": path,
+                "type": "folder" if is_folder else "file",
+                "deleted_by": current_user["id"],
+                "deleted_by_name": current_user["name"],
+                "deleted_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Get file size if it's a file
+            if not is_folder and trash_path.exists():
+                trash_record["size"] = trash_path.stat().st_size
+            
+            await db.storage_trash.insert_one(trash_record)
+            action = "mover para lixeira"
         
         # Auditoria
         await create_audit_log(
             user=current_user,
-            action=f"excluir {'pasta' if is_folder else 'arquivo'}",
+            action=action,
             entity_type="storage",
             entity_id=item_name,
             entity_name=item_name,
-            details=f"{'Pasta' if is_folder else 'Arquivo'} excluído: {path}",
+            details=f"{'Pasta' if is_folder else 'Arquivo'}: {path}",
             module="Armazenamento"
         )
         
-        return {"message": "Item excluído com sucesso"}
+        return {"message": "Item movido para lixeira" if not permanent else "Item excluído permanentemente"}
     except Exception as e:
         logger.error(f"Error deleting item: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao excluir: {str(e)}")
+
+@api_router.get("/storage/trash")
+async def list_trash_items(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """List all items in trash"""
+    await get_current_user(credentials)
+    
+    items = await db.storage_trash.find({}, {"_id": 0}).sort("deleted_at", -1).to_list(1000)
+    return items
+
+@api_router.post("/storage/trash/{item_id}/restore")
+async def restore_trash_item(
+    item_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Restore an item from trash"""
+    current_user = await get_current_user(credentials)
+    
+    # Find item in trash
+    trash_item = await db.storage_trash.find_one({"id": item_id}, {"_id": 0})
+    if not trash_item:
+        raise HTTPException(status_code=404, detail="Item não encontrado na lixeira")
+    
+    trash_path = STORAGE_TRASH_DIR / item_id
+    if not trash_path.exists():
+        # Clean up database record
+        await db.storage_trash.delete_one({"id": item_id})
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado no sistema")
+    
+    # Restore to original location
+    original_path = trash_item["original_path"]
+    restore_path = STORAGE_DIR / original_path.lstrip("/")
+    
+    # Create parent directories if needed
+    restore_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Handle name conflicts
+    if restore_path.exists():
+        base_name = Path(trash_item["original_name"]).stem
+        ext = Path(trash_item["original_name"]).suffix
+        counter = 1
+        while restore_path.exists():
+            new_name = f"{base_name}_{counter}{ext}"
+            restore_path = restore_path.parent / new_name
+            counter += 1
+    
+    try:
+        import shutil
+        shutil.move(str(trash_path), str(restore_path))
+        
+        # Remove from trash database
+        await db.storage_trash.delete_one({"id": item_id})
+        
+        # Auditoria
+        await create_audit_log(
+            user=current_user,
+            action="restaurar da lixeira",
+            entity_type="storage",
+            entity_id=trash_item["original_name"],
+            entity_name=trash_item["original_name"],
+            details=f"Restaurado para: {str(restore_path.relative_to(STORAGE_DIR))}",
+            module="Armazenamento"
+        )
+        
+        return {"message": "Item restaurado com sucesso", "restored_path": "/" + str(restore_path.relative_to(STORAGE_DIR)).replace("\\", "/")}
+    except Exception as e:
+        logger.error(f"Error restoring item: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao restaurar: {str(e)}")
+
+@api_router.delete("/storage/trash/{item_id}")
+async def delete_trash_item_permanently(
+    item_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Permanently delete an item from trash"""
+    current_user = await get_current_user(credentials)
+    
+    # Find item in trash
+    trash_item = await db.storage_trash.find_one({"id": item_id}, {"_id": 0})
+    if not trash_item:
+        raise HTTPException(status_code=404, detail="Item não encontrado na lixeira")
+    
+    trash_path = STORAGE_TRASH_DIR / item_id
+    
+    try:
+        if trash_path.exists():
+            if trash_path.is_dir():
+                import shutil
+                shutil.rmtree(trash_path)
+            else:
+                trash_path.unlink()
+        
+        # Remove from trash database
+        await db.storage_trash.delete_one({"id": item_id})
+        
+        # Auditoria
+        await create_audit_log(
+            user=current_user,
+            action="excluir permanentemente",
+            entity_type="storage",
+            entity_id=trash_item["original_name"],
+            entity_name=trash_item["original_name"],
+            details=f"Excluído permanentemente da lixeira",
+            module="Armazenamento"
+        )
+        
+        return {"message": "Item excluído permanentemente"}
+    except Exception as e:
+        logger.error(f"Error deleting trash item: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao excluir: {str(e)}")
+
+@api_router.delete("/storage/trash")
+async def empty_trash(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Empty all items from trash"""
+    current_user = await get_current_user(credentials)
+    
+    try:
+        import shutil
+        
+        # Get all items from trash
+        trash_items = await db.storage_trash.find({}, {"_id": 0}).to_list(1000)
+        count = len(trash_items)
+        
+        # Delete all files/folders in trash directory
+        for item in trash_items:
+            trash_path = STORAGE_TRASH_DIR / item["id"]
+            if trash_path.exists():
+                if trash_path.is_dir():
+                    shutil.rmtree(trash_path)
+                else:
+                    trash_path.unlink()
+        
+        # Clear trash database
+        await db.storage_trash.delete_many({})
+        
+        # Auditoria
+        await create_audit_log(
+            user=current_user,
+            action="esvaziar lixeira",
+            entity_type="storage",
+            entity_id="trash",
+            entity_name="Lixeira",
+            details=f"{count} itens excluídos permanentemente",
+            module="Armazenamento"
+        )
+        
+        return {"message": f"Lixeira esvaziada. {count} itens excluídos."}
+    except Exception as e:
+        logger.error(f"Error emptying trash: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao esvaziar lixeira: {str(e)}")
 
 @api_router.patch("/storage/rename")
 async def rename_storage_item(
