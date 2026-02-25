@@ -263,6 +263,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                 <div className="flex items-center gap-1 shrink-0">
                   {canPreview && (
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600"
@@ -273,6 +274,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                     </Button>
                   )}
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-gray-400 hover:text-blue-600"
