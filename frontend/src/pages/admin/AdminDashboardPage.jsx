@@ -55,6 +55,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchFilterData();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -65,6 +66,23 @@ export default function AdminDashboardPage() {
       console.error("Erro ao carregar dashboard:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFilterData = async () => {
+    try {
+      const [ccRes, pcRes, cpRes, crRes] = await Promise.all([
+        axios.get(`${API}/admin/centro-custo`),
+        axios.get(`${API}/admin/plano-contas`),
+        axios.get(`${API}/admin/contas-pagar`),
+        axios.get(`${API}/admin/contas-receber`)
+      ]);
+      setCentrosCusto(ccRes.data);
+      setPlanosContas(pcRes.data);
+      setContasPagar(cpRes.data);
+      setContasReceber(crRes.data);
+    } catch (error) {
+      console.error("Erro ao carregar dados de filtro:", error);
     }
   };
 
