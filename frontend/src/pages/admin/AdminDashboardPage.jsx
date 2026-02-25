@@ -194,6 +194,9 @@ export default function AdminDashboardPage() {
 
         {/* Tab: Resumo */}
         <TabsContent value="resumo" className="mt-6">
+          {/* Filters */}
+          <FilterBar />
+          
           {/* Financial Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <Card className="stat-card border-l-4 border-l-red-500">
