@@ -73,9 +73,17 @@ export default function ContasReceberPage() {
   const fetchPlanoContas = async () => {
     try {
       const response = await axios.get(`${API}/admin/plano-contas?tipo=receita`);
-      setPlanoContas(response.data);
+      // Separar contas principais (nível 1) e subcontas (nível 2)
+      const todas = response.data;
+      setPlanoContas(todas.filter(p => p.nivel === 1));
+      setSubcontas(todas.filter(p => p.nivel === 2));
     } catch (error) { console.error(error); }
   };
+
+  // Filtrar subcontas pelo plano de contas selecionado
+  const subcontasFiltradas = formData.plano_conta_id 
+    ? subcontas.filter(s => s.pai_id === formData.plano_conta_id)
+    : [];
 
   const fetchCentrosCusto = async () => {
     try {
