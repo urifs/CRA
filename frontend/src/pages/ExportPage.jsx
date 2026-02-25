@@ -22,7 +22,9 @@ import {
   ChevronRight,
   Clock,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
+  FileSpreadsheet,
+  FileCode
 } from "lucide-react";
 
 const ICONS = {
