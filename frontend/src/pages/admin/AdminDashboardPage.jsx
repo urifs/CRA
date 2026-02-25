@@ -535,6 +535,9 @@ export default function AdminDashboardPage() {
 
         {/* Tab: Quitados */}
         <TabsContent value="quitados" className="mt-6">
+          {/* Filters */}
+          <FilterBar />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Pagos */}
             <Card>
