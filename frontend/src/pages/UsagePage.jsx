@@ -152,6 +152,32 @@ export default function UsagePage() {
     });
   };
 
+  // Funções para exclusão de máquina
+  const handleDeleteMachine = async () => {
+    if (!deleteMachineDialog.machineId) return;
+    
+    setDeleteMachineLoading(true);
+    try {
+      await axios.delete(`${API}/machines/${deleteMachineDialog.machineId}`);
+      toast.success("Máquina excluída com sucesso!");
+      setDeleteMachineDialog({ open: false, machineId: null, machineName: "", machinePlate: "" });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao excluir máquina");
+    } finally {
+      setDeleteMachineLoading(false);
+    }
+  };
+
+  const openDeleteMachineDialog = (status) => {
+    setDeleteMachineDialog({
+      open: true,
+      machineId: status.machine_id,
+      machineName: status.machine_name,
+      machinePlate: status.machine_plate
+    });
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "Nunca";
     return new Date(dateString).toLocaleDateString("pt-BR");
