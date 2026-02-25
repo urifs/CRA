@@ -358,10 +358,10 @@ export default function ArmazenamentoPage() {
         <div className="flex items-center gap-1 text-sm mb-4 overflow-x-auto pb-2">
           {breadcrumbs.map((crumb, index) => (
             <div key={crumb.path} className="flex items-center gap-1 whitespace-nowrap">
-              {index > 0 && <ChevronRight size={14} className="text-gray-400" />}
+              {index > 0 && <ChevronRight size={14} className="text-gray-500" />}
               <button
                 onClick={() => handleNavigate(crumb.path)}
-                className={`hover:text-[#E31A1A] ${index === breadcrumbs.length - 1 ? 'text-[#E31A1A] font-medium' : 'text-gray-600'}`}
+                className={`hover:text-[#E31A1A] ${index === breadcrumbs.length - 1 ? 'text-[#E31A1A] font-medium' : 'text-gray-400'}`}
               >
                 {index === 0 ? <Home size={16} /> : crumb.name}
               </button>
