@@ -357,15 +357,31 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                   src={previewUrl} 
                   alt={previewName || "Preview"} 
                   className="max-h-[75vh] max-w-full object-contain rounded shadow-lg"
+                  onError={(e) => {
+                    console.error("Erro ao carregar imagem");
+                    toast.error("Erro ao exibir imagem. Tente baixar o arquivo.");
+                  }}
                 />
               </div>
             ) : previewType === "pdf" && previewUrl ? (
-              <iframe
-                src={previewUrl}
-                title={previewName || "PDF Preview"}
-                className="w-full h-[75vh] border-0"
-              />
-            ) : null}
+              <div className="h-[75vh] flex flex-col">
+                <iframe
+                  src={`${previewUrl}#toolbar=1`}
+                  title={previewName || "PDF Preview"}
+                  className="w-full flex-1 border-0"
+                  onError={() => {
+                    toast.error("Erro ao exibir PDF. Tente baixar o arquivo.");
+                  }}
+                />
+                <div className="p-2 bg-gray-200 text-center text-sm text-gray-600">
+                  Se o PDF não aparecer, clique em "Baixar" acima
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[60vh] text-gray-500">
+                <p>Não foi possível visualizar este arquivo. Use o botão Baixar.</p>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
