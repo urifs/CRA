@@ -289,7 +289,7 @@ export default function UsagePage() {
             s.machine_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (s.machine_plate || "").toLowerCase().includes(searchTerm.toLowerCase())
           ).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {oilStatus
                 .filter(s => 
                   s.machine_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -305,96 +305,87 @@ export default function UsagePage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 hover:bg-red-50"
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 hover:bg-red-50 h-7 w-7 p-0"
                     onClick={() => openDeleteMachineDialog(status)}
                     data-testid={`delete-machine-${status.machine_id}`}
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </Button>
                   
-                  <CardContent className="pt-6">
-                    {/* Machine header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                          status.needs_alert ? "bg-orange-100" : "bg-gray-100"
-                        }`}>
-                          <Truck className={status.needs_alert ? "text-[#E31A1A]" : "text-gray-600"} size={24} />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-black">{status.machine_name}</h3>
-                          <p className="font-mono text-sm text-gray-500">{status.machine_plate}</p>
-                        </div>
+                  <CardContent className="p-3">
+                    {/* Machine header - compacto */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${
+                        status.needs_alert ? "bg-orange-100" : "bg-gray-100"
+                      }`}>
+                        <Truck className={status.needs_alert ? "text-[#E31A1A]" : "text-gray-600"} size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-black text-sm truncate">{status.machine_name}</h3>
+                        {status.machine_plate && (
+                          <p className="font-mono text-xs text-gray-500">{status.machine_plate}</p>
+                        )}
                       </div>
                       {status.needs_alert && (
-                        <span className="status-badge badge-maintenance flex items-center gap-1">
-                          <AlertTriangle size={12} />
-                          Alerta
+                        <span className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded flex items-center gap-1 flex-shrink-0">
+                          <AlertTriangle size={10} />
                         </span>
                       )}
                     </div>
 
-                    {/* Hours progress */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Horas de Uso</span>
-                        <span className="font-bold">
+                    {/* Hours progress - compacto */}
+                    <div className="space-y-1 mb-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Horas</span>
+                        <span className="font-semibold">
                           {status.hours_since_change.toFixed(0)}h / 500h
                         </span>
                       </div>
                       <Progress 
                         value={(status.hours_since_change / 500) * 100} 
-                        className="h-2"
+                        className="h-1.5"
                       />
-                      <div className="flex justify-between text-xs">
-                        <span className={`font-medium ${status.hours_remaining <= 50 ? "text-[#E31A1A]" : "text-gray-500"}`}>
-                          {status.hours_remaining > 0 
-                            ? `Restam ${status.hours_remaining.toFixed(0)}h`
-                            : "Limite atingido!"
-                          }
-                        </span>
-                      </div>
+                      <p className={`text-xs ${status.hours_remaining <= 50 ? "text-[#E31A1A] font-medium" : "text-gray-400"}`}>
+                        {status.hours_remaining > 0 
+                          ? `Restam ${status.hours_remaining.toFixed(0)}h`
+                          : "Limite!"
+                        }
+                      </p>
                     </div>
 
-                    {/* Time progress */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Tempo desde última troca</span>
-                        <span className="font-bold">
-                          {status.days_since_change} dias / 365 dias
+                    {/* Time progress - compacto */}
+                    <div className="space-y-1 mb-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Tempo</span>
+                        <span className="font-semibold">
+                          {status.days_since_change}d / 365d
                         </span>
                       </div>
                       <Progress 
                         value={(status.days_since_change / 365) * 100} 
-                        className="h-2"
+                        className="h-1.5"
                       />
-                      <div className="flex justify-between text-xs">
-                        <span className={`font-medium ${status.days_remaining <= 60 ? "text-[#E31A1A]" : "text-gray-500"}`}>
-                          {status.days_remaining > 0 
-                            ? `Restam ${status.days_remaining} dias`
-                            : "1 ano atingido!"
-                          }
-                        </span>
-                      </div>
+                      <p className={`text-xs ${status.days_remaining <= 60 ? "text-[#E31A1A] font-medium" : "text-gray-400"}`}>
+                        {status.days_remaining > 0 
+                          ? `Restam ${status.days_remaining}d`
+                          : "1 ano!"
+                        }
+                      </p>
                     </div>
 
-                    {/* Info */}
-                    <div className="pt-4 border-t border-gray-200 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 flex items-center gap-1">
-                          <Calendar size={14} />
-                          Última troca:
-                        </span>
-                        <span className="font-medium">{formatDate(status.last_oil_change_date)}</span>
-                      </div>
+                    {/* Info - compacto */}
+                    <div className="pt-2 border-t border-gray-100 text-xs flex justify-between items-center">
+                      <span className="text-gray-400 flex items-center gap-1">
+                        <Calendar size={10} />
+                        Troca:
+                      </span>
+                      <span className="font-medium text-gray-600">{formatDate(status.last_oil_change_date)}</span>
                     </div>
 
-                    {/* Alert message */}
+                    {/* Alert message - compacto */}
                     {status.alert_reason && (
-                      <div className="mt-4 p-3 bg-orange-100 rounded-lg">
-                        <p className="text-sm text-orange-800 font-medium">
-                          ⚠️ {status.alert_reason}
-                        </p>
+                      <div className="mt-2 p-1.5 bg-orange-100 rounded text-xs text-orange-800">
+                        ⚠️ {status.alert_reason}
                       </div>
                     )}
                   </CardContent>
