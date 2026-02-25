@@ -1,47 +1,54 @@
 <analysis>**original_problem_statement**:
-O usuário solicitou inicialmente um sistema de gerenciamento de máquinas e manutenções. O escopo foi expandido para incluir controle de estoque, um painel financeiro, um novo e abrangente **Módulo Administrativo** no estilo ERP, um módulo de **Aluguéis de Máquinas**, e um centro de **Notificações**.
+O usuário solicitou inicialmente um sistema de gerenciamento de máquinas e manutenções, que evoluiu para um sistema ERP completo com controle de estoque, painel financeiro, módulo administrativo, aluguéis e notificações.
 
-As solicitações mais recentes focaram em melhorias de UI/UX, na criação de um **Painel de Super Administrador**, um **chatbot com IA**, funcionalidade de **exportação para PDF/Excel/OFX**, e a capacidade de **anexar e visualizar arquivos** em vários módulos.
+Nesta sessão, o usuário solicitou as seguintes alterações e novas funcionalidades:
+1.  **Refatoração do Plano de Contas**: Mudar a interface do Plano de Contas para remover a separação de Receitas e Despesas, exibindo tudo em uma lista única. As subcontas devem ser aninhadas (dropdown/expansível) e cada conta/subconta deve ter uma opção de Extrato para visualizar as transações vinculadas.
+2.  **Dropdown de Cadastros**: Nos formulários de Contas a Pagar e Contas a Receber, o campo de nome (Fornecedor/Cliente) deve ser um dropdown que busca da lista de Cadastros existentes.
+3.  **Correção de Visualização de Anexos**: Corrigir um erro que impede a visualização de documentos anexados, especialmente no módulo Armazenamento.
+4.  **Cadastro Rápido de Cliente/Fornecedor**: Adicionar um botão Cadastrar novo ao lado dos dropdowns de Cliente/Fornecedor para permitir a criação de um novo cadastro através de um modal, sem sair da tela de contas.
 
-Recentemente, o usuário solicitou uma série de novas funcionalidades e melhorias, a maioria das quais foram implementadas na sessão anterior:
-1.  **Novo Sistema de Armazenamento**: Um módulo para gerenciamento de arquivos no estilo Google Drive, com pastas, uploads e uma lixeira.
-2.  **Campo de Contrato para Aluguéis**: Adicionar um campo de texto para o número do contrato e um anexo de arquivo no formulário de criação de aluguel.
-3.  **Novos Formatos de Exportação**: Adicionar exportação para Excel e OFX, além do PDF existente.
-4.  **Visualização de Anexos**: Modificar as funcionalidades de anexo para permitir a visualização de documentos (como imagens e PDFs) diretamente na tela, sem a necessidade de download.
-5.  **Anexos em Produtos**: Adicionar a capacidade de anexar arquivos no formulário de cadastro de novos produtos.
-6.  **Importação de Dados (CNPJ/CEP)**: Implementar uma função que, ao digitar um CNPJ ou CEP, pesquise os dados e preencha os campos restantes automaticamente. A implementação inicial para CNPJ com Gemini apresentou bugs.
-7.  **Medição de Máquinas**: Adicionar um sistema para medição de uso de máquinas (horas/km) no módulo de Obras.
-8.  **Melhorias no Dashboard Financeiro**: Adicionar opções de pesquisa e filtro.
+**PRODUCT REQUIREMENTS**:
+1.  **Funcionalidade**:
+    *   O Plano de Contas deve ser uma lista unificada com extrato por conta.
+    *   Os formulários de Contas devem usar um dropdown para selecionar clientes/fornecedores.
+    *   Deve ser possível criar um cliente/fornecedor rapidamente a partir do formulário de contas.
+2.  **Bugs**:
+    *   A visualização de anexos (PDFs, etc.) deve funcionar corretamente em todo o sistema.
 
 **User's preferred language**: Portuguese (Brazil). The next agent MUST respond in Portuguese.
 
 **what currently exists?**
-Um aplicativo full-stack (React + FastAPI + MongoDB) com autenticação JWT e identidade visual da CRA Construtora. O sistema possui módulos de **Gerenciamento**, **Administrativo** e um **Painel Admin**. Funcionalidades como Gerenciador de Banco de Dados, chatbot com Gemini, exportação para PDF/Excel/OFX, anexos de arquivos com preview, sistema de tarefas, um completo sistema de armazenamento com lixeira, medição de uso de máquinas e filtros no dashboard financeiro foram implementadas. A consulta de CEP funciona via ViaCEP e a de CNPJ foi alterada para usar a BrasilAPI após a tentativa com Gemini falhar. O backend continua em um arquivo monolítico , que agora possui mais de 6.000 linhas.
+Um aplicativo full-stack (React + FastAPI + MongoDB). A sessão começou com a validação bem-sucedida de uma correção de bug no Plano de Contas hierárquico, confirmada por testes manuais e pelo .
+
+Em seguida, o agente implementou uma série de novas solicitações do usuário:
+1.  Refatorou completamente a página  para uma nova UI de lista única com funcionalidade de Extrato.
+2.  Modificou as páginas  e  para substituir o campo de texto de Fornecedor/Cliente por um componente de  (dropdown pesquisável).
+3.  Implementou uma funcionalidade de cadastro rápido com um modal para adicionar novos Clientes/Fornecedores diretamente dessas páginas. Um bug relacionado ao nome do campo ( vs. ) foi identificado e corrigido.
+4.  Realizou uma tentativa de correção para o visualizador de anexos, melhorando o componente  para tratar melhor os PDFs e fornecer um link de download como alternativa, embora a correção não tenha sido verificada devido à falta de dados para teste no ambiente.
 
 **Last working item**:
-    - Last item agent was working: Corrigindo a funcionalidade de consulta de CNPJ. A implementação inicial usando Gemini estava retornando dados incorretos. O agente substituiu a lógica no backend para usar a , que é mais confiável e busca dados diretamente da Receita Federal. O código do backend foi alterado, mas o agente não reiniciou o serviço nem testou a correção.
-    - Status: IN PROGRESS
-    - Agent Testing Done: N
-    - Which testing method agent to use? backend testing agent. O agente deve primeiro usar  para testar o endpoint  e garantir que ele retorna os dados corretos da BrasilAPI. Depois, deve testar a funcionalidade no frontend para validar que o preenchimento automático funciona como esperado.
+    - Last item agent was working: Finalização da implementação e correção da funcionalidade de Cadastro Rápido de clientes/fornecedores. O agente corrigiu um erro na chamada da API, onde o campo  era enviado em vez de , e ajustou o frontend para usar o nome de campo correto.
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y (O agente confirmou que a chamada à API para criar um novo cadastro via  funcionou após a correção. As screenshots confirmaram que os elementos de UI, como o botão e o modal, estão corretos).
+    - Which testing method agent to use? Frontend testing agent. O próximo agente deve pedir ao usuário para testar o fluxo completo: 1. Abrir a página de Contas a Pagar. 2. Clicar no botão para cadastrar um novo fornecedor. 3. Preencher e enviar o formulário do modal. 4. Verificar se o novo fornecedor aparece selecionado no dropdown.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Validar a correção da consulta de CNPJ (PRIORITY: P0)
+  - Issue 1:  Corrigir visualização de anexos (PRIORITY: P0)
   
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: A implementação original com Gemini foi descartada por falta de confiabilidade. O código foi alterado para usar a BrasilAPI, mas esta correção ainda não foi validada.
+     - Attempted fixes: O agente modificou  para melhorar a forma como os previews de arquivos (especialmente PDFs) são tratados, adicionando um link de download como fallback caso a visualização embutida falhe.
      - Next debug checklist: 
-        1. Reinicie o serviço de backend: backend: stopped
-backend: started.
-        2. Verifique os logs do backend para garantir que não há erros na inicialização.
-        3. Teste o endpoint diretamente com um CNPJ válido: {"detail":"Not authenticated"}.
-        4. Verifique se o JSON retornado contém os dados corretos da empresa.
-        5. Teste no frontend: vá para a página Cadastros, crie um novo cadastro de Pessoa Jurídica, insira um CNPJ e clique no botão de busca para confirmar o preenchimento automático dos campos.
-     - Why fix this issue and what will be achieved with the fix? A funcionalidade é crítica para a agilidade do processo de cadastro e, em seu estado anterior, estava inserindo dados incorretos no sistema, o que é inaceitável.
+        1. Pedir ao usuário para navegar até a seção Armazenamento ou qualquer outra área com anexos.
+        2. Fazer o upload de um arquivo (preferencialmente um PDF).
+        3. Clicar para visualizar o anexo.
+        4. Se a visualização direta falhar, verificar se o link de download alternativo aparece e funciona.
+        5. Inspecionar o console do navegador em busca de erros de CORS, Content-Security-Policy ou outros erros de script.
+     - Why fix this issue and what will be achieved with the fix? A visualização de documentos é uma funcionalidade essencial para o sistema, permitindo que os usuários acessem contratos, notas fiscais e outros arquivos importantes diretamente na plataforma.
      - Status:  IN PROGRESS
-     - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Both.
+     - Is recurring issue? Y (mencionado no ).
+     - Should Test frontend/backend/both after fix? Frontend.
      - Blocked on other issue: Não.
 
 **In progress Task List**:
@@ -49,37 +56,23 @@ backend: started.
 
 **Upcoming and Future Tasks**
  **Upcoming Tasks:**
- - **P1: Visualização de Anexos (Contas)**: Modificar a seção de anexos em Contas a Pagar/Receber para permitir a visualização de imagens/PDFs em um modal, sem download.
- - **P1: Integração Estoque ↔ Manutenção**: Implementar a baixa automática de peças do estoque ao registrar uma manutenção.
+ - **P1: Refatoração Parcial do Backend**: Executar a refatoração parcial do  conforme aprovado pelo usuário, movendo as rotas mais críticas (ex: , , ) para seus próprios arquivos no diretório .
+ - **P1: Visualização de Outros Tipos de Arquivo**: Adicionar suporte para preview de arquivos do Word e Excel no sistema de armazenamento.
 
  **Future Tasks:**
- - **P2: Refatoração Crítica do Backend**: Executar a refatoração completa do monolito  para uma estrutura modular com diretórios (, , ), conforme planejado no .
+ - **P2: Refatoração Crítica do Backend**: Continuar e completar a refatoração completa do monolito  para a estrutura modular.
+ - **P2: Integração Estoque ↔ Manutenção**: Implementar a baixa automática de peças do estoque ao registrar uma manutenção.
  - **P2: Notificações Externas**: Envio de notificações por email/WhatsApp.
  - **P2: Reativar PWA**: Reativar o Service Worker para habilitar a funcionalidade de Progressive Web App.
 
 **Completed work in this session**
-- **Sistema de Armazenamento (Storage System)**:
-  - Implementado backend completo (CRUD, upload, download, renomear).
-  - UI criada em  com tema escuro, navegação por clique único e preview de arquivos.
-  - Adicionada funcionalidade de **Lixeira** com opções para restaurar ou excluir permanentemente.
-- **Contrato em Aluguéis**:
-  - Adicionado campo Nº do Contrato e anexo de arquivo ao formulário de aluguéis ().
-- **Exportação para Excel/OFX**:
-  - Instaladas bibliotecas  e .
-  - Adicionados endpoints de backend e botões na UI ().
-- **Anexos em Produtos e Cadastros**:
-  - Implementada funcionalidade de anexo e preview de arquivos nas páginas de Produtos e Cadastros.
-- **Medições de Máquinas**:
-  - Criada a página  com backend para registrar o uso de máquinas (horas/km) por obra.
-- **Dashboard Financeiro Melhorado**:
-  - Adicionados filtros por Centro de Custo e Plano de Contas no .
-- **Tradução do Painel Admin**:
-  - Textos em inglês na UI do  foram traduzidos para português.
-- **Consulta de CEP**:
-  - Implementado preenchimento automático de endereço a partir do CEP usando a API ViaCEP.
+- **Validação de Correção de Bug**: O bug de associação incorreta de subcontas no Plano de Contas foi testado e confirmado como resolvido. O  validou a correção com 100% de sucesso.
+- **Refatoração do Plano de Contas**: A UI foi completamente redesenhada para uma lista única com subcontas expansíveis e um botão Extrato, conforme solicitado pelo usuário.
+- **Dropdown de Cliente/Fornecedor**: Os campos de texto para Fornecedor e Cliente nas páginas de Contas a Pagar/Receber foram substituídos por um  pesquisável.
+- **Cadastro Rápido de Cliente/Fornecedor**: Implementada uma funcionalidade de modal para criar novos cadastros diretamente dos formulários de contas, incluindo a correção de um bug na carga útil da API ( vs ).
 
 **Earlier issues found/mentioned but not fixed**
-   - Nenhum.
+   - O problema de visualização de anexos foi abordado, mas não verificado. Portanto, permanece como uma questão pendente.
 
 **Known issue recurrence from previous fork**
   - Nenhum.
@@ -88,59 +81,54 @@ backend: started.
 
 
 **Key Technical Concepts**
-- **API-based Lookups**: Utilização de APIs externas para enriquecimento de dados (BrasilAPI para CNPJ, ViaCEP para CEP). A decisão de trocar um LLM por uma API determinística para dados factuais foi um aprendizado chave.
-- **File System Management**: O módulo de armazenamento realiza operações no sistema de arquivos do backend (, ) para gerenciar pastas, arquivos e a lixeira.
-- **Dynamic File Serving**: Uso do  do FastAPI para servir arquivos para download e preview.
+- **Refatoração de UI**: Alteração drástica de um componente React com base em novos requisitos do usuário, mudando de uma visualização de duas colunas para uma lista única expansível.
+- **Componente **: Implementação de um dropdown pesquisável para seleção de dados de uma API, melhorando a UX em relação a um campo de texto simples.
+- **Modais para Ações Rápidas**: Uso de  (modal) para permitir a criação de entidades relacionadas (um Cadastro) sem que o usuário precise sair do fluxo principal (criação de uma Conta).
+- **Depuração de API**: Diagnóstico e correção de uma incompatibilidade entre o payload enviado pelo frontend () e o esperado pelo modelo Pydantic do backend ().
 
 **key DB schema**
-- **medicoes**: 
-- **storage_items**: 
-- **cadastros, produtos, alugueis**: Adicionado o campo .
+- **cadastros**:  - O campo  foi confirmado como o correto para o nome/razão social.
+- **plano_contas**: A remoção do campo  no frontend simplificou a criação, mas o campo provavelmente ainda existe no backend/DB.
 
 **changes in tech stack**
-- **Adicionado**: , , .
+- Nenhuma.
 
 **All files of reference**
-- 
-- 
-- 
-- 
-- 
-- 
+-  (modificado)
+-  (modificado)
+-  (modificado)
+-  (modificado)
+-  (referenciado para depuração da API)
+-  (relatório de teste que validou a correção inicial do Plano de Contas)
 
 **Areas that need refactoring**:
-- **CRÍTICO**: O arquivo  é um grande monolito e um débito técnico significativo. A refatoração planejada para uma estrutura modular é essencial para a manutenibilidade e escalabilidade futura do projeto.
+- **CRÍTICO**:  permanece como a principal dívida técnica. O usuário aprovou sua refatoração, que deve ser retomada assim que as tarefas de UI de alta prioridade forem concluídas e validadas.
 
 **key api endpoints**
-- **Storage**: , , , , , .
-- **Lookups**: , .
-- **Measurements**: .
-- **Exports**: , .
+- : Usado e corrigido para a funcionalidade de cadastro rápido.
+- : Usado para popular os dropdowns de cliente/fornecedor.
+- : Endpoint para download de arquivos, relevante para o bug de visualização de anexos.
+- : Endpoint para download de anexos de entidades.
 
 **Critical Info for New Agent**
-- **Prioridade Máxima**: A primeira ação deve ser validar a correção da consulta de CNPJ. Este foi o último bug crítico reportado pelo usuário.
-- **APIs vs. LLMs**: A decisão de usar BrasilAPI em vez de Gemini para dados de CNPJ foi crucial. Mantenha essa abordagem: use APIs determinísticas para dados factuais e LLMs para tarefas criativas ou de conversação.
-- **Consulta de CPF**: O agente anterior já informou corretamente ao usuário que a consulta de CPF não é viável por meios gratuitos/legais devido à LGPD. Não tente implementar isso, a menos que o usuário forneça credenciais para um serviço pago e compatível.
-- **Refatoração do Backend**: O monolito  é um risco. Proponha a refatoração como uma tarefa de melhoria técnica assim que as funcionalidades de alta prioridade forem concluídas, explicando os benefícios de estabilidade e agilidade no longo prazo.
+- **Validação do Usuário é Crucial**: As duas últimas funcionalidades (Dropdown de Cadastros e Cadastro Rápido) foram implementadas, mas o usuário ainda não as testou. O próximo passo deve ser solicitar a validação do usuário para esses itens.
+- **Bug de Anexo Não Verificado**: A correção para a visualização de anexos foi implementada no escuro, sem um caso de teste para reproduzir o erro. É essencial que o usuário teste isso com um arquivo real para confirmar se o problema foi resolvido.
+- **Prioridades do Usuário**: O usuário demonstrou que direciona ativamente as prioridades, muitas vezes interrompendo tarefas planejadas (como a refatoração do backend) para solicitar novas funcionalidades de UI. Esteja preparado para essa dinâmica.
+- **Refatoração do Backend em Espera**: A refatoração do  é a próxima grande tarefa técnica na fila, mas só deve ser iniciada após a confirmação do usuário de que as funcionalidades atuais estão satisfatórias.
 
 **documents and test reports created in this job**
-- 
+-  (atualizado várias vezes)
 - 
 
-**Last 10 User Messages and any pending HUMAN messages**
-- **User 10**: Reporta que a consulta de CNPJ via Gemini está retornando dados errados e pede uma correção. (**EM ANDAMENTO**)
-- **User 9**: Pergunta se a mesma consulta pode ser feita para CPF. (Respondido que não é possível)
-- **User 8**: Pede para implementar as tarefas P0 restantes: exportação, visualização e anexos em produtos. (**CONCLUÍDO**)
-- **User 7**: Pede um sistema de medição de máquinas, tradução do painel admin, preview de arquivos no armazenamento e filtros no dashboard financeiro. (**CONCLUÍDO**)
-- **User 6**: Pede a funcionalidade de lixeira no sistema de armazenamento. (**CONCLUÍDO**)
-- **User 5**: Pede para alterar o fundo do sistema de armazenamento. (**CONCLUÍDO**)
-- **User 4**: Reporta que as pastas no armazenamento não abrem com um clique. (**CONCLUÍDO**)
-- **User 3**: Confirma para continuar as tarefas de prioridade P0.
-- **User 2**: (Mensagens de sessões anteriores)
-- **User 1**: (Mensagens de sessões anteriores)
+**Last 10 User Messages and any pending HUMAN messages** 
+- **User 10**:  - O usuário aprovou a sugestão do agente para criar um botão de cadastro rápido. (COMPLETED)
+- **User 9**:  - O usuário solicitou duas novas funcionalidades/correções de alta prioridade. (COMPLETED/IN PROGRESS)
+- **User 8**:  - O usuário deu o sinal verde para continuar o trabalho. (COMPLETED)
+- **User 7**:  - O usuário interrompeu a tarefa planejada (refatoração de backend) e forneceu novos requisitos para a página Plano de Contas. (COMPLETED)
+- **User 6**:  - O usuário deu o sinal verde para continuar o trabalho. (COMPLETED)
 
 **Project Health Check:**
-- **Broken**: A funcionalidade de consulta de CNPJ está com a correção pendente de validação.
+- **Broken**: A funcionalidade de visualização de anexos é considerada quebrada, pois a correção implementada ainda não foi verificada e o problema original foi relatado pelo usuário.
 - **Mocked**: Nenhum.
 
 **3rd Party Integrations**
@@ -152,7 +140,7 @@ backend: started.
 - **python-ofxparse**: Usado para geração de OFX.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (para o Sistema de Armazenamento e Contratos de Aluguel).
+  - Testing agent used after significant changes: YES (para validar a correção inicial do bug do Plano de Contas).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
   - Known regressions: Nenhum.
@@ -163,4 +151,4 @@ backend: started.
 - **Role**: 
 
 **What agent forgot to execute**
-- O agente alterou o código do backend para corrigir a consulta de CNPJ, mas não reiniciou o serviço nem testou a correção. A validação completa (backend e frontend) desta correção é a ação pendente mais crítica.</analysis>
+- O agente foi instruído a iniciar a refatoração do backend, mas foi interrompido por novas solicitações de alta prioridade do usuário. A tarefa de refatoração não foi esquecida, mas sim adiada com base na priorização do usuário.</analysis>
