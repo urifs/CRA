@@ -459,38 +459,38 @@ export default function ArmazenamentoPage() {
             })}
           </div>
         ) : (
-          <Card>
+          <Card className="bg-gray-900 border-gray-800">
             <CardContent className="p-0">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-800 border-b border-gray-700">
                   <tr>
-                    <th className="text-left p-3 font-medium text-gray-600">Nome</th>
-                    <th className="text-left p-3 font-medium text-gray-600 hidden sm:table-cell">Tamanho</th>
-                    <th className="text-left p-3 font-medium text-gray-600 hidden md:table-cell">Modificado</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Ações</th>
+                    <th className="text-left p-3 font-medium text-gray-300">Nome</th>
+                    <th className="text-left p-3 font-medium text-gray-300 hidden sm:table-cell">Tamanho</th>
+                    <th className="text-left p-3 font-medium text-gray-300 hidden md:table-cell">Modificado</th>
+                    <th className="text-right p-3 font-medium text-gray-300">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {folders.map((item) => (
-                    <tr key={item.path} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleNavigate(item.path)}>
+                    <tr key={item.path} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer" onClick={() => handleNavigate(item.path)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <FolderOpen size={24} className="text-[#D4A000]" />
-                          <span className="font-medium">{item.name}</span>
+                          <span className="font-medium text-white">{item.name}</span>
                         </div>
                       </td>
-                      <td className="p-3 text-gray-500 hidden sm:table-cell">{item.items_count || 0} itens</td>
-                      <td className="p-3 text-gray-500 hidden md:table-cell">{new Date(item.modified_at).toLocaleDateString("pt-BR")}</td>
+                      <td className="p-3 text-gray-400 hidden sm:table-cell">{item.items_count || 0} itens</td>
+                      <td className="p-3 text-gray-400 hidden md:table-cell">{new Date(item.modified_at).toLocaleDateString("pt-BR")}</td>
                       <td className="p-3 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm"><MoreVertical size={16} /></Button>
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={(e) => e.stopPropagation()}><MoreVertical size={16} /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => { setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
                               <Edit size={14} className="mr-2" /> Renomear
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(item)} className="text-red-600">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
                               <Trash2 size={14} className="mr-2" /> Excluir
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -502,19 +502,19 @@ export default function ArmazenamentoPage() {
                     const fileType = getFileIcon(item.name);
                     const FileIcon = fileType.icon;
                     return (
-                      <tr key={item.path} className="border-b hover:bg-gray-50 cursor-pointer" onDoubleClick={() => handleDownload(item)}>
+                      <tr key={item.path} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer" onDoubleClick={() => handleDownload(item)}>
                         <td className="p-3">
                           <div className="flex items-center gap-3">
                             <FileIcon size={24} className={fileType.color} />
-                            <span>{item.name}</span>
+                            <span className="text-white">{item.name}</span>
                           </div>
                         </td>
-                        <td className="p-3 text-gray-500 hidden sm:table-cell">{formatFileSize(item.size)}</td>
-                        <td className="p-3 text-gray-500 hidden md:table-cell">{new Date(item.modified_at).toLocaleDateString("pt-BR")}</td>
+                        <td className="p-3 text-gray-400 hidden sm:table-cell">{formatFileSize(item.size)}</td>
+                        <td className="p-3 text-gray-400 hidden md:table-cell">{new Date(item.modified_at).toLocaleDateString("pt-BR")}</td>
                         <td className="p-3 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm"><MoreVertical size={16} /></Button>
+                              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white"><MoreVertical size={16} /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                               {isPreviewable(item.name) && (
