@@ -44,6 +44,8 @@ export default function ContasReceberPage() {
   const [centrosCusto, setCentrosCusto] = useState([]);
   const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
   const [cadastros, setCadastros] = useState([]);
+  const [showNovoCadastro, setShowNovoCadastro] = useState(false);
+  const [novoCadastroData, setNovoCadastroData] = useState({ nome: "", cnpj_cpf: "", telefone: "", email: "" });
   
   const [formData, setFormData] = useState({
     cliente_nome: "", documento: "", numero_doc: "", descricao: "",
