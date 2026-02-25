@@ -38,7 +38,8 @@ export default function AdminDashboardPage() {
     aPagar: { total: 0, mes: 0, ano: 0, vencidas: 0, osValor: 0 },
     aReceber: { total: 0, mes: 0, ano: 0, vencidas: 0, osValor: 0 },
     quitados: { pagar: { total: 0, mes: 0, ano: 0 }, receber: { total: 0, mes: 0, ano: 0 } },
-    contasProximas: []
+    contasProximas: [],
+    vencidas: { pagar: { quantidade: 0, valor: 0, lista: [] }, receber: { quantidade: 0, valor: 0, lista: [] }, totalQuantidade: 0, totalValor: 0 }
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("resumo");
