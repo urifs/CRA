@@ -352,54 +352,7 @@ export default function AdminDashboardPage() {
         {/* Tab: A Pagar */}
         <TabsContent value="pagar" className="mt-6">
           {/* Filters */}
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <Input
-                    placeholder="Buscar por descrição..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={filterCentroCusto} onValueChange={setFilterCentroCusto}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Centro de Custo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {centrosCusto.map(cc => (
-                      <SelectItem key={cc.id} value={cc.id}>{cc.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filterPlanoContas} onValueChange={setFilterPlanoContas}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Plano de Contas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {planosContas.map(pc => (
-                      <SelectItem key={pc.id} value={pc.id}>{pc.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="vencido">Vencido</SelectItem>
-                    <SelectItem value="pago">Pago</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          <FilterBar />
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="border-l-4 border-l-red-400">
