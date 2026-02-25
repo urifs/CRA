@@ -352,7 +352,22 @@ export default function ContasPagarPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2">
                 <label className="form-label">Fornecedor</label>
-                <Input value={formData.fornecedor_nome} onChange={(e) => setFormData({...formData, fornecedor_nome: e.target.value})} />
+                <Select 
+                  value={formData.fornecedor_nome || "none"} 
+                  onValueChange={(value) => setFormData({...formData, fornecedor_nome: value === "none" ? "" : value})}
+                >
+                  <SelectTrigger className="w-full h-11">
+                    <SelectValue placeholder="Selecione um fornecedor..." />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Selecione...</SelectItem>
+                    {cadastros.map(c => (
+                      <SelectItem key={c.id} value={c.nome || c.razao_social}>
+                        {c.nome || c.razao_social} {c.cnpj_cpf ? `(${c.cnpj_cpf})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="form-label">Forma de Pagamento</label>
