@@ -384,19 +384,57 @@ export default function ExportPage({ module = "gerenciamento" }) {
                           </p>
                           <p className="text-xs text-gray-500">{sub.description}</p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => exportPDF(sub.id)}
-                          disabled={isSubExporting}
-                          className="shrink-0 text-gray-500 hover:text-gray-900"
-                        >
-                          {isSubExporting ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <FileDown size={14} />
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* PDF */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => exportPDF(sub.id)}
+                            disabled={exporting === `pdf-${sub.id}`}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            title="Exportar PDF"
+                          >
+                            {exporting === `pdf-${sub.id}` ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <FileText size={14} />
+                            )}
+                          </Button>
+                          {/* Excel */}
+                          {excelCategories.includes(sub.id) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => exportExcel(sub.id)}
+                              disabled={exporting === `excel-${sub.id}`}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              title="Exportar Excel"
+                            >
+                              {exporting === `excel-${sub.id}` ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <FileSpreadsheet size={14} />
+                              )}
+                            </Button>
                           )}
-                        </Button>
+                          {/* OFX */}
+                          {ofxCategories.includes(sub.id) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => exportOFX(sub.id)}
+                              disabled={exporting === `ofx-${sub.id}`}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Exportar OFX (Bancos)"
+                            >
+                              {exporting === `ofx-${sub.id}` ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <FileCode size={14} />
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
