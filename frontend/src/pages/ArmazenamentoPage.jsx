@@ -391,28 +391,28 @@ export default function ArmazenamentoPage() {
             {folders.map((item) => (
               <Card
                 key={item.path}
-                className="hover:shadow-lg cursor-pointer transition-all group"
+                className="bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group"
                 onClick={() => handleNavigate(item.path)}
               >
                 <CardContent className="p-4 text-center relative">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100">
+                      <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
                         <MoreVertical size={16} />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => { setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
                         <Edit size={14} className="mr-2" /> Renomear
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(item)} className="text-red-600">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
                         <Trash2 size={14} className="mr-2" /> Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <FolderOpen size={48} className="mx-auto text-[#D4A000] mb-2" />
-                  <p className="text-sm font-medium truncate">{item.name}</p>
-                  <p className="text-xs text-gray-400">{item.items_count || 0} itens</p>
+                  <p className="text-sm font-medium truncate text-white">{item.name}</p>
+                  <p className="text-xs text-gray-500">{item.items_count || 0} itens</p>
                 </CardContent>
               </Card>
             ))}
@@ -423,13 +423,13 @@ export default function ArmazenamentoPage() {
               return (
                 <Card
                   key={item.path}
-                  className="hover:shadow-lg cursor-pointer transition-all group"
+                  className="bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group"
                   onDoubleClick={() => isPreviewable(item.name) ? handlePreview(item) : handleDownload(item)}
                 >
                   <CardContent className="p-4 text-center relative">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100">
+                        <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
                           <MoreVertical size={16} />
                         </Button>
                       </DropdownMenuTrigger>
@@ -451,8 +451,8 @@ export default function ArmazenamentoPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <FileIcon size={48} className={`mx-auto ${fileType.color} mb-2`} />
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-gray-400">{formatFileSize(item.size)}</p>
+                    <p className="text-sm font-medium truncate text-white">{item.name}</p>
+                    <p className="text-xs text-gray-500">{formatFileSize(item.size)}</p>
                   </CardContent>
                 </Card>
               );
