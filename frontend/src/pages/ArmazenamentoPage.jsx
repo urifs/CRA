@@ -84,11 +84,13 @@ export default function ArmazenamentoPage() {
   const fileInputRef = useRef(null);
 
   const [items, setItems] = useState([]);
+  const [trashItems, setTrashItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
   const [currentPath, setCurrentPath] = useState(searchParams.get("path") || "/");
   const [breadcrumbs, setBreadcrumbs] = useState([{ name: "Início", path: "/" }]);
+  const [showTrash, setShowTrash] = useState(false);
 
   // Modals
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
@@ -104,9 +106,13 @@ export default function ArmazenamentoPage() {
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetchItems();
-    updateBreadcrumbs();
-  }, [currentPath]);
+    if (showTrash) {
+      fetchTrashItems();
+    } else {
+      fetchItems();
+      updateBreadcrumbs();
+    }
+  }, [currentPath, showTrash]);
 
   const updateBreadcrumbs = () => {
     const parts = currentPath.split('/').filter(p => p);
