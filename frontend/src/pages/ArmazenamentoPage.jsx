@@ -376,8 +376,8 @@ export default function ArmazenamentoPage() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-20">
-            <FolderOpen size={64} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500 mb-4">
+            <FolderOpen size={64} className="mx-auto text-gray-600 mb-4" />
+            <p className="text-gray-400 mb-4">
               {searchTerm ? "Nenhum item encontrado" : "Esta pasta está vazia"}
             </p>
             <Button onClick={() => fileInputRef.current?.click()} className="bg-[#E31A1A] hover:bg-red-700">
