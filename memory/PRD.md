@@ -438,3 +438,54 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - [x] **Aluguéis**: Clique no card abre modal de edição
 - [x] **Ordens de Serviço**: Clique no card abre modal de edição
 - **Implementação**: Adicionado `cursor-pointer`, `onClick` na `<tr>` ou `<Card>`, e `e.stopPropagation()` nas colunas de ações
+
+### Atualização de Branding e UI - 25/02/2026
+
+#### Renomeação "CRA Construtora" → "Gerenciamento" ✅
+- [x] Página de Login
+- [x] Página de Seleção de Sistema
+- [x] Layout (Sidebar)
+- [x] Rodapé
+- [x] Página de Registro
+- [x] Página de Exportação
+- [x] Chatbot Widget
+- [x] Página "Mais"
+
+#### Botão "Buscar" em todas as barras de pesquisa ✅
+Adicionado em todas as páginas:
+- [x] Dashboard Financeiro (todas as 4 abas)
+- [x] Contas a Pagar
+- [x] Contas a Receber
+- [x] Cadastros
+- [x] Produtos
+- [x] Centro de Custo
+- [x] Aluguéis
+- [x] Ordens de Serviço
+- [x] Formas de Pagamento
+- [x] Máquinas
+- [x] Manutenções
+- [x] Estoque
+- [x] Obras
+- [x] Categorias
+- [x] Armazenamento
+- [x] Notificações
+- [x] Uso de Máquinas (Usage)
+- [x] Auditoria
+- [x] Notificações Admin
+- [x] Fornecedores
+- [x] Painel Admin
+- [x] Medições
+
+#### Estrutura de Backend (Parcialmente refatorada)
+A refatoração parcial foi preparada com arquivos em:
+- `/app/backend/routes/auth.py` - Rotas de autenticação
+- `/app/backend/routes/categories.py` - Rotas de categorias
+- `/app/backend/utils/` - Funções utilitárias (database, auth, audit)
+- `/app/backend/models/` - Modelos Pydantic
+
+**Próximos passos da refatoração**:
+1. Migrar rotas de máquinas para `/routes/machines.py`
+2. Migrar rotas de manutenções para `/routes/maintenances.py`
+3. Migrar rotas de estoque para `/routes/stock.py`
+4. Migrar rotas administrativas para `/routes/admin.py`
+5. Integrar routers modulares no `server.py` principal
