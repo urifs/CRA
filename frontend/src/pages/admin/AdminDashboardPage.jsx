@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const { stats, aPagar, aReceber, quitados, contasProximas } = data;
+  const { stats, aPagar, aReceber, quitados, contasProximas, vencidas } = data;
 
   // Componente de filtros reutilizável
   const FilterBar = () => (
