@@ -158,7 +158,12 @@ export default function CentroCustoPage() {
             </thead>
             <tbody>
               {filteredCentros.map((c) => (
-                <tr key={c.id} className="border-t hover:bg-white" data-testid={`centro-${c.id}`}>
+                <tr 
+                  key={c.id} 
+                  className="border-t hover:bg-gray-50 cursor-pointer transition-colors" 
+                  data-testid={`centro-${c.id}`}
+                  onClick={() => openModal(c)}
+                >
                   <td className="p-3 font-mono">{c.codigo || "-"}</td>
                   <td className="p-3 font-medium">{c.nome}</td>
                   <td className="p-3 text-gray-500 max-w-[200px] truncate">{c.descricao || "-"}</td>
@@ -173,7 +178,7 @@ export default function CentroCustoPage() {
                       </span>
                     )}
                   </td>
-                  <td className="p-3 text-center">
+                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-center gap-1">
                       <Button size="sm" variant="outline" onClick={() => openModal(c)}><Edit size={14} /></Button>
                       <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></Button>
