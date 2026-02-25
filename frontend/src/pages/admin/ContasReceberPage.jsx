@@ -100,6 +100,13 @@ export default function ContasReceberPage() {
     } catch (error) { console.error(error); }
   };
 
+  const fetchCadastros = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/cadastros`);
+      setCadastros(response.data);
+    } catch (error) { console.error(error); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
