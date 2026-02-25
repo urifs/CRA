@@ -3473,6 +3473,95 @@ async def delete_produto(id: str, current_user: dict = Depends(get_current_user)
     await create_audit_log(current_user, "delete", "produto", id, produto["descricao"])
     return {"message": "Produto excluído"}
 
+# --- Anexos de Produtos ---
+PRODUTOS_ANEXOS_DIR = ROOT_DIR / "uploads" / "produtos"
+PRODUTOS_ANEXOS_DIR.mkdir(parents=True, exist_ok=True)
+
+@api_router.post("/admin/produtos/{id}/anexos")
+async def upload_produto_anexo(
+    id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload anexo para produto"""
+    produto = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    
+    content = await file.read()
+    max_size = 50 * 1024 * 1024
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 50MB")
+    
+    ext = Path(file.filename).suffix.lower() if file.filename else ''
+    unique_filename = f"{id}_{uuid.uuid4()}{ext}"
+    file_path = PRODUTOS_ANEXOS_DIR / unique_filename
+    
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    anexo = {
+        "id": str(uuid.uuid4()),
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "size": len(content),
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.produtos_admin.update_one({"id": id}, {"$push": {"anexos": anexo}})
+    await create_audit_log(current_user, "upload anexo", "produto", id, f"{produto['descricao']} - {file.filename}")
+    
+    return {"message": "Anexo adicionado", "anexo": anexo}
+
+@api_router.delete("/admin/produtos/{id}/anexos/{anexo_id}")
+async def delete_produto_anexo(
+    id: str,
+    anexo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Excluir anexo de produto"""
+    produto = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    
+    anexo = next((a for a in produto.get("anexos", []) if a["id"] == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    file_path = PRODUTOS_ANEXOS_DIR / anexo["filename"]
+    if file_path.exists():
+        file_path.unlink()
+    
+    await db.produtos_admin.update_one({"id": id}, {"$pull": {"anexos": {"id": anexo_id}}})
+    await create_audit_log(current_user, "excluir anexo", "produto", id, produto["descricao"])
+    
+    return {"message": "Anexo excluído"}
+
+@api_router.get("/admin/produtos/{id}/anexos/{anexo_id}/download")
+async def download_produto_anexo(
+    id: str,
+    anexo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Download de anexo de produto"""
+    produto = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    
+    anexo = next((a for a in produto.get("anexos", []) if a["id"] == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    file_path = PRODUTOS_ANEXOS_DIR / anexo["filename"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=anexo.get("original_name", anexo["filename"]),
+        media_type="application/octet-stream"
+    )
+
 # --- Ordens de Serviço (Completo) ---
 @api_router.get("/admin/ordens-servico")
 async def get_ordens_servico(
