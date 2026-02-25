@@ -183,6 +183,7 @@ export default function ProdutosPage() {
   const openModal = (produto = null) => {
     if (produto) {
       setEditingProduto(produto);
+      setAnexos(produto.anexos || []);
       setFormData({
         codigo_interno: produto.codigo_interno || "",
         codigo_fabricante: produto.codigo_fabricante || "",
@@ -217,6 +218,7 @@ export default function ProdutosPage() {
       });
     } else {
       setEditingProduto(null);
+      setAnexos([]);
       setFormData({
         codigo_interno: "", codigo_fabricante: "", codigo_barras: "", descricao: "",
         fabricante: "", aplicacao: "", grupo: "", subgrupo: "",
