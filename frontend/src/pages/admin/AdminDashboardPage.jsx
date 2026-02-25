@@ -27,7 +27,9 @@ import {
   Wallet,
   BadgeDollarSign,
   Search,
-  Filter
+  Filter,
+  AlertTriangle,
+  XCircle
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
