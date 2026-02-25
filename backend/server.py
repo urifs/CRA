@@ -6453,21 +6453,24 @@ async def upload_storage_file(
 async def download_storage_file(
     path: str,
     token: Optional[str] = None,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security)
 ):
     """Download a file from storage"""
     # Support both Authorization header and query param token (for iframe/img src)
-    if not credentials and token:
+    if credentials and credentials.credentials:
+        try:
+            payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            raise HTTPException(status_code=401, detail="Token inválido")
+    elif token:
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expirado")
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Token inválido")
-    elif credentials:
-        await get_current_user(credentials)
     else:
-        raise HTTPException(status_code=401, detail="Token não fornecido")
+        raise HTTPException(status_code=401, detail="Not authenticated")
     
     # Normalize path
     if not path.startswith("/"):
