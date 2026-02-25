@@ -268,7 +268,7 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 
 ### P1 (Importante) - Próximos Passos
 - [x] **Exportação Excel/OFX** (além do PDF existente) ✅ CONCLUÍDO (24/02/2026)
-- [ ] **Visualização de Anexos em Modal** (Contas a Pagar/Receber)
+- [x] **Visualização de Anexos em Modal** (Contas a Pagar/Receber) ✅ CONCLUÍDO (25/02/2026)
 - [x] **Consulta de CNPJ** (preenchimento automático via BrasilAPI) ✅ CONCLUÍDO (25/02/2026)
 - [x] **Consulta de CEP** (preenchimento automático via ViaCEP) ✅ CONCLUÍDO (25/02/2026)
 - [x] **Anexos em Produtos** (upload de arquivos no cadastro) ✅ CONCLUÍDO (24/02/2026)
