@@ -118,6 +118,31 @@ export default function UsagePage() {
     }
   };
 
+  const handleDeleteLog = async () => {
+    if (!deleteDialog.logId) return;
+    
+    setDeleteLoading(true);
+    try {
+      await axios.delete(`${API}/usage-logs/${deleteDialog.logId}`);
+      toast.success("Registro de uso excluído com sucesso!");
+      setDeleteDialog({ open: false, logId: null, machineName: "", hours: 0 });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao excluir registro");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const openDeleteDialog = (log) => {
+    setDeleteDialog({
+      open: true,
+      logId: log.id,
+      machineName: log.machine_name,
+      hours: log.hours
+    });
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "Nunca";
     return new Date(dateString).toLocaleDateString("pt-BR");
