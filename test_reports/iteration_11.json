@@ -1,0 +1,110 @@
+{
+  "summary": "Tested CNPJ lookup via BrasilAPI feature. Backend API and Frontend UI integration working correctly. The CNPJ lookup successfully fetches company data from Receita Federal and auto-fills the form fields.",
+  
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  
+  "passed_tests": [
+    "Backend: CNPJ lookup for Banco do Brasil (00000000000191) - Returns correct company data",
+    "Backend: CNPJ lookup with invalid CNPJ (less than 14 digits) - Returns 400 error",
+    "Backend: CNPJ lookup with non-existent CNPJ - Returns appropriate error",
+    "Backend: CNPJ lookup without authentication - Returns 401/403",
+    "Backend: CNPJ lookup with unformatted CNPJ - Works correctly",
+    "Backend: CEP lookup for valid CEP - Returns correct address data",
+    "Frontend: Login flow works correctly",
+    "Frontend: Navigation to Administrativo system works",
+    "Frontend: Cadastros page loads correctly",
+    "Frontend: Novo Cadastro modal opens correctly",
+    "Frontend: Pessoa dropdown changes form fields (PF to PJ)",
+    "Frontend: CNPJ field with search button appears for Pessoa Jurídica",
+    "Frontend: CNPJ lookup auto-fills all fields (Razão Social, Nome Fantasia, Telefone, CEP, Endereço, Número, Complemento, Bairro, Cidade, UF)",
+    "Frontend: Success toast 'Dados preenchidos automaticamente!' appears after CNPJ lookup"
+  ],
+  
+  "test_report_links": [
+    "/app/backend/tests/test_cnpj_lookup.py",
+    "/app/test_reports/pytest/pytest_cnpj_lookup.xml"
+  ],
+  
+  "action_items": [],
+  
+  "critical_code_review_comments": [],
+  
+  "updated_files": [
+    "/app/backend/tests/test_cnpj_lookup.py"
+  ],
+  
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  
+  "test_credentials": {
+    "email": "test@test.com",
+    "password": "password",
+    "role": "admin"
+  },
+  
+  "seed_data_creation": "None required - used existing test user",
+  
+  "retest_needed": false,
+  
+  "should_main_agent_self_test": false,
+  
+  "context_for_next_testing_agent": "CNPJ lookup feature tested and working. The endpoint /api/consulta/cnpj/{cnpj} uses BrasilAPI to fetch company data from Receita Federal. Frontend integration in CadastrosPage.jsx correctly calls the API and auto-fills form fields. Test CNPJ used: 00000000000191 (Banco do Brasil).",
+  
+  "features_verified": {
+    "cnpj_lookup": {
+      "status": "WORKING",
+      "backend_endpoint": "GET /api/consulta/cnpj/{cnpj}",
+      "api_source": "BrasilAPI (https://brasilapi.com.br/api/cnpj/v1/{cnpj})",
+      "fields_returned": [
+        "razao_social",
+        "nome_fantasia",
+        "cnpj",
+        "inscricao_estadual",
+        "telefone",
+        "email",
+        "cep",
+        "endereco",
+        "numero",
+        "complemento",
+        "bairro",
+        "cidade",
+        "uf",
+        "situacao",
+        "atividade_principal",
+        "capital_social",
+        "data_abertura",
+        "natureza_juridica",
+        "porte"
+      ],
+      "frontend_integration": {
+        "page": "CadastrosPage.jsx",
+        "function": "handleConsultaCnpj",
+        "trigger": "Search button (lupa icon) next to CNPJ field",
+        "condition": "Only visible when tipo_pessoa = 'PJ' (Pessoa Jurídica)"
+      }
+    },
+    "cep_lookup": {
+      "status": "WORKING",
+      "backend_endpoint": "GET /api/consulta/cep/{cep}"
+    }
+  },
+  
+  "test_cnpj_used": "00000000000191",
+  "test_company_result": {
+    "razao_social": "BANCO DO BRASIL SA",
+    "nome_fantasia": "DIRECAO GERAL",
+    "cidade": "BRASILIA",
+    "uf": "DF"
+  }
+}
