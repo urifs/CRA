@@ -575,6 +575,10 @@ export default function PainelAdminPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <Input placeholder="Buscar usuários..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-900 border-gray-700 text-white" />
               </div>
+              <Button className="bg-[#D4A000] hover:bg-[#b38900] text-black">
+                <Search size={16} className="mr-2" />
+                Buscar
+              </Button>
               <Button className="bg-[#E31A1A] hover:bg-red-700" onClick={() => setShowCreateModal(true)}>
                 <Plus size={18} className="mr-2" />Novo Usuário
               </Button>

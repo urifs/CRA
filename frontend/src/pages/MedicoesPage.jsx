@@ -357,7 +357,7 @@ export default function MedicoesPage() {
           {/* Filters */}
           <Card className="mb-4">
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                   <Input
@@ -401,6 +401,10 @@ export default function MedicoesPage() {
                   value={filterDataFim}
                   onChange={(e) => setFilterDataFim(e.target.value)}
                 />
+                <Button className="bg-[#E31A1A] hover:bg-[#c41616] text-white">
+                  <Search size={16} className="mr-2" />
+                  Buscar
+                </Button>
               </div>
             </CardContent>
           </Card>
