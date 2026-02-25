@@ -365,7 +365,7 @@ export default function ArmazenamentoPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
             <Input
-              placeholder="Pesquisar arquivos..."
+              placeholder={showTrash ? "Pesquisar na lixeira..." : "Pesquisar arquivos..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-10 bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
@@ -379,21 +379,48 @@ export default function ArmazenamentoPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowNewFolderModal(true)} className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
-              <FolderPlus size={18} className="mr-2" />
-              Nova Pasta
+            {!showTrash ? (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setShowNewFolderModal(true)} className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
+                  <FolderPlus size={18} className="mr-2" />
+                  Nova Pasta
+                </Button>
+                <Button className="bg-[#E31A1A] hover:bg-red-700" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <Upload size={18} className="mr-2" />
+                  Upload
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleUpload}
+                />
+              </>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleEmptyTrash} 
+                className="border-red-700 text-red-500 hover:bg-red-900/30 hover:text-red-400"
+                disabled={trashItems.length === 0}
+              >
+                <Trash2 size={18} className="mr-2" />
+                Esvaziar Lixeira
+              </Button>
+            )}
+            <Button 
+              variant={showTrash ? "secondary" : "outline"} 
+              size="sm" 
+              onClick={() => { setShowTrash(!showTrash); setSearchTerm(""); }} 
+              className={showTrash ? "bg-gray-700 text-white" : "border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"}
+            >
+              <Trash size={18} className="mr-2" />
+              Lixeira
+              {trashItems.length > 0 && !showTrash && (
+                <span className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">{trashItems.length}</span>
+              )}
             </Button>
-            <Button className="bg-[#E31A1A] hover:bg-red-700" size="sm" onClick={() => fileInputRef.current?.click()}>
-              <Upload size={18} className="mr-2" />
-              Upload
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleUpload}
-            />
             <div className="flex border border-gray-700 rounded-md">
               <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className={`rounded-r-none ${viewMode === "grid" ? "bg-gray-700" : "text-gray-400 hover:text-white"}`} onClick={() => setViewMode("grid")}>
                 <Grid size={18} />
