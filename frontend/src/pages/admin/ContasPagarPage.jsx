@@ -45,7 +45,7 @@ export default function ContasPagarPage() {
   const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
   const [cadastros, setCadastros] = useState([]);
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
-  const [novoCadastroData, setNovoCadastroData] = useState({ nome: "", cnpj_cpf: "", telefone: "", email: "" });
+  const [novoCadastroData, setNovoCadastroData] = useState({ nome_razao: "", cnpj_cpf: "", telefone: "", email: "" });
   
   const [formData, setFormData] = useState({
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
