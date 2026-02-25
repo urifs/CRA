@@ -312,7 +312,12 @@ export default function OrdensServicoPage() {
             const tipoInfo = getTipoFinanceiroInfo(ordem.tipo_financeiro);
             const TipoIcon = tipoInfo.icon;
             return (
-              <Card key={ordem.id} className="hover:shadow-md transition-shadow" data-testid={`os-${ordem.id}`}>
+              <Card 
+                key={ordem.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer" 
+                data-testid={`os-${ordem.id}`}
+                onClick={() => openModal(ordem)}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
