@@ -468,6 +468,9 @@ export default function AdminDashboardPage() {
 
         {/* Tab: A Receber */}
         <TabsContent value="receber" className="mt-6">
+          {/* Filters */}
+          <FilterBar />
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="border-l-4 border-l-green-400">
               <CardContent className="p-6">
