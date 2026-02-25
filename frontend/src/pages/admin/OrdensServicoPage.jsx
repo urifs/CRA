@@ -275,6 +275,10 @@ export default function OrdensServicoPage() {
             data-testid="search-os"
           />
         </div>
+        <Button className="bg-[#D4A000] hover:bg-[#b38900] text-black shrink-0">
+          <Search size={16} className="mr-2" />
+          Buscar
+        </Button>
         <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
           {[
             { value: "todas", label: "Todas" },
