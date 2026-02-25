@@ -288,7 +288,11 @@ export default function ContasReceberPage() {
                 const status = getStatusInfo(c);
                 const StatusIcon = status.icon;
                 return (
-                  <tr key={c.id} className="border-t hover:bg-white">
+                  <tr 
+                    key={c.id} 
+                    className="border-t hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => openModal(c)}
+                  >
                     <td className="p-3 font-mono">{c.numero}</td>
                     <td className="p-3">{c.cliente_nome || "-"}</td>
                     <td className="p-3 max-w-[200px] truncate">{c.descricao}</td>
@@ -298,7 +302,7 @@ export default function ContasReceberPage() {
                     <td className="p-3 text-right font-medium text-green-600">{formatCurrency(c.valor_final || c.valor)}</td>
                     <td className="p-3 text-xs">{formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
                     <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${status.color}`}><StatusIcon className="inline mr-1" size={12} />{status.label}</span></td>
-                    <td className="p-3 text-center">
+                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-1">
                         {c.status === "em_aberto" && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleQuitar(c.id)} title="Quitar"><CheckCircle2 size={14} /></Button>}
                         <Button size="sm" variant="outline" onClick={() => openModal(c)}><Edit size={14} /></Button>
