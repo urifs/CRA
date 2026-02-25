@@ -388,19 +388,42 @@ export default function ContasReceberPage() {
                 <label className="form-label">Plano de Contas</label>
                 <Select value={formData.plano_conta_id || "none"} onValueChange={(value) => {
                   if (value === "none") {
-                    setFormData({...formData, plano_conta_id: "", plano_conta_nome: ""});
+                    setFormData({...formData, plano_conta_id: "", plano_conta_nome: "", subconta_id: "", subconta_nome: ""});
                   } else {
                     const pc = planoContas.find(p => p.id === value);
-                    setFormData({...formData, plano_conta_id: value, plano_conta_nome: pc?.nome || ""});
+                    setFormData({...formData, plano_conta_id: value, plano_conta_nome: pc?.nome || "", subconta_id: "", subconta_nome: ""});
                   }
                 }}>
-                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione o tipo de conta..." /></SelectTrigger>
                   <SelectContent className="z-[9999]">
                     <SelectItem value="none">Nenhum</SelectItem>
                     {planoContas.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo ? `${p.codigo} - ` : ""}{p.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <label className="form-label">Subconta</label>
+                <Select 
+                  value={formData.subconta_id || "none"} 
+                  onValueChange={(value) => {
+                    if (value === "none") {
+                      setFormData({...formData, subconta_id: "", subconta_nome: ""});
+                    } else {
+                      const sc = subcontasFiltradas.find(s => s.id === value);
+                      setFormData({...formData, subconta_id: value, subconta_nome: sc?.nome || ""});
+                    }
+                  }}
+                  disabled={!formData.plano_conta_id}
+                >
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder={formData.plano_conta_id ? "Selecione a subconta..." : "Selecione um plano primeiro"} /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {subcontasFiltradas.map(s => <SelectItem key={s.id} value={s.id}>{s.codigo ? `${s.codigo} - ` : ""}{s.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Centro de Custo</label>
                 <Select value={formData.centro_custo || "none"} onValueChange={(value) => setFormData({...formData, centro_custo: value === "none" ? "" : value})}>
@@ -411,6 +434,7 @@ export default function ContasReceberPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
             </div>
             <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
             
