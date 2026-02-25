@@ -299,16 +299,63 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
       )}
 
       {/* Preview Modal */}
-      <Dialog open={!!previewUrl} onOpenChange={() => { setPreviewUrl(null); setPreviewType(null); }}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Visualização</DialogTitle>
-          </DialogHeader>
-          {previewType === "image" && previewUrl && (
-            <div className="flex justify-center">
-              <img src={previewUrl} alt="Preview" className="max-h-[70vh] object-contain rounded" />
+      <Dialog open={!!previewUrl} onOpenChange={closePreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b bg-gray-50">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base font-medium truncate pr-4">
+                {previewName || "Visualização"}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = previewUrl;
+                    link.setAttribute('download', previewName || 'arquivo');
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                  }}
+                >
+                  <Download size={14} className="mr-1" />
+                  Baixar
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={closePreview}
+                >
+                  <X size={16} />
+                </Button>
+              </div>
             </div>
-          )}
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-auto bg-gray-100">
+            {loadingPreview ? (
+              <div className="flex items-center justify-center h-[60vh]">
+                <Loader2 size={32} className="animate-spin text-gray-400" />
+              </div>
+            ) : previewType === "image" && previewUrl ? (
+              <div className="flex items-center justify-center p-4 min-h-[60vh]">
+                <img 
+                  src={previewUrl} 
+                  alt={previewName || "Preview"} 
+                  className="max-h-[75vh] max-w-full object-contain rounded shadow-lg"
+                />
+              </div>
+            ) : previewType === "pdf" && previewUrl ? (
+              <iframe
+                src={previewUrl}
+                title={previewName || "PDF Preview"}
+                className="w-full h-[75vh] border-0"
+              />
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
