@@ -129,9 +129,9 @@ export default function SystemSelectPage() {
         {/* Header */}
         <div className="text-center mb-4 sm:mb-8">
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <img src="/logo.png" alt="CRA Construtora" className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
+            <img src="/logo.png" alt="Gerenciamento" className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-heading font-black text-white">
-              CRA Construtora
+              Gerenciamento
             </h1>
           </div>
           <p className="text-gray-400 text-sm sm:text-base flex flex-wrap items-center justify-center gap-2">
