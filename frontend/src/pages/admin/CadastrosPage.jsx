@@ -35,6 +35,10 @@ export default function CadastrosPage() {
   const [previewModal, setPreviewModal] = useState({ open: false, url: null, name: null, type: null });
   const fileInputRef = useRef(null);
   
+  // Consultas
+  const [consultandoCnpj, setConsultandoCnpj] = useState(false);
+  const [consultandoCep, setConsultandoCep] = useState(false);
+  
   const [formData, setFormData] = useState({
     tipo_cadastro: "cliente",
     tipo_pessoa: "PF",
