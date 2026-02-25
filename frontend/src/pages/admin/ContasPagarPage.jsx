@@ -40,6 +40,7 @@ export default function ContasPagarPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
   const [planoContas, setPlanoContas] = useState([]);
+  const [subcontas, setSubcontas] = useState([]);
   const [centrosCusto, setCentrosCusto] = useState([]);
   const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
   
@@ -47,7 +48,9 @@ export default function ContasPagarPage() {
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
     valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
     data_emissao: "", data_vencimento: "",
-    plano_conta_id: "", plano_conta_nome: "", centro_custo: "",
+    plano_conta_id: "", plano_conta_nome: "", 
+    subconta_id: "", subconta_nome: "",
+    centro_custo: "",
     forma_pagamento: "boleto", conta_movimento: "", observacoes: ""
   });
 
