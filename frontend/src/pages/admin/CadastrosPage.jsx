@@ -491,11 +491,97 @@ export default function CadastrosPage() {
               <Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} />
             </div>
 
+            {/* Anexos - só aparece ao editar */}
+            {editingCadastro && (
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="form-label flex items-center gap-2 mb-0">
+                    <Paperclip size={16} /> Anexos ({anexos.length})
+                  </label>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAnexo}
+                  >
+                    {uploadingAnexo ? <Loader2 size={14} className="animate-spin mr-1" /> : <Plus size={14} className="mr-1" />}
+                    Anexar
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleUploadAnexo}
+                  />
+                </div>
+                
+                {anexos.length > 0 && (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {anexos.map((anexo) => {
+                      const ext = anexo.filename?.split('.').pop()?.toLowerCase() || '';
+                      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+                      const isPdf = ext === 'pdf';
+                      const canPreview = isImage || isPdf;
+                      
+                      return (
+                        <div key={anexo.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {isImage ? <ImageIcon size={16} className="text-blue-500" /> : <FileText size={16} className="text-gray-500" />}
+                            <span className="text-sm truncate">{anexo.original_name || anexo.filename}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {canPreview && (
+                              <Button type="button" size="sm" variant="ghost" onClick={() => handleViewAnexo(anexo)} title="Visualizar">
+                                <Eye size={14} className="text-[#D4A000]" />
+                              </Button>
+                            )}
+                            <Button type="button" size="sm" variant="ghost" onClick={() => handleDownloadAnexo(anexo)} title="Baixar">
+                              <Download size={14} className="text-gray-500" />
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => handleDeleteAnexo(anexo.id)} title="Excluir">
+                              <Trash2 size={14} className="text-red-500" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingCadastro ? "Atualizar" : "Cadastrar"}</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Preview */}
+      <Dialog open={previewModal.open} onOpenChange={(open) => setPreviewModal({ ...previewModal, open })}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{previewModal.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center min-h-[400px] bg-gray-100 rounded-lg overflow-auto">
+            {previewModal.type === 'image' && previewModal.url && (
+              <img src={previewModal.url} alt={previewModal.name} className="max-w-full max-h-[70vh] object-contain" />
+            )}
+            {previewModal.type === 'pdf' && previewModal.url && (
+              <iframe src={previewModal.url} className="w-full h-[70vh]" title="PDF Preview" />
+            )}
+            {previewModal.type === 'other' && (
+              <p className="text-gray-500">Preview não disponível para este tipo de arquivo</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewModal({ open: false, url: null, name: null, type: null })}>
+              Fechar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
