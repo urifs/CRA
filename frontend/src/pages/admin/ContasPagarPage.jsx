@@ -375,22 +375,33 @@ export default function ContasPagarPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2">
                 <label className="form-label">Fornecedor</label>
-                <Select 
-                  value={formData.fornecedor_nome || "none"} 
-                  onValueChange={(value) => setFormData({...formData, fornecedor_nome: value === "none" ? "" : value})}
-                >
-                  <SelectTrigger className="w-full h-11">
-                    <SelectValue placeholder="Selecione um fornecedor..." />
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999]">
-                    <SelectItem value="none">Selecione...</SelectItem>
-                    {cadastros.map(c => (
-                      <SelectItem key={c.id} value={c.nome || c.razao_social}>
-                        {c.nome || c.razao_social} {c.cnpj_cpf ? `(${c.cnpj_cpf})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select 
+                    value={formData.fornecedor_nome || "none"} 
+                    onValueChange={(value) => setFormData({...formData, fornecedor_nome: value === "none" ? "" : value})}
+                  >
+                    <SelectTrigger className="w-full h-11">
+                      <SelectValue placeholder="Selecione um fornecedor..." />
+                    </SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="none">Selecione...</SelectItem>
+                      {cadastros.map(c => (
+                        <SelectItem key={c.id} value={c.nome || c.razao_social}>
+                          {c.nome || c.razao_social} {c.cnpj_cpf ? `(${c.cnpj_cpf})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="h-11 px-3 shrink-0"
+                    onClick={() => setShowNovoCadastro(true)}
+                    title="Cadastrar novo fornecedor"
+                  >
+                    <UserPlus size={18} />
+                  </Button>
+                </div>
               </div>
               <div>
                 <label className="form-label">Forma de Pagamento</label>
