@@ -87,7 +87,7 @@ export default function MorePage() {
 
       {/* App Info */}
       <div className="text-center py-4">
-        <p className="text-sm text-gray-400">CRA Construtora v1.0</p>
+        <p className="text-sm text-gray-400">Sistema de Gerenciamento v1.0</p>
         <p className="text-xs text-gray-300 mt-1">Sistema de Gerenciamento de Manutenção</p>
       </div>
     </div>

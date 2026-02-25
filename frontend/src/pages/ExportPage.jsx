@@ -454,7 +454,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
           </h3>
           <p className="text-sm text-gray-600 mb-3">
             Selecione as categorias ou subcategorias desejadas e clique em "Exportar". 
-            Os relatórios são gerados com a identidade visual da CRA Construtora.
+            Os relatórios são gerados com a identidade visual do Sistema de Gerenciamento.
           </p>
           <div className="flex flex-wrap gap-4 text-xs">
             <div className="flex items-center gap-1 text-red-600">

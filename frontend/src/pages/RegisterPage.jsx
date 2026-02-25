@@ -57,7 +57,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md relative z-10 border-gray-200 shadow-2xl animate-fade-in">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto w-20 h-20 mb-4">
-            <img src="/logo.png" alt="CRA Construtora" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="Gerenciamento" className="w-full h-full object-contain" />
           </div>
           <CardTitle className="font-heading text-3xl font-black tracking-tight text-black">
             Criar Conta

@@ -87,7 +87,7 @@ export default function ChatbotWidget({ module = "gerenciamento", accentColor = 
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: `Olá! Sou o assistente virtual da CRA Construtora.
+      content: `Olá! Sou o assistente virtual do Sistema de Gerenciamento.
 
 Tenho acesso a todas as informações da plataforma e posso ajudar com:
 
