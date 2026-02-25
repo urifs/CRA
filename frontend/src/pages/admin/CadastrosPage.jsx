@@ -398,7 +398,11 @@ export default function CadastrosPage() {
             </thead>
             <tbody>
               {filteredCadastros.map((c) => (
-                <tr key={c.id} className="border-t hover:bg-white">
+                <tr 
+                  key={c.id} 
+                  className="border-t hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => openModal(c)}
+                >
                   <td className="p-3 text-sm font-mono">{c.codigo}</td>
                   <td className="p-3 text-sm font-medium">{c.nome_razao}</td>
                   <td className="p-3 text-sm text-gray-600">{c.apelido_fantasia || "-"}</td>
@@ -414,7 +418,7 @@ export default function CadastrosPage() {
                       {c.status === 'ativo' ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="p-3 text-center">
+                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-center gap-1">
                       <Button size="sm" variant="outline" onClick={() => openModal(c)}><Edit size={14} /></Button>
                       <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></Button>
