@@ -89,6 +89,67 @@ export default function CadastrosPage() {
     }
   };
 
+  const handleUploadAnexo = async (e) => {
+    const files = e.target.files;
+    if (!files?.length || !editingCadastro?.id) return;
+    
+    setUploadingAnexo(true);
+    try {
+      for (const file of files) {
+        const formDataFile = new FormData();
+        formDataFile.append("file", file);
+        await axios.post(`${API}/admin/cadastros/${editingCadastro.id}/anexos`, formDataFile, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+      }
+      toast.success("Anexo(s) adicionado(s)!");
+      // Refresh cadastro to get updated anexos
+      const response = await axios.get(`${API}/admin/cadastros/${editingCadastro.id}`);
+      setAnexos(response.data.anexos || []);
+    } catch (error) {
+      toast.error("Erro ao anexar arquivo");
+    } finally {
+      setUploadingAnexo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteAnexo = async (anexoId) => {
+    if (!confirm("Excluir este anexo?")) return;
+    try {
+      await axios.delete(`${API}/admin/cadastros/${editingCadastro.id}/anexos/${anexoId}`);
+      setAnexos(anexos.filter(a => a.id !== anexoId));
+      toast.success("Anexo excluído!");
+    } catch (error) {
+      toast.error("Erro ao excluir anexo");
+    }
+  };
+
+  const handleViewAnexo = (anexo) => {
+    const url = `${API.replace('/api', '')}/uploads/cadastros/${anexo.filename}`;
+    const ext = anexo.filename.split('.').pop().toLowerCase();
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+    const isPdf = ext === 'pdf';
+    setPreviewModal({ open: true, url, name: anexo.original_name || anexo.filename, type: isImage ? 'image' : isPdf ? 'pdf' : 'other' });
+  };
+
+  const handleDownloadAnexo = async (anexo) => {
+    try {
+      const response = await axios.get(`${API}/admin/cadastros/${editingCadastro.id}/anexos/${anexo.id}/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', anexo.original_name || anexo.filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error("Erro ao baixar anexo");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
