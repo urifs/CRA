@@ -526,8 +526,8 @@ export default function ContasReceberPage() {
             <div>
               <label className="form-label">Nome / Razão Social *</label>
               <Input 
-                value={novoCadastroData.nome} 
-                onChange={(e) => setNovoCadastroData({...novoCadastroData, nome: e.target.value})}
+                value={novoCadastroData.nome_razao} 
+                onChange={(e) => setNovoCadastroData({...novoCadastroData, nome_razao: e.target.value})}
                 placeholder="Nome do cliente"
                 required
               />
