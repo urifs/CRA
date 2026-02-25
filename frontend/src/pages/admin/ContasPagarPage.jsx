@@ -55,7 +55,7 @@ export default function ContasPagarPage() {
     forma_pagamento: "boleto", conta_movimento: "", observacoes: ""
   });
 
-  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); }, [filterStatus, filterVencimento, filterFormaPag]);
+  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); }, [filterStatus, filterVencimento, filterFormaPag]);
 
   const fetchContas = async () => {
     try {
