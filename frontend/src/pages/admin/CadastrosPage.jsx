@@ -479,7 +479,30 @@ export default function CadastrosPage() {
               </div>
               <div>
                 <label className="form-label">{formData.tipo_pessoa === "PJ" ? "CNPJ" : "CPF"}</label>
-                <Input value={formData.cpf_cnpj} onChange={(e) => setFormData({...formData, cpf_cnpj: e.target.value})} placeholder={formData.tipo_pessoa === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"} />
+                <div className="flex gap-2">
+                  <Input 
+                    value={formData.cpf_cnpj} 
+                    onChange={(e) => setFormData({...formData, cpf_cnpj: e.target.value})} 
+                    placeholder={formData.tipo_pessoa === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"} 
+                    className="flex-1"
+                  />
+                  {formData.tipo_pessoa === "PJ" && (
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline"
+                      onClick={handleConsultaCnpj}
+                      disabled={consultandoCnpj}
+                      className="text-[#D4A000] border-[#D4A000] hover:bg-[#D4A000] hover:text-white"
+                      title="Consultar CNPJ e preencher dados"
+                    >
+                      {consultandoCnpj ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    </Button>
+                  )}
+                </div>
+                {formData.tipo_pessoa === "PJ" && (
+                  <p className="text-xs text-gray-500 mt-1">Clique na lupa para consultar e preencher automaticamente</p>
+                )}
               </div>
               <div>
                 <label className="form-label">{formData.tipo_pessoa === "PJ" ? "Inscrição Estadual" : "RG"}</label>
@@ -507,7 +530,25 @@ export default function CadastrosPage() {
             <div className="grid grid-cols-6 gap-4">
               <div>
                 <label className="form-label">CEP</label>
-                <Input value={formData.cep} onChange={(e) => setFormData({...formData, cep: e.target.value})} placeholder="00000-000" />
+                <div className="flex gap-1">
+                  <Input 
+                    value={formData.cep} 
+                    onChange={(e) => setFormData({...formData, cep: e.target.value})} 
+                    placeholder="00000-000" 
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleConsultaCep}
+                    disabled={consultandoCep}
+                    className="text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white px-2"
+                    title="Buscar endereço pelo CEP"
+                  >
+                    {consultandoCep ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                  </Button>
+                </div>
               </div>
               <div className="col-span-3">
                 <label className="form-label">Endereço</label>
