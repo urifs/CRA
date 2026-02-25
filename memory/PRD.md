@@ -22,6 +22,13 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
   - Estados vazios amigáveis quando não há contas vencidas
   - Backend atualizado para retornar lista completa de contas vencidas
 
+- ✅ **Função de Excluir Registros de Uso (Tempo de Uso)**:
+  - Botão de excluir (ícone lixeira) em cada linha do histórico de uso
+  - Modal de confirmação antes de excluir com detalhes do registro
+  - Aviso que as horas serão subtraídas do total da máquina
+  - Endpoint DELETE `/api/usage-logs/{log_id}` implementado no backend
+  - Atualização automática das horas da máquina ao excluir
+
 ### Sessão Anterior (25/02/2026)
 - ✅ **Plano de Contas Refatorado**:
   - Removida separação Receitas/Despesas - cadastro livre
@@ -60,7 +67,8 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## Arquivos Modificados
 - `/app/frontend/src/pages/admin/AdminDashboardPage.jsx` - Nova aba Vencidas
-- `/app/backend/server.py` - Endpoint dashboard com lista de contas vencidas
+- `/app/frontend/src/pages/UsagePage.jsx` - Função de excluir registros de uso
+- `/app/backend/server.py` - Endpoint dashboard com lista de contas vencidas + DELETE usage-logs
 - `/app/frontend/src/pages/admin/PlanoContasPage.jsx`
 - `/app/frontend/src/pages/admin/ContasPagarPage.jsx`
 - `/app/frontend/src/pages/admin/ContasReceberPage.jsx`
