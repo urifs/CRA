@@ -452,11 +452,21 @@ export default function ExportPage({ module = "gerenciamento" }) {
             <FileText size={16} style={{ color: accentColor }} />
             Sobre a Exportação
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mb-3">
             Selecione as categorias ou subcategorias desejadas e clique em "Exportar". 
-            Os relatórios são gerados em PDF com a identidade visual da CRA Construtora.
-            Você pode clicar no ícone <FileDown size={12} className="inline" /> ao lado de cada item para exportar individualmente.
+            Os relatórios são gerados com a identidade visual da CRA Construtora.
           </p>
+          <div className="flex flex-wrap gap-4 text-xs">
+            <div className="flex items-center gap-1 text-red-600">
+              <FileText size={14} /> PDF - Relatório formatado
+            </div>
+            <div className="flex items-center gap-1 text-green-600">
+              <FileSpreadsheet size={14} /> Excel - Planilha editável
+            </div>
+            <div className="flex items-center gap-1 text-blue-600">
+              <FileCode size={14} /> OFX - Importar em bancos/sistemas financeiros
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
