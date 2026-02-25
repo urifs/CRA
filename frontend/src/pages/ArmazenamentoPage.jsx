@@ -631,32 +631,33 @@ export default function ArmazenamentoPage() {
             {files.map((item) => {
               const fileType = getFileIcon(item.name);
               const FileIcon = fileType.icon;
+              const canPreview = isPreviewable(item.name);
               return (
                 <Card
                   key={item.path}
                   className="bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group"
-                  onDoubleClick={() => isPreviewable(item.name) ? handlePreview(item) : handleDownload(item)}
+                  onClick={() => canPreview ? handlePreview(item) : handleDownload(item)}
                 >
                   <CardContent className="p-4 text-center relative">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
+                        <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white" onClick={(e) => e.stopPropagation()}>
                           <MoreVertical size={16} />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        {isPreviewable(item.name) && (
-                          <DropdownMenuItem onClick={() => handlePreview(item)}>
+                        {canPreview && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handlePreview(item); }}>
                             <Eye size={14} className="mr-2" /> Visualizar
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => handleDownload(item)}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownload(item); }}>
                           <Download size={14} className="mr-2" /> Baixar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
                           <Edit size={14} className="mr-2" /> Renomear
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(item)} className="text-red-600">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
                           <Trash2 size={14} className="mr-2" /> Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -664,6 +665,11 @@ export default function ArmazenamentoPage() {
                     <FileIcon size={48} className={`mx-auto ${fileType.color} mb-2`} />
                     <p className="text-sm font-medium truncate text-white">{item.name}</p>
                     <p className="text-xs text-gray-500">{formatFileSize(item.size)}</p>
+                    {canPreview && (
+                      <p className="text-xs text-[#D4A000] mt-1 flex items-center justify-center gap-1">
+                        <Eye size={12} /> Clique para visualizar
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               );
