@@ -154,6 +154,71 @@ export default function CadastrosPage() {
     }
   };
 
+  const handleConsultaCnpj = async () => {
+    const cnpj = formData.cpf_cnpj.replace(/\D/g, '');
+    if (cnpj.length !== 14) {
+      toast.error("CNPJ deve ter 14 dígitos");
+      return;
+    }
+    
+    setConsultandoCnpj(true);
+    try {
+      const response = await axios.get(`${API}/consulta/cnpj/${cnpj}`);
+      const dados = response.data.data;
+      
+      setFormData(prev => ({
+        ...prev,
+        nome_razao: dados.razao_social || prev.nome_razao,
+        apelido_fantasia: dados.nome_fantasia || prev.apelido_fantasia,
+        rg_ie: dados.inscricao_estadual || prev.rg_ie,
+        telefone: dados.telefone || prev.telefone,
+        email: dados.email || prev.email,
+        cep: dados.cep || prev.cep,
+        endereco: dados.endereco || prev.endereco,
+        numero: dados.numero || prev.numero,
+        complemento: dados.complemento || prev.complemento,
+        bairro: dados.bairro || prev.bairro,
+        cidade: dados.cidade || prev.cidade,
+        uf: dados.uf || prev.uf
+      }));
+      
+      toast.success("Dados preenchidos automaticamente!");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao consultar CNPJ");
+    } finally {
+      setConsultandoCnpj(false);
+    }
+  };
+
+  const handleConsultaCep = async () => {
+    const cep = formData.cep.replace(/\D/g, '');
+    if (cep.length !== 8) {
+      toast.error("CEP deve ter 8 dígitos");
+      return;
+    }
+    
+    setConsultandoCep(true);
+    try {
+      const response = await axios.get(`${API}/consulta/cep/${cep}`);
+      const dados = response.data.data;
+      
+      setFormData(prev => ({
+        ...prev,
+        endereco: dados.endereco || prev.endereco,
+        complemento: dados.complemento || prev.complemento,
+        bairro: dados.bairro || prev.bairro,
+        cidade: dados.cidade || prev.cidade,
+        uf: dados.uf || prev.uf
+      }));
+      
+      toast.success("Endereço preenchido!");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "CEP não encontrado");
+    } finally {
+      setConsultandoCep(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
