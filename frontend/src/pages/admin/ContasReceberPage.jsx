@@ -353,7 +353,22 @@ export default function ContasReceberPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2">
                 <label className="form-label">Cliente</label>
-                <Input value={formData.cliente_nome} onChange={(e) => setFormData({...formData, cliente_nome: e.target.value})} />
+                <Select 
+                  value={formData.cliente_nome || "none"} 
+                  onValueChange={(value) => setFormData({...formData, cliente_nome: value === "none" ? "" : value})}
+                >
+                  <SelectTrigger className="w-full h-11">
+                    <SelectValue placeholder="Selecione um cliente..." />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Selecione...</SelectItem>
+                    {cadastros.map(c => (
+                      <SelectItem key={c.id} value={c.nome || c.razao_social}>
+                        {c.nome || c.razao_social} {c.cnpj_cpf ? `(${c.cnpj_cpf})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="form-label">Forma de Pagamento</label>
