@@ -147,15 +147,21 @@ export default function FornecedoresPage() {
       </div>
 
       {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-        <Input
-          placeholder="Buscar por nome, CNPJ ou cidade..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-          data-testid="search-fornecedores"
-        />
+      <div className="flex gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <Input
+            placeholder="Buscar por nome, CNPJ ou cidade..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+            data-testid="search-fornecedores"
+          />
+        </div>
+        <Button className="bg-[#D4A000] hover:bg-[#b38900] text-black">
+          <Search size={16} className="mr-2" />
+          Buscar
+        </Button>
       </div>
 
       {/* Lista */}

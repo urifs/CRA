@@ -152,6 +152,10 @@ export default function AuditPage() {
                 data-testid="audit-search-input"
               />
             </div>
+            <Button className="bg-[#E31A1A] hover:bg-[#c41616] text-white shrink-0">
+              <Search size={16} className="mr-2" />
+              Buscar
+            </Button>
             <div className="flex gap-2">
               <Select value={filterType} onValueChange={setFilterType}>
                 <SelectTrigger className="w-[180px]" data-testid="audit-type-filter">

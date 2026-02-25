@@ -102,24 +102,30 @@ export default function NotificacoesPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="relative max-w-md mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-        <Input
-          type="text"
-          placeholder="Pesquisar notificações..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 pr-10 h-10 bg-white border-gray-200"
-          data-testid="search-notificacoes"
-        />
-        {searchTerm && (
-          <button
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            onClick={() => setSearchTerm("")}
-          >
-            <X size={16} />
-          </button>
-        )}
+      <div className="flex gap-4 max-w-lg mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Input
+            type="text"
+            placeholder="Pesquisar notificações..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-10 h-10 bg-white border-gray-200"
+            data-testid="search-notificacoes"
+          />
+          {searchTerm && (
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              onClick={() => setSearchTerm("")}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        <Button className="bg-[#D4A000] hover:bg-[#b38900] text-black">
+          <Search size={16} className="mr-2" />
+          Buscar
+        </Button>
       </div>
 
       {/* Configuração de prazo */}
