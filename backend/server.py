@@ -3030,6 +3030,95 @@ async def delete_cadastro(id: str, current_user: dict = Depends(get_current_user
     await create_audit_log(current_user, "delete", "cadastro", id, cadastro["nome_razao"])
     return {"message": "Cadastro excluído"}
 
+# --- Anexos de Cadastros ---
+CADASTROS_ANEXOS_DIR = ROOT_DIR / "uploads" / "cadastros"
+CADASTROS_ANEXOS_DIR.mkdir(parents=True, exist_ok=True)
+
+@api_router.post("/admin/cadastros/{id}/anexos")
+async def upload_cadastro_anexo(
+    id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload anexo para cadastro"""
+    cadastro = await db.cadastros.find_one({"id": id}, {"_id": 0})
+    if not cadastro:
+        raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+    
+    content = await file.read()
+    max_size = 50 * 1024 * 1024
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 50MB")
+    
+    ext = Path(file.filename).suffix.lower() if file.filename else ''
+    unique_filename = f"{id}_{uuid.uuid4()}{ext}"
+    file_path = CADASTROS_ANEXOS_DIR / unique_filename
+    
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    anexo = {
+        "id": str(uuid.uuid4()),
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "size": len(content),
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.cadastros.update_one({"id": id}, {"$push": {"anexos": anexo}})
+    await create_audit_log(current_user, "upload anexo", "cadastro", id, f"{cadastro['nome_razao']} - {file.filename}")
+    
+    return {"message": "Anexo adicionado", "anexo": anexo}
+
+@api_router.delete("/admin/cadastros/{id}/anexos/{anexo_id}")
+async def delete_cadastro_anexo(
+    id: str,
+    anexo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Excluir anexo de cadastro"""
+    cadastro = await db.cadastros.find_one({"id": id}, {"_id": 0})
+    if not cadastro:
+        raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+    
+    anexo = next((a for a in cadastro.get("anexos", []) if a["id"] == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    file_path = CADASTROS_ANEXOS_DIR / anexo["filename"]
+    if file_path.exists():
+        file_path.unlink()
+    
+    await db.cadastros.update_one({"id": id}, {"$pull": {"anexos": {"id": anexo_id}}})
+    await create_audit_log(current_user, "excluir anexo", "cadastro", id, cadastro["nome_razao"])
+    
+    return {"message": "Anexo excluído"}
+
+@api_router.get("/admin/cadastros/{id}/anexos/{anexo_id}/download")
+async def download_cadastro_anexo(
+    id: str,
+    anexo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Download de anexo"""
+    cadastro = await db.cadastros.find_one({"id": id}, {"_id": 0})
+    if not cadastro:
+        raise HTTPException(status_code=404, detail="Cadastro não encontrado")
+    
+    anexo = next((a for a in cadastro.get("anexos", []) if a["id"] == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    file_path = CADASTROS_ANEXOS_DIR / anexo["filename"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=anexo.get("original_name", anexo["filename"]),
+        media_type="application/octet-stream"
+    )
+
 # --- Contas a Pagar (Completo) ---
 @api_router.get("/admin/contas-pagar")
 async def get_contas_pagar(
