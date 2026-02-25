@@ -114,6 +114,11 @@ export default function ArmazenamentoPage() {
     }
   }, [currentPath, showTrash]);
 
+  // Fetch trash count on mount
+  useEffect(() => {
+    fetchTrashItems();
+  }, []);
+
   const updateBreadcrumbs = () => {
     const parts = currentPath.split('/').filter(p => p);
     const crumbs = [{ name: "Início", path: "/" }];
