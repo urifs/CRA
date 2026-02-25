@@ -149,24 +149,32 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
 
   const handlePreview = async (attachment) => {
     setLoadingPreview(true);
+    setPreviewName(attachment.filename);
+    
     try {
       const response = await axios.get(`${API}/attachments/download/${attachment.id}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
       
-      const blob = new Blob([response.data], { type: attachment.file_type });
+      // Determinar o tipo correto
+      const contentType = response.headers['content-type'] || attachment.file_type || 'application/octet-stream';
+      const blob = new Blob([response.data], { type: contentType });
       const url = window.URL.createObjectURL(blob);
       setPreviewUrl(url);
-      setPreviewName(attachment.filename);
       
-      if (attachment.file_type?.startsWith("image/")) {
+      if (contentType.startsWith("image/")) {
         setPreviewType("image");
-      } else if (attachment.file_type?.includes("pdf")) {
+      } else if (contentType.includes("pdf")) {
         setPreviewType("pdf");
+      } else {
+        // Para outros tipos, abrir em nova aba para download
+        window.open(url, '_blank');
+        closePreview();
       }
     } catch (error) {
-      toast.error("Erro ao carregar visualização");
+      console.error("Erro ao carregar preview:", error);
+      toast.error("Erro ao carregar visualização. Tente baixar o arquivo.");
     } finally {
       setLoadingPreview(false);
     }
