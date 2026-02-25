@@ -76,6 +76,15 @@ export default function UsagePage() {
   });
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Estado para exclusão de máquina (card de status)
+  const [deleteMachineDialog, setDeleteMachineDialog] = useState({
+    open: false,
+    machineId: null,
+    machineName: "",
+    machinePlate: ""
+  });
+  const [deleteMachineLoading, setDeleteMachineLoading] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
