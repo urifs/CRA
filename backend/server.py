@@ -1168,6 +1168,40 @@ async def get_usage_logs(machine_id: Optional[str] = None, current_user: dict = 
         created_at=l["created_at"]
     ) for l in logs]
 
+@api_router.delete("/usage-logs/{log_id}")
+async def delete_usage_log(log_id: str, current_user: dict = Depends(get_current_user)):
+    """Exclui um registro de uso e atualiza as horas da máquina"""
+    # Find the usage log
+    log = await db.usage_logs.find_one({"id": log_id}, {"_id": 0})
+    if not log:
+        raise HTTPException(status_code=404, detail="Registro de uso não encontrado")
+    
+    # Get machine info
+    machine = await db.machines.find_one({"id": log["machine_id"]}, {"_id": 0})
+    
+    # Subtract hours from machine's total
+    if machine:
+        current_hours = machine.get("hours_since_oil_change", 0)
+        new_hours = max(0, current_hours - log["hours"])  # Prevent negative
+        await db.machines.update_one(
+            {"id": log["machine_id"]},
+            {"$set": {"hours_since_oil_change": new_hours}}
+        )
+    
+    # Delete the usage log
+    await db.usage_logs.delete_one({"id": log_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="registro de uso",
+        entity_id=log_id,
+        entity_name=f"{machine.get('name', 'N/A') if machine else 'N/A'} - {log['hours']}h"
+    )
+    
+    return {"message": "Registro de uso excluído com sucesso"}
+
 @api_router.get("/oil-change-status", response_model=List[OilChangeStatusResponse])
 async def get_oil_change_status(current_user: dict = Depends(get_current_user)):
     machines = await db.machines.find({}, {"_id": 0}).to_list(1000)
