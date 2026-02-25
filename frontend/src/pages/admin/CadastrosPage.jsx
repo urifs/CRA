@@ -186,6 +186,7 @@ export default function CadastrosPage() {
   const openModal = (cadastro = null) => {
     if (cadastro) {
       setEditingCadastro(cadastro);
+      setAnexos(cadastro.anexos || []);
       setFormData({
         tipo_cadastro: cadastro.tipo_cadastro || "cliente",
         tipo_pessoa: cadastro.tipo_pessoa || "PF",
@@ -212,6 +213,7 @@ export default function CadastrosPage() {
       });
     } else {
       setEditingCadastro(null);
+      setAnexos([]);
       setFormData({
         tipo_cadastro: "cliente",
         tipo_pessoa: "PF",
