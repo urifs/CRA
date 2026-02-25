@@ -208,6 +208,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
             id={`file-upload-${entityId}`}
           />
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
