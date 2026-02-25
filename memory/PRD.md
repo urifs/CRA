@@ -267,10 +267,11 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **GET `/api/admin/alugueis/{id}/contrato/download`** - Download de contrato
 
 ### P1 (Importante) - Próximos Passos
-- [ ] **Exportação Excel/OFX** (além do PDF existente)
-- [ ] **Visualização de Anexos em Modal** (Contas a Pagar/Receber e Cadastros)
-- [ ] **Consulta de CNPJ** (preenchimento automático via API externa)
-- [ ] **Anexos em Produtos** (upload de arquivos no cadastro)
+- [x] **Exportação Excel/OFX** (além do PDF existente) ✅ CONCLUÍDO (24/02/2026)
+- [ ] **Visualização de Anexos em Modal** (Contas a Pagar/Receber)
+- [x] **Consulta de CNPJ** (preenchimento automático via BrasilAPI) ✅ CONCLUÍDO (25/02/2026)
+- [x] **Consulta de CEP** (preenchimento automático via ViaCEP) ✅ CONCLUÍDO (25/02/2026)
+- [x] **Anexos em Produtos** (upload de arquivos no cadastro) ✅ CONCLUÍDO (24/02/2026)
 - [ ] **Integração estoque ↔ manutenção** (baixa automática de peças)
 - [ ] **Integração NF-e com SEFAZ** (requer certificado digital A1)
 - [ ] Gráficos de custos por categoria
