@@ -243,7 +243,7 @@ export default function SystemSelectPage() {
 
         {/* Footer */}
         <p className="text-center text-gray-500 text-xs sm:text-sm mt-4 sm:mt-6">
-          CRA Construtora © 2026
+          Gerenciamento © 2026
         </p>
       </div>
     </div>
