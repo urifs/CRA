@@ -115,7 +115,7 @@ class CategoryResponse(BaseModel):
 
 class MachineCreate(BaseModel):
     name: str
-    plate: str
+    plate: Optional[str] = ""
     category_id: str
     brand: Optional[str] = ""
     model: Optional[str] = ""
@@ -127,7 +127,7 @@ class MachineResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     name: str
-    plate: str
+    plate: Optional[str] = ""
     category_id: str
     category_name: Optional[str] = ""
     brand: str
