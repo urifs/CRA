@@ -420,3 +420,21 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Arquivos modificados**: 
   - `frontend/src/components/AttachmentsSection.jsx`
   - `backend/server.py` (ordem das rotas)
+
+### Correções e Melhorias - 25/02/2026
+
+#### Preview de Arquivos no Armazenamento ✅
+- [x] **Bug corrigido**: Preview de PDF retornava "Not authenticated" porque o endpoint exigia autenticação via header
+- [x] **Solução**: Criado `optional_security` com `auto_error=False` para aceitar token via query string
+- [x] **Suporte a vídeos**: Adicionado preview para arquivos MP4, WebM e OGG usando tag `<video>`
+- **Arquivos modificados**: `backend/server.py`
+
+#### Linhas Clicáveis nas Listas ✅
+- [x] **Contas a Pagar**: Clique na linha abre modal de edição
+- [x] **Contas a Receber**: Clique na linha abre modal de edição
+- [x] **Cadastros**: Clique na linha abre modal de edição
+- [x] **Produtos**: Clique na linha abre modal de edição
+- [x] **Centro de Custo**: Clique na linha abre modal de edição
+- [x] **Aluguéis**: Clique no card abre modal de edição
+- [x] **Ordens de Serviço**: Clique no card abre modal de edição
+- **Implementação**: Adicionado `cursor-pointer`, `onClick` na `<tr>` ou `<Card>`, e `e.stopPropagation()` nas colunas de ações
