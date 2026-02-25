@@ -42,6 +42,8 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewType, setPreviewType] = useState(null);
+  const [previewName, setPreviewName] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
