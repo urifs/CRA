@@ -21,6 +21,7 @@ import NotificationsPage from "@/pages/NotificationsPage";
 import BalancePage from "@/pages/BalancePage";
 import ObrasPage from "@/pages/ObrasPage";
 import ObraDetailPage from "@/pages/ObraDetailPage";
+import MedicoesPage from "@/pages/MedicoesPage";
 import AuditPage from "@/pages/AuditPage";
 import MorePage from "@/pages/MorePage";
 import SystemSelectPage from "@/pages/SystemSelectPage";
