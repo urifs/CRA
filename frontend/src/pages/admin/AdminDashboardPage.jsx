@@ -150,6 +150,10 @@ export default function AdminDashboardPage() {
               <SelectItem value="pago">Pago/Recebido</SelectItem>
             </SelectContent>
           </Select>
+          <Button className="bg-[#D4A000] hover:bg-[#b38900] text-black">
+            <Search size={16} className="mr-2" />
+            Buscar
+          </Button>
         </div>
       </CardContent>
     </Card>
