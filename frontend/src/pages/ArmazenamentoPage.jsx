@@ -299,23 +299,23 @@ export default function ArmazenamentoPage() {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
             <Input
               placeholder="Pesquisar arquivos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10"
+              className="pl-10 pr-10 bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
             />
             {searchTerm && (
               <button className="absolute right-3 top-1/2 -translate-y-1/2" onClick={() => setSearchTerm("")}>
-                <X size={16} className="text-gray-400" />
+                <X size={16} className="text-gray-500" />
               </button>
             )}
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowNewFolderModal(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowNewFolderModal(true)} className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
               <FolderPlus size={18} className="mr-2" />
               Nova Pasta
             </Button>
@@ -330,11 +330,11 @@ export default function ArmazenamentoPage() {
               className="hidden"
               onChange={handleUpload}
             />
-            <div className="flex border rounded-md">
-              <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className="rounded-r-none" onClick={() => setViewMode("grid")}>
+            <div className="flex border border-gray-700 rounded-md">
+              <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className={`rounded-r-none ${viewMode === "grid" ? "bg-gray-700" : "text-gray-400 hover:text-white"}`} onClick={() => setViewMode("grid")}>
                 <Grid size={18} />
               </Button>
-              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" className="rounded-l-none" onClick={() => setViewMode("list")}>
+              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" className={`rounded-l-none ${viewMode === "list" ? "bg-gray-700" : "text-gray-400 hover:text-white"}`} onClick={() => setViewMode("list")}>
                 <List size={18} />
               </Button>
             </div>
