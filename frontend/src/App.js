@@ -151,6 +151,7 @@ function App() {
             <Route path="balance" element={<BalancePage />} />
             <Route path="obras" element={<ObrasPage />} />
             <Route path="obras/:id" element={<ObraDetailPage />} />
+            <Route path="obras/:obraId/medicoes" element={<MedicoesPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="usage" element={<UsagePage />} />
             <Route path="notifications" element={<NotificationsPage />} />
