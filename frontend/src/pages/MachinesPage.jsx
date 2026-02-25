@@ -191,15 +191,21 @@ export default function MachinesPage() {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-        <Input
-          placeholder="Buscar por nome, placa ou categoria..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 h-11 bg-white border border-gray-300 rounded-md focus:border-[#E31A1A] focus:ring-2 focus:ring-[#E31A1A] focus:outline-none"
-          data-testid="machines-search-input"
-        />
+      <div className="flex gap-4 max-w-lg">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <Input
+            placeholder="Buscar por nome, placa ou categoria..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-11 bg-white border border-gray-300 rounded-md focus:border-[#E31A1A] focus:ring-2 focus:ring-[#E31A1A] focus:outline-none"
+            data-testid="machines-search-input"
+          />
+        </div>
+        <Button className="bg-[#E31A1A] hover:bg-[#c41616] text-white">
+          <Search size={16} className="mr-2" />
+          Buscar
+        </Button>
       </div>
 
       {/* Machines Grid */}

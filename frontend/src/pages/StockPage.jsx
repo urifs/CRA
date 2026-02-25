@@ -373,6 +373,10 @@ export default function StockPage() {
                 data-testid="stock-search-input"
               />
             </div>
+            <Button className="bg-[#E31A1A] hover:bg-[#c41616] text-white">
+              <Search size={16} className="mr-2" />
+              Buscar
+            </Button>
             <Button
               variant={showLowStockOnly ? "default" : "outline"}
               onClick={() => setShowLowStockOnly(!showLowStockOnly)}
