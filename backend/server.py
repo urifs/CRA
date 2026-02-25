@@ -5948,15 +5948,6 @@ async def upload_attachment(
     attachment.pop("_id", None)
     return {"message": "Arquivo enviado com sucesso", "attachment": attachment}
 
-@api_router.get("/attachments/{entity_type}/{entity_id}")
-async def get_attachments(entity_type: str, entity_id: str, current_user: dict = Depends(get_current_user)):
-    """Lista anexos de uma entidade"""
-    attachments = await db.attachments.find(
-        {"entity_type": entity_type, "entity_id": entity_id},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
-    return attachments
-
 @api_router.get("/attachments/download/{file_id}")
 async def download_attachment(file_id: str, current_user: dict = Depends(get_current_user)):
     """Download de um anexo"""
@@ -5974,6 +5965,15 @@ async def download_attachment(file_id: str, current_user: dict = Depends(get_cur
         filename=attachment["filename"],
         media_type=attachment.get("file_type", "application/octet-stream")
     )
+
+@api_router.get("/attachments/{entity_type}/{entity_id}")
+async def get_attachments(entity_type: str, entity_id: str, current_user: dict = Depends(get_current_user)):
+    """Lista anexos de uma entidade"""
+    attachments = await db.attachments.find(
+        {"entity_type": entity_type, "entity_id": entity_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return attachments
 
 @api_router.delete("/attachments/{file_id}")
 async def delete_attachment(file_id: str, current_user: dict = Depends(get_current_user)):
