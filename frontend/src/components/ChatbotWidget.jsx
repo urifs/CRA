@@ -191,7 +191,7 @@ Como posso ajudar?`
         <div className="flex items-center gap-2">
           <Bot size={20} className="text-white" />
           <CardTitle className="text-sm font-medium text-white">
-            Assistente CRA
+            Assistente Virtual
           </CardTitle>
         </div>
         <div className="flex items-center gap-1">

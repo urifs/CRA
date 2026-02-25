@@ -157,7 +157,7 @@ export default function SystemSelectPage() {
                 <div className="flex items-start gap-3 mb-3">
                   <div className={`w-12 h-12 ${system.color} rounded-xl flex items-center justify-center flex-shrink-0 ${!system.hasAccess && 'grayscale'}`}>
                     {system.useLogo ? (
-                      <img src="/logo.png" alt="CRA" className="w-8 h-8 object-contain" />
+                      <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
                     ) : (
                       <system.icon className={system.id === "administrativo" && system.hasAccess ? "text-black" : "text-white"} size={24} />
                     )}
