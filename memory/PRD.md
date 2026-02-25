@@ -408,3 +408,15 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
 - **Frontend CNPJ**: 100% (preenchimento automático validado)
 - **Teste com CNPJ**: 00000000000191 (Banco do Brasil) - Retornou corretamente
 - **Arquivo de teste**: `/app/test_reports/iteration_11.json`
+
+### Visualização de Anexos em Modal ✅ (25/02/2026)
+- [x] **Preview de Imagens**: Modal exibe imagens (PNG, JPG, GIF, WebP) em tamanho ampliado
+- [x] **Preview de PDFs**: Modal exibe PDFs em iframe para visualização inline
+- [x] **Botão de visualização (Eye)**: Adicionado para imagens E PDFs na lista de anexos
+- [x] **Botão de Download no Modal**: Permite baixar o arquivo diretamente do modal de preview
+- [x] **Botão X para fechar**: Modal pode ser fechado facilmente
+- [x] **Bug corrigido**: Ordem das rotas no backend (`/attachments/download/{id}` antes de `/attachments/{type}/{id}`)
+- [x] **Bug corrigido**: Botões de ação com `type="button"` para evitar submit do formulário
+- **Arquivos modificados**: 
+  - `frontend/src/components/AttachmentsSection.jsx`
+  - `backend/server.py` (ordem das rotas)
