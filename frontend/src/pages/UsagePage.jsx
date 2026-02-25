@@ -515,6 +515,46 @@ export default function UsagePage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ ...deleteDialog, open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 size={20} />
+              Excluir Registro de Uso
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Tem certeza que deseja excluir este registro?</p>
+              <div className="bg-gray-100 p-3 rounded-lg mt-2">
+                <p className="font-medium text-black">{deleteDialog.machineName}</p>
+                <p className="text-sm text-gray-600">Horas: <span className="font-bold text-[#E31A1A]">+{deleteDialog.hours}h</span></p>
+              </div>
+              <p className="text-orange-600 text-sm font-medium mt-2">
+                ⚠️ As horas serão subtraídas do total da máquina.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLog}
+              disabled={deleteLoading}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="confirm-delete-log"
+            >
+              {deleteLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                "Excluir"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
