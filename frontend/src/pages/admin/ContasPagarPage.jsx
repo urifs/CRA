@@ -386,8 +386,8 @@ export default function ContasPagarPage() {
                     <SelectContent className="z-[9999]">
                       <SelectItem value="none">Selecione...</SelectItem>
                       {cadastros.map(c => (
-                        <SelectItem key={c.id} value={c.nome || c.razao_social}>
-                          {c.nome || c.razao_social} {c.cnpj_cpf ? `(${c.cnpj_cpf})` : ''}
+                        <SelectItem key={c.id} value={c.nome_razao || c.nome || c.razao_social}>
+                          {c.nome_razao || c.nome || c.razao_social} {c.cnpj_cpf ? `(${c.cnpj_cpf})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
