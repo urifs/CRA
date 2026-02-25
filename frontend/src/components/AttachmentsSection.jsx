@@ -284,6 +284,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                     <Download size={14} />
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
