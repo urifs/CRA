@@ -147,9 +147,6 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
     }
   };
 
-  const [previewName, setPreviewName] = useState(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-
   const handlePreview = async (attachment) => {
     setLoadingPreview(true);
     try {
