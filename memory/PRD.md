@@ -15,17 +15,21 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - ✅ **Plano de Contas Refatorado**:
   - Removida separação Receitas/Despesas - cadastro agora é livre
   - Lista única de Planos de Conta com subcontas em dropdown
-  - Botão "Extrato" para visualizar todas as contas a pagar/receber vinculadas
-  - Funcionalidade de expandir para ver movimentações (como um extrato bancário)
-  - Resumo financeiro: Total a Pagar, Total a Receber, Saldo
-  - Campo "Tipo" removido do formulário de cadastro
-  - Filtro de busca por nome/código
-  - Exportar relatório em PDF
+  - Botão "Extrato" para visualizar contas a pagar/receber vinculadas
+  - Campo "Tipo" removido do formulário
+
+- ✅ **Dropdown de Cadastros em Contas a Pagar/Receber**:
+  - Campo Fornecedor/Cliente agora é dropdown com lista de cadastros
+  - Integração automática com módulo de Cadastros
+
+- ✅ **Melhorias na Visualização de Anexos**:
+  - Melhor tratamento de erros no preview
+  - Fallback quando PDF não carrega no iframe
+  - Mensagens informativas ao usuário
 
 ### Sessões anteriores
 - Plano de Contas hierárquico (contas pai e subcontas)
-- Dropdowns dependentes nos formulários de Contas a Pagar/Receber
-- Correção de bug de associação de subcontas (e.stopPropagation)
+- Dropdowns dependentes nos formulários
 - Sistema de armazenamento de arquivos
 - Dashboard financeiro com filtros
 - Módulo de Aluguéis de Máquinas
@@ -35,38 +39,22 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - Exportação PDF/Excel/OFX
 
 ## Backlog (P1 - Próximas tarefas)
-- Refatoração parcial do backend (server.py tem ~6800 linhas)
-- Visualização de outros tipos de arquivo (Word, Excel) no armazenamento
+- Refatoração parcial do backend (server.py ~6800 linhas)
+- Visualização de Word/Excel no armazenamento
 
 ## Backlog (P2 - Futuro)
-- Refatoração completa do backend
-- Integração Estoque ↔ Manutenção (baixa automática de peças)
-- Notificações externas (email/WhatsApp)
+- Integração Estoque ↔ Manutenção
+- Notificações por email/WhatsApp
 - Reativar PWA
 
-## Integrações de Terceiros
-- **Gemini**: Chatbot AI
-- **BrasilAPI**: Consulta CNPJ
-- **ViaCEP**: Consulta CEP
-- **reportlab**: Geração PDF
-- **openpyxl**: Geração Excel
-- **python-ofxparse**: Geração OFX
+## Integrações
+- Gemini, BrasilAPI, ViaCEP, reportlab, openpyxl, python-ofxparse
 
 ## Credenciais de Teste
-- **Email**: test@test.com
-- **Password**: password
-- **Role**: admin
+- **Email**: test@test.com | **Password**: password | **Role**: admin
 
-## URLs
-- **Frontend**: https://gerenciamento-erp-1.preview.emergentagent.com
-- **Rotas principais**:
-  - /administrativo/plano-contas
-  - /administrativo/a-pagar
-  - /administrativo/a-receber
-  - /administrativo/dashboard
-
-## Arquivos Principais
-- `/app/frontend/src/pages/admin/PlanoContasPage.jsx` - Página refatorada
+## Arquivos Principais Modificados
+- `/app/frontend/src/pages/admin/PlanoContasPage.jsx`
 - `/app/frontend/src/pages/admin/ContasPagarPage.jsx`
 - `/app/frontend/src/pages/admin/ContasReceberPage.jsx`
-- `/app/backend/server.py` - Monólito (~6800 linhas, precisa refatoração)
+- `/app/frontend/src/components/AttachmentsSection.jsx`
