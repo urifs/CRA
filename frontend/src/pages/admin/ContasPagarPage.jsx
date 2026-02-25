@@ -159,6 +159,8 @@ export default function ContasPagarPage() {
         data_vencimento: conta.data_vencimento || "",
         plano_conta_id: conta.plano_conta_id || "",
         plano_conta_nome: conta.plano_conta_nome || "",
+        subconta_id: conta.subconta_id || "",
+        subconta_nome: conta.subconta_nome || "",
         centro_custo: conta.centro_custo || "",
         forma_pagamento: conta.forma_pagamento || "boleto",
         conta_movimento: conta.conta_movimento || "",
@@ -170,7 +172,9 @@ export default function ContasPagarPage() {
         fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
         valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
         data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "",
-        plano_conta_id: "", plano_conta_nome: "", centro_custo: "",
+        plano_conta_id: "", plano_conta_nome: "", 
+        subconta_id: "", subconta_nome: "",
+        centro_custo: "",
         forma_pagamento: "boleto", conta_movimento: "", observacoes: ""
       });
     }
