@@ -386,7 +386,12 @@ export default function AlugueisPage() {
             const isVencido = aluguel.status === "ativo" && aluguel.data_vencimento < new Date().toISOString().split("T")[0];
             
             return (
-              <Card key={aluguel.id} className={`hover:shadow-md transition-shadow ${isVencido ? 'border-l-4 border-l-red-500' : ''}`} data-testid={`aluguel-${aluguel.id}`}>
+              <Card 
+                key={aluguel.id} 
+                className={`hover:shadow-md transition-shadow cursor-pointer ${isVencido ? 'border-l-4 border-l-red-500' : ''}`} 
+                data-testid={`aluguel-${aluguel.id}`}
+                onClick={() => openModal(aluguel)}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
