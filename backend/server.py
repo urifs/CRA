@@ -2960,6 +2960,145 @@ async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
         "contasProximas": contas_proximas[:10]
     }
 
+# --- Consulta de CNPJ via Gemini (Web Search) ---
+import httpx
+from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+@api_router.get("/consulta/cnpj/{cnpj}")
+async def consulta_cnpj(
+    cnpj: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Consulta dados de empresa via CNPJ usando Gemini com pesquisa na web"""
+    
+    # Remove caracteres não numéricos
+    cnpj_limpo = ''.join(filter(str.isdigit, cnpj))
+    
+    if len(cnpj_limpo) != 14:
+        raise HTTPException(status_code=400, detail="CNPJ inválido. Deve conter 14 dígitos.")
+    
+    try:
+        # Usar Gemini para pesquisar informações do CNPJ
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Chave de API não configurada")
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"cnpj-{cnpj_limpo}-{uuid.uuid4()}",
+            system_message="""Você é um assistente especializado em consultar dados de empresas brasileiras.
+Quando receber um CNPJ, pesquise na web informações sobre a empresa e retorne APENAS um JSON válido com os seguintes campos (sem markdown, sem explicações):
+{
+    "razao_social": "Nome da empresa",
+    "nome_fantasia": "Nome fantasia se houver",
+    "cnpj": "CNPJ formatado",
+    "inscricao_estadual": "IE se encontrar",
+    "telefone": "Telefone principal",
+    "email": "Email se encontrar",
+    "cep": "CEP",
+    "endereco": "Logradouro",
+    "numero": "Número",
+    "complemento": "Complemento se houver",
+    "bairro": "Bairro",
+    "cidade": "Cidade",
+    "uf": "Estado (sigla)",
+    "situacao": "Situação cadastral",
+    "atividade_principal": "Descrição da atividade principal",
+    "capital_social": "Capital social se encontrar"
+}
+Se não encontrar algum campo, deixe como string vazia. Retorne APENAS o JSON."""
+        ).with_model("gemini", "gemini-2.0-flash")
+        
+        user_message = UserMessage(
+            text=f"Pesquise na web os dados da empresa com CNPJ {cnpj_limpo}. Busque em sites como ReceitaWS, CNPJ.info, ConsultaCNPJ, ou outras fontes confiáveis."
+        )
+        
+        response = await chat.send_message(user_message)
+        
+        # Tentar extrair JSON da resposta
+        import json
+        response_text = response.strip()
+        
+        # Remover possíveis marcadores de código
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        
+        try:
+            dados = json.loads(response_text.strip())
+        except json.JSONDecodeError:
+            # Tentar encontrar JSON dentro da resposta
+            import re
+            json_match = re.search(r'\{[^{}]*\}', response_text, re.DOTALL)
+            if json_match:
+                dados = json.loads(json_match.group())
+            else:
+                raise HTTPException(status_code=500, detail="Não foi possível processar a resposta")
+        
+        await create_audit_log(
+            user=current_user,
+            action="consultar cnpj",
+            entity_type="cnpj",
+            entity_id=cnpj_limpo,
+            entity_name=dados.get("razao_social", cnpj_limpo),
+            module="Administrativo"
+        )
+        
+        return {"success": True, "data": dados}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao consultar CNPJ: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao consultar CNPJ: {str(e)}")
+
+@api_router.get("/consulta/cep/{cep}")
+async def consulta_cep(
+    cep: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Consulta endereço via CEP usando ViaCEP"""
+    
+    # Remove caracteres não numéricos
+    cep_limpo = ''.join(filter(str.isdigit, cep))
+    
+    if len(cep_limpo) != 8:
+        raise HTTPException(status_code=400, detail="CEP inválido. Deve conter 8 dígitos.")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"https://viacep.com.br/ws/{cep_limpo}/json/", timeout=10)
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=404, detail="CEP não encontrado")
+            
+            data = response.json()
+            
+            if data.get("erro"):
+                raise HTTPException(status_code=404, detail="CEP não encontrado")
+            
+            resultado = {
+                "cep": data.get("cep", "").replace("-", ""),
+                "endereco": data.get("logradouro", ""),
+                "complemento": data.get("complemento", ""),
+                "bairro": data.get("bairro", ""),
+                "cidade": data.get("localidade", ""),
+                "uf": data.get("uf", ""),
+                "ibge": data.get("ibge", ""),
+                "ddd": data.get("ddd", "")
+            }
+            
+            return {"success": True, "data": resultado}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao consultar CEP: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao consultar CEP: {str(e)}")
+
 # --- Cadastro de Clientes/Fornecedores ---
 @api_router.get("/admin/cadastros")
 async def get_cadastros(
