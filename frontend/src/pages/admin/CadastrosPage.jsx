@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,11 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, Search, Users, Phone, Mail, MapPin, Edit, Trash2, Building, User, Filter
+  Plus, Search, Users, Phone, Mail, MapPin, Edit, Trash2, Building, User, Filter,
+  Paperclip, Eye, Download, X, FileText, Image as ImageIcon, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 
 export default function CadastrosPage() {
