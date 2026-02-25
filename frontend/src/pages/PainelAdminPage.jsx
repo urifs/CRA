@@ -554,13 +554,13 @@ export default function PainelAdminPage() {
         {/* Tabs - Mobile optimized */}
         <div className="flex flex-wrap gap-2 mb-4 md:mb-6">
           <Button size="sm" variant={activeTab === "users" ? "default" : "outline"} className={activeTab === "users" ? "bg-[#E31A1A] hover:bg-red-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("users")}>
-            <Users size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Usuários</span><span className="sm:hidden">Users</span>
+            <Users size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Usuários</span><span className="sm:hidden">Usuários</span>
           </Button>
           <Button size="sm" variant={activeTab === "audit" ? "default" : "outline"} className={activeTab === "audit" ? "bg-[#D4A000] hover:bg-yellow-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("audit")}>
-            <Activity size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Auditoria</span><span className="sm:hidden">Audit</span>
+            <Activity size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Auditoria</span><span className="sm:hidden">Auditoria</span>
           </Button>
           <Button size="sm" variant={activeTab === "database" ? "default" : "outline"} className={activeTab === "database" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("database")}>
-            <Database size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Banco de Dados</span><span className="sm:hidden">DB</span>
+            <Database size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Banco de Dados</span><span className="sm:hidden">Banco</span>
           </Button>
           <Button size="sm" variant={activeTab === "tasks" ? "default" : "outline"} className={activeTab === "tasks" ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("tasks")}>
             <Send size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Lançar Tarefa</span><span className="sm:hidden">Tarefas</span>
