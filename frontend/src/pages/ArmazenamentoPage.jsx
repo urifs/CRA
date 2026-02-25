@@ -394,6 +394,11 @@ export default function ArmazenamentoPage() {
               </button>
             )}
           </div>
+          
+          <Button className="bg-[#D4A000] hover:bg-[#b38900] text-black shrink-0">
+            <Search size={16} className="mr-2" />
+            Buscar
+          </Button>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
