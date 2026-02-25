@@ -5295,6 +5295,287 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
     )
 
 
+# ============ EXCEL/OFX EXPORT ROUTES ============
+import xlsxwriter
+
+async def generate_excel_report(category: str, data: list, title: str) -> io.BytesIO:
+    """Gera um relatório Excel formatado"""
+    buffer = io.BytesIO()
+    workbook = xlsxwriter.Workbook(buffer, {'in_memory': True})
+    worksheet = workbook.add_worksheet('Dados')
+    
+    # Formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#E31A1A',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter'
+    })
+    cell_format = workbook.add_format({'border': 1, 'valign': 'vcenter'})
+    money_format = workbook.add_format({'border': 1, 'num_format': 'R$ #,##0.00', 'valign': 'vcenter'})
+    date_format = workbook.add_format({'border': 1, 'num_format': 'dd/mm/yyyy', 'valign': 'vcenter'})
+    
+    # Definir headers e dados baseado na categoria
+    if category in ["contas_pagar", "contas_receber"]:
+        headers = ["Descrição", "Valor", "Vencimento", "Status", "Fornecedor/Cliente", "Centro de Custo", "Plano de Contas"]
+        worksheet.set_column(0, 0, 30)  # Descrição
+        worksheet.set_column(1, 1, 15)  # Valor
+        worksheet.set_column(2, 2, 12)  # Vencimento
+        worksheet.set_column(3, 3, 12)  # Status
+        worksheet.set_column(4, 4, 25)  # Fornecedor
+        worksheet.set_column(5, 5, 20)  # Centro de Custo
+        worksheet.set_column(6, 6, 20)  # Plano de Contas
+        
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("descricao", ""), cell_format)
+            worksheet.write(row, 1, float(item.get("valor", 0)), money_format)
+            worksheet.write(row, 2, item.get("data_vencimento", "")[:10] if item.get("data_vencimento") else "", cell_format)
+            worksheet.write(row, 3, item.get("status", "").capitalize(), cell_format)
+            worksheet.write(row, 4, item.get("fornecedor_nome", "") or item.get("cliente_nome", ""), cell_format)
+            worksheet.write(row, 5, item.get("centro_custo_nome", ""), cell_format)
+            worksheet.write(row, 6, item.get("plano_contas_nome", ""), cell_format)
+    
+    elif category == "machines":
+        headers = ["Nome", "Placa", "Marca", "Modelo", "Ano", "Status", "Categoria"]
+        worksheet.set_column(0, 0, 25)
+        worksheet.set_column(1, 1, 12)
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        for row, item in enumerate(data, 1):
+            status = "Operacional" if item.get("status") == "operational" else "Em Manutenção"
+            worksheet.write(row, 0, item.get("name", ""), cell_format)
+            worksheet.write(row, 1, item.get("plate", ""), cell_format)
+            worksheet.write(row, 2, item.get("brand", ""), cell_format)
+            worksheet.write(row, 3, item.get("model", ""), cell_format)
+            worksheet.write(row, 4, item.get("year", ""), cell_format)
+            worksheet.write(row, 5, status, cell_format)
+            worksheet.write(row, 6, item.get("category_name", ""), cell_format)
+    
+    elif category == "cadastros":
+        headers = ["Nome/Razão", "CPF/CNPJ", "Tipo", "Telefone", "Email", "Cidade", "Status"]
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(1, 1, 18)
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("nome_razao", ""), cell_format)
+            worksheet.write(row, 1, item.get("cpf_cnpj", ""), cell_format)
+            worksheet.write(row, 2, item.get("tipo_cadastro", "").capitalize(), cell_format)
+            worksheet.write(row, 3, item.get("telefone", "") or item.get("celular", ""), cell_format)
+            worksheet.write(row, 4, item.get("email", ""), cell_format)
+            worksheet.write(row, 5, item.get("cidade", ""), cell_format)
+            worksheet.write(row, 6, item.get("status", "").capitalize(), cell_format)
+    
+    elif category == "alugueis":
+        headers = ["Nº", "Máquina", "Cliente", "Valor", "Data Entrega", "Vencimento", "Status", "Contrato"]
+        worksheet.set_column(0, 0, 8)
+        worksheet.set_column(1, 1, 20)
+        worksheet.set_column(2, 2, 25)
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("numero", ""), cell_format)
+            worksheet.write(row, 1, item.get("maquina_nome", ""), cell_format)
+            worksheet.write(row, 2, item.get("cliente_nome", ""), cell_format)
+            worksheet.write(row, 3, float(item.get("valor", 0)), money_format)
+            worksheet.write(row, 4, item.get("data_entrega", "")[:10] if item.get("data_entrega") else "", cell_format)
+            worksheet.write(row, 5, item.get("data_vencimento", "")[:10] if item.get("data_vencimento") else "", cell_format)
+            worksheet.write(row, 6, item.get("status", "").capitalize(), cell_format)
+            worksheet.write(row, 7, item.get("numero_contrato", ""), cell_format)
+    
+    else:
+        # Genérico: pegar as chaves do primeiro item
+        if data:
+            keys = [k for k in data[0].keys() if k not in ["_id", "password"]]
+            for col, key in enumerate(keys):
+                worksheet.write(0, col, key.replace("_", " ").title(), header_format)
+            for row, item in enumerate(data, 1):
+                for col, key in enumerate(keys):
+                    value = item.get(key, "")
+                    if isinstance(value, (int, float)):
+                        worksheet.write(row, col, value, cell_format)
+                    else:
+                        worksheet.write(row, col, str(value)[:50] if value else "", cell_format)
+    
+    workbook.close()
+    buffer.seek(0)
+    return buffer
+
+def generate_ofx_content(data: list, account_type: str = "pagar") -> str:
+    """Gera conteúdo OFX para importação em sistemas financeiros"""
+    now = datetime.now()
+    
+    ofx_content = f"""OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+<SIGNONMSGSRSV1>
+<SONRS>
+<STATUS>
+<CODE>0
+<SEVERITY>INFO
+</STATUS>
+<DTSERVER>{now.strftime('%Y%m%d%H%M%S')}
+<LANGUAGE>POR
+</SONRS>
+</SIGNONMSGSRSV1>
+<BANKMSGSRSV1>
+<STMTTRNRS>
+<TRNUID>1
+<STATUS>
+<CODE>0
+<SEVERITY>INFO
+</STATUS>
+<STMTRS>
+<CURDEF>BRL
+<BANKACCTFROM>
+<BANKID>001
+<ACCTID>CRA_CONSTRUTORA
+<ACCTTYPE>CHECKING
+</BANKACCTFROM>
+<BANKTRANLIST>
+<DTSTART>{now.strftime('%Y%m%d')}
+<DTEND>{now.strftime('%Y%m%d')}
+"""
+    
+    for item in data:
+        trntype = "DEBIT" if account_type == "pagar" else "CREDIT"
+        valor = float(item.get("valor", 0))
+        if account_type == "pagar":
+            valor = -abs(valor)  # Negativo para débitos
+        else:
+            valor = abs(valor)  # Positivo para créditos
+        
+        data_venc = item.get("data_vencimento", now.strftime("%Y-%m-%d"))
+        if data_venc:
+            data_venc = data_venc.replace("-", "")[:8]
+        else:
+            data_venc = now.strftime('%Y%m%d')
+        
+        fitid = item.get("id", str(uuid.uuid4()))[:20]
+        memo = item.get("descricao", "")[:32]
+        
+        ofx_content += f"""<STMTTRN>
+<TRNTYPE>{trntype}
+<DTPOSTED>{data_venc}
+<TRNAMT>{valor:.2f}
+<FITID>{fitid}
+<MEMO>{memo}
+</STMTTRN>
+"""
+    
+    ofx_content += """</BANKTRANLIST>
+<LEDGERBAL>
+<BALAMT>0.00
+<DTASOF>""" + now.strftime('%Y%m%d%H%M%S') + """
+</LEDGERBAL>
+</STMTRS>
+</STMTTRNRS>
+</BANKMSGSRSV1>
+</OFX>"""
+    
+    return ofx_content
+
+@api_router.get("/export/excel/{category}")
+async def export_excel(category: str, current_user: dict = Depends(get_current_user)):
+    """Exporta dados de uma categoria em Excel"""
+    
+    category_configs = {
+        "machines": {"collection": "machines", "title": "Maquinas", "filter": {}},
+        "maintenances": {"collection": "maintenances", "title": "Manutencoes", "filter": {}},
+        "stock_items": {"collection": "stock_items", "title": "Estoque", "filter": {}},
+        "obras": {"collection": "obras", "title": "Obras", "filter": {}},
+        "contas_pagar": {"collection": "contas_pagar", "title": "Contas_a_Pagar", "filter": {}},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "filter": {"status": "pendente"}},
+        "contas_receber": {"collection": "contas_receber", "title": "Contas_a_Receber", "filter": {}},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "filter": {"status": "pendente"}},
+        "cadastros": {"collection": "cadastros", "title": "Cadastros", "filter": {}},
+        "cadastros_clientes": {"collection": "cadastros", "title": "Clientes", "filter": {"tipo_cadastro": "cliente"}},
+        "cadastros_fornecedores": {"collection": "cadastros", "title": "Fornecedores", "filter": {"tipo_cadastro": "fornecedor"}},
+        "produtos_admin": {"collection": "produtos_admin", "title": "Produtos", "filter": {}},
+        "alugueis": {"collection": "alugueis", "title": "Alugueis", "filter": {}},
+        "medicoes": {"collection": "medicoes", "title": "Medicoes", "filter": {}},
+    }
+    
+    if category not in category_configs:
+        raise HTTPException(status_code=400, detail=f"Categoria '{category}' inválida para Excel")
+    
+    config = category_configs[category]
+    collection = db[config["collection"]]
+    data = await collection.find(config["filter"], {"_id": 0}).to_list(5000)
+    
+    excel_buffer = await generate_excel_report(config["collection"], data, config["title"])
+    
+    await create_audit_log(
+        user=current_user,
+        action="exportar excel",
+        entity_type="relatório Excel",
+        entity_id=category,
+        entity_name=config["title"],
+        details=f"Exportou {len(data)} registros",
+        module="Exportação"
+    )
+    
+    return StreamingResponse(
+        excel_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=CRA_{config['title']}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        }
+    )
+
+@api_router.get("/export/ofx/{category}")
+async def export_ofx(category: str, current_user: dict = Depends(get_current_user)):
+    """Exporta dados financeiros em formato OFX"""
+    
+    valid_categories = {
+        "contas_pagar": {"collection": "contas_pagar", "title": "Contas_a_Pagar", "type": "pagar"},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "type": "pagar", "filter": {"status": "pendente"}},
+        "contas_receber": {"collection": "contas_receber", "title": "Contas_a_Receber", "type": "receber"},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "type": "receber", "filter": {"status": "pendente"}},
+    }
+    
+    if category not in valid_categories:
+        raise HTTPException(status_code=400, detail="OFX só está disponível para contas a pagar/receber")
+    
+    config = valid_categories[category]
+    query_filter = config.get("filter", {})
+    collection = db[config["collection"]]
+    data = await collection.find(query_filter, {"_id": 0}).to_list(5000)
+    
+    ofx_content = generate_ofx_content(data, config["type"])
+    
+    await create_audit_log(
+        user=current_user,
+        action="exportar ofx",
+        entity_type="relatório OFX",
+        entity_id=category,
+        entity_name=config["title"],
+        details=f"Exportou {len(data)} registros",
+        module="Exportação"
+    )
+    
+    return StreamingResponse(
+        io.BytesIO(ofx_content.encode('latin-1')),
+        media_type="application/x-ofx",
+        headers={
+            "Content-Disposition": f"attachment; filename=CRA_{config['title']}_{datetime.now().strftime('%Y%m%d_%H%M')}.ofx"
+        }
+    )
+
+
 # ============ FILE UPLOAD/ATTACHMENT ROUTES ============
 
 from fastapi.staticfiles import StaticFiles
