@@ -40,6 +40,18 @@ export default function AdminDashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("resumo");
+  
+  // Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCentroCusto, setFilterCentroCusto] = useState("");
+  const [filterPlanoContas, setFilterPlanoContas] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  
+  // Data for filters
+  const [centrosCusto, setCentrosCusto] = useState([]);
+  const [planosContas, setPlanosContas] = useState([]);
+  const [contasPagar, setContasPagar] = useState([]);
+  const [contasReceber, setContasReceber] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
