@@ -601,6 +601,53 @@ export default function UsagePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Machine Confirmation Dialog */}
+      <AlertDialog open={deleteMachineDialog.open} onOpenChange={(open) => !open && setDeleteMachineDialog({ ...deleteMachineDialog, open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Truck size={20} />
+              Excluir Máquina
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Tem certeza que deseja excluir esta máquina do sistema?</p>
+              <div className="bg-gray-100 p-3 rounded-lg mt-2">
+                <p className="font-medium text-black">{deleteMachineDialog.machineName}</p>
+                <p className="text-sm text-gray-600 font-mono">{deleteMachineDialog.machinePlate}</p>
+              </div>
+              <div className="bg-red-50 border border-red-200 p-3 rounded-lg mt-2">
+                <p className="text-red-700 text-sm font-medium">
+                  ⚠️ Esta ação irá:
+                </p>
+                <ul className="text-red-600 text-sm mt-1 list-disc list-inside">
+                  <li>Remover a máquina do sistema</li>
+                  <li>Excluir todas as manutenções associadas</li>
+                  <li>Esta ação não pode ser desfeita</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMachineLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMachine}
+              disabled={deleteMachineLoading}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="confirm-delete-machine"
+            >
+              {deleteMachineLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                "Excluir Máquina"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
