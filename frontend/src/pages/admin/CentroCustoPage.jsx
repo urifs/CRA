@@ -99,14 +99,20 @@ export default function CentroCustoPage() {
 
       {/* Busca */}
       <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <Input 
-            placeholder="Buscar por código, nome ou descrição..." 
-            value={search} 
-            onChange={(e) => setSearch(e.target.value)} 
-            className="pl-10" 
-          />
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Input 
+              placeholder="Buscar por código, nome ou descrição..." 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              className="pl-10" 
+            />
+          </div>
+          <Button className="bg-[#D4A000] hover:bg-[#b38900] text-black">
+            <Search size={16} className="mr-2" />
+            Buscar
+          </Button>
         </div>
       </div>
 

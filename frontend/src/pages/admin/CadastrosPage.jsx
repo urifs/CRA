@@ -342,7 +342,7 @@ export default function CadastrosPage() {
       </div>
 
       {/* Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="relative md:col-span-2">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <Input
@@ -369,6 +369,10 @@ export default function CadastrosPage() {
             <SelectItem value="inativo">Inativo</SelectItem>
           </SelectContent>
         </Select>
+        <Button className="h-11 bg-[#D4A000] hover:bg-[#b38900] text-black">
+          <Search size={16} className="mr-2" />
+          Buscar
+        </Button>
       </div>
 
       {/* Lista */}
