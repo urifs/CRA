@@ -445,26 +445,137 @@ export default function ArmazenamentoPage() {
           </div>
         )}
 
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-1 text-sm mb-4 overflow-x-auto pb-2">
-          {breadcrumbs.map((crumb, index) => (
-            <div key={crumb.path} className="flex items-center gap-1 whitespace-nowrap">
-              {index > 0 && <ChevronRight size={14} className="text-gray-500" />}
-              <button
-                onClick={() => handleNavigate(crumb.path)}
-                className={`hover:text-[#E31A1A] ${index === breadcrumbs.length - 1 ? 'text-[#E31A1A] font-medium' : 'text-gray-400'}`}
-              >
-                {index === 0 ? <Home size={16} /> : crumb.name}
-              </button>
-            </div>
-          ))}
-        </div>
+        {/* Breadcrumbs or Trash Header */}
+        {showTrash ? (
+          <div className="flex items-center gap-2 text-sm mb-4">
+            <Trash size={16} className="text-gray-400" />
+            <span className="text-gray-400">Lixeira</span>
+            <span className="text-gray-500">({trashItems.length} itens)</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-sm mb-4 overflow-x-auto pb-2">
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.path} className="flex items-center gap-1 whitespace-nowrap">
+                {index > 0 && <ChevronRight size={14} className="text-gray-500" />}
+                <button
+                  onClick={() => handleNavigate(crumb.path)}
+                  className={`hover:text-[#E31A1A] ${index === breadcrumbs.length - 1 ? 'text-[#E31A1A] font-medium' : 'text-gray-400'}`}
+                >
+                  {index === 0 ? <Home size={16} /> : crumb.name}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="animate-spin text-[#E31A1A]" size={40} />
           </div>
+        ) : showTrash ? (
+          /* Trash View */
+          filteredTrashItems.length === 0 ? (
+            <div className="text-center py-20">
+              <Trash size={64} className="mx-auto text-gray-600 mb-4" />
+              <p className="text-gray-400 mb-4">
+                {searchTerm ? "Nenhum item encontrado" : "A lixeira está vazia"}
+              </p>
+              <Button onClick={() => setShowTrash(false)} className="bg-gray-700 hover:bg-gray-600">
+                <ArrowLeft size={18} className="mr-2" />
+                Voltar aos Arquivos
+              </Button>
+            </div>
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {filteredTrashItems.map((item) => {
+                const isFolder = item.type === "folder";
+                const fileType = !isFolder ? getFileIcon(item.original_name) : null;
+                const FileIcon = fileType?.icon || FolderOpen;
+                return (
+                  <Card
+                    key={item.id}
+                    className="bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 transition-all group"
+                  >
+                    <CardContent className="p-4 text-center relative">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
+                            <MoreVertical size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleRestore(item)}>
+                            <RotateCcw size={14} className="mr-2" /> Restaurar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeletePermanently(item)} className="text-red-600">
+                            <Trash2 size={14} className="mr-2" /> Excluir Permanentemente
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      {isFolder ? (
+                        <FolderOpen size={48} className="mx-auto text-gray-500 mb-2" />
+                      ) : (
+                        <FileIcon size={48} className={`mx-auto ${fileType?.color || "text-gray-500"} mb-2 opacity-50`} />
+                      )}
+                      <p className="text-sm font-medium truncate text-gray-400">{item.original_name}</p>
+                      <p className="text-xs text-gray-600">
+                        {new Date(item.deleted_at).toLocaleDateString("pt-BR")}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-0">
+                <table className="w-full">
+                  <thead className="bg-gray-800 border-b border-gray-700">
+                    <tr>
+                      <th className="text-left p-3 font-medium text-gray-300">Nome</th>
+                      <th className="text-left p-3 font-medium text-gray-300 hidden sm:table-cell">Caminho Original</th>
+                      <th className="text-left p-3 font-medium text-gray-300 hidden md:table-cell">Excluído em</th>
+                      <th className="text-right p-3 font-medium text-gray-300">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTrashItems.map((item) => {
+                      const isFolder = item.type === "folder";
+                      const fileType = !isFolder ? getFileIcon(item.original_name) : null;
+                      const FileIcon = fileType?.icon || FolderOpen;
+                      return (
+                        <tr key={item.id} className="border-b border-gray-800 hover:bg-gray-800">
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              {isFolder ? (
+                                <FolderOpen size={24} className="text-gray-500" />
+                              ) : (
+                                <FileIcon size={24} className={`${fileType?.color || "text-gray-500"} opacity-50`} />
+                              )}
+                              <span className="text-gray-400">{item.original_name}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-gray-500 hidden sm:table-cell">{item.original_path}</td>
+                          <td className="p-3 text-gray-500 hidden md:table-cell">{new Date(item.deleted_at).toLocaleDateString("pt-BR")}</td>
+                          <td className="p-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleRestore(item)} className="text-green-500 hover:text-green-400">
+                                <RotateCcw size={16} />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDeletePermanently(item)} className="text-red-500 hover:text-red-400">
+                                <Trash2 size={16} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-20">
             <FolderOpen size={64} className="mx-auto text-gray-600 mb-4" />
