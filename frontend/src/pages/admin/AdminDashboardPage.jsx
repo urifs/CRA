@@ -174,10 +174,17 @@ export default function AdminDashboardPage() {
 
       {/* Tabs principais */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
           <TabsTrigger value="resumo" className="flex items-center gap-2">
             <Wallet size={16} />
             Resumo
+          </TabsTrigger>
+          <TabsTrigger value="vencidas" className="flex items-center gap-2" data-testid="tab-vencidas">
+            <AlertTriangle size={16} />
+            Vencidas
+            {(vencidas?.totalQuantidade > 0) && (
+              <span className="bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full animate-pulse">{vencidas.totalQuantidade}</span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="pagar" className="flex items-center gap-2">
             <TrendingDown size={16} />
