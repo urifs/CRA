@@ -390,8 +390,8 @@ export default function AdminDashboardPage() {
             <CardContent>
               {contasPagar.filter(c => {
                 if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-                if (filterCentroCusto && c.centro_custo_id !== filterCentroCusto) return false;
-                if (filterPlanoContas && c.plano_contas_id !== filterPlanoContas) return false;
+                if (filterCentroCusto && filterCentroCusto !== "all" && c.centro_custo_id !== filterCentroCusto) return false;
+                if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_contas_id !== filterPlanoContas) return false;
                 if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
                 if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;
                 if (filterStatus === "pago" && c.status !== "pago") return false;
@@ -402,8 +402,8 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {contasPagar.filter(c => {
                     if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-                    if (filterCentroCusto && c.centro_custo_id !== filterCentroCusto) return false;
-                    if (filterPlanoContas && c.plano_contas_id !== filterPlanoContas) return false;
+                    if (filterCentroCusto && filterCentroCusto !== "all" && c.centro_custo_id !== filterCentroCusto) return false;
+                    if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_contas_id !== filterPlanoContas) return false;
                     if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
                     if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;
                     if (filterStatus === "pago" && c.status !== "pago") return false;
