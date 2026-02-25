@@ -391,3 +391,20 @@ Sistema de gerenciamento de máquinas (tratores e caminhões) para registro de m
                 ├── OrdensServicoPage.jsx
                 └── ...
 ```
+
+### Consulta de CNPJ e CEP ✅ (25/02/2026)
+- [x] **Consulta de CNPJ**: Preenchimento automático de dados via BrasilAPI (Receita Federal)
+  - Endpoint: `GET /api/consulta/cnpj/{cnpj}`
+  - Dados retornados: Razão Social, Nome Fantasia, Telefone, Email, Endereço completo, Situação, Atividade Principal
+  - Botão de busca (lupa) ao lado do campo CNPJ no formulário de Pessoa Jurídica
+  - Bug corrigido: Substituída implementação via Gemini (dados incorretos) por BrasilAPI (dados oficiais)
+- [x] **Consulta de CEP**: Preenchimento automático de endereço via ViaCEP
+  - Endpoint: `GET /api/consulta/cep/{cep}`
+  - Dados retornados: Logradouro, Complemento, Bairro, Cidade, UF
+  - Botão de busca (lupa) ao lado do campo CEP
+
+## Últimos Testes (25/02/2026)
+- **Backend CNPJ**: 100% (consulta via BrasilAPI funcionando)
+- **Frontend CNPJ**: 100% (preenchimento automático validado)
+- **Teste com CNPJ**: 00000000000191 (Banco do Brasil) - Retornou corretamente
+- **Arquivo de teste**: `/app/test_reports/iteration_11.json`
