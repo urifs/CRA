@@ -77,6 +77,7 @@ api_router = APIRouter(prefix="/api")
 
 # Security
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 # ============ MODELS ============
 
