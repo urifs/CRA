@@ -825,17 +825,32 @@ export default function ArmazenamentoPage() {
           </DialogHeader>
           <div className="flex items-center justify-center min-h-[400px] bg-gray-100 rounded-lg overflow-hidden">
             {previewItem && (
-              previewItem.name.toLowerCase().endsWith('.pdf') ? (
+              getPreviewType(previewItem.name) === 'pdf' ? (
                 <iframe
                   src={`${API}/storage/download?path=${encodeURIComponent(previewItem.path)}&token=${token}`}
                   className="w-full h-[70vh]"
+                  title={previewItem.name}
                 />
-              ) : (
+              ) : getPreviewType(previewItem.name) === 'video' ? (
+                <video
+                  src={`${API}/storage/download?path=${encodeURIComponent(previewItem.path)}&token=${token}`}
+                  controls
+                  className="max-w-full max-h-[70vh]"
+                >
+                  Seu navegador não suporta o elemento de vídeo.
+                </video>
+              ) : getPreviewType(previewItem.name) === 'image' ? (
                 <img
                   src={`${API}/storage/download?path=${encodeURIComponent(previewItem.path)}&token=${token}`}
                   alt={previewItem.name}
                   className="max-w-full max-h-[70vh] object-contain"
                 />
+              ) : (
+                <div className="text-gray-500 text-center p-8">
+                  <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Este tipo de arquivo não pode ser visualizado.</p>
+                  <p className="text-sm mt-2">Clique em "Baixar" para obter o arquivo.</p>
+                </div>
               )
             )}
           </div>
