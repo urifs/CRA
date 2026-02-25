@@ -96,8 +96,8 @@ export const Layout = () => {
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="CRA" className="w-8 h-8 object-contain" />
-            <span className="font-heading font-bold">CRA Construtora</span>
+            <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+            <span className="font-heading font-bold">Gerenciamento</span>
           </div>
           <div className="flex items-center gap-1">
             <TasksInbox system="gerenciamento" accentColor="#E31A1A" />
