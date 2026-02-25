@@ -13,36 +13,30 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ### Última sessão (25/02/2026)
 - ✅ **Plano de Contas Refatorado**:
-  - Removida separação Receitas/Despesas - cadastro agora é livre
-  - Lista única de Planos de Conta com subcontas em dropdown
-  - Botão "Extrato" para visualizar contas a pagar/receber vinculadas
-  - Campo "Tipo" removido do formulário
+  - Removida separação Receitas/Despesas - cadastro livre
+  - Lista única com subcontas em dropdown
+  - Botão "Extrato" para visualizar movimentações
 
 - ✅ **Dropdown de Cadastros em Contas a Pagar/Receber**:
-  - Campo Fornecedor/Cliente agora é dropdown com lista de cadastros
-  - Integração automática com módulo de Cadastros
+  - Campo Fornecedor/Cliente agora é dropdown
+  - Lista automaticamente os cadastros do sistema
+  - Mostra nome + CNPJ/CPF
+
+- ✅ **Botão "Cadastrar Novo" no Dropdown**:
+  - Ao lado do dropdown há um botão com ícone de pessoa
+  - Abre modal de cadastro rápido de Fornecedor/Cliente
+  - Campos: Nome, CNPJ/CPF, Telefone, Email
+  - Após cadastrar, seleciona automaticamente no dropdown
 
 - ✅ **Melhorias na Visualização de Anexos**:
   - Melhor tratamento de erros no preview
-  - Fallback quando PDF não carrega no iframe
-  - Mensagens informativas ao usuário
+  - Fallback quando arquivo não carrega
 
-### Sessões anteriores
-- Plano de Contas hierárquico (contas pai e subcontas)
-- Dropdowns dependentes nos formulários
-- Sistema de armazenamento de arquivos
-- Dashboard financeiro com filtros
-- Módulo de Aluguéis de Máquinas
-- Centro de Notificações
-- Painel Admin (usuários, auditoria, banco de dados)
-- Chatbot com Gemini AI
-- Exportação PDF/Excel/OFX
-
-## Backlog (P1 - Próximas tarefas)
+## Backlog (P1)
 - Refatoração parcial do backend (server.py ~6800 linhas)
 - Visualização de Word/Excel no armazenamento
 
-## Backlog (P2 - Futuro)
+## Backlog (P2)
 - Integração Estoque ↔ Manutenção
 - Notificações por email/WhatsApp
 - Reativar PWA
@@ -53,7 +47,7 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 ## Credenciais de Teste
 - **Email**: test@test.com | **Password**: password | **Role**: admin
 
-## Arquivos Principais Modificados
+## Arquivos Modificados
 - `/app/frontend/src/pages/admin/PlanoContasPage.jsx`
 - `/app/frontend/src/pages/admin/ContasPagarPage.jsx`
 - `/app/frontend/src/pages/admin/ContasReceberPage.jsx`
