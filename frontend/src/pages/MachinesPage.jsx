@@ -584,6 +584,40 @@ export default function MachinesPage() {
               />
             </div>
 
+            {/* Chassi / Número de Série */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="form-label">Tipo de Identificador</Label>
+                <Select
+                  value={formData.identificador_tipo}
+                  onValueChange={(value) => setFormData({...formData, identificador_tipo: value === "__none__" ? "" : value})}
+                >
+                  <SelectTrigger className="form-input" data-testid="machine-identificador-tipo-select">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
+                    <SelectItem value="chassi">Chassi</SelectItem>
+                    <SelectItem value="serie">Número de Série</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="form-label">
+                  {formData.identificador_tipo === "chassi" ? "Número do Chassi" : 
+                   formData.identificador_tipo === "serie" ? "Número de Série" : "Número"}
+                </Label>
+                <Input
+                  value={formData.identificador_numero}
+                  onChange={(e) => setFormData({...formData, identificador_numero: e.target.value})}
+                  placeholder={formData.identificador_tipo === "chassi" ? "Ex: 9BWZZZ377VT004251" : "Ex: SN-123456789"}
+                  className="form-input font-mono"
+                  disabled={!formData.identificador_tipo}
+                  data-testid="machine-identificador-numero-input"
+                />
+              </div>
+            </div>
+
             {/* Frota e Subfrota */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
