@@ -7076,15 +7076,6 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     empresa_cnpj = empresa_data["cnpj"]
     empresa_endereco = empresa_data["endereco"]
     empresa_telefone = empresa_data["telefone"]
-            elements.append(logo)
-    except Exception as e:
-        logging.warning(f"Não foi possível carregar o logo: {e}")
-    
-    # Cabeçalho
-    empresa_nome = empresa.get("razao_social", "CRA LOCAÇÕES")
-    empresa_cnpj = empresa.get("cnpj", "")
-    empresa_endereco = empresa.get("endereco", "")
-    empresa_telefone = empresa.get("telefone", "")
     
     header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, alignment=1, textColor=colors.gray)
     elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', fontSize=14, alignment=1)))
