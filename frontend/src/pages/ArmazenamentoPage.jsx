@@ -888,7 +888,10 @@ export default function ArmazenamentoPage() {
       <Dialog open={showNewFolderModal} onOpenChange={setShowNewFolderModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova Pasta</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderPlus className="text-[#D4A000]" size={20} />
+              Nova Pasta
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -900,9 +903,24 @@ export default function ArmazenamentoPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
               />
             </div>
+            <div>
+              <Label className="flex items-center gap-2">
+                <Lock size={14} className="text-yellow-500" />
+                Senha (opcional)
+              </Label>
+              <Input
+                type="password"
+                value={newFolderPassword}
+                onChange={(e) => setNewFolderPassword(e.target.value)}
+                placeholder="Deixe vazio para não proteger"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Defina uma senha para proteger o acesso à pasta
+              </p>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewFolderModal(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setShowNewFolderModal(false); setNewFolderPassword(""); }}>Cancelar</Button>
             <Button onClick={handleCreateFolder} className="bg-[#E31A1A] hover:bg-red-700">Criar</Button>
           </DialogFooter>
         </DialogContent>
