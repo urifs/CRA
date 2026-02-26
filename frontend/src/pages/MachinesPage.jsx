@@ -466,6 +466,76 @@ export default function MachinesPage() {
               />
             </div>
 
+            {/* Frota e Subfrota */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="form-label flex items-center gap-1">
+                  <FolderTree size={14} className="text-gray-400" />
+                  Frota (opcional)
+                </Label>
+                <Select
+                  value={formData.fleet_id}
+                  onValueChange={(value) => setFormData({...formData, fleet_id: value, subfleet_id: ""})}
+                >
+                  <SelectTrigger className="form-input" data-testid="machine-fleet-select">
+                    <SelectValue placeholder="Selecione uma frota" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    {fleets.map((fleet) => (
+                      <SelectItem key={fleet.id} value={fleet.id}>
+                        {fleet.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="form-label">Subfrota (opcional)</Label>
+                <Select
+                  value={formData.subfleet_id}
+                  onValueChange={(value) => setFormData({...formData, subfleet_id: value})}
+                  disabled={!formData.fleet_id}
+                >
+                  <SelectTrigger className="form-input" data-testid="machine-subfleet-select">
+                    <SelectValue placeholder={formData.fleet_id ? "Selecione uma subfrota" : "Selecione uma frota primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    {filteredSubfleets.map((subfleet) => (
+                      <SelectItem key={subfleet.id} value={subfleet.id}>
+                        {subfleet.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Operador/Funcionário */}
+            <div className="space-y-2">
+              <Label className="form-label flex items-center gap-1">
+                <User size={14} className="text-gray-400" />
+                Operador/Funcionário (opcional)
+              </Label>
+              <Select
+                value={formData.operator_id}
+                onValueChange={(value) => setFormData({...formData, operator_id: value})}
+              >
+                <SelectTrigger className="form-input" data-testid="machine-operator-select">
+                  <SelectValue placeholder="Selecione um funcionário" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {cadastros.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome_razao} {c.cpf_cnpj ? `(${c.cpf_cnpj})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <DialogFooter className="gap-2">
               <Button
                 type="button"
