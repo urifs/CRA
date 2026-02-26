@@ -584,15 +584,16 @@ export default function ExportPage({ module = "gerenciamento" }) {
                 <div className="border-t border-gray-100 bg-gray-50">
                   {category.subcategories.map((sub, index) => {
                     const isSubSelected = selectedItems.includes(sub.id);
-                    const isSubExporting = exporting === sub.id;
-                    const hasFilter = filterableCategories[sub.id];
-                    const filterData = specificFilters[sub.id];
+                    const isSubExpanded = expandedSubcategories[sub.id];
+                    const items = subcategoryItems[sub.id] || [];
+                    const isLoadingItems = loadingSubcategory[sub.id];
+                    const canExpand = EXPANDABLE_SUBCATEGORIES.includes(sub.id);
 
                     return (
                       <div key={sub.id}>
                         <div 
                           className={`flex items-center gap-3 px-4 py-3 pl-16 ${
-                            index !== category.subcategories.length - 1 && !filterData?.expanded ? 'border-b border-gray-100' : ''
+                            index !== category.subcategories.length - 1 && !isSubExpanded ? 'border-b border-gray-100' : ''
                           } ${isSubSelected ? 'bg-white' : 'hover:bg-white'}`}
                         >
                           <Checkbox 
@@ -609,26 +610,24 @@ export default function ExportPage({ module = "gerenciamento" }) {
                               {sub.label}
                             </p>
                             <p className="text-xs text-gray-500">{sub.description}</p>
-                            {filterData?.selectedIds?.length > 0 && (
-                              <p className="text-xs text-blue-600 mt-1">
-                                {filterData.selectedIds.length} item(s) específico(s) selecionado(s)
-                              </p>
-                            )}
                           </div>
                           
-                          {/* Botão de filtro para subcategorias que suportam */}
-                          {hasFilter && isSubSelected && (
+                          {/* Botão para expandir e ver itens individuais */}
+                          {canExpand && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => toggleFilterExpand(sub.id)}
-                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                              title="Filtrar itens específicos"
+                              onClick={() => toggleSubcategoryExpand(sub.id)}
+                              className="text-purple-500 hover:text-purple-700 hover:bg-purple-50"
+                              title="Ver itens individuais"
+                              data-testid={`expand-${sub.id}`}
                             >
-                              {loadingFilters[sub.id] ? (
+                              {isLoadingItems ? (
                                 <Loader2 size={14} className="animate-spin" />
+                              ) : isSubExpanded ? (
+                                <ChevronDown size={14} />
                               ) : (
-                                <Filter size={14} />
+                                <List size={14} />
                               )}
                             </Button>
                           )}
@@ -641,7 +640,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                               onClick={() => exportPDF(sub.id)}
                               disabled={exporting === `pdf-${sub.id}`}
                               className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              title="Exportar PDF"
+                              title="Exportar PDF (todos)"
                             >
                               {exporting === `pdf-${sub.id}` ? (
                                 <Loader2 size={14} className="animate-spin" />
@@ -657,7 +656,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                 onClick={() => exportExcel(sub.id)}
                                 disabled={exporting === `excel-${sub.id}`}
                                 className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                title="Exportar Excel"
+                                title="Exportar Excel (todos)"
                               >
                                 {exporting === `excel-${sub.id}` ? (
                                   <Loader2 size={14} className="animate-spin" />
@@ -686,46 +685,78 @@ export default function ExportPage({ module = "gerenciamento" }) {
                         </div>
                       </div>
                         
-                        {/* Área de filtros expandíveis */}
-                        {hasFilter && filterData?.expanded && sub.id !== 'extrato_bancario' && (
-                          <div className="bg-blue-50 border-t border-blue-100 px-4 py-3 pl-20">
-                            <p className="text-xs text-blue-700 font-medium mb-2">
-                              Selecione itens específicos para exportar (deixe vazio para exportar todos):
+                        {/* Lista de itens individuais expandida */}
+                        {isSubExpanded && (
+                          <div className="bg-purple-50 border-t border-purple-100 px-4 py-3 pl-20">
+                            <p className="text-xs text-purple-700 font-medium mb-3">
+                              Itens individuais - clique para exportar apenas um:
                             </p>
-                            {loadingFilters[sub.id] ? (
-                              <div className="flex items-center gap-2 text-blue-600">
+                            {isLoadingItems ? (
+                              <div className="flex items-center gap-2 text-purple-600">
                                 <Loader2 size={14} className="animate-spin" />
                                 <span className="text-sm">Carregando itens...</span>
                               </div>
-                            ) : filterData?.items?.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {filterData.items.map(item => (
-                                  <label
+                            ) : items.length > 0 ? (
+                              <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {items.map(item => (
+                                  <div
                                     key={item.id}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm cursor-pointer transition-colors ${
-                                      filterData.selectedIds.includes(item.id)
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white border border-blue-200 text-blue-700 hover:bg-blue-100'
-                                    }`}
+                                    className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-purple-200 hover:border-purple-400 transition-colors"
                                   >
-                                    <input
-                                      type="checkbox"
-                                      className="sr-only"
-                                      checked={filterData.selectedIds.includes(item.id)}
-                                      onChange={() => toggleFilterItem(sub.id, item.id)}
-                                    />
-                                    {item.name}
-                                  </label>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {item.name || "Sem descrição"}
+                                      </p>
+                                      {/* Informações extras dependendo do tipo */}
+                                      <div className="flex gap-3 text-xs text-gray-500">
+                                        {item.valor !== undefined && (
+                                          <span>R$ {Number(item.valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                        )}
+                                        {item.data_vencimento && (
+                                          <span>Venc: {item.data_vencimento}</span>
+                                        )}
+                                        {item.fornecedor_nome && (
+                                          <span>{item.fornecedor_nome}</span>
+                                        )}
+                                        {item.cliente_nome && (
+                                          <span>{item.cliente_nome}</span>
+                                        )}
+                                        {item.model && (
+                                          <span>{item.model}</span>
+                                        )}
+                                        {item.plate && (
+                                          <span>{item.plate}</span>
+                                        )}
+                                        {item.banco && (
+                                          <span>{item.banco}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => exportIndividualItem(sub.id, item.id, item.name)}
+                                      disabled={exporting === `individual-${item.id}`}
+                                      className="ml-2 text-purple-600 border-purple-300 hover:bg-purple-100"
+                                      data-testid={`export-individual-${item.id}`}
+                                    >
+                                      {exporting === `individual-${item.id}` ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                      ) : (
+                                        <>
+                                          <FileText size={14} className="mr-1" />
+                                          PDF
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-sm text-gray-500">Nenhum item cadastrado</p>
+                              <p className="text-sm text-gray-500">Nenhum item cadastrado nesta categoria</p>
                             )}
                           </div>
                         )}
-                        
-                        {/* Seleção específica para Extrato Bancário */}
-                        {sub.id === 'extrato_bancario' && isSubSelected && (
                           <div className="bg-amber-50 border-t border-amber-200 px-4 py-3 pl-20">
                             <p className="text-xs text-amber-700 font-medium mb-2">
                               Selecione a conta bancária para exportar o extrato:
