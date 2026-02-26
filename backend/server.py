@@ -6926,6 +6926,315 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         elements.append(table)
+    
+    elif category == "plano_contas":
+        # Informações do plano de contas
+        elements.append(Paragraph("DADOS DO PLANO DE CONTAS", section_style))
+        info_data = [
+            [Paragraph("Código:", label_style), Paragraph(item.get("codigo", "-"), value_style),
+             Paragraph("Nome:", label_style), Paragraph(item.get("nome", "-"), value_style)],
+            [Paragraph("Tipo:", label_style), Paragraph(item.get("tipo", "-"), value_style),
+             Paragraph("Natureza:", label_style), Paragraph(item.get("natureza", "-"), value_style)],
+            [Paragraph("Conta Pai:", label_style), Paragraph(item.get("conta_pai_nome", "-"), value_style),
+             Paragraph("Status:", label_style), Paragraph("Ativo" if item.get("ativo", True) else "Inativo", value_style)],
+        ]
+        info_table = Table(info_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Buscar contas a pagar e receber vinculadas a este plano
+        plano_id = item.get("id")
+        plano_nome = item.get("nome", "")
+        
+        # Contas a Pagar
+        contas_pagar = await db["contas_pagar"].find(
+            {"$or": [{"plano_conta_id": plano_id}, {"plano_conta_nome": plano_nome}]}, 
+            {"_id": 0}
+        ).to_list(500)
+        
+        # Contas a Receber
+        contas_receber = await db["contas_receber"].find(
+            {"$or": [{"plano_conta_id": plano_id}, {"plano_conta_nome": plano_nome}]}, 
+            {"_id": 0}
+        ).to_list(500)
+        
+        # Tabela de Contas a Pagar vinculadas
+        if contas_pagar:
+            elements.append(Paragraph("CONTAS A PAGAR VINCULADAS", section_style))
+            pagar_headers = [
+                Paragraph("<b>Descrição</b>", label_style),
+                Paragraph("<b>Fornecedor</b>", label_style),
+                Paragraph("<b>Vencimento</b>", label_style),
+                Paragraph("<b>Valor</b>", label_style),
+                Paragraph("<b>Status</b>", label_style)
+            ]
+            pagar_data = [pagar_headers]
+            total_pagar = 0
+            for cp in contas_pagar:
+                valor = float(cp.get("valor_final") or cp.get("valor", 0) or 0)
+                total_pagar += valor
+                status = "Quitada" if cp.get("status") == "quitada" else "Em Aberto"
+                pagar_data.append([
+                    Paragraph(cp.get("descricao", "-")[:40], value_style),
+                    Paragraph((cp.get("fornecedor_nome", "-") or "-")[:25], value_style),
+                    Paragraph(cp.get("data_vencimento", "-"), value_style),
+                    Paragraph(fmt_valor(valor), value_style),
+                    Paragraph(status, value_style)
+                ])
+            # Total
+            pagar_data.append([
+                Paragraph("", value_style),
+                Paragraph("<b>TOTAL</b>", value_style),
+                Paragraph("", value_style),
+                Paragraph(f"<b>{fmt_valor(total_pagar)}</b>", value_style),
+                Paragraph("", value_style)
+            ])
+            pagar_table = Table(pagar_data, colWidths=[5*cm, 4*cm, 2.5*cm, 3*cm, 2.5*cm])
+            pagar_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f5f5f5")),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            elements.append(pagar_table)
+            elements.append(Spacer(1, 0.4*cm))
+        
+        # Tabela de Contas a Receber vinculadas
+        if contas_receber:
+            elements.append(Paragraph("CONTAS A RECEBER VINCULADAS", section_style))
+            receber_headers = [
+                Paragraph("<b>Descrição</b>", label_style),
+                Paragraph("<b>Cliente</b>", label_style),
+                Paragraph("<b>Vencimento</b>", label_style),
+                Paragraph("<b>Valor</b>", label_style),
+                Paragraph("<b>Status</b>", label_style)
+            ]
+            receber_data = [receber_headers]
+            total_receber = 0
+            for cr in contas_receber:
+                valor = float(cr.get("valor_final") or cr.get("valor", 0) or 0)
+                total_receber += valor
+                status = "Recebida" if cr.get("status") == "recebida" else "Em Aberto"
+                receber_data.append([
+                    Paragraph(cr.get("descricao", "-")[:40], value_style),
+                    Paragraph((cr.get("cliente_nome", "-") or "-")[:25], value_style),
+                    Paragraph(cr.get("data_vencimento", "-"), value_style),
+                    Paragraph(fmt_valor(valor), value_style),
+                    Paragraph(status, value_style)
+                ])
+            # Total
+            receber_data.append([
+                Paragraph("", value_style),
+                Paragraph("<b>TOTAL</b>", value_style),
+                Paragraph("", value_style),
+                Paragraph(f"<b>{fmt_valor(total_receber)}</b>", value_style),
+                Paragraph("", value_style)
+            ])
+            receber_table = Table(receber_data, colWidths=[5*cm, 4*cm, 2.5*cm, 3*cm, 2.5*cm])
+            receber_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f5f5f5")),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            elements.append(receber_table)
+            elements.append(Spacer(1, 0.4*cm))
+        
+        # Resumo
+        if contas_pagar or contas_receber:
+            total_pagar = sum(float(cp.get("valor_final") or cp.get("valor", 0) or 0) for cp in contas_pagar)
+            total_receber = sum(float(cr.get("valor_final") or cr.get("valor", 0) or 0) for cr in contas_receber)
+            saldo = total_receber - total_pagar
+            
+            elements.append(Paragraph("RESUMO FINANCEIRO", section_style))
+            resumo_data = [
+                [Paragraph("Total a Pagar:", label_style), Paragraph(fmt_valor(total_pagar), ParagraphStyle('VP', fontSize=10, textColor=colors.HexColor("#dc3545")))],
+                [Paragraph("Total a Receber:", label_style), Paragraph(fmt_valor(total_receber), ParagraphStyle('VR', fontSize=10, textColor=colors.HexColor("#28a745")))],
+                [Paragraph("<b>Saldo:</b>", label_style), Paragraph(f"<b>{fmt_valor(saldo)}</b>", ParagraphStyle('VS', fontSize=11, textColor=colors.HexColor("#28a745") if saldo >= 0 else colors.HexColor("#dc3545")))],
+            ]
+            resumo_table = Table(resumo_data, colWidths=[4*cm, 6*cm])
+            resumo_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(resumo_table)
+        else:
+            elements.append(Paragraph("Nenhuma conta vinculada a este plano de contas.", value_style))
+    
+    elif category == "centros_custo":
+        # Informações do centro de custo
+        elements.append(Paragraph("DADOS DO CENTRO DE CUSTO", section_style))
+        info_data = [
+            [Paragraph("Código:", label_style), Paragraph(item.get("codigo", "-"), value_style)],
+            [Paragraph("Nome:", label_style), Paragraph(item.get("nome", "-"), value_style)],
+            [Paragraph("Descrição:", label_style), Paragraph(item.get("descricao", "-"), value_style)],
+            [Paragraph("Status:", label_style), Paragraph("Ativo" if item.get("ativo", True) else "Inativo", value_style)],
+        ]
+        info_table = Table(info_data, colWidths=[4*cm, 14*cm])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Buscar contas vinculadas a este centro de custo
+        centro_nome = item.get("nome", "")
+        
+        contas_pagar = await db["contas_pagar"].find({"centro_custo": centro_nome}, {"_id": 0}).to_list(500)
+        contas_receber = await db["contas_receber"].find({"centro_custo": centro_nome}, {"_id": 0}).to_list(500)
+        
+        # Contas a Pagar
+        if contas_pagar:
+            elements.append(Paragraph("CONTAS A PAGAR - CENTRO DE CUSTO", section_style))
+            total_pagar = sum(float(cp.get("valor_final") or cp.get("valor", 0) or 0) for cp in contas_pagar)
+            elements.append(Paragraph(f"Total de {len(contas_pagar)} contas | Valor: {fmt_valor(total_pagar)}", value_style))
+            elements.append(Spacer(1, 0.3*cm))
+        
+        # Contas a Receber
+        if contas_receber:
+            elements.append(Paragraph("CONTAS A RECEBER - CENTRO DE CUSTO", section_style))
+            total_receber = sum(float(cr.get("valor_final") or cr.get("valor", 0) or 0) for cr in contas_receber)
+            elements.append(Paragraph(f"Total de {len(contas_receber)} contas | Valor: {fmt_valor(total_receber)}", value_style))
+    
+    elif category == "cadastros":
+        # Informações completas do cadastro
+        elements.append(Paragraph("DADOS DO CADASTRO", section_style))
+        
+        nome = item.get("razao_social") or item.get("nome", "-")
+        doc = item.get("cnpj") or item.get("cpf", "-")
+        
+        info_data = [
+            [Paragraph("Nome/Razão Social:", label_style), Paragraph(nome, value_style)],
+            [Paragraph("CPF/CNPJ:", label_style), Paragraph(doc, value_style)],
+            [Paragraph("Tipo:", label_style), Paragraph(item.get("tipo", "-"), value_style)],
+            [Paragraph("Telefone:", label_style), Paragraph(item.get("telefone", "-"), value_style)],
+            [Paragraph("Email:", label_style), Paragraph(item.get("email", "-"), value_style)],
+            [Paragraph("Endereço:", label_style), Paragraph(item.get("endereco", "-"), value_style)],
+            [Paragraph("Cidade:", label_style), Paragraph(item.get("cidade", "-"), value_style)],
+            [Paragraph("Estado:", label_style), Paragraph(item.get("estado", "-"), value_style)],
+            [Paragraph("CEP:", label_style), Paragraph(item.get("cep", "-"), value_style)],
+            [Paragraph("Observações:", label_style), Paragraph(item.get("observacoes", "-"), value_style)],
+        ]
+        info_table = Table(info_data, colWidths=[4*cm, 14*cm])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(info_table)
+    
+    elif category == "contas_bancarias":
+        # Informações completas da conta bancária
+        elements.append(Paragraph("DADOS DA CONTA BANCÁRIA", section_style))
+        
+        info_data = [
+            [Paragraph("Nome:", label_style), Paragraph(item.get("nome", "-"), value_style),
+             Paragraph("Banco:", label_style), Paragraph(item.get("banco", "-"), value_style)],
+            [Paragraph("Agência:", label_style), Paragraph(item.get("agencia", "-"), value_style),
+             Paragraph("Conta:", label_style), Paragraph(item.get("conta", "-"), value_style)],
+            [Paragraph("Tipo:", label_style), Paragraph(item.get("tipo", "-"), value_style),
+             Paragraph("Titular:", label_style), Paragraph(item.get("titular", "-"), value_style)],
+            [Paragraph("CPF/CNPJ:", label_style), Paragraph(item.get("cpf_cnpj", "-"), value_style),
+             Paragraph("PIX:", label_style), Paragraph(item.get("pix", "-"), value_style)],
+            [Paragraph("Status:", label_style), Paragraph("Ativa" if item.get("ativa", True) else "Inativa", value_style),
+             Paragraph("Saldo:", label_style), Paragraph(fmt_valor(item.get("saldo", 0)), value_style)],
+        ]
+        info_table = Table(info_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(info_table)
+    
+    elif category == "alugueis":
+        # Informações completas do aluguel
+        elements.append(Paragraph("DADOS DO ALUGUEL", section_style))
+        
+        info_data = [
+            [Paragraph("Máquina:", label_style), Paragraph(item.get("maquina_nome", "-"), value_style),
+             Paragraph("Cliente:", label_style), Paragraph(item.get("cliente_nome", "-"), value_style)],
+            [Paragraph("Data Início:", label_style), Paragraph(item.get("data_inicio", "-"), value_style),
+             Paragraph("Data Fim:", label_style), Paragraph(item.get("data_fim", "-"), value_style)],
+            [Paragraph("Valor Diário:", label_style), Paragraph(fmt_valor(item.get("valor_diario", 0)), value_style),
+             Paragraph("Valor Total:", label_style), Paragraph(fmt_valor(item.get("valor_total") or item.get("valor", 0)), value_style)],
+            [Paragraph("Status:", label_style), Paragraph(item.get("status", "-"), value_style),
+             Paragraph("Horímetro Início:", label_style), Paragraph(str(item.get("horimetro_inicio", "-")), value_style)],
+        ]
+        info_table = Table(info_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(info_table)
+        
+        if item.get("observacoes"):
+            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Paragraph("OBSERVAÇÕES", section_style))
+            elements.append(Paragraph(item.get("observacoes", "-"), value_style))
+    
+    elif "imoveis" in category:
+        # Informações completas do imóvel
+        elements.append(Paragraph("DADOS DO IMÓVEL", section_style))
+        
+        endereco = item.get("endereco", {})
+        if isinstance(endereco, dict):
+            endereco_str = f"{endereco.get('logradouro', '')}, {endereco.get('numero', '')} - {endereco.get('bairro', '')} - {endereco.get('cidade', '')}/{endereco.get('estado', '')} - CEP: {endereco.get('cep', '')}"
+        else:
+            endereco_str = str(endereco) if endereco else "-"
+        
+        info_data = [
+            [Paragraph("Descrição:", label_style), Paragraph(item.get("descricao", "-"), value_style)],
+            [Paragraph("Tipo:", label_style), Paragraph(item.get("tipo", "-"), value_style)],
+            [Paragraph("Área:", label_style), Paragraph(item.get("area", "-"), value_style)],
+            [Paragraph("Endereço:", label_style), Paragraph(endereco_str, value_style)],
+            [Paragraph("Quartos:", label_style), Paragraph(str(item.get("quartos", "-")), value_style)],
+            [Paragraph("Banheiros:", label_style), Paragraph(str(item.get("banheiros", "-")), value_style)],
+            [Paragraph("Vagas:", label_style), Paragraph(str(item.get("vagas", "-")), value_style)],
+            [Paragraph("Valor Aluguel:", label_style), Paragraph(fmt_valor(item.get("valor_aluguel", 0)), value_style)],
+            [Paragraph("Valor Condomínio:", label_style), Paragraph(fmt_valor(item.get("valor_condominio", 0)), value_style)],
+            [Paragraph("Valor IPTU:", label_style), Paragraph(fmt_valor(item.get("valor_iptu", 0)), value_style)],
+            [Paragraph("Inquilino:", label_style), Paragraph(item.get("inquilino_nome", "-"), value_style)],
+            [Paragraph("Status:", label_style), Paragraph(item.get("status", "-"), value_style)],
+        ]
+        info_table = Table(info_data, colWidths=[4*cm, 14*cm])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(info_table)
         
     else:
         # Genérico para outros tipos
