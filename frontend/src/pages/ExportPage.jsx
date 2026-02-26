@@ -1049,6 +1049,58 @@ export default function ExportPage({ module = "gerenciamento" }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Seleção de Empresa para Recibo/Duplicata */}
+      <Dialog open={empresaModal.open} onOpenChange={(open) => !open && closeEmpresaModal()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {empresaModal.type === 'recibo' ? <Receipt className="text-green-500" /> : <FileCheck className="text-amber-500" />}
+              Selecionar Empresa
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Selecione a empresa para gerar o {empresaModal.type === 'recibo' ? 'recibo' : 'duplicata/recibo fatura'}:
+            </p>
+            <div className="space-y-3">
+              {/* CRA Construtora */}
+              <Button
+                variant="outline"
+                className="w-full h-auto py-4 flex flex-col items-start gap-1 hover:bg-amber-50 hover:border-amber-300"
+                onClick={() => generateWithEmpresa('construtora')}
+                disabled={exporting}
+              >
+                <div className="flex items-center gap-2 font-semibold text-amber-700">
+                  <HardHat size={20} />
+                  CRA CONSTRUTORA
+                </div>
+                <div className="text-xs text-gray-500 text-left">
+                  CNPJ: 04.887.879/0001-96<br/>
+                  Tel: (63) 98407-1513
+                </div>
+              </Button>
+              
+              {/* CRA Locadora */}
+              <Button
+                variant="outline"
+                className="w-full h-auto py-4 flex flex-col items-start gap-1 hover:bg-blue-50 hover:border-blue-300"
+                onClick={() => generateWithEmpresa('locadora')}
+                disabled={exporting}
+              >
+                <div className="flex items-center gap-2 font-semibold text-blue-700">
+                  <Truck size={20} />
+                  CRA LOCADORA
+                </div>
+                <div className="text-xs text-gray-500 text-left">
+                  CNPJ: 39.543.761/0001-25<br/>
+                  Tel: (63) 98407-1513
+                </div>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
