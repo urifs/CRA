@@ -187,6 +187,51 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
+  // Exportar todos os itens selecionados em um único PDF
+  const exportAllSelected = async () => {
+    if (selectedItems.length === 0) {
+      toast.error("Selecione pelo menos um item para exportar");
+      return;
+    }
+    
+    setExporting('all-combined');
+    try {
+      // Construir filtros específicos
+      const filters = {};
+      Object.keys(specificFilters).forEach(key => {
+        const filter = specificFilters[key];
+        if (filter?.selectedIds?.length > 0 && selectedItems.includes(key)) {
+          filters[key] = { ids: filter.selectedIds };
+        }
+      });
+
+      const response = await axios.post(`${API}/export/combined`, {
+        categories: selectedItems,
+        format: 'pdf',
+        filters: Object.keys(filters).length > 0 ? filters : null
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CRA_Relatorio_Combinado_${new Date().toISOString().slice(0,10)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`${selectedItems.length} categorias exportadas em um único PDF!`);
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      toast.error("Erro ao exportar relatório combinado");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const exportPDF = async (itemId) => {
     setExporting(`pdf-${itemId}`);
     try {
