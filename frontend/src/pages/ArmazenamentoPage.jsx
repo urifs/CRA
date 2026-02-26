@@ -700,6 +700,15 @@ export default function ArmazenamentoPage() {
           <div className="flex items-center gap-2">
             {!showTrash ? (
               <>
+                <Button 
+                  variant={selectionMode ? "secondary" : "outline"} 
+                  size="sm" 
+                  onClick={toggleSelectionMode}
+                  className={selectionMode ? "bg-blue-600 text-white hover:bg-blue-700" : "border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"}
+                >
+                  <CheckSquare size={18} className="mr-2" />
+                  {selectionMode ? "Cancelar Seleção" : "Selecionar"}
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => setShowNewFolderModal(true)} className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
                   <FolderPlus size={18} className="mr-2" />
                   Nova Pasta
