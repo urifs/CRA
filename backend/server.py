@@ -111,6 +111,22 @@ class CategoryResponse(BaseModel):
     id: str
     name: str
     description: str
+    subcategories_count: int = 0
+    created_at: str
+
+# Subcategorias de máquinas
+class SubcategoryCreate(BaseModel):
+    name: str
+    category_id: str
+    description: Optional[str] = ""
+
+class SubcategoryResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    category_id: str
+    category_name: str = ""
+    description: str
     created_at: str
 
 class MachineCreate(BaseModel):
