@@ -58,7 +58,7 @@ export default function SystemSelectPage() {
       color: "bg-[#E31A1A]",
       hoverColor: "hover:border-[#E31A1A]",
       textColor: "text-[#E31A1A]",
-      path: "/dashboard",
+      path: "/gerenciamento/dashboard",
       hasAccess: canAccessGerenciamento,
       features: [
         { icon: Truck, label: "Máquinas" },

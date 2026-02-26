@@ -67,26 +67,26 @@ export const Layout = () => {
   };
 
   const navItems = [
-    { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/obras", icon: HardHat, label: "Plano de Obras" },
-    { path: "/machines", icon: Truck, label: "Máquinas" },
-    { path: "/maintenances", icon: Wrench, label: "Manutenções" },
-    { path: "/balance", icon: DollarSign, label: "Balanço" },
-    { path: "/usage", icon: Clock, label: "Tempo de Uso" },
-    { path: "/frotas", icon: FolderTree, label: "Frotas" },
-    { path: "/notifications", icon: Bell, label: "Notificações", badge: notificationCount },
-    { path: "/stock", icon: Package, label: "Estoque" },
-    { path: "/categories", icon: Tags, label: "Categorias" },
-    { path: "/exportar", icon: FileDown, label: "Exportação" },
+    { path: "/gerenciamento/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/gerenciamento/obras", icon: HardHat, label: "Plano de Obras" },
+    { path: "/gerenciamento/machines", icon: Truck, label: "Máquinas" },
+    { path: "/gerenciamento/maintenances", icon: Wrench, label: "Manutenções" },
+    { path: "/gerenciamento/balance", icon: DollarSign, label: "Balanço" },
+    { path: "/gerenciamento/usage", icon: Clock, label: "Tempo de Uso" },
+    { path: "/gerenciamento/frotas", icon: FolderTree, label: "Frotas" },
+    { path: "/gerenciamento/notifications", icon: Bell, label: "Notificações", badge: notificationCount },
+    { path: "/gerenciamento/stock", icon: Package, label: "Estoque" },
+    { path: "/gerenciamento/categories", icon: Tags, label: "Categorias" },
+    { path: "/gerenciamento/exportar", icon: FileDown, label: "Exportação" },
   ];
 
   // Mobile bottom navigation items
   const mobileNavItems = [
-    { path: "/dashboard", icon: LayoutDashboard, label: "Início" },
-    { path: "/obras", icon: HardHat, label: "Obras" },
-    { path: "/machines", icon: Truck, label: "Máquinas" },
-    { path: "/maintenances", icon: Wrench, label: "Manutenções" },
-    { path: "/more", icon: MoreHorizontal, label: "Mais" },
+    { path: "/gerenciamento/dashboard", icon: LayoutDashboard, label: "Início" },
+    { path: "/gerenciamento/obras", icon: HardHat, label: "Obras" },
+    { path: "/gerenciamento/machines", icon: Truck, label: "Máquinas" },
+    { path: "/gerenciamento/maintenances", icon: Wrench, label: "Manutenções" },
+    { path: "/gerenciamento/more", icon: MoreHorizontal, label: "Mais" },
   ];
 
   return (
@@ -177,7 +177,7 @@ export const Layout = () => {
             data-testid="new-maintenance-btn"
             className="w-full bg-[#E31A1A] hover:bg-red-700 text-white font-bold"
             onClick={() => {
-              navigate("/maintenances/new");
+              navigate("/gerenciamento/maintenances/new");
               setSidebarOpen(false);
             }}
           >
@@ -230,7 +230,7 @@ export const Layout = () => {
       <nav className="mobile-nav" data-testid="mobile-bottom-nav">
         {mobileNavItems.map((item) => {
           const isActive = location.pathname === item.path || 
-            (item.path === "/more" && ["/balance", "/usage", "/notifications", "/stock", "/categories"].includes(location.pathname));
+            (item.path === "/gerenciamento/more" && ["/gerenciamento/balance", "/gerenciamento/usage", "/gerenciamento/notifications", "/gerenciamento/stock", "/gerenciamento/categories"].includes(location.pathname));
           
           return (
             <NavLink
@@ -247,9 +247,9 @@ export const Layout = () => {
       </nav>
 
       {/* Floating action button for mobile */}
-      {isMobile && location.pathname !== "/maintenances/new" && (
+      {isMobile && location.pathname !== "/gerenciamento/maintenances/new" && (
         <button
-          onClick={() => navigate("/maintenances/new")}
+          onClick={() => navigate("/gerenciamento/maintenances/new")}
           className="fab bg-[#E31A1A] hover:bg-red-700 text-white flex items-center justify-center shadow-lg"
           data-testid="fab-new-maintenance"
           style={{ bottom: 'calc(90px + env(safe-area-inset-bottom))' }}
