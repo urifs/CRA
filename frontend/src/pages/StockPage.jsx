@@ -1178,6 +1178,30 @@ export default function StockPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Subcategory Confirmation Dialog */}
+      <Dialog open={!!deleteSubcategoryId} onOpenChange={() => setDeleteSubcategoryId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Excluir Subcategoria</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir esta subcategoria? Os itens que usam esta subcategoria não serão afetados.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteSubcategoryId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDeleteSubcategory}
+              data-testid="confirm-delete-subcategory-btn"
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
