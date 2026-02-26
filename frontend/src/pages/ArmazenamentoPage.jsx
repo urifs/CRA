@@ -416,14 +416,26 @@ export default function ArmazenamentoPage() {
     setPreviewLoading(true);
     setPreviewBlobUrl(null);
     
+    const previewType = getPreviewType(item.name);
+    
     try {
-      const response = await axios.get(`${API}/storage/download`, {
-        params: { path: item.path },
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob"
-      });
-      const blobUrl = window.URL.createObjectURL(response.data);
-      setPreviewBlobUrl(blobUrl);
+      if (previewType === 'word' || previewType === 'excel') {
+        // Use office preview endpoint for Word/Excel
+        const response = await axios.get(`${API}/storage/preview-office`, {
+          params: { path: item.path },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPreviewBlobUrl(response.data.html); // Store HTML content in blobUrl state
+      } else {
+        // Use blob for images, PDFs, videos
+        const response = await axios.get(`${API}/storage/download`, {
+          params: { path: item.path },
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob"
+        });
+        const blobUrl = window.URL.createObjectURL(response.data);
+        setPreviewBlobUrl(blobUrl);
+      }
     } catch (error) {
       toast.error("Erro ao carregar preview");
     } finally {
@@ -432,7 +444,8 @@ export default function ArmazenamentoPage() {
   };
 
   const closePreviewModal = () => {
-    if (previewBlobUrl) {
+    const previewType = previewItem ? getPreviewType(previewItem.name) : null;
+    if (previewBlobUrl && previewType !== 'word' && previewType !== 'excel') {
       window.URL.revokeObjectURL(previewBlobUrl);
     }
     setPreviewBlobUrl(null);
