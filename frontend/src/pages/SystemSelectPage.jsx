@@ -19,7 +19,9 @@ import {
   LogOut,
   FolderOpen,
   Upload,
-  HardDrive
+  HardDrive,
+  Clock,
+  Calculator
 } from "lucide-react";
 
 export default function SystemSelectPage() {
@@ -29,9 +31,10 @@ export default function SystemSelectPage() {
   // Verificar permissões baseado no role do usuário
   const userRole = user?.role || "gerenciamento";
   
-  const canAccessGerenciamento = ["gerenciamento", "ambos", "admin"].includes(userRole);
-  const canAccessAdministrativo = ["administrativo", "ambos", "admin"].includes(userRole);
-  const canAccessArmazenamento = ["admin", "ambos", "gerenciamento", "administrativo"].includes(userRole); // Todos podem acessar
+  const canAccessGerenciamento = ["gerenciamento", "ambos", "admin", "gerenciamento_rh"].includes(userRole);
+  const canAccessAdministrativo = ["administrativo", "ambos", "admin", "administrativo_rh"].includes(userRole);
+  const canAccessRH = ["rh", "admin", "ambos_rh", "gerenciamento_rh", "administrativo_rh"].includes(userRole);
+  const canAccessArmazenamento = ["admin", "ambos", "gerenciamento", "administrativo", "rh", "ambos_rh", "gerenciamento_rh", "administrativo_rh"].includes(userRole);
   const canAccessAdminPanel = userRole === "admin";
 
   const handleLogout = () => {
@@ -84,6 +87,23 @@ export default function SystemSelectPage() {
       ]
     },
     {
+      id: "rh",
+      title: "RH",
+      description: "Recursos Humanos, ponto eletrônico, folha de pagamento e EPIs",
+      icon: Users,
+      useLogo: false,
+      color: "bg-[#10B981]",
+      hoverColor: "hover:border-[#10B981]",
+      textColor: "text-[#10B981]",
+      path: "/rh/dashboard",
+      hasAccess: canAccessRH,
+      features: [
+        { icon: Users, label: "Funcionários" },
+        { icon: Clock, label: "Ponto" },
+        { icon: HardHat, label: "EPIs" },
+      ]
+    },
+    {
       id: "armazenamento",
       title: "Armazenamento",
       description: "Sistema de arquivos e documentos da empresa",
@@ -106,7 +126,11 @@ export default function SystemSelectPage() {
     const roleInfo = {
       gerenciamento: { label: "Gerenciamento", color: "bg-[#E31A1A]" },
       administrativo: { label: "Administrativo", color: "bg-[#D4A000] text-black" },
-      ambos: { label: "Acesso Duplo", color: "bg-purple-500" },
+      rh: { label: "RH", color: "bg-[#10B981]" },
+      ambos: { label: "Ger + Admin", color: "bg-purple-500" },
+      ambos_rh: { label: "Ger + Admin + RH", color: "bg-purple-600" },
+      gerenciamento_rh: { label: "Ger + RH", color: "bg-pink-500" },
+      administrativo_rh: { label: "Admin + RH", color: "bg-orange-500" },
       admin: { label: "Administrador", color: "bg-green-500" }
     };
     const info = roleInfo[userRole] || roleInfo.gerenciamento;
