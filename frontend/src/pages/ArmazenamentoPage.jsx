@@ -1055,13 +1055,6 @@ export default function ArmazenamentoPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                          <Edit size={14} className="mr-2" /> Renomear
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
-                          <Trash2 size={14} className="mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                     <FileIcon size={48} className={`mx-auto ${fileType.color} mb-2`} />
                     <p className="text-sm font-medium truncate text-white">{item.name}</p>
                     <p className="text-xs text-gray-500">{formatFileSize(item.size)}</p>
