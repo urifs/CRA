@@ -980,10 +980,34 @@ export default function PainelAdminPage() {
                         Administrativo
                       </span>
                     </SelectItem>
+                    <SelectItem value="rh" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                        RH
+                      </span>
+                    </SelectItem>
                     <SelectItem value="ambos" className="text-white">
                       <span className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-purple-500"></span>
                         Gerenciamento + Administrativo
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="gerenciamento_rh" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-pink-500"></span>
+                        Gerenciamento + RH
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="administrativo_rh" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                        Administrativo + RH
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="ambos_rh" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                        Ger + Admin + RH
                       </span>
                     </SelectItem>
                     <SelectItem value="admin" className="text-white">
@@ -1024,7 +1048,11 @@ export default function PainelAdminPage() {
                 <SelectContent className="bg-gray-800 border-gray-700">
                   <SelectItem value="gerenciamento" className="text-white">Gerenciamento</SelectItem>
                   <SelectItem value="administrativo" className="text-white">Administrativo</SelectItem>
+                  <SelectItem value="rh" className="text-white">RH</SelectItem>
                   <SelectItem value="ambos" className="text-white">Gerenciamento + Administrativo</SelectItem>
+                  <SelectItem value="gerenciamento_rh" className="text-white">Gerenciamento + RH</SelectItem>
+                  <SelectItem value="administrativo_rh" className="text-white">Administrativo + RH</SelectItem>
+                  <SelectItem value="ambos_rh" className="text-white">Ger + Admin + RH</SelectItem>
                   <SelectItem value="admin" className="text-white">Administrador (Acesso Total)</SelectItem>
                 </SelectContent>
               </Select>
