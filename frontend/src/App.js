@@ -44,6 +44,7 @@ import AdminMorePage from "@/pages/admin/AdminMorePage";
 import CentroCustoPage from "@/pages/admin/CentroCustoPage";
 import FormasPagamentoPage from "@/pages/admin/FormasPagamentoPage";
 import AlugueisPage from "@/pages/admin/AlugueisPage";
+import ImoveisPage from "@/pages/admin/ImoveisPage";
 import AdminNotificacoesPage from "@/pages/admin/NotificacoesPage";
 import ArmazenamentoPage from "@/pages/ArmazenamentoPage";
 import ContasBancariasPage from "@/pages/admin/ContasBancariasPage";
