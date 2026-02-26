@@ -31,7 +31,10 @@ import {
   Eye,
   Loader2,
   FolderTree,
-  User
+  User,
+  LayoutGrid,
+  List,
+  ChevronRight
 } from "lucide-react";
 
 export default function MachinesPage() {
