@@ -1074,6 +1074,7 @@ export default function ArmazenamentoPage() {
               <table className="w-full">
                 <thead className="bg-gray-800 border-b border-gray-700">
                   <tr>
+                    {selectionMode && <th className="w-10 p-3"></th>}
                     <th className="text-left p-3 font-medium text-gray-300">Nome</th>
                     <th className="text-left p-3 font-medium text-gray-300 hidden sm:table-cell">Tamanho</th>
                     <th className="text-left p-3 font-medium text-gray-300 hidden md:table-cell">Modificado</th>
@@ -1082,7 +1083,20 @@ export default function ArmazenamentoPage() {
                 </thead>
                 <tbody>
                   {folders.map((item) => (
-                    <tr key={item.path} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer" onClick={() => handleFolderClick(item)}>
+                    <tr 
+                      key={item.path} 
+                      className={`border-b border-gray-800 hover:bg-gray-800 cursor-pointer ${selectedItems.has(item.path) ? 'bg-blue-900/30' : ''}`} 
+                      onClick={() => selectionMode ? toggleItemSelection(item) : handleFolderClick(item)}
+                    >
+                      {selectionMode && (
+                        <td className="p-3" onClick={(e) => { e.stopPropagation(); toggleItemSelection(item); }}>
+                          {selectedItems.has(item.path) ? (
+                            <CheckSquare size={18} className="text-blue-500" />
+                          ) : (
+                            <Square size={18} className="text-gray-500" />
+                          )}
+                        </td>
+                      )}
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <div className="relative">
@@ -1106,6 +1120,12 @@ export default function ArmazenamentoPage() {
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
                               <Edit size={14} className="mr-2" /> Renomear
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openMoveModal([item]); }}>
+                              <Move size={14} className="mr-2" /> Mover
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openCopyModal([item]); }}>
+                              <Copy size={14} className="mr-2" /> Copiar
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSetPasswordModal(item); }}>
                               {item.has_password ? <LockOpen size={14} className="mr-2" /> : <Lock size={14} className="mr-2" />}
                               {item.has_password ? "Alterar/Remover Senha" : "Definir Senha"}
@@ -1122,7 +1142,21 @@ export default function ArmazenamentoPage() {
                     const fileType = getFileIcon(item.name);
                     const FileIcon = fileType.icon;
                     return (
-                      <tr key={item.path} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer" onDoubleClick={() => handleDownload(item)}>
+                      <tr 
+                        key={item.path} 
+                        className={`border-b border-gray-800 hover:bg-gray-800 cursor-pointer ${selectedItems.has(item.path) ? 'bg-blue-900/30' : ''}`}
+                        onClick={() => selectionMode ? toggleItemSelection(item) : null}
+                        onDoubleClick={() => !selectionMode && handleDownload(item)}
+                      >
+                        {selectionMode && (
+                          <td className="p-3" onClick={(e) => { e.stopPropagation(); toggleItemSelection(item); }}>
+                            {selectedItems.has(item.path) ? (
+                              <CheckSquare size={18} className="text-blue-500" />
+                            ) : (
+                              <Square size={18} className="text-gray-500" />
+                            )}
+                          </td>
+                        )}
                         <td className="p-3">
                           <div className="flex items-center gap-3">
                             <FileIcon size={24} className={fileType.color} />
@@ -1143,6 +1177,26 @@ export default function ArmazenamentoPage() {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem onClick={() => handleDownload(item)}>
+                                <Download size={14} className="mr-2" /> Baixar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => { setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
+                                <Edit size={14} className="mr-2" /> Renomear
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openMoveModal([item])}>
+                                <Move size={14} className="mr-2" /> Mover
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openCopyModal([item])}>
+                                <Copy size={14} className="mr-2" /> Copiar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDelete(item)} className="text-red-600">
+                                <Trash2 size={14} className="mr-2" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
                                 <Download size={14} className="mr-2" /> Baixar
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => { setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
