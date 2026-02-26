@@ -133,6 +133,7 @@ class MachineCreate(BaseModel):
     name: str
     plate: Optional[str] = ""
     category_id: str
+    subcategory_id: Optional[str] = None
     brand: Optional[str] = ""
     model: Optional[str] = ""
     year: Optional[int] = None
@@ -149,6 +150,8 @@ class MachineResponse(BaseModel):
     plate: Optional[str] = ""
     category_id: str
     category_name: Optional[str] = ""
+    subcategory_id: Optional[str] = None
+    subcategory_name: Optional[str] = ""
     brand: str
     model: str
     year: Optional[int] = None
