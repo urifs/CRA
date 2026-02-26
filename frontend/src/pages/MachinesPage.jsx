@@ -528,14 +528,14 @@ export default function MachinesPage() {
                 <Label className="form-label">Subfrota (opcional)</Label>
                 <Select
                   value={formData.subfleet_id}
-                  onValueChange={(value) => setFormData({...formData, subfleet_id: value})}
+                  onValueChange={(value) => setFormData({...formData, subfleet_id: value === "__none__" ? "" : value})}
                   disabled={!formData.fleet_id}
                 >
                   <SelectTrigger className="form-input" data-testid="machine-subfleet-select">
                     <SelectValue placeholder={formData.fleet_id ? "Selecione uma subfrota" : "Selecione uma frota primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="__none__">Nenhuma</SelectItem>
                     {filteredSubfleets.map((subfleet) => (
                       <SelectItem key={subfleet.id} value={subfleet.id}>
                         {subfleet.name}
