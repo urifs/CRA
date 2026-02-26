@@ -203,6 +203,44 @@ class OilChangeStatusResponse(BaseModel):
     needs_alert: bool
     alert_reason: Optional[str] = None
 
+# ============ FLEET MODELS ============
+
+class FleetCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+
+class FleetUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class FleetResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    description: str
+    machines_count: int = 0
+    subfleets_count: int = 0
+    created_at: str
+
+class SubfleetCreate(BaseModel):
+    name: str
+    fleet_id: str
+    description: Optional[str] = ""
+
+class SubfleetUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class SubfleetResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    fleet_id: str
+    fleet_name: str = ""
+    description: str
+    machines_count: int = 0
+    created_at: str
+
 class NotificationResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
