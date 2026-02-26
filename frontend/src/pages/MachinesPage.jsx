@@ -682,11 +682,26 @@ export default function MachinesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Nenhum</SelectItem>
-                  {cadastros.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome_razao} {c.cpf_cnpj ? `(${c.cpf_cnpj})` : ""}
-                    </SelectItem>
-                  ))}
+                  {funcionarios.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100">Funcionários (RH)</div>
+                      {funcionarios.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.nome} {f.cargo ? `(${f.cargo})` : ""}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {cadastros.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100">Cadastros (Admin)</div>
+                      {cadastros.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.nome_razao} {c.cpf_cnpj ? `(${c.cpf_cnpj})` : ""}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
