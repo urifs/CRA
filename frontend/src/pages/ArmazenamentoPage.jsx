@@ -956,10 +956,19 @@ export default function ArmazenamentoPage() {
             {folders.map((item) => (
               <Card
                 key={item.path}
-                className="bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group"
-                onClick={() => handleFolderClick(item)}
+                className={`bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group ${selectedItems.has(item.path) ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+                onClick={() => selectionMode ? toggleItemSelection(item) : handleFolderClick(item)}
               >
                 <CardContent className="p-4 text-center relative">
+                  {selectionMode && (
+                    <div className="absolute top-2 left-2" onClick={(e) => { e.stopPropagation(); toggleItemSelection(item); }}>
+                      {selectedItems.has(item.path) ? (
+                        <CheckSquare size={20} className="text-blue-500" />
+                      ) : (
+                        <Square size={20} className="text-gray-500 hover:text-blue-400" />
+                      )}
+                    </div>
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white" onClick={(e) => e.stopPropagation()}>
@@ -969,6 +978,12 @@ export default function ArmazenamentoPage() {
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
                         <Edit size={14} className="mr-2" /> Renomear
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openMoveModal([item]); }}>
+                        <Move size={14} className="mr-2" /> Mover
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openCopyModal([item]); }}>
+                        <Copy size={14} className="mr-2" /> Copiar
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSetPasswordModal(item); }}>
                         {item.has_password ? <LockOpen size={14} className="mr-2" /> : <Lock size={14} className="mr-2" />}
@@ -998,10 +1013,19 @@ export default function ArmazenamentoPage() {
               return (
                 <Card
                   key={item.path}
-                  className="bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group"
-                  onClick={() => canPreview ? handlePreview(item) : handleDownload(item)}
+                  className={`bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group ${selectedItems.has(item.path) ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+                  onClick={() => selectionMode ? toggleItemSelection(item) : (canPreview ? handlePreview(item) : handleDownload(item))}
                 >
                   <CardContent className="p-4 text-center relative">
+                    {selectionMode && (
+                      <div className="absolute top-2 left-2" onClick={(e) => { e.stopPropagation(); toggleItemSelection(item); }}>
+                        {selectedItems.has(item.path) ? (
+                          <CheckSquare size={20} className="text-blue-500" />
+                        ) : (
+                          <Square size={20} className="text-gray-500 hover:text-blue-400" />
+                        )}
+                      </div>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white" onClick={(e) => e.stopPropagation()}>
@@ -1018,6 +1042,19 @@ export default function ArmazenamentoPage() {
                           <Download size={14} className="mr-2" /> Baixar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
+                          <Edit size={14} className="mr-2" /> Renomear
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openMoveModal([item]); }}>
+                          <Move size={14} className="mr-2" /> Mover
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openCopyModal([item]); }}>
+                          <Copy size={14} className="mr-2" /> Copiar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
+                          <Trash2 size={14} className="mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                           <Edit size={14} className="mr-2" /> Renomear
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
