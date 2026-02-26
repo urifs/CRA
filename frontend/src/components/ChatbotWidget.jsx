@@ -99,14 +99,17 @@ Tenho acesso a todas as informações da plataforma e posso ajudar com:
 • Status do estoque
 • Dados financeiros (contas, OS, aluguéis)
 • Estatísticas e relatórios
+• **Você pode anexar arquivos** (imagens, PDFs, documentos)
 
 Como posso ajudar?`
     }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,12 +125,47 @@ Como posso ajudar?`
     }
   }, [isOpen, isMinimized]);
 
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(file => {
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert(`Arquivo ${file.name} é muito grande (máx 10MB)`);
+        return false;
+      }
+      return true;
+    });
+    setAttachedFiles(prev => [...prev, ...validFiles]);
+    e.target.value = ''; // Reset input
+  };
+
+  const removeFile = (index) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileIcon = (file) => {
+    const type = file.type;
+    if (type.startsWith('image/')) return <ImageIcon size={14} />;
+    if (type.includes('pdf')) return <FileText size={14} />;
+    return <File size={14} />;
+  };
+
   const handleSend = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
 
     const userMessage = inputValue.trim();
     setInputValue("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    
+    // Criar mensagem do usuário com anexos
+    const userMsgContent = attachedFiles.length > 0 
+      ? `${userMessage}\n\n📎 ${attachedFiles.length} arquivo(s) anexado(s): ${attachedFiles.map(f => f.name).join(', ')}`
+      : userMessage;
+    
+    setMessages(prev => [...prev, { role: "user", content: userMsgContent, files: [...attachedFiles] }]);
+    
+    // Limpar anexos
+    const filesToSend = [...attachedFiles];
+    setAttachedFiles([]);
     setIsLoading(true);
 
     try {
