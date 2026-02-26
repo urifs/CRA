@@ -70,7 +70,11 @@ import {
 const USER_ROLES = {
   gerenciamento: { label: "Gerenciamento", icon: Wrench, color: "bg-[#E31A1A]" },
   administrativo: { label: "Administrativo", icon: Building2, color: "bg-[#D4A000]" },
+  rh: { label: "RH", icon: Users, color: "bg-[#10B981]" },
   ambos: { label: "Gerenciamento + Administrativo", icon: Users, color: "bg-purple-500" },
+  ambos_rh: { label: "Ger + Admin + RH", icon: Crown, color: "bg-purple-600" },
+  gerenciamento_rh: { label: "Gerenciamento + RH", icon: Users, color: "bg-pink-500" },
+  administrativo_rh: { label: "Administrativo + RH", icon: Building2, color: "bg-orange-500" },
   admin: { label: "Administrador", icon: Crown, color: "bg-green-500" }
 };
 
@@ -84,7 +88,8 @@ const PRIORITIES = {
 // Sistemas alvo
 const TARGET_SYSTEMS = {
   gerenciamento: { label: "Gerenciamento", color: "bg-[#E31A1A]" },
-  administrativo: { label: "Administrativo", color: "bg-[#D4A000]" }
+  administrativo: { label: "Administrativo", color: "bg-[#D4A000]" },
+  rh: { label: "RH", color: "bg-[#10B981]" }
 };
 
 // Coleções disponíveis
