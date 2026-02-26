@@ -142,6 +142,7 @@ export default function MachinesPage() {
       name: machine.name,
       plate: machine.plate || "",
       category_id: machine.category_id,
+      subcategory_id: machine.subcategory_id || "",
       brand: machine.brand || "",
       model: machine.model || "",
       year: machine.year?.toString() || "",
@@ -158,6 +159,7 @@ export default function MachinesPage() {
       name: "",
       plate: "",
       category_id: "",
+      subcategory_id: "",
       brand: "",
       model: "",
       year: "",
@@ -172,6 +174,11 @@ export default function MachinesPage() {
   // Filtrar subfrotas com base na frota selecionada
   const filteredSubfleets = formData.fleet_id 
     ? subfleets.filter(s => s.fleet_id === formData.fleet_id)
+    : [];
+
+  // Filtrar subcategorias com base na categoria selecionada
+  const filteredSubcategories = formData.category_id 
+    ? subcategories.filter(s => s.category_id === formData.category_id)
     : [];
 
   const filteredMachines = machines.filter(
