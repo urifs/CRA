@@ -442,8 +442,8 @@ export default function ArmazenamentoPage() {
 
   const isPreviewable = (filename) => {
     const ext = filename.split('.').pop()?.toLowerCase();
-    // Imagens, PDFs e vídeos podem ser visualizados
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'mp4', 'webm', 'ogg'].includes(ext);
+    // Imagens, PDFs, vídeos, Word e Excel podem ser visualizados
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'mp4', 'webm', 'ogg', 'doc', 'docx', 'xls', 'xlsx'].includes(ext);
   };
 
   const getPreviewType = (filename) => {
@@ -451,6 +451,8 @@ export default function ArmazenamentoPage() {
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
     if (ext === 'pdf') return 'pdf';
     if (['mp4', 'webm', 'ogg'].includes(ext)) return 'video';
+    if (['doc', 'docx'].includes(ext)) return 'word';
+    if (['xls', 'xlsx'].includes(ext)) return 'excel';
     return 'other';
   };
 
