@@ -67,12 +67,18 @@ export default function MachinesPage() {
 
   const fetchData = async () => {
     try {
-      const [machinesRes, categoriesRes] = await Promise.all([
+      const [machinesRes, categoriesRes, fleetsRes, subfleetsRes, cadastrosRes] = await Promise.all([
         axios.get(`${API}/machines`),
-        axios.get(`${API}/categories`)
+        axios.get(`${API}/categories`),
+        axios.get(`${API}/fleets`),
+        axios.get(`${API}/subfleets`),
+        axios.get(`${API}/cadastros`)
       ]);
       setMachines(machinesRes.data);
       setCategories(categoriesRes.data);
+      setFleets(fleetsRes.data);
+      setSubfleets(subfleetsRes.data);
+      setCadastros(cadastrosRes.data);
     } catch (error) {
       toast.error("Erro ao carregar dados");
     } finally {
