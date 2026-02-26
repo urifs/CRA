@@ -7185,7 +7185,7 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
 
 # Endpoint para gerar Duplicata/Recibo Fatura
 @api_router.get("/export/duplicata/{category}/{item_id}")
-async def export_duplicata(category: str, item_id: str, current_user: dict = Depends(get_current_user)):
+async def export_duplicata(category: str, item_id: str, empresa: str = "locadora", current_user: dict = Depends(get_current_user)):
     """Gera uma duplicata/recibo fatura em PDF"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -7210,7 +7210,8 @@ async def export_duplicata(category: str, item_id: str, current_user: dict = Dep
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
-    empresa = await db.empresa_config.find_one({}, {"_id": 0}) or {}
+    # Usar dados da empresa selecionada
+    empresa_data = EMPRESAS_CRA.get(empresa, EMPRESAS_CRA["locadora"])
     
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1*cm, leftMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
@@ -7218,12 +7219,12 @@ async def export_duplicata(category: str, item_id: str, current_user: dict = Dep
     
     elements = []
     
-    # Dados da empresa
-    empresa_nome = empresa.get("razao_social", "CRA LOCAÇÕES")
-    empresa_cnpj = empresa.get("cnpj", "")
-    empresa_ie = empresa.get("ie", "")
-    empresa_endereco = empresa.get("endereco", "")
-    empresa_telefone = empresa.get("telefone", "")
+    # Dados da empresa selecionada
+    empresa_nome = empresa_data["nome"]
+    empresa_cnpj = empresa_data["cnpj"]
+    empresa_ie = empresa_data["ie"]
+    empresa_endereco = empresa_data["endereco"]
+    empresa_telefone = empresa_data["telefone"]
     
     # Logo
     try:
