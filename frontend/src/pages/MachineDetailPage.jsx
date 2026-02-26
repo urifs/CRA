@@ -33,12 +33,11 @@ export default function MachineDetailPage() {
 
   const fetchData = async () => {
     try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       const [machineRes, maintenancesRes, horimetroRes] = await Promise.all([
-        axios.get(`${API}/machines/${id}`),
-        axios.get(`${API}/maintenances?machine_id=${id}`),
-        axios.get(`${API}/horimetro/machine/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => ({ data: [] }))
+        axios.get(`${API}/machines/${id}`, config),
+        axios.get(`${API}/maintenances?machine_id=${id}`, config),
+        axios.get(`${API}/horimetro/machine/${id}`, config).catch(() => ({ data: [] }))
       ]);
       setMachine(machineRes.data);
       setMaintenances(maintenancesRes.data);
