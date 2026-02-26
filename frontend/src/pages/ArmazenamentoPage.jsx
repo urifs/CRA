@@ -48,7 +48,12 @@ import {
   HardDrive,
   LogOut,
   RotateCcw,
-  Trash
+  Trash,
+  CheckSquare,
+  Square,
+  Move,
+  Copy,
+  FolderInput
 } from "lucide-react";
 import { Lock, LockOpen, KeyRound } from "lucide-react";
 
