@@ -52,7 +52,6 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 ## Backlog
 
 ### 🟡 P1 - Pendentes
-- Integrar dropdown de subcategoria no StockPage.jsx
 - Verificar visualização de anexos (bug pendente)
 - Refatoração parcial do backend
 
