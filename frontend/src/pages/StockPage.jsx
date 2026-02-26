@@ -47,24 +47,29 @@ export default function StockPage() {
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [showMovementDialog, setShowMovementDialog] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleteCategoryId, setDeleteCategoryId] = useState(null);
+  const [deleteSubcategoryId, setDeleteSubcategoryId] = useState(null);
   const [activeTab, setActiveTab] = useState("items");
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newSubcategoryForm, setNewSubcategoryForm] = useState({ name: "", category_id: "" });
 
   const [itemForm, setItemForm] = useState({
     name: "",
     code: "",
     category: "",
+    subcategory_id: "",
     unit: "un",
     quantity: "",
     min_quantity: "",
