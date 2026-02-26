@@ -6254,9 +6254,9 @@ async def chatbot_ask_with_files(
     files: List[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Endpoint do chatbot que processa arquivos anexados"""
+    """Endpoint do chatbot que processa arquivos anexados com extração de conteúdo"""
     from emergentintegrations.llm.chat import LlmChat, UserMessage
-    import base64
+    import io
     
     try:
         # Processar arquivos anexados
@@ -6267,22 +6267,98 @@ async def chatbot_ask_with_files(
             for file in files:
                 content = await file.read()
                 file_size = len(content)
+                filename = file.filename or "arquivo_sem_nome"
+                content_type = file.content_type or ""
                 
                 # Informações básicas do arquivo
                 files_info.append({
-                    "nome": file.filename,
-                    "tipo": file.content_type,
+                    "nome": filename,
+                    "tipo": content_type,
                     "tamanho": f"{file_size / 1024:.1f} KB"
                 })
                 
-                # Para arquivos de texto, extrair conteúdo
-                if file.content_type and ('text' in file.content_type or 
-                    file.filename.endswith(('.txt', '.csv', '.json', '.xml'))):
+                # Extrair conteúdo baseado no tipo de arquivo
+                extracted_content = None
+                
+                # Arquivos de texto
+                if 'text' in content_type or filename.endswith(('.txt', '.csv', '.json', '.xml', '.md', '.log')):
                     try:
                         text_content = content.decode('utf-8')
-                        file_contents.append(f"Conteúdo de {file.filename}:\n{text_content[:3000]}...")
+                        extracted_content = f"📄 CONTEÚDO DE {filename}:\n{text_content[:5000]}"
+                        if len(text_content) > 5000:
+                            extracted_content += "\n[...conteúdo truncado...]"
                     except:
-                        file_contents.append(f"Arquivo {file.filename}: conteúdo binário não extraível")
+                        extracted_content = f"⚠️ Arquivo {filename}: não foi possível decodificar como texto"
+                
+                # PDFs - extrair texto
+                elif filename.lower().endswith('.pdf') or 'pdf' in content_type:
+                    try:
+                        from PyPDF2 import PdfReader
+                        pdf_reader = PdfReader(io.BytesIO(content))
+                        pdf_text = ""
+                        for i, page in enumerate(pdf_reader.pages[:10]):  # Máximo 10 páginas
+                            page_text = page.extract_text()
+                            if page_text:
+                                pdf_text += f"\n--- Página {i+1} ---\n{page_text}"
+                        if pdf_text.strip():
+                            extracted_content = f"📑 CONTEÚDO DO PDF {filename}:{pdf_text[:8000]}"
+                            if len(pdf_text) > 8000:
+                                extracted_content += "\n[...conteúdo truncado...]"
+                        else:
+                            extracted_content = f"📑 PDF {filename}: {len(pdf_reader.pages)} páginas (texto não extraível - pode ser imagem/escaneado)"
+                    except Exception as pdf_err:
+                        extracted_content = f"⚠️ PDF {filename}: erro ao extrair texto ({str(pdf_err)[:100]})"
+                
+                # Documentos Word
+                elif filename.lower().endswith(('.docx', '.doc')):
+                    try:
+                        from docx import Document
+                        doc = Document(io.BytesIO(content))
+                        doc_text = "\n".join([para.text for para in doc.paragraphs])
+                        if doc_text.strip():
+                            extracted_content = f"📝 CONTEÚDO DO DOCUMENTO {filename}:\n{doc_text[:5000]}"
+                            if len(doc_text) > 5000:
+                                extracted_content += "\n[...conteúdo truncado...]"
+                        else:
+                            extracted_content = f"📝 Documento {filename}: sem texto extraível"
+                    except Exception as doc_err:
+                        extracted_content = f"⚠️ Documento {filename}: erro ao extrair ({str(doc_err)[:100]})"
+                
+                # Planilhas Excel
+                elif filename.lower().endswith(('.xlsx', '.xls')):
+                    try:
+                        import openpyxl
+                        wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+                        excel_content = []
+                        for sheet_name in wb.sheetnames[:3]:  # Máximo 3 abas
+                            sheet = wb[sheet_name]
+                            sheet_data = f"\n--- Aba: {sheet_name} ---\n"
+                            row_count = 0
+                            for row in sheet.iter_rows(max_row=50, values_only=True):  # Máximo 50 linhas
+                                row_values = [str(cell) if cell is not None else "" for cell in row]
+                                if any(row_values):
+                                    sheet_data += " | ".join(row_values) + "\n"
+                                    row_count += 1
+                            excel_content.append(sheet_data)
+                        extracted_content = f"📊 CONTEÚDO DA PLANILHA {filename}:{''.join(excel_content)}"
+                    except Exception as xl_err:
+                        extracted_content = f"⚠️ Planilha {filename}: erro ao extrair ({str(xl_err)[:100]})"
+                
+                # Imagens - descrever que é uma imagem
+                elif content_type.startswith('image/') or filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp')):
+                    try:
+                        from PIL import Image
+                        img = Image.open(io.BytesIO(content))
+                        extracted_content = f"🖼️ IMAGEM {filename}: formato {img.format}, dimensões {img.width}x{img.height} pixels, modo {img.mode}"
+                    except:
+                        extracted_content = f"🖼️ Imagem {filename}: arquivo de imagem ({file_size / 1024:.1f} KB)"
+                
+                # Outros arquivos
+                else:
+                    extracted_content = f"📁 Arquivo {filename}: tipo {content_type or 'desconhecido'} ({file_size / 1024:.1f} KB)"
+                
+                if extracted_content:
+                    file_contents.append(extracted_content)
                 
                 # Reset file pointer
                 await file.seek(0)
@@ -6290,12 +6366,15 @@ async def chatbot_ask_with_files(
         # Construir contexto dos arquivos
         files_context = ""
         if files_info:
-            files_context = "\n\nARQUIVOS ANEXADOS PELO USUÁRIO:\n"
+            files_context = "\n\n═══════════════════════════════════════════════════════════════\n"
+            files_context += "ARQUIVOS ANEXADOS PELO USUÁRIO:\n"
+            files_context += "═══════════════════════════════════════════════════════════════\n"
             for info in files_info:
-                files_context += f"• {info['nome']} ({info['tipo']}, {info['tamanho']})\n"
+                files_context += f"• {info['nome']} ({info['tipo'] or 'tipo desconhecido'}, {info['tamanho']})\n"
             
             if file_contents:
-                files_context += "\nCONTEÚDO DOS ARQUIVOS:\n" + "\n".join(file_contents)
+                files_context += "\n" + "\n\n".join(file_contents)
+            files_context += "\n═══════════════════════════════════════════════════════════════\n"
         
         # Coletar contexto da plataforma
         platform_context = await get_full_platform_context()
@@ -6310,18 +6389,21 @@ DADOS COMPLETOS DO SISTEMA:
 {files_context}
 
 SUAS CAPACIDADES:
-- Você pode analisar arquivos anexados (imagens, PDFs, documentos)
-- Você pode extrair informações de documentos
+- Você pode analisar arquivos anexados (PDFs, documentos Word, planilhas Excel, textos)
+- Você pode extrair e analisar informações de documentos
 - Você pode comparar dados dos arquivos com dados da plataforma
 - Você conhece TODOS os usuários, máquinas, manutenções, estoque, obras, contas, etc.
 
-INSTRUÇÕES:
+INSTRUÇÕES IMPORTANTES:
 1. SEMPRE responda em português brasileiro
 2. Use QUEBRAS DE LINHA para separar parágrafos
 3. Use listas com "•" para enumerar itens
 4. Formate valores monetários como R$ 1.234,56
-5. Se o usuário anexou arquivos, analise e comente sobre eles
-6. NÃO use markdown com asteriscos
+5. Se o usuário anexou arquivos, ANALISE O CONTEÚDO EXTRAÍDO e faça comentários úteis
+6. Se for uma planilha ou documento, resuma as informações principais
+7. Se for uma imagem, descreva o que sabe sobre ela
+8. NÃO use markdown com asteriscos (**, *)
+9. Relacione os dados dos arquivos com os dados da plataforma quando relevante
 """
         
         # Inicializar chat com Gemini
@@ -6334,7 +6416,7 @@ INSTRUÇÕES:
         ).with_model("gemini", "gemini-2.0-flash")
         
         # Mensagem do usuário
-        user_text = message if message else "Analise os arquivos que anexei"
+        user_text = message if message else "Analise os arquivos que anexei e me diga o que encontrou"
         if files_info:
             user_text += f"\n\n[Arquivos anexados: {', '.join([f['nome'] for f in files_info])}]"
         
@@ -6348,7 +6430,9 @@ INSTRUÇÕES:
         
     except Exception as e:
         logging.error(f"Erro no chatbot com arquivos: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Erro ao processar: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao processar arquivos: {str(e)}")
 
 
 # ============ PDF EXPORT ROUTES ============
