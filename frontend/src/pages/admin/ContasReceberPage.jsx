@@ -120,6 +120,13 @@ export default function ContasReceberPage() {
     } catch (error) { console.error(error); }
   };
 
+  const fetchContasBancarias = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/contas-bancarias?ativo=true`);
+      setContasBancarias(response.data);
+    } catch (error) { console.error(error); }
+  };
+
   const handleNovoCadastro = async (e) => {
     e.preventDefault();
     if (!novoCadastroData.nome_razao.trim()) {
