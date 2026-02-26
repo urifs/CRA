@@ -773,6 +773,41 @@ export default function ArmazenamentoPage() {
           </div>
         )}
 
+        {/* Selection Actions Bar */}
+        {selectionMode && (
+          <div className="mb-4 bg-blue-900/30 border border-blue-700 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-blue-300 font-medium">
+                {selectedItems.size} item(s) selecionado(s)
+              </span>
+              <Button variant="ghost" size="sm" onClick={selectAll} className="text-blue-300 hover:text-white hover:bg-blue-800">
+                Selecionar Todos
+              </Button>
+              {selectedItems.size > 0 && (
+                <Button variant="ghost" size="sm" onClick={deselectAll} className="text-blue-300 hover:text-white hover:bg-blue-800">
+                  Limpar Seleção
+                </Button>
+              )}
+            </div>
+            {selectedItems.size > 0 && (
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => openMoveModal()} className="bg-blue-600 hover:bg-blue-700">
+                  <Move size={16} className="mr-2" />
+                  Mover
+                </Button>
+                <Button size="sm" onClick={() => openCopyModal()} className="bg-green-600 hover:bg-green-700">
+                  <Copy size={16} className="mr-2" />
+                  Copiar
+                </Button>
+                <Button size="sm" onClick={handleDeleteSelected} className="bg-red-600 hover:bg-red-700">
+                  <Trash2 size={16} className="mr-2" />
+                  Excluir
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Breadcrumbs or Trash Header */}
         {showTrash ? (
           <div className="flex items-center gap-2 text-sm mb-4">
