@@ -11,73 +11,50 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (25/02/2026)
-- ✅ **Aba "Vencidas" no Dashboard Financeiro**:
-  - Nova aba com badge indicador de quantidade de contas vencidas
-  - Cards de resumo: Total Vencido, A Pagar Vencido, A Receber Vencido
-  - Listas detalhadas de contas vencidas com:
-    - Descrição, fornecedor/cliente, centro de custo
-    - Data de vencimento e dias de atraso
-    - Valor da conta
-  - Estados vazios amigáveis quando não há contas vencidas
-  - Backend atualizado para retornar lista completa de contas vencidas
+### Sessão Atual (26/02/2026)
+- ✅ **Senhas em Pastas (Armazenamento)**:
+  - Campo de senha opcional ao criar pasta
+  - Modal para digitar senha ao acessar pasta protegida
+  - Ícone de cadeado em pastas protegidas
+  - Opção de definir/alterar/remover senha em pastas existentes
+  - Endpoints: POST /storage/folder/check-password, POST /storage/folder/set-password
 
-- ✅ **Função de Excluir Registros de Uso (Tempo de Uso)**:
-  - Botão de excluir (ícone lixeira) em cada linha do histórico de uso
-  - Modal de confirmação antes de excluir com detalhes do registro
-  - Aviso que as horas serão subtraídas do total da máquina
-  - Endpoint DELETE `/api/usage-logs/{log_id}` implementado no backend
-  - Atualização automática das horas da máquina ao excluir
+- ✅ **Sistema de Frotas (Gerenciamento)** - PARCIAL:
+  - Backend completo: CRUD de Frotas e Subfrotas
+  - Endpoints: /fleets, /subfleets
+  - Modelo de máquina atualizado com fleet_id, subfleet_id, operator_id
+  - Página FrotasPage.jsx criada
+  - Rota e menu adicionados
 
-- ✅ **Função de Excluir Máquinas (Cards de Status)**:
-  - Botão de excluir aparece ao passar o mouse sobre cada card de máquina
-  - Modal de confirmação com aviso detalhado sobre as consequências:
-    - Remoção da máquina do sistema
-    - Exclusão de todas as manutenções associadas
-    - Alerta de que a ação não pode ser desfeita
-  - Usa o endpoint existente DELETE `/api/machines/{machine_id}`
+### Sessões Anteriores
+- Cards compactos no Tempo de Uso
+- Excluir registros de uso e máquinas
+- Aba "Vencidas" no Dashboard Financeiro
+- Plano de Contas refatorado
+- Dropdown de Cadastros
+- Cadastro Rápido de Cliente/Fornecedor
 
-### Sessão Anterior (25/02/2026)
-- ✅ **Plano de Contas Refatorado**:
-  - Removida separação Receitas/Despesas - cadastro livre
-  - Lista única com subcontas em dropdown
-  - Botão "Extrato" para visualizar movimentações
+## Backlog (Próxima Sessão)
 
-- ✅ **Dropdown de Cadastros em Contas a Pagar/Receber**:
-  - Campo Fornecedor/Cliente agora é dropdown
-  - Lista automaticamente os cadastros do sistema
-  - Mostra nome + CNPJ/CPF
+### 🔴 P0 - Continuação das 5 Funcionalidades:
+1. ~~Senhas em Pastas~~ ✅ DONE
+2. ~~Sistema de Frotas~~ ✅ Backend + Página (FALTA: integrar dropdown no form de máquinas)
+3. **Funcionários em Máquinas** - Dropdown com cadastros do sistema financeiro
+4. **Subcategorias de Máquinas** - CRUD + campo opcional na criação
+5. **Subcategorias de Estoque** - CRUD + campo opcional na criação
 
-- ✅ **Botão "Cadastrar Novo" no Dropdown**:
-  - Ao lado do dropdown há um botão com ícone de pessoa
-  - Abre modal de cadastro rápido de Fornecedor/Cliente
-  - Campos: Nome, CNPJ/CPF, Telefone, Email
-  - Após cadastrar, seleciona automaticamente no dropdown
+### 🟡 P1 - Pendentes:
+- Verificar visualização de anexos (bug pendente)
+- Refatoração parcial do backend
 
-- ✅ **Melhorias na Visualização de Anexos**:
-  - Melhor tratamento de erros no preview
-  - Fallback quando arquivo não carrega
-
-## Backlog (P1)
-- Refatoração parcial do backend (server.py ~6800 linhas)
-- Visualização de Word/Excel no armazenamento
-
-## Backlog (P2)
-- Integração Estoque ↔ Manutenção
-- Notificações por email/WhatsApp
-- Reativar PWA
-
-## Integrações
-- Gemini, BrasilAPI, ViaCEP, reportlab, openpyxl, python-ofxparse
+## Arquivos Modificados Nesta Sessão
+- `/app/backend/server.py` - Endpoints de senha em pasta, frotas, subfrotas
+- `/app/frontend/src/pages/ArmazenamentoPage.jsx` - UI de senha em pastas
+- `/app/frontend/src/pages/FrotasPage.jsx` - NOVO
+- `/app/frontend/src/App.js` - Rota de frotas
+- `/app/frontend/src/components/Layout.jsx` - Menu de frotas
 
 ## Credenciais de Teste
-- **Email**: test@test.com | **Password**: password | **Role**: admin
-
-## Arquivos Modificados
-- `/app/frontend/src/pages/admin/AdminDashboardPage.jsx` - Nova aba Vencidas
-- `/app/frontend/src/pages/UsagePage.jsx` - Função de excluir registros de uso
-- `/app/backend/server.py` - Endpoint dashboard com lista de contas vencidas + DELETE usage-logs
-- `/app/frontend/src/pages/admin/PlanoContasPage.jsx`
-- `/app/frontend/src/pages/admin/ContasPagarPage.jsx`
-- `/app/frontend/src/pages/admin/ContasReceberPage.jsx`
-- `/app/frontend/src/components/AttachmentsSection.jsx`
+- Email: test@test.com
+- Password: password
+- Role: admin
