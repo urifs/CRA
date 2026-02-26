@@ -27,6 +27,15 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
   - `DashboardPage.jsx`, `MachineDetailPage.jsx`, `NewMaintenancePage.jsx`, etc.
 - Fluxo correto: `/` → `/login` → `/select-system` → `/gerenciamento/dashboard`
 
+#### ✅ Correção de Layout dos PDFs (P1) - COMPLETO
+- **Problema**: Descrições cortadas, informações coladas, textos sobrepostos nos PDFs de exportação
+- **Solução**: Refatoração das funções de geração de PDF no `server.py`
+- Melhorado espaçamento no cabeçalho da empresa nos recibos e duplicatas
+- Implementado word-wrap adequado usando `Paragraph` com `wordWrap='CJK'` para textos longos
+- Aumentado padding nas células das tabelas para evitar cortes
+- Testado com descrições longas (300+ caracteres) - funcionando corretamente
+- Funções corrigidas: `export_recibo`, `export_duplicata`
+
 ### Sessão Anterior (26/02/2026) - Parte 6
 
 #### ✅ Exportação de Extrato Bancário - COMPLETO
