@@ -348,7 +348,7 @@ export default function ObraDetailPage() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => navigate(`/machines/${machine.id}`)}
+                      onClick={() => navigate(`/gerenciamento/machines/${machine.id}`)}
                     >
                       <Eye size={14} className="mr-1" />
                       Ver
