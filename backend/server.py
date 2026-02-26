@@ -2997,6 +2997,8 @@ class ContaPagarCreate(BaseModel):
     plano_conta_id: Optional[str] = None
     plano_conta_nome: Optional[str] = None
     centro_custo: Optional[str] = None
+    frota_id: Optional[str] = None  # Frota associada
+    frota_nome: Optional[str] = None
     
     # Pagamento
     forma_pagamento: str = "dinheiro"  # dinheiro, pix, cartao_debito, cartao_credito, boleto, cheque, transferencia
@@ -3028,6 +3030,8 @@ class ContaPagarResponse(BaseModel):
     plano_conta_id: Optional[str] = None
     plano_conta_nome: Optional[str] = None
     centro_custo: Optional[str] = None
+    frota_id: Optional[str] = None
+    frota_nome: Optional[str] = None
     forma_pagamento: str
     conta_movimento: Optional[str] = None
     status: str
