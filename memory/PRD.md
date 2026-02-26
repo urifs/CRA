@@ -19,6 +19,14 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - Ao selecionar "Extrato Bancário", painel amarelo aparece com dropdown de contas
 - Botão "Exportar Extrato" gera PDF do extrato da conta selecionada
 
+#### ✅ Exportação de Itens Individuais - COMPLETO
+- Cada subcategoria pode ser expandida clicando no ícone de lista (≡)
+- Ao expandir, mostra todos os itens individuais da categoria
+- Cada item tem botão "PDF" para exportar apenas aquele item específico
+- Suporte para: Contas a Pagar, Contas a Receber, Máquinas, Manutenções, Estoque, Obras, Aluguéis, Plano de Contas, Centros de Custo, Cadastros, Contas Bancárias, Extrato Bancário
+- Endpoint: `GET /api/export/individual/{category}/{item_id}`
+- Endpoint: `GET /api/export/items/{collection}` (expandido para mais categorias)
+
 ### Sessão Anterior (26/02/2026) - Parte 5
 
 #### ✅ Sistema de Contas Bancárias - COMPLETO
