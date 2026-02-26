@@ -43,6 +43,7 @@ export default function MachinesPage() {
   const [fleets, setFleets] = useState([]);
   const [subfleets, setSubfleets] = useState([]);
   const [cadastros, setCadastros] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -79,13 +80,14 @@ export default function MachinesPage() {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
     
     try {
-      const [machinesRes, categoriesRes, fleetsRes, subfleetsRes, cadastrosRes, subcategoriesRes] = await Promise.all([
+      const [machinesRes, categoriesRes, fleetsRes, subfleetsRes, cadastrosRes, subcategoriesRes, funcionariosRes] = await Promise.all([
         axios.get(`${API}/machines`, { headers }),
         axios.get(`${API}/categories`, { headers }),
         axios.get(`${API}/fleets`, { headers }),
         axios.get(`${API}/subfleets`, { headers }),
         axios.get(`${API}/admin/cadastros`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API}/subcategories`, { headers })
+        axios.get(`${API}/subcategories`, { headers }),
+        axios.get(`${API}/rh/funcionarios?status=ativo`, { headers }).catch(() => ({ data: [] }))
       ]);
       setMachines(machinesRes.data);
       setCategories(categoriesRes.data);
@@ -93,6 +95,7 @@ export default function MachinesPage() {
       setSubfleets(subfleetsRes.data);
       setCadastros(cadastrosRes.data);
       setSubcategories(subcategoriesRes.data);
+      setFuncionarios(funcionariosRes.data);
     } catch (error) {
       toast.error("Erro ao carregar dados");
     } finally {
