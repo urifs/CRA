@@ -396,39 +396,61 @@ export default function MachinesPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="form-label">Categoria *</Label>
-              <Select
-                value={formData.category_id}
-                onValueChange={(value) => setFormData({...formData, category_id: value})}
-                required
-              >
-                <SelectTrigger className="form-input" data-testid="machine-category-select">
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {categories.length === 0 && (
-                <p className="text-sm text-[#E31A1A]">
-                  Nenhuma categoria cadastrada.{" "}
-                  <button
-                    type="button"
-                    className="underline"
-                    onClick={() => {
-                      setShowDialog(false);
-                      navigate("/categories");
-                    }}
-                  >
-                    Cadastrar categoria
-                  </button>
-                </p>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="form-label">Categoria *</Label>
+                <Select
+                  value={formData.category_id}
+                  onValueChange={(value) => setFormData({...formData, category_id: value, subcategory_id: ""})}
+                  required
+                >
+                  <SelectTrigger className="form-input" data-testid="machine-category-select">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {categories.length === 0 && (
+                  <p className="text-sm text-[#E31A1A]">
+                    Nenhuma categoria cadastrada.{" "}
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => {
+                        setShowDialog(false);
+                        navigate("/categories");
+                      }}
+                    >
+                      Cadastrar categoria
+                    </button>
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="form-label">Subcategoria (opcional)</Label>
+                <Select
+                  value={formData.subcategory_id}
+                  onValueChange={(value) => setFormData({...formData, subcategory_id: value})}
+                  disabled={!formData.category_id || filteredSubcategories.length === 0}
+                >
+                  <SelectTrigger className="form-input" data-testid="machine-subcategory-select">
+                    <SelectValue placeholder={!formData.category_id ? "Selecione categoria primeiro" : filteredSubcategories.length === 0 ? "Sem subcategorias" : "Selecione subcategoria"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    {filteredSubcategories.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
