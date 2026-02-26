@@ -407,6 +407,10 @@ export default function StockPage() {
             <History size={16} className="mr-2" />
             Movimentações ({movements.length})
           </TabsTrigger>
+          <TabsTrigger value="categories" data-testid="tab-categories">
+            <Tags size={16} className="mr-2" />
+            Categorias ({categories.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* Items Tab */}
