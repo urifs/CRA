@@ -73,6 +73,7 @@ export const Layout = () => {
     { path: "/gerenciamento/machines", icon: Truck, label: "Máquinas" },
     { path: "/gerenciamento/maintenances", icon: Wrench, label: "Manutenções" },
     { path: "/gerenciamento/horimetro", icon: Clock, label: "Horímetro" },
+    { path: "/gerenciamento/combustivel", icon: Fuel, label: "Combustível" },
     { path: "/gerenciamento/balance", icon: DollarSign, label: "Balanço" },
     { path: "/gerenciamento/usage", icon: Clock, label: "Tempo de Uso" },
     { path: "/gerenciamento/frotas", icon: FolderTree, label: "Frotas" },
