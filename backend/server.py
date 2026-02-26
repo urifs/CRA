@@ -6176,6 +6176,151 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
         }
     )
 
+# Endpoint para exportação combinada de múltiplas categorias
+class CombinedExportRequest(BaseModel):
+    categories: list[str]
+    format: str = "pdf"  # pdf, excel
+    filters: Optional[dict] = None  # Filtros específicos por ID
+
+@api_router.post("/export/combined")
+async def export_combined(data: CombinedExportRequest, current_user: dict = Depends(get_current_user)):
+    """Exporta múltiplas categorias em um único arquivo"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    
+    category_configs = {
+        "machines": {"collection": "machines", "title": "Máquinas", "filter": {}},
+        "machines_operational": {"collection": "machines", "title": "Máquinas Operacionais", "filter": {"status": "operational"}},
+        "machines_maintenance": {"collection": "machines", "title": "Máquinas em Manutenção", "filter": {"status": "maintenance"}},
+        "categories": {"collection": "categories", "title": "Categorias de Máquinas", "filter": {}},
+        "maintenances": {"collection": "maintenances", "title": "Manutenções", "filter": {}},
+        "stock_items": {"collection": "stock_items", "title": "Itens de Estoque", "filter": {}},
+        "obras": {"collection": "obras", "title": "Obras e Projetos", "filter": {}},
+        "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar", "filter": {}},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
+        "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber", "filter": {}},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
+        "cadastros": {"collection": "cadastros", "title": "Cadastros", "filter": {}},
+        "produtos_admin": {"collection": "produtos_admin", "title": "Produtos", "filter": {}},
+        "ordens_servico": {"collection": "ordens_servico", "title": "Ordens de Serviço", "filter": {}},
+        "alugueis": {"collection": "alugueis", "title": "Aluguéis de Máquinas", "filter": {}},
+        "plano_contas": {"collection": "plano_contas", "title": "Plano de Contas", "filter": {}},
+        "centros_custo": {"collection": "centros_custo", "title": "Centros de Custo", "filter": {}},
+        "formas_pagamento": {"collection": "formas_pagamento", "title": "Formas de Pagamento", "filter": {}},
+        "fleets": {"collection": "fleets", "title": "Frotas", "filter": {}},
+    }
+    
+    all_data = []
+    for cat_id in data.categories:
+        if cat_id not in category_configs:
+            continue
+        
+        config = category_configs[cat_id]
+        query_filter = config["filter"].copy()
+        
+        # Aplicar filtros específicos se fornecidos
+        if data.filters and cat_id in data.filters:
+            specific_filter = data.filters[cat_id]
+            if "id" in specific_filter:
+                query_filter["id"] = specific_filter["id"]
+            if "ids" in specific_filter:
+                query_filter["id"] = {"$in": specific_filter["ids"]}
+        
+        items = await db[config["collection"]].find(query_filter, {"_id": 0}).to_list(1000)
+        if items:
+            all_data.append({
+                "title": config["title"],
+                "items": items,
+                "category": cat_id
+            })
+    
+    if not all_data:
+        raise HTTPException(status_code=400, detail="Nenhum dado encontrado para exportar")
+    
+    # Gerar PDF combinado
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor=colors.HexColor('#E31A1A'),
+        spaceAfter=12
+    )
+    
+    elements = []
+    
+    for section in all_data:
+        # Título da seção
+        elements.append(Paragraph(section["title"], title_style))
+        elements.append(Spacer(1, 10))
+        
+        # Tabela de dados
+        if section["items"]:
+            # Pegar as colunas do primeiro item
+            sample = section["items"][0]
+            columns = list(sample.keys())[:6]  # Limitar a 6 colunas
+            
+            # Header
+            table_data = [columns]
+            
+            # Dados
+            for item in section["items"][:50]:  # Limitar a 50 itens por seção
+                row = [str(item.get(col, ""))[:30] for col in columns]
+                table_data.append(row)
+            
+            table = Table(table_data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E31A1A')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('FONTSIZE', (0, 1), (-1, -1), 7),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            elements.append(table)
+        
+        elements.append(PageBreak())
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=CRA_Relatorio_Combinado_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        }
+    )
+
+# Endpoint para listar itens específicos para filtro de exportação
+@api_router.get("/export/items/{collection}")
+async def get_export_items(collection: str, current_user: dict = Depends(get_current_user)):
+    """Retorna itens de uma coleção para seleção em exportação"""
+    valid_collections = {
+        "plano_contas": {"name_field": "nome", "id_field": "id"},
+        "centros_custo": {"name_field": "nome", "id_field": "id"},
+        "fleets": {"name_field": "name", "id_field": "id"},
+        "cadastros": {"name_field": "nome", "id_field": "id"},
+        "formas_pagamento": {"name_field": "nome", "id_field": "id"},
+    }
+    
+    if collection not in valid_collections:
+        raise HTTPException(status_code=400, detail="Coleção inválida")
+    
+    config = valid_collections[collection]
+    items = await db[collection].find({}, {"_id": 0, config["id_field"]: 1, config["name_field"]: 1}).to_list(100)
+    
+    return [{"id": item.get(config["id_field"]), "name": item.get(config["name_field"], "Sem nome")} for item in items]
+
 
 # ============ EXCEL/OFX EXPORT ROUTES ============
 import xlsxwriter
