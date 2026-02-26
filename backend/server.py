@@ -7234,9 +7234,13 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     empresa_endereco = empresa_data["endereco"]
     empresa_telefone = empresa_data["telefone"]
     
-    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, alignment=1, textColor=colors.gray, spaceBefore=2, spaceAfter=2)
-    elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', fontSize=16, alignment=1, spaceAfter=8)))
-    elements.append(Spacer(1, 0.2*cm))
+    # Estilo do cabeçalho com mais espaçamento
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, alignment=1, textColor=colors.gray, spaceBefore=4, spaceAfter=4, leading=14)
+    empresa_nome_style = ParagraphStyle('EmpNome', fontSize=16, alignment=1, spaceAfter=12, fontName='Helvetica-Bold')
+    
+    elements.append(Paragraph(empresa_nome, empresa_nome_style))
+    elements.append(Spacer(1, 0.4*cm))  # Mais espaço após o nome
+    
     if empresa_cnpj:
         elements.append(Paragraph(f"CNPJ: {empresa_cnpj}", header_style))
     if empresa_endereco:
@@ -7244,8 +7248,8 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     if empresa_telefone:
         elements.append(Paragraph(f"Tel: {empresa_telefone}", header_style))
     
-    elements.append(Spacer(1, 0.6*cm))
-    elements.append(Paragraph("RECIBO", ParagraphStyle('Title', fontSize=24, alignment=1, spaceAfter=10)))
+    elements.append(Spacer(1, 0.8*cm))  # Mais espaço antes do título RECIBO
+    elements.append(Paragraph("RECIBO", ParagraphStyle('Title', fontSize=24, alignment=1, spaceAfter=10, fontName='Helvetica-Bold')))
     elements.append(Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y')}", ParagraphStyle('Data', fontSize=10, alignment=2)))
     elements.append(Spacer(1, 0.5*cm))
     
