@@ -10593,7 +10593,7 @@ Responda APENAS em formato JSON:
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
             session_id=f"epi_cbo_{codigo_cbo}",
             system_message="Você é especialista em segurança do trabalho e EPIs no Brasil."
-        ).with_model("google", "gemini-2.0-flash-exp")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         response_text = await llm.send_message(UserMessage(text=prompt))
         
