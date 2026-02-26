@@ -32,7 +32,8 @@ import {
   TrendingUp,
   FileSpreadsheet,
   FileCode,
-  Filter
+  Filter,
+  List
 } from "lucide-react";
 
 const ICONS = {
@@ -48,6 +49,15 @@ const ICONS = {
   clock: Clock,
 };
 
+// Subcategorias que suportam expansão para itens individuais
+const EXPANDABLE_SUBCATEGORIES = [
+  'contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
+  'contas_receber', 'contas_receber_pendente', 'contas_receber_recebidas', 'contas_receber_vencidas',
+  'machines', 'maintenances', 'stock_items', 'obras', 'alugueis',
+  'plano_contas', 'centros_custo', 'cadastros', 'contas_bancarias', 'formas_pagamento',
+  'fleets', 'extrato_bancario'
+];
+
 export default function ExportPage({ module = "gerenciamento" }) {
   const { token } = useAuth();
   const [categories, setCategories] = useState([]);
@@ -55,21 +65,13 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(null);
-  const [specificFilters, setSpecificFilters] = useState({}); // {plano_contas: {expanded: true, selectedIds: [], items: []}}
-  const [loadingFilters, setLoadingFilters] = useState({});
+  
+  // Estado para subcategorias expandidas e seus itens
+  const [expandedSubcategories, setExpandedSubcategories] = useState({});
+  const [subcategoryItems, setSubcategoryItems] = useState({});
+  const [loadingSubcategory, setLoadingSubcategory] = useState({});
 
   const accentColor = module === "gerenciamento" ? "#E31A1A" : "#D4A000";
-
-  // Subcategorias que suportam seleção específica
-  const filterableCategories = {
-    'plano_contas': 'plano_contas',
-    'centros_custo': 'centros_custo',
-    'fleets': 'fleets',
-    'cadastros': 'cadastros',
-    'formas_pagamento': 'formas_pagamento',
-    'contas_bancarias': 'contas_bancarias',
-    'extrato_bancario': 'contas_bancarias'  // Para extrato, busca contas bancárias
-  };
 
   // State para extrato bancário
   const [selectedContaBancaria, setSelectedContaBancaria] = useState(null);
