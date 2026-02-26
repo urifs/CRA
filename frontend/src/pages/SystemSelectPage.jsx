@@ -149,7 +149,7 @@ export default function SystemSelectPage() {
         }} />
       </div>
 
-      <div className="w-full max-w-5xl relative z-10">
+      <div className="w-full max-w-6xl relative z-10">
         {/* Header */}
         <div className="text-center mb-4 sm:mb-8">
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
@@ -168,7 +168,7 @@ export default function SystemSelectPage() {
         </div>
 
         {/* System Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 px-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 px-1">
           {systems.map((system) => (
             <Card
               key={system.id}
