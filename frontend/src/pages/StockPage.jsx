@@ -41,7 +41,9 @@ import {
   Filter,
   Tags,
   Settings,
-  ChevronRight
+  ChevronRight,
+  LayoutGrid,
+  List
 } from "lucide-react";
 
 export default function StockPage() {
