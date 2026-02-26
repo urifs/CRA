@@ -11,49 +11,51 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026) - Parte 2
+### Sessão Atual (26/02/2026) - Parte 3
 
-#### ✅ 1. Correção Preview de Anexos (P0) - COMPLETO
-- Implementada visualização usando Blob URL em vez de URL direta
-- PDFs agora usam `<object>` tag para melhor compatibilidade
-- Imagens e vídeos funcionando corretamente
-- Estado de loading durante carregamento do preview
+#### ✅ Seleção Múltipla de Arquivos - COMPLETO
+- Botão "Selecionar" para ativar modo de seleção
+- Checkboxes em todos os arquivos/pastas
+- "Selecionar Todos" e "Limpar Seleção"
+- Barra de ações com contador de itens selecionados
+- Destaque visual (borda azul) nos itens selecionados
 
-#### ✅ 2. Suporte Word/Excel no Armazenamento - COMPLETO
-- Novo endpoint `/api/storage/preview-office` para conversão para HTML
-- Suporte para arquivos `.doc`, `.docx`, `.xls`, `.xlsx`
-- Word: Renderiza títulos, parágrafos, headers e tabelas
-- Excel: Renderiza planilhas com nome da aba e dados formatados em tabela
-- Dependências: python-docx, openpyxl
+#### ✅ Mover Arquivos - COMPLETO
+- Endpoint `/api/storage/move` no backend
+- Modal de seleção de destino
+- Suporte para mover múltiplos arquivos simultaneamente
+- Tratamento de conflitos de nome (renomeia automaticamente)
+- Validação para não mover pasta dentro dela mesma
 
-### Sessão Atual (26/02/2026) - Parte 1
+#### ✅ Copiar Arquivos - COMPLETO
+- Endpoint `/api/storage/copy` no backend
+- Modal de seleção de destino
+- Suporte para copiar múltiplos arquivos simultaneamente
+- Adiciona " - Cópia (n)" em conflitos de nome
 
-#### ✅ Correção do Dropdown de Categorias
-- Corrigido problema de autenticação nas chamadas axios
-- Dropdown funciona corretamente no formulário de nova máquina
+#### ✅ Exclusão em Lote - COMPLETO
+- Botão "Excluir" na barra de ações de seleção
+- Confirmação antes de excluir
+- Move todos os itens selecionados para lixeira
 
-#### ✅ Visualização Lista/Grid no Estoque
-- Implementado viewMode com lista como padrão
-- Seletor de visualização lista/grid funcional
+#### ✅ Menu de Contexto Atualizado
+- Opções Mover e Copiar no menu de cada arquivo/pasta
+- Funciona tanto para itens individuais quanto seleção múltipla
 
-#### ✅ Página de Categorias de Máquinas
-- Nova página `/categories` para gerenciamento
-- CRUD completo de categorias e subcategorias
+### Sessão Atual - Parte 2 (Preview)
+- Correção preview de anexos usando Blob URL
+- Suporte para Word/Excel no armazenamento
 
-#### ✅ Seletor Grid/Lista em Máquinas
-- Toggle para alternar entre grid e lista
-
-### Sessões Anteriores
-- Sistema de Frotas completo
-- Senhas em Pastas no Armazenamento
-- Subcategorias de Máquinas e Estoque
-- Dashboard Financeiro com aba "Vencidas"
-- Tempo de Uso com exclusão e cards compactos
+### Sessão Atual - Parte 1 (UI)
+- Correção dropdown de categorias
+- Visualização lista/grid no Estoque
+- Página de Categorias de máquinas
+- Seletor grid/lista em Máquinas
 
 ## Backlog
 
 ### 🟡 P1 - Pendentes
-- Refatoração parcial do backend (server.py > 7500 linhas)
+- Refatoração parcial do backend (server.py > 7700 linhas)
 
 ### 🔵 P2 - Futuros
 - Integração Estoque ↔ Manutenção (baixa automática de peças)
@@ -61,12 +63,17 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - Reativar PWA
 
 ## Arquivos Principais
-- `backend/server.py` - Backend monolítico (7600+ linhas)
-- `frontend/src/pages/ArmazenamentoPage.jsx` - Sistema de arquivos com preview
+- `backend/server.py` - Backend monolítico (7700+ linhas)
+- `frontend/src/pages/ArmazenamentoPage.jsx` - Sistema de arquivos completo
 - `frontend/src/pages/MachinesPage.jsx` - Página de máquinas
 - `frontend/src/pages/StockPage.jsx` - Controle de estoque
 - `frontend/src/pages/CategoriesPage.jsx` - Categorias de máquinas
 - `frontend/src/pages/FrotasPage.jsx` - Gerenciamento de frotas
+
+## Novos Endpoints de Armazenamento
+- `POST /api/storage/move` - Move arquivo/pasta
+- `POST /api/storage/copy` - Copia arquivo/pasta
+- `GET /api/storage/preview-office` - Preview Word/Excel como HTML
 
 ## Credenciais de Teste
 - Email: test@test.com
