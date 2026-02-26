@@ -11,69 +11,55 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026) - Parte 3
+### Sessão Atual (26/02/2026) - Parte 4
 
-#### ✅ Seleção Múltipla de Arquivos - COMPLETO
-- Botão "Selecionar" para ativar modo de seleção
-- Checkboxes em todos os arquivos/pastas
-- "Selecionar Todos" e "Limpar Seleção"
-- Barra de ações com contador de itens selecionados
-- Destaque visual (borda azul) nos itens selecionados
+#### ✅ Correção Exportação de Contas a Pagar - COMPLETO
+- Corrigido filtro de status: de "pendente" para "em_aberto"
+- PDFs de Contas a Pagar agora contêm os dados corretamente
 
-#### ✅ Mover Arquivos - COMPLETO
-- Endpoint `/api/storage/move` no backend
-- Modal de seleção de destino
-- Suporte para mover múltiplos arquivos simultaneamente
-- Tratamento de conflitos de nome (renomeia automaticamente)
-- Validação para não mover pasta dentro dela mesma
+#### ✅ Exportação Combinada - COMPLETO
+- Novo endpoint `POST /api/export/combined` para exportar múltiplas categorias em um único PDF
+- Frontend atualizado para usar exportação combinada ao clicar em "Exportar (N)"
+- Todos os itens selecionados são exportados em um único arquivo
 
-#### ✅ Copiar Arquivos - COMPLETO
-- Endpoint `/api/storage/copy` no backend
-- Modal de seleção de destino
-- Suporte para copiar múltiplos arquivos simultaneamente
-- Adiciona " - Cópia (n)" em conflitos de nome
+#### ✅ Filtros Específicos na Exportação - COMPLETO
+- Novo endpoint `GET /api/export/items/{collection}` para listar itens para filtro
+- UI com botão de filtro (ícone de filtro) nas subcategorias que suportam
+- Área expandível com chips selecionáveis para cada item
+- Suporta: plano_contas, centros_custo, fleets, cadastros, formas_pagamento
 
-#### ✅ Exclusão em Lote - COMPLETO
-- Botão "Excluir" na barra de ações de seleção
-- Confirmação antes de excluir
-- Move todos os itens selecionados para lixeira
+#### ✅ Dropdown de Frotas em Contas a Pagar/Receber - COMPLETO
+- Adicionado campo `frota_id` e `frota_nome` nos modelos Pydantic
+- Dropdown "Frota (Opcional)" no formulário de Nova Conta a Pagar
+- Dropdown "Frota (Opcional)" no formulário de Nova Conta a Receber
+- Integração com sistema de frotas existente
 
-#### ✅ Menu de Contexto Atualizado
-- Opções Mover e Copiar no menu de cada arquivo/pasta
-- Funciona tanto para itens individuais quanto seleção múltipla
-
-### Sessão Atual - Parte 2 (Preview)
-- Correção preview de anexos usando Blob URL
-- Suporte para Word/Excel no armazenamento
-
-### Sessão Atual - Parte 1 (UI)
-- Correção dropdown de categorias
-- Visualização lista/grid no Estoque
-- Página de Categorias de máquinas
-- Seletor grid/lista em Máquinas
+### Sessões Anteriores
+- Sistema de seleção múltipla no Armazenamento
+- Funcionalidades de Mover e Copiar arquivos
+- Preview de Word/Excel no armazenamento
+- Correção preview de anexos
+- Sistema de Frotas completo
+- Senhas em Pastas no Armazenamento
+- Dashboard Financeiro com aba "Vencidas"
 
 ## Backlog
 
 ### 🟡 P1 - Pendentes
-- Refatoração parcial do backend (server.py > 7700 linhas)
+- Refatoração parcial do backend (server.py > 7850 linhas)
 
 ### 🔵 P2 - Futuros
 - Integração Estoque ↔ Manutenção (baixa automática de peças)
 - Notificações email/WhatsApp
 - Reativar PWA
 
-## Arquivos Principais
-- `backend/server.py` - Backend monolítico (7700+ linhas)
-- `frontend/src/pages/ArmazenamentoPage.jsx` - Sistema de arquivos completo
-- `frontend/src/pages/MachinesPage.jsx` - Página de máquinas
-- `frontend/src/pages/StockPage.jsx` - Controle de estoque
-- `frontend/src/pages/CategoriesPage.jsx` - Categorias de máquinas
-- `frontend/src/pages/FrotasPage.jsx` - Gerenciamento de frotas
+## Novos Endpoints
+- `POST /api/export/combined` - Exporta múltiplas categorias em um PDF
+- `GET /api/export/items/{collection}` - Lista itens para filtro de exportação
 
-## Novos Endpoints de Armazenamento
-- `POST /api/storage/move` - Move arquivo/pasta
-- `POST /api/storage/copy` - Copia arquivo/pasta
-- `GET /api/storage/preview-office` - Preview Word/Excel como HTML
+## Modelos Atualizados
+- `ContaPagarCreate/Response` - Adicionado `frota_id`, `frota_nome`
+- `ContaReceberCreate/Response` - Adicionado `frota_id`, `frota_nome`
 
 ## Credenciais de Teste
 - Email: test@test.com
@@ -83,4 +69,4 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 ## Integrações de Terceiros
 - Gemini AI (chatbot)
 - BrasilAPI, ViaCEP
-- reportlab, openpyxl, python-docx, python-ofxparse
+- reportlab, openpyxl, python-docx, python-ofxparse, PyPDF2
