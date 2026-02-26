@@ -210,7 +210,7 @@ export default function ObraDetailPage() {
       <div className="flex flex-wrap gap-2">
         <Button 
           className="bg-[#D4A000] hover:bg-yellow-600"
-          onClick={() => navigate(`/obras/${id}/medicoes`)}
+          onClick={() => navigate(`/gerenciamento/obras/${id}/medicoes`)}
         >
           <BarChart3 size={18} className="mr-2" />
           Medições de Máquinas

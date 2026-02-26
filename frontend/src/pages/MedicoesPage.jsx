@@ -269,7 +269,7 @@ export default function MedicoesPage() {
       {/* Header */}
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/obras/${obraId}`)} className="p-1">
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/gerenciamento/obras/${obraId}`)} className="p-1">
             <ArrowLeft size={20} />
           </Button>
           <div>
