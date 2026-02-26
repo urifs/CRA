@@ -43,7 +43,7 @@ export default function MaintenanceDetailPage() {
       setMaintenance(response.data);
     } catch (error) {
       toast.error("Erro ao carregar manutenção");
-      navigate("/maintenances");
+      navigate("/gerenciamento/maintenances");
     } finally {
       setLoading(false);
     }
@@ -126,7 +126,7 @@ export default function MaintenanceDetailPage() {
       {/* Back button */}
       <Button
         variant="ghost"
-        onClick={() => navigate("/maintenances")}
+        onClick={() => navigate("/gerenciamento/maintenances")}
         className="text-gray-600 hover:text-black"
         data-testid="back-btn"
       >

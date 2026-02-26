@@ -37,7 +37,7 @@ export default function RegisterPage() {
       const response = await axios.post(`${API}/auth/register`, { name, email, password });
       login(response.data.token, response.data.user);
       toast.success("Conta criada com sucesso!");
-      navigate("/dashboard");
+      navigate("/gerenciamento/dashboard");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao criar conta");
     } finally {

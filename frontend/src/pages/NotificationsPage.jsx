@@ -239,7 +239,7 @@ export default function NotificationsPage() {
                       variant="outline"
                       size="sm"
                       className="shrink-0"
-                      onClick={() => navigate("/stock")}
+                      onClick={() => navigate("/gerenciamento/stock")}
                     >
                       Ver Estoque
                       <ArrowRight size={14} className="ml-1" />
@@ -274,7 +274,7 @@ export default function NotificationsPage() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => navigate("/usage")}
+                onClick={() => navigate("/gerenciamento/usage")}
               >
                 Ver Tempo de Uso
                 <ArrowRight size={16} className="ml-2" />

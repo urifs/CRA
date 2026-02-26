@@ -116,7 +116,7 @@ export default function MaintenancesPage() {
         </div>
         <Button
           className="bg-[#E31A1A] hover:bg-[#E31A1A] text-white font-bold"
-          onClick={() => navigate("/maintenances/new")}
+          onClick={() => navigate("/gerenciamento/maintenances/new")}
           data-testid="new-maintenance-btn"
         >
           <Plus size={18} className="mr-2" />
@@ -271,7 +271,7 @@ export default function MaintenancesPage() {
           {!searchTerm && filterType === "all" && filterMachine === "all" && (
             <Button
               className="bg-[#E31A1A] hover:bg-[#E31A1A]"
-              onClick={() => navigate("/maintenances/new")}
+              onClick={() => navigate("/gerenciamento/maintenances/new")}
             >
               <Plus size={18} className="mr-2" />
               Registrar Manutenção

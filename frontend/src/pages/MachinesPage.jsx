@@ -501,7 +501,7 @@ export default function MachinesPage() {
                       className="underline"
                       onClick={() => {
                         setShowDialog(false);
-                        navigate("/categories");
+                        navigate("/gerenciamento/categories");
                       }}
                     >
                       Cadastrar categoria
