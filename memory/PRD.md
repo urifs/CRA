@@ -27,6 +27,29 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - Endpoint: `GET /api/export/individual/{category}/{item_id}`
 - Endpoint: `GET /api/export/items/{collection}` (expandido para mais categorias)
 
+#### ✅ Seleção Múltipla e Exportação Combinada - COMPLETO
+- Checkbox em cada item individual para seleção múltipla
+- Botão "Selecionar Todos" no cabeçalho da lista
+- Botão "Exportar Selecionados" para gerar PDF consolidado
+- Endpoint: `POST /api/export/individual-multiple`
+
+#### ✅ Recibos e Duplicatas - COMPLETO
+- Botão verde (Recibo) e amarelo (Duplicata) em cada item de Contas a Pagar/Receber, Aluguéis e Imóveis
+- Recibo: Comprovante de pagamento com valor por extenso
+- Duplicata: Documento de cobrança formal com campos de aceite
+- Endpoints: `GET /api/export/recibo/{category}/{item_id}`, `GET /api/export/duplicata/{category}/{item_id}`
+
+#### ✅ Módulo de Imóveis para Locação - COMPLETO
+- Nova página `/admin/imoveis` com CRUD completo
+- Modelo: ImovelCreate com dados do imóvel, inquilino e contrato
+- Cards de estatísticas: Total, Locados, Disponíveis, Receita Mensal
+- Campos: Tipo, Descrição, Endereço completo, Área, Quartos, Banheiros, Vagas
+- Valores: Aluguel, Condomínio, IPTU, Caução, Dia de Vencimento
+- Integração com ViaCEP para preenchimento automático de endereço
+- Geração automática de Conta a Receber mensal
+- Suporte a anexo de contrato
+- Endpoints: CRUD em `/api/admin/imoveis`
+
 ### Sessão Anterior (26/02/2026) - Parte 5
 
 #### ✅ Sistema de Contas Bancárias - COMPLETO
