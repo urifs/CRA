@@ -1037,15 +1037,15 @@ export default function ArmazenamentoPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {setPasswordFolder?.has_password ? <LockOpen className="text-yellow-500" size={20} /> : <Lock className="text-yellow-500" size={20} />}
-              {setPasswordFolder?.has_password ? "Alterar/Remover Senha" : "Definir Senha"}
+              {passwordTargetFolder?.has_password ? <LockOpen className="text-yellow-500" size={20} /> : <Lock className="text-yellow-500" size={20} />}
+              {passwordTargetFolder?.has_password ? "Alterar/Remover Senha" : "Definir Senha"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-gray-600">
-              Pasta: <span className="font-medium text-white">"{setPasswordFolder?.name}"</span>
+              Pasta: <span className="font-medium text-white">"{passwordTargetFolder?.name}"</span>
             </p>
-            {setPasswordFolder?.has_password && (
+            {passwordTargetFolder?.has_password && (
               <div className="bg-yellow-900/20 border border-yellow-600/30 p-3 rounded-lg">
                 <p className="text-yellow-500 text-sm">
                   ⚠️ Esta pasta já possui senha. Deixe os campos vazios para remover a proteção.
@@ -1058,7 +1058,7 @@ export default function ArmazenamentoPage() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder={setPasswordFolder?.has_password ? "Deixe vazio para remover" : "Digite uma senha"}
+                placeholder={passwordTargetFolder?.has_password ? "Deixe vazio para remover" : "Digite uma senha"}
               />
             </div>
             <div>
