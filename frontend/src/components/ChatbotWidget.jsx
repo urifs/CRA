@@ -170,16 +170,43 @@ Como posso ajudar?`
 
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${API}/api/chatbot/ask`,
-        { message: userMessage, module },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      
+      // Se há arquivos, enviar como FormData
+      if (filesToSend.length > 0) {
+        const formData = new FormData();
+        formData.append('message', userMessage || 'Analise os arquivos anexados');
+        formData.append('module', module);
+        filesToSend.forEach((file, index) => {
+          formData.append(`files`, file);
+        });
+        
+        const response = await axios.post(
+          `${API}/api/chatbot/ask-with-files`,
+          formData,
+          { 
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            } 
+          }
+        );
+        
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: response.data.response 
+        }]);
+      } else {
+        const response = await axios.post(
+          `${API}/api/chatbot/ask`,
+          { message: userMessage, module },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: response.data.response 
-      }]);
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: response.data.response 
+        }]);
+      }
     } catch (error) {
       console.error("Erro no chatbot:", error);
       setMessages(prev => [...prev, { 
