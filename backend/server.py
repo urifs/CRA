@@ -7031,7 +7031,8 @@ async def export_recibo(category: str, item_id: str, current_user: dict = Depend
         "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
         "contas_receber": "contas_receber", "contas_receber_pendente": "contas_receber",
         "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
-        "alugueis": "alugueis"
+        "alugueis": "alugueis",
+        "imoveis": "imoveis", "imoveis_ativo": "imoveis", "imoveis_pendente": "imoveis"
     }
     
     if category not in collection_map:
@@ -7177,7 +7178,8 @@ async def export_duplicata(category: str, item_id: str, current_user: dict = Dep
         "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
         "contas_receber": "contas_receber", "contas_receber_pendente": "contas_receber",
         "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
-        "alugueis": "alugueis"
+        "alugueis": "alugueis",
+        "imoveis": "imoveis", "imoveis_ativo": "imoveis", "imoveis_pendente": "imoveis"
     }
     
     if category not in collection_map:
