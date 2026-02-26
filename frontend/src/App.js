@@ -176,6 +176,7 @@ function App() {
             <Route path="usage" element={<UsagePage />} />
             <Route path="frotas" element={<FrotasPage />} />
             <Route path="horimetro" element={<HorimetroPage />} />
+            <Route path="combustivel" element={<CombustivelPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="more" element={<MorePage />} />
