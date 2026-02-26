@@ -469,64 +469,89 @@ export default function ExportPage({ module = "gerenciamento" }) {
                   {category.subcategories.map((sub, index) => {
                     const isSubSelected = selectedItems.includes(sub.id);
                     const isSubExporting = exporting === sub.id;
+                    const hasFilter = filterableCategories[sub.id];
+                    const filterData = specificFilters[sub.id];
 
                     return (
-                      <div 
-                        key={sub.id}
-                        className={`flex items-center gap-3 px-4 py-3 pl-16 ${
-                          index !== category.subcategories.length - 1 ? 'border-b border-gray-100' : ''
-                        } ${isSubSelected ? 'bg-white' : 'hover:bg-white'}`}
-                      >
-                        <Checkbox 
-                          checked={isSubSelected}
-                          onCheckedChange={() => toggleItem(sub.id)}
-                          className="shrink-0"
-                          style={{ 
-                            borderColor: isSubSelected ? accentColor : undefined,
-                            backgroundColor: isSubSelected ? accentColor : undefined
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm ${isSubSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
-                            {sub.label}
-                          </p>
-                          <p className="text-xs text-gray-500">{sub.description}</p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {/* PDF */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => exportPDF(sub.id)}
-                            disabled={exporting === `pdf-${sub.id}`}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            title="Exportar PDF"
-                          >
-                            {exporting === `pdf-${sub.id}` ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <FileText size={14} />
+                      <div key={sub.id}>
+                        <div 
+                          className={`flex items-center gap-3 px-4 py-3 pl-16 ${
+                            index !== category.subcategories.length - 1 && !filterData?.expanded ? 'border-b border-gray-100' : ''
+                          } ${isSubSelected ? 'bg-white' : 'hover:bg-white'}`}
+                        >
+                          <Checkbox 
+                            checked={isSubSelected}
+                            onCheckedChange={() => toggleItem(sub.id)}
+                            className="shrink-0"
+                            style={{ 
+                              borderColor: isSubSelected ? accentColor : undefined,
+                              backgroundColor: isSubSelected ? accentColor : undefined
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm ${isSubSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                              {sub.label}
+                            </p>
+                            <p className="text-xs text-gray-500">{sub.description}</p>
+                            {filterData?.selectedIds?.length > 0 && (
+                              <p className="text-xs text-blue-600 mt-1">
+                                {filterData.selectedIds.length} item(s) específico(s) selecionado(s)
+                              </p>
                             )}
-                          </Button>
-                          {/* Excel */}
-                          {excelCategories.includes(sub.id) && (
+                          </div>
+                          
+                          {/* Botão de filtro para subcategorias que suportam */}
+                          {hasFilter && isSubSelected && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => exportExcel(sub.id)}
-                              disabled={exporting === `excel-${sub.id}`}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              title="Exportar Excel"
+                              onClick={() => toggleFilterExpand(sub.id)}
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              title="Filtrar itens específicos"
                             >
-                              {exporting === `excel-${sub.id}` ? (
+                              {loadingFilters[sub.id] ? (
                                 <Loader2 size={14} className="animate-spin" />
                               ) : (
-                                <FileSpreadsheet size={14} />
+                                <Filter size={14} />
                               )}
                             </Button>
                           )}
-                          {/* OFX */}
-                          {ofxCategories.includes(sub.id) && (
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* PDF */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => exportPDF(sub.id)}
+                              disabled={exporting === `pdf-${sub.id}`}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              title="Exportar PDF"
+                            >
+                              {exporting === `pdf-${sub.id}` ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <FileText size={14} />
+                              )}
+                            </Button>
+                            {/* Excel */}
+                            {excelCategories.includes(sub.id) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => exportExcel(sub.id)}
+                                disabled={exporting === `excel-${sub.id}`}
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                title="Exportar Excel"
+                              >
+                                {exporting === `excel-${sub.id}` ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <FileSpreadsheet size={14} />
+                                )}
+                              </Button>
+                            )}
+                            {/* OFX */}
+                            {ofxCategories.includes(sub.id) && (
                             <Button
                               size="sm"
                               variant="ghost"
