@@ -19,7 +19,8 @@ import {
   ArrowLeft,
   HardHat,
   FileDown,
-  FolderTree
+  FolderTree,
+  Fuel
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatbotWidget from "@/components/ChatbotWidget";
