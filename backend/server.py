@@ -122,6 +122,9 @@ class MachineCreate(BaseModel):
     year: Optional[int] = None
     notes: Optional[str] = ""
     obra_id: Optional[str] = None
+    fleet_id: Optional[str] = None
+    subfleet_id: Optional[str] = None
+    operator_id: Optional[str] = None  # ID do funcionário/operador
 
 class MachineResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -137,6 +140,12 @@ class MachineResponse(BaseModel):
     status: str
     obra_id: Optional[str] = None
     obra_name: Optional[str] = ""
+    fleet_id: Optional[str] = None
+    fleet_name: Optional[str] = ""
+    subfleet_id: Optional[str] = None
+    subfleet_name: Optional[str] = ""
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = ""
     created_at: str
 
 class MaintenanceCreate(BaseModel):
