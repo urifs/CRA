@@ -6347,6 +6347,15 @@ STORAGE_DIR.mkdir(exist_ok=True)
 class FolderCreate(BaseModel):
     name: str
     parent_path: str = "/"
+    password: Optional[str] = None  # Senha opcional para proteger a pasta
+
+class FolderPasswordCheck(BaseModel):
+    path: str
+    password: str
+
+class FolderPasswordSet(BaseModel):
+    path: str
+    password: Optional[str] = None  # None para remover senha
 
 class RenameItem(BaseModel):
     path: str
