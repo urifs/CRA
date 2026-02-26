@@ -757,55 +757,6 @@ export default function ExportPage({ module = "gerenciamento" }) {
                             )}
                           </div>
                         )}
-                          <div className="bg-amber-50 border-t border-amber-200 px-4 py-3 pl-20">
-                            <p className="text-xs text-amber-700 font-medium mb-2">
-                              Selecione a conta bancária para exportar o extrato:
-                            </p>
-                            <div className="flex items-center gap-3">
-                              <Select
-                                value={selectedContaBancaria || ""}
-                                onValueChange={(value) => setSelectedContaBancaria(value)}
-                              >
-                                <SelectTrigger className="w-[300px] bg-white" data-testid="select-conta-extrato">
-                                  <SelectValue placeholder="Selecione uma conta bancária" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {contasBancarias.length > 0 ? (
-                                    contasBancarias.map((conta) => (
-                                      <SelectItem key={conta.id} value={conta.id}>
-                                        {conta.nome} - {conta.banco}
-                                      </SelectItem>
-                                    ))
-                                  ) : (
-                                    <SelectItem value="" disabled>
-                                      Nenhuma conta cadastrada
-                                    </SelectItem>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                size="sm"
-                                onClick={() => exportExtratoBancario()}
-                                disabled={!selectedContaBancaria || exporting === 'extrato_bancario'}
-                                style={{ backgroundColor: accentColor }}
-                                className="text-white"
-                                data-testid="btn-exportar-extrato"
-                              >
-                                {exporting === 'extrato_bancario' ? (
-                                  <Loader2 size={14} className="animate-spin mr-2" />
-                                ) : (
-                                  <FileText size={14} className="mr-2" />
-                                )}
-                                Exportar Extrato
-                              </Button>
-                            </div>
-                            {contasBancarias.length === 0 && (
-                              <p className="text-xs text-amber-600 mt-2">
-                                Cadastre contas bancárias em Administrativo → Contas Bancárias
-                              </p>
-                            )}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
