@@ -1037,6 +1037,11 @@ export default function ArmazenamentoPage() {
                   alt={previewItem.name}
                   className="max-w-full max-h-[70vh] object-contain"
                 />
+              ) : (getPreviewType(previewItem.name) === 'word' || getPreviewType(previewItem.name) === 'excel') ? (
+                <div 
+                  className="w-full h-[70vh] overflow-auto bg-white p-4"
+                  dangerouslySetInnerHTML={{ __html: previewBlobUrl }}
+                />
               ) : (
                 <div className="text-gray-500 text-center p-8">
                   <FileText size={48} className="mx-auto mb-4 opacity-50" />
