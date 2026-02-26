@@ -155,6 +155,7 @@ function App() {
             <Route path="obras/:obraId/medicoes" element={<MedicoesPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="usage" element={<UsagePage />} />
+            <Route path="frotas" element={<FrotasPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="more" element={<MorePage />} />
