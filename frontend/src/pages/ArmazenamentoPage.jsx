@@ -96,6 +96,7 @@ export default function ArmazenamentoPage() {
   // Modals
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderPassword, setNewFolderPassword] = useState("");
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameItem, setRenameItem] = useState(null);
   const [newName, setNewName] = useState("");
@@ -103,6 +104,17 @@ export default function ArmazenamentoPage() {
   const [previewItem, setPreviewItem] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Password protection
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordFolder, setPasswordFolder] = useState(null);
+  const [folderPassword, setFolderPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [showSetPasswordModal, setShowSetPasswordModal] = useState(false);
+  const [setPasswordFolder, setSetPasswordFolder] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [unlockedFolders, setUnlockedFolders] = useState(new Set()); // Track unlocked folders in session
 
   const token = localStorage.getItem("token");
 
