@@ -33,7 +33,10 @@ import {
   FileSpreadsheet,
   FileCode,
   Filter,
-  List
+  List,
+  Receipt,
+  FileCheck,
+  CheckSquare
 } from "lucide-react";
 
 const ICONS = {
