@@ -632,6 +632,7 @@ export default function StockPage() {
                 </Card>
               ))}
             </div>
+            )
           ) : (
             <div className="empty-state">
               <Package className="text-gray-300 mb-4" size={64} />
