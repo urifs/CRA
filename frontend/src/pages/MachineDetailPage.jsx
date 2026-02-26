@@ -15,7 +15,9 @@ import {
   Plus,
   DollarSign,
   Clock,
-  Timer
+  Timer,
+  Fuel,
+  Droplets
 } from "lucide-react";
 
 export default function MachineDetailPage() {
@@ -25,6 +27,7 @@ export default function MachineDetailPage() {
   const [machine, setMachine] = useState(null);
   const [maintenances, setMaintenances] = useState([]);
   const [horimetros, setHorimetros] = useState([]);
+  const [combustiveis, setCombustiveis] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,14 +37,16 @@ export default function MachineDetailPage() {
   const fetchData = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const [machineRes, maintenancesRes, horimetroRes] = await Promise.all([
+      const [machineRes, maintenancesRes, horimetroRes, combustivelRes] = await Promise.all([
         axios.get(`${API}/machines/${id}`, config),
         axios.get(`${API}/maintenances?machine_id=${id}`, config),
-        axios.get(`${API}/horimetro/machine/${id}`, config).catch(() => ({ data: [] }))
+        axios.get(`${API}/horimetro/machine/${id}`, config).catch(() => ({ data: [] })),
+        axios.get(`${API}/combustivel/machine/${id}`, config).catch(() => ({ data: [] }))
       ]);
       setMachine(machineRes.data);
       setMaintenances(maintenancesRes.data);
       setHorimetros(horimetroRes.data || []);
+      setCombustiveis(combustivelRes.data || []);
     } catch (error) {
       toast.error("Erro ao carregar dados da máquina");
       navigate("/gerenciamento/machines");
