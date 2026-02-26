@@ -7305,6 +7305,99 @@ async def preview_office_file(
 STORAGE_TRASH_DIR = ROOT_DIR / "storage_trash"
 STORAGE_TRASH_DIR.mkdir(exist_ok=True)
 
+class MoveRequest(BaseModel):
+    source_path: str
+    destination_path: str
+
+@api_router.post("/storage/move")
+async def move_storage_item(
+    data: MoveRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Move a file or folder to another location"""
+    current_user = await get_current_user(credentials)
+    import shutil
+    
+    # Normalize paths
+    source = data.source_path if data.source_path.startswith("/") else "/" + data.source_path
+    dest = data.destination_path if data.destination_path.startswith("/") else "/" + data.destination_path
+    
+    source_abs = STORAGE_DIR / source.lstrip("/")
+    dest_dir = STORAGE_DIR / dest.lstrip("/")
+    
+    if not source_abs.exists():
+        raise HTTPException(status_code=404, detail="Arquivo de origem não encontrado")
+    
+    if not dest_dir.exists() or not dest_dir.is_dir():
+        raise HTTPException(status_code=400, detail="Pasta de destino não existe")
+    
+    # Check if destination is inside source (cannot move folder into itself)
+    if source_abs.is_dir():
+        try:
+            dest_dir.relative_to(source_abs)
+            raise HTTPException(status_code=400, detail="Não é possível mover uma pasta para dentro dela mesma")
+        except ValueError:
+            pass  # dest is not inside source, this is good
+    
+    dest_path = dest_dir / source_abs.name
+    
+    # Handle name conflicts
+    if dest_path.exists():
+        base = dest_path.stem
+        ext = dest_path.suffix
+        counter = 1
+        while dest_path.exists():
+            dest_path = dest_dir / f"{base} ({counter}){ext}"
+            counter += 1
+    
+    try:
+        shutil.move(str(source_abs), str(dest_path))
+        return {"message": "Item movido com sucesso", "new_path": "/" + str(dest_path.relative_to(STORAGE_DIR))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao mover: {str(e)}")
+
+@api_router.post("/storage/copy")
+async def copy_storage_item(
+    data: MoveRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Copy a file or folder to another location"""
+    current_user = await get_current_user(credentials)
+    import shutil
+    
+    # Normalize paths
+    source = data.source_path if data.source_path.startswith("/") else "/" + data.source_path
+    dest = data.destination_path if data.destination_path.startswith("/") else "/" + data.destination_path
+    
+    source_abs = STORAGE_DIR / source.lstrip("/")
+    dest_dir = STORAGE_DIR / dest.lstrip("/")
+    
+    if not source_abs.exists():
+        raise HTTPException(status_code=404, detail="Arquivo de origem não encontrado")
+    
+    if not dest_dir.exists() or not dest_dir.is_dir():
+        raise HTTPException(status_code=400, detail="Pasta de destino não existe")
+    
+    dest_path = dest_dir / source_abs.name
+    
+    # Handle name conflicts
+    if dest_path.exists():
+        base = dest_path.stem
+        ext = dest_path.suffix
+        counter = 1
+        while dest_path.exists():
+            dest_path = dest_dir / f"{base} - Cópia ({counter}){ext}"
+            counter += 1
+    
+    try:
+        if source_abs.is_dir():
+            shutil.copytree(str(source_abs), str(dest_path))
+        else:
+            shutil.copy2(str(source_abs), str(dest_path))
+        return {"message": "Item copiado com sucesso", "new_path": "/" + str(dest_path.relative_to(STORAGE_DIR))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao copiar: {str(e)}")
+
 @api_router.delete("/storage/delete")
 async def delete_storage_item(
     path: str,
