@@ -90,6 +90,15 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [selectedContaBancaria, setSelectedContaBancaria] = useState(null);
   const [contasBancarias, setContasBancarias] = useState([]);
 
+  // State para modal de seleção de empresa (Recibo/Duplicata)
+  const [empresaModal, setEmpresaModal] = useState({
+    open: false,
+    type: null, // 'recibo' ou 'duplicata'
+    subcategoryId: null,
+    itemId: null,
+    itemName: null
+  });
+
   useEffect(() => {
     fetchCategories();
     if (module === "administrativo") {
