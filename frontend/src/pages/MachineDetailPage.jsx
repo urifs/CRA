@@ -238,6 +238,91 @@ export default function MachineDetailPage() {
         </Card>
       </div>
 
+      {/* Horímetro Section */}
+      <Card>
+        <CardHeader className="border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <CardTitle className="font-heading text-xl font-bold flex items-center gap-2">
+              <Clock className="text-yellow-500" size={20} />
+              Registros de Horímetro
+            </CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Total trabalhado</p>
+                <p className="text-lg font-bold text-yellow-600">{totalHorasTrabalhadas.toFixed(1)}h</p>
+              </div>
+              <Button
+                size="sm"
+                className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                onClick={() => navigate("/gerenciamento/horimetro")}
+              >
+                <Plus size={16} className="mr-1" />
+                Novo Registro
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {horimetros.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {horimetros.slice(0, 10).map((horimetro) => (
+                <div
+                  key={horimetro.id}
+                  className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  data-testid={`horimetro-item-${horimetro.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-yellow-50">
+                      <Timer className="text-yellow-600" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">
+                        {horimetro.horas_trabalhadas?.toFixed(1)}h trabalhadas
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {horimetro.operador ? `Operador: ${horimetro.operador}` : "Sem operador registrado"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-sm text-gray-700">
+                      {horimetro.hora_inicial}h → {horimetro.hora_final}h
+                    </p>
+                    <p className="text-sm text-gray-500 flex items-center justify-end gap-1">
+                      <Calendar size={14} />
+                      {new Date(horimetro.data + "T00:00:00").toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {horimetros.length > 10 && (
+                <div className="p-4 text-center">
+                  <Button
+                    variant="link"
+                    onClick={() => navigate("/gerenciamento/horimetro")}
+                    className="text-yellow-600"
+                  >
+                    Ver todos os {horimetros.length} registros
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="empty-state py-12">
+              <Clock className="text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500">Nenhum registro de horímetro para esta máquina</p>
+              <Button
+                className="mt-4 bg-yellow-500 hover:bg-yellow-600 text-black"
+                onClick={() => navigate("/gerenciamento/horimetro")}
+              >
+                <Plus size={18} className="mr-2" />
+                Registrar Horas
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Maintenance History */}
       <Card>
         <CardHeader className="border-b border-gray-200">
