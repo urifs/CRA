@@ -123,12 +123,26 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+// Root redirect component - handles initial routing logic
+const RootRedirect = () => {
+  const { token } = useAuth();
+  
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <Navigate to="/select-system" replace />;
+};
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Toaster position="top-right" richColors />
         <Routes>
+          {/* Root redirect - must come first */}
+          <Route path="/" element={<RootRedirect />} />
+          
           {/* Public routes */}
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
@@ -143,7 +157,8 @@ function App() {
           <Route path="/armazenamento" element={<ProtectedRoute><ArmazenamentoPage /></ProtectedRoute>} />
           
           {/* Gerenciamento routes */}
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/gerenciamento" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/gerenciamento/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="machines" element={<MachinesPage />} />
             <Route path="machines/:id" element={<MachineDetailPage />} />
@@ -185,8 +200,8 @@ function App() {
             <Route path="exportar" element={<ExportPage module="administrativo" />} />
           </Route>
           
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Catch all - redirect to login if not authenticated */}
+          <Route path="*" element={<RootRedirect />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
