@@ -211,6 +211,10 @@ export default function ContasPagarPage() {
         subconta_id: conta.subconta_id || "",
         subconta_nome: conta.subconta_nome || "",
         centro_custo: conta.centro_custo || "",
+        frota_id: conta.frota_id || "",
+        frota_nome: conta.frota_nome || "",
+        conta_bancaria_id: conta.conta_bancaria_id || "",
+        conta_bancaria_nome: conta.conta_bancaria_nome || "",
         forma_pagamento: conta.forma_pagamento || "boleto",
         conta_movimento: conta.conta_movimento || "",
         observacoes: conta.observacoes || ""
