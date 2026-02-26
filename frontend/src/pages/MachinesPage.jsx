@@ -93,7 +93,10 @@ export default function MachinesPage() {
     try {
       const payload = {
         ...formData,
-        year: formData.year ? parseInt(formData.year) : null
+        year: formData.year ? parseInt(formData.year) : null,
+        fleet_id: formData.fleet_id || null,
+        subfleet_id: formData.subfleet_id || null,
+        operator_id: formData.operator_id || null
       };
 
       if (editingMachine) {
