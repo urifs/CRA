@@ -23,35 +23,35 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   HardHat, Users, Plus, Search, Download, AlertTriangle, 
-  Check, Loader2, Sparkles, FileText, Shield, AlertCircle
+  Check, Loader2, Sparkles, FileText, Shield, AlertCircle, BookOpen
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EPIPage() {
   const [funcionarios, setFuncionarios] = useState([]);
-  const [cargos, setCargos] = useState([]);
   const [fichasEPI, setFichasEPI] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFuncionario, setSelectedFuncionario] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCargoModalOpen, setIsCargoModalOpen] = useState(false);
-  const [consultandoIA, setConsultandoIA] = useState(false);
+  const [consultandoCBO, setConsultandoCBO] = useState(false);
+  const [consultandoEPIs, setConsultandoEPIs] = useState(false);
   const [episSugeridos, setEpisSugeridos] = useState([]);
   const [episSelecionados, setEpisSelecionados] = useState([]);
   const [mapaRisco, setMapaRisco] = useState([]);
+  const [cboInfo, setCboInfo] = useState(null);
+  const [cboSearch, setCboSearch] = useState("");
+  const [cboResults, setCboResults] = useState([]);
   
   const [formData, setFormData] = useState({
     funcionario_id: "",
-    cargo: "",
+    codigo_cbo: "",
+    ocupacao_cbo: "",
     data_entrega: new Date().toISOString().split('T')[0],
     observacoes: ""
   });
 
-  const [novoCargo, setNovoCargo] = useState("");
-
   useEffect(() => {
     fetchFuncionarios();
-    fetchCargos();
     fetchFichasEPI();
   }, []);
 
@@ -61,15 +61,6 @@ export default function EPIPage() {
       setFuncionarios(response.data);
     } catch (error) {
       console.error("Erro ao carregar funcionários:", error);
-    }
-  };
-
-  const fetchCargos = async () => {
-    try {
-      const response = await axios.get(`${API}/rh/epi/cargos`);
-      setCargos(response.data);
-    } catch (error) {
-      console.error("Erro ao carregar cargos:", error);
     }
   };
 
@@ -87,26 +78,59 @@ export default function EPIPage() {
     }
   };
 
-  const handleConsultarEPIs = async () => {
-    if (!formData.cargo) {
-      toast.error("Selecione um cargo primeiro");
+  const handleSearchCBO = async () => {
+    if (!cboSearch.trim()) {
+      toast.error("Digite um código ou nome de ocupação");
       return;
     }
     
-    setConsultandoIA(true);
+    setConsultandoCBO(true);
+    setCboResults([]);
     try {
-      const response = await axios.post(`${API}/rh/epi/consultar-epis`, {
-        cargo: formData.cargo
+      const response = await axios.get(`${API}/rh/epi/cbo/buscar?q=${encodeURIComponent(cboSearch)}`);
+      setCboResults(response.data || []);
+      if (response.data.length === 0) {
+        toast.info("Nenhuma ocupação encontrada");
+      }
+    } catch (error) {
+      toast.error("Erro ao buscar CBO");
+    } finally {
+      setConsultandoCBO(false);
+    }
+  };
+
+  const handleSelectCBO = (cbo) => {
+    setFormData({
+      ...formData,
+      codigo_cbo: cbo.codigo,
+      ocupacao_cbo: cbo.ocupacao
+    });
+    setCboInfo(cbo);
+    setCboResults([]);
+    setCboSearch("");
+  };
+
+  const handleConsultarEPIs = async () => {
+    if (!formData.codigo_cbo) {
+      toast.error("Selecione uma ocupação CBO primeiro");
+      return;
+    }
+    
+    setConsultandoEPIs(true);
+    try {
+      const response = await axios.post(`${API}/rh/epi/consultar-epis-cbo`, {
+        codigo_cbo: formData.codigo_cbo,
+        ocupacao: formData.ocupacao_cbo
       });
       
       setEpisSugeridos(response.data.epis || []);
       setMapaRisco(response.data.mapa_risco || []);
       setEpisSelecionados([]);
-      toast.success("EPIs sugeridos pela IA carregados!");
+      toast.success("EPIs carregados com base na CBO!");
     } catch (error) {
       toast.error("Erro ao consultar EPIs");
     } finally {
-      setConsultandoIA(false);
+      setConsultandoEPIs(false);
     }
   };
 
@@ -176,33 +200,20 @@ export default function EPIPage() {
     }
   };
 
-  const handleAdicionarCargo = async () => {
-    if (!novoCargo.trim()) {
-      toast.error("Digite o nome do cargo");
-      return;
-    }
-    
-    try {
-      await axios.post(`${API}/rh/epi/cargos`, { nome: novoCargo });
-      toast.success("Cargo adicionado!");
-      fetchCargos();
-      setNovoCargo("");
-      setIsCargoModalOpen(false);
-    } catch (error) {
-      toast.error("Erro ao adicionar cargo");
-    }
-  };
-
   const openModal = () => {
     setFormData({
       funcionario_id: "",
-      cargo: "",
+      codigo_cbo: "",
+      ocupacao_cbo: "",
       data_entrega: new Date().toISOString().split('T')[0],
       observacoes: ""
     });
     setEpisSugeridos([]);
     setEpisSelecionados([]);
     setMapaRisco([]);
+    setCboInfo(null);
+    setCboSearch("");
+    setCboResults([]);
     setIsModalOpen(true);
   };
 
@@ -233,17 +244,29 @@ export default function EPIPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Gestão de EPI/EPC</h1>
-          <p className="text-gray-500 mt-1">Fichas de Equipamentos de Proteção Individual</p>
+          <p className="text-gray-500 mt-1">Fichas baseadas na Classificação Brasileira de Ocupações (CBO)</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsCargoModalOpen(true)}>
-            <Plus size={18} className="mr-2" />Novo Cargo
-          </Button>
-          <Button onClick={openModal} className="bg-[#10B981] hover:bg-[#059669]">
-            <Plus size={18} className="mr-2" />Nova Ficha EPI
-          </Button>
-        </div>
+        <Button onClick={openModal} className="bg-[#10B981] hover:bg-[#059669]">
+          <Plus size={18} className="mr-2" />Nova Ficha EPI
+        </Button>
       </div>
+
+      {/* Info sobre CBO */}
+      <Card className="mb-6 border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <BookOpen className="text-blue-600 mt-1" size={24} />
+            <div>
+              <h3 className="font-semibold text-blue-800">Sobre a CBO</h3>
+              <p className="text-sm text-blue-600">
+                A Classificação Brasileira de Ocupações (CBO) é o documento que reconhece, nomeia e codifica 
+                as ocupações do mercado de trabalho brasileiro. Pesquise pelo código (ex: 7152-10) ou nome 
+                da ocupação para obter os EPIs recomendados.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filtros */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -313,7 +336,10 @@ export default function EPIPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h4 className="font-bold text-lg">{getFuncionarioNome(ficha.funcionario_id)}</h4>
-                    <p className="text-sm text-gray-500">Cargo: {ficha.cargo}</p>
+                    <p className="text-sm text-gray-500">
+                      CBO: <span className="font-mono font-medium text-blue-600">{ficha.codigo_cbo || "-"}</span>
+                      {ficha.ocupacao_cbo && <span className="ml-2">- {ficha.ocupacao_cbo}</span>}
+                    </p>
                     <p className="text-sm text-gray-500">Data de Entrega: {new Date(ficha.data_entrega).toLocaleDateString('pt-BR')}</p>
                   </div>
                   <div className="flex gap-2">
@@ -383,52 +409,97 @@ export default function EPIPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nova Ficha de EPI</DialogTitle>
+            <DialogTitle>Nova Ficha de EPI (CBO)</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Funcionário *</Label>
-                <Select value={formData.funcionario_id} onValueChange={(v) => {
-                  const func = funcionarios.find(f => f.id === v);
-                  setFormData({...formData, funcionario_id: v, cargo: func?.cargo || formData.cargo});
-                }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent className="z-[9999]">
-                    {funcionarios.map(f => (
-                      <SelectItem key={f.id} value={f.id}>{f.nome} - {f.cargo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Seleção de Funcionário */}
+            <div>
+              <Label>Funcionário *</Label>
+              <Select value={formData.funcionario_id} onValueChange={(v) => {
+                setFormData({...formData, funcionario_id: v});
+              }}>
+                <SelectTrigger><SelectValue placeholder="Selecione o funcionário" /></SelectTrigger>
+                <SelectContent className="z-[9999]">
+                  {funcionarios.map(f => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome} - {f.cargo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Busca por CBO */}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <Label className="flex items-center gap-2 mb-3">
+                <BookOpen size={16} className="text-blue-600" />
+                Buscar Ocupação (CBO)
+              </Label>
               
-              <div>
-                <Label>Cargo/Função *</Label>
-                <div className="flex gap-2">
-                  <Select value={formData.cargo} onValueChange={(v) => setFormData({...formData, cargo: v})}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent className="z-[9999]">
-                      {cargos.map(c => (
-                        <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button 
-                    type="button" 
-                    onClick={handleConsultarEPIs}
-                    disabled={consultandoIA || !formData.cargo}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    {consultandoIA ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Sparkles size={16} />
-                    )}
-                    <span className="ml-2">Sugerir EPIs</span>
-                  </Button>
-                </div>
+              <div className="flex gap-2 mb-3">
+                <Input 
+                  placeholder="Digite o código CBO (ex: 7152-10) ou nome da ocupação"
+                  value={cboSearch}
+                  onChange={(e) => setCboSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchCBO()}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleSearchCBO}
+                  disabled={consultandoCBO}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {consultandoCBO ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                  <span className="ml-2">Buscar</span>
+                </Button>
               </div>
+
+              {/* Resultados da busca CBO */}
+              {cboResults.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto bg-white rounded border p-2">
+                  {cboResults.map((cbo, idx) => (
+                    <div 
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded hover:bg-blue-50 cursor-pointer border"
+                      onClick={() => handleSelectCBO(cbo)}
+                    >
+                      <div>
+                        <span className="font-mono font-bold text-blue-600">{cbo.codigo}</span>
+                        <span className="ml-2">{cbo.ocupacao}</span>
+                      </div>
+                      <Button size="sm" variant="outline">Selecionar</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* CBO Selecionado */}
+              {cboInfo && (
+                <div className="mt-3 p-3 bg-blue-100 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Ocupação Selecionada:</p>
+                      <p className="font-bold text-blue-800">
+                        <span className="font-mono">{cboInfo.codigo}</span> - {cboInfo.ocupacao}
+                      </p>
+                      {cboInfo.descricao && (
+                        <p className="text-sm text-gray-600 mt-1">{cboInfo.descricao}</p>
+                      )}
+                    </div>
+                    <Button 
+                      onClick={handleConsultarEPIs}
+                      disabled={consultandoEPIs}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {consultandoEPIs ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={16} />
+                      )}
+                      <span className="ml-2">Carregar EPIs</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -442,7 +513,7 @@ export default function EPIPage() {
                 <CardContent className="p-4">
                   <h4 className="font-semibold mb-3 flex items-center gap-2 text-purple-600">
                     <Shield size={18} />
-                    Mapa de Risco para {formData.cargo}
+                    Mapa de Risco para CBO {formData.codigo_cbo}
                   </h4>
                   <div className="space-y-2">
                     {mapaRisco.map((risco, idx) => (
@@ -463,7 +534,7 @@ export default function EPIPage() {
             {/* EPIs Sugeridos */}
             {episSugeridos.length > 0 && (
               <div>
-                <h4 className="font-semibold mb-3">EPIs Sugeridos pela IA (Gemini)</h4>
+                <h4 className="font-semibold mb-3">EPIs Recomendados para esta Ocupação</h4>
                 <div className="grid gap-2 max-h-60 overflow-y-auto">
                   {episSugeridos.map((epi, idx) => (
                     <div 
@@ -481,7 +552,9 @@ export default function EPIPage() {
                       />
                       <div className="flex-1">
                         <p className="font-medium">{epi.nome}</p>
-                        <p className="text-sm text-gray-500">CA: {epi.ca || 'A definir'} | Validade: {epi.validade_meses || 12} meses</p>
+                        <p className="text-sm text-gray-500">
+                          CA: {epi.ca || 'A definir'} | Validade: {epi.validade_meses || 12} meses
+                        </p>
                       </div>
                       <span className={`px-2 py-1 rounded text-xs ${getPrioridadeCor(epi.prioridade)}`}>
                         {epi.prioridade}
@@ -514,31 +587,6 @@ export default function EPIPage() {
               disabled={!formData.funcionario_id || episSelecionados.length === 0}
             >
               Salvar Ficha
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Novo Cargo */}
-      <Dialog open={isCargoModalOpen} onOpenChange={setIsCargoModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Adicionar Cargo</DialogTitle>
-          </DialogHeader>
-          
-          <div>
-            <Label>Nome do Cargo</Label>
-            <Input 
-              value={novoCargo} 
-              onChange={(e) => setNovoCargo(e.target.value)}
-              placeholder="Ex: Operador de Máquinas"
-            />
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => setIsCargoModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleAdicionarCargo} className="bg-[#10B981] hover:bg-[#059669]">
-              Adicionar
             </Button>
           </DialogFooter>
         </DialogContent>
