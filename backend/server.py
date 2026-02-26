@@ -6642,6 +6642,528 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
     )
 
 
+# Endpoint para exportar múltiplos itens individuais
+class MultipleItemsExport(BaseModel):
+    category: str
+    item_ids: list
+
+@api_router.post("/export/individual-multiple")
+async def export_multiple_individual_items(data: MultipleItemsExport, current_user: dict = Depends(get_current_user)):
+    """Exporta múltiplos itens individuais em um único PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    import io
+    
+    category_config = {
+        "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar"},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes"},
+        "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas"},
+        "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas a Pagar Vencidas"},
+        "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber"},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes"},
+        "contas_receber_recebidas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas"},
+        "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas a Receber Vencidas"},
+        "machines": {"collection": "machines", "title": "Máquinas"},
+        "maintenances": {"collection": "maintenances", "title": "Manutenções"},
+        "stock_items": {"collection": "stock_items", "title": "Itens de Estoque"},
+        "obras": {"collection": "obras", "title": "Obras"},
+        "alugueis": {"collection": "alugueis", "title": "Aluguéis"},
+    }
+    
+    if data.category not in category_config:
+        raise HTTPException(status_code=400, detail="Categoria inválida")
+    
+    config = category_config[data.category]
+    items = await db[config["collection"]].find({"id": {"$in": data.item_ids}}, {"_id": 0}).to_list(100)
+    
+    if not items:
+        raise HTTPException(status_code=404, detail="Nenhum item encontrado")
+    
+    # Criar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, spaceAfter=10)
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.gray, spaceAfter=15)
+    
+    elements = []
+    
+    # Título principal
+    elements.append(Paragraph(f"{config['title']} - {len(items)} itens selecionados", title_style))
+    elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Tabela com todos os itens
+    if "contas" in data.category:
+        headers = ["Descrição", "Fornecedor/Cliente", "Valor", "Vencimento", "Status"]
+        table_data = [headers]
+        total = 0
+        for item in items:
+            desc = item.get("descricao", "-")[:50]
+            pessoa = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
+            valor = item.get("valor_final") or item.get("valor", 0)
+            total += valor
+            valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            venc = item.get("data_vencimento", "-")
+            status = "Quitada" if item.get("status") == "quitada" else "Em Aberto"
+            table_data.append([desc, pessoa[:30], valor_str, venc, status])
+        
+        # Linha de total
+        total_str = f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        table_data.append(["", "", total_str, "", "TOTAL"])
+        
+        table = Table(table_data, colWidths=[6*cm, 4*cm, 3*cm, 2.5*cm, 2*cm])
+    else:
+        headers = ["Nome/Descrição", "Detalhes", "Valor/Info"]
+        table_data = [headers]
+        for item in items:
+            nome = item.get("descricao") or item.get("name") or item.get("nome", "-")
+            detalhes = item.get("machine_name") or item.get("model") or item.get("category") or "-"
+            valor = item.get("valor") or item.get("cost") or item.get("quantity") or "-"
+            if isinstance(valor, (int, float)):
+                valor = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            table_data.append([str(nome)[:40], str(detalhes)[:30], str(valor)])
+        
+        table = Table(table_data, colWidths=[8*cm, 5*cm, 4*cm])
+    
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4A000")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f5f5f5")),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    
+    await create_audit_log(current_user, "export", data.category, None, f"Múltiplos itens: {len(items)}")
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=CRA_{config['title'].replace(' ', '_')}_{len(items)}_itens.pdf"}
+    )
+
+
+# Função auxiliar para converter valor para extenso
+def valor_por_extenso(valor):
+    """Converte valor numérico para extenso em português"""
+    unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove']
+    dezenas = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa']
+    dez_a_dezenove = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove']
+    centenas = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos']
+    
+    def grupo_de_tres(n):
+        if n == 0:
+            return ''
+        elif n == 100:
+            return 'cem'
+        
+        resultado = ''
+        c = n // 100
+        d = (n % 100) // 10
+        u = n % 10
+        
+        if c > 0:
+            resultado += centenas[c]
+            if d > 0 or u > 0:
+                resultado += ' e '
+        
+        if d == 1:
+            resultado += dez_a_dezenove[u]
+        elif d > 1:
+            resultado += dezenas[d]
+            if u > 0:
+                resultado += ' e ' + unidades[u]
+        elif u > 0:
+            resultado += unidades[u]
+        
+        return resultado
+    
+    if valor == 0:
+        return 'zero reais'
+    
+    inteiro = int(valor)
+    centavos = int(round((valor - inteiro) * 100))
+    
+    resultado = ''
+    
+    # Milhões
+    milhoes = inteiro // 1000000
+    if milhoes > 0:
+        if milhoes == 1:
+            resultado += 'um milhão'
+        else:
+            resultado += grupo_de_tres(milhoes) + ' milhões'
+        inteiro = inteiro % 1000000
+        if inteiro > 0:
+            resultado += ', ' if inteiro >= 100 else ' e '
+    
+    # Milhares
+    milhares = inteiro // 1000
+    if milhares > 0:
+        if milhares == 1:
+            resultado += 'mil'
+        else:
+            resultado += grupo_de_tres(milhares) + ' mil'
+        inteiro = inteiro % 1000
+        if inteiro > 0:
+            resultado += ', ' if inteiro >= 100 else ' e '
+    
+    # Centenas, dezenas e unidades
+    if inteiro > 0:
+        resultado += grupo_de_tres(inteiro)
+    
+    # Reais
+    valor_int = int(valor)
+    if valor_int == 1:
+        resultado += ' real'
+    elif valor_int > 0:
+        resultado += ' reais'
+    
+    # Centavos
+    if centavos > 0:
+        if valor_int > 0:
+            resultado += ' e '
+        resultado += grupo_de_tres(centavos)
+        if centavos == 1:
+            resultado += ' centavo'
+        else:
+            resultado += ' centavos'
+    
+    return resultado.upper()
+
+
+# Endpoint para gerar Recibo
+@api_router.get("/export/recibo/{category}/{item_id}")
+async def export_recibo(category: str, item_id: str, current_user: dict = Depends(get_current_user)):
+    """Gera um recibo de pagamento em PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    import io
+    
+    # Determinar coleção
+    collection_map = {
+        "contas_pagar": "contas_pagar", "contas_pagar_pendente": "contas_pagar",
+        "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
+        "contas_receber": "contas_receber", "contas_receber_pendente": "contas_receber",
+        "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
+        "alugueis": "alugueis"
+    }
+    
+    if category not in collection_map:
+        raise HTTPException(status_code=400, detail="Categoria não suporta recibo")
+    
+    item = await db[collection_map[category]].find_one({"id": item_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    # Buscar dados da empresa
+    empresa = await db.empresa_config.find_one({}, {"_id": 0}) or {}
+    
+    # Criar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, alignment=1, spaceAfter=20, textColor=colors.HexColor("#333333"))
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, alignment=1, textColor=colors.gray)
+    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=9, textColor=colors.gray)
+    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=11)
+    extenso_style = ParagraphStyle('Extenso', parent=styles['Normal'], fontSize=10, leading=14)
+    
+    elements = []
+    
+    # Cabeçalho da empresa
+    empresa_nome = empresa.get("razao_social", "CRA LOCAÇÕES")
+    empresa_cnpj = empresa.get("cnpj", "")
+    empresa_endereco = empresa.get("endereco", "")
+    empresa_telefone = empresa.get("telefone", "")
+    
+    elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', parent=styles['Normal'], fontSize=14, alignment=1)))
+    if empresa_cnpj:
+        elements.append(Paragraph(f"CNPJ: {empresa_cnpj}", header_style))
+    if empresa_endereco:
+        elements.append(Paragraph(empresa_endereco, header_style))
+    if empresa_telefone:
+        elements.append(Paragraph(f"Tel: {empresa_telefone}", header_style))
+    
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Título RECIBO
+    elements.append(Paragraph("RECIBO", title_style))
+    
+    # Data
+    elements.append(Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y')}", ParagraphStyle('Data', parent=styles['Normal'], fontSize=10, alignment=2)))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Dados do cliente/fornecedor
+    pessoa_nome = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
+    pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_cnpj") or "-"
+    
+    client_data = [
+        [Paragraph("Cliente:", label_style), Paragraph(pessoa_nome, value_style)],
+        [Paragraph("CPF/CNPJ:", label_style), Paragraph(pessoa_doc, value_style)],
+    ]
+    client_table = Table(client_data, colWidths=[3*cm, 14*cm])
+    client_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(client_table)
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Valor
+    valor = item.get("valor_final") or item.get("valor", 0)
+    valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    
+    elements.append(Paragraph(f"Recebi(emos) de <b>{pessoa_nome}</b> a importância de:", extenso_style))
+    elements.append(Spacer(1, 0.3*cm))
+    elements.append(Paragraph(f"<b>{valor_por_extenso(valor)}</b>", ParagraphStyle('ValorExtenso', parent=styles['Normal'], fontSize=11, leading=14)))
+    elements.append(Spacer(1, 0.3*cm))
+    
+    # Box com valor
+    valor_box = Table([[Paragraph(f"<b>{valor_str}</b>", ParagraphStyle('ValorNum', parent=styles['Normal'], fontSize=16, alignment=1))]], colWidths=[17*cm])
+    valor_box.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f5f5f5")),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    elements.append(valor_box)
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Detalhes do documento
+    elements.append(Paragraph("<b>Proveniente do pagamento do(s) documento(s) abaixo:</b>", extenso_style))
+    elements.append(Spacer(1, 0.3*cm))
+    
+    doc_data = [
+        ["Documento", "Emissão", "Vencimento", "Valor", "Descrição"],
+        [
+            item_id[:8],
+            item.get("data_emissao", item.get("created_at", "-")[:10] if item.get("created_at") else "-"),
+            item.get("data_vencimento", "-"),
+            valor_str,
+            item.get("descricao", "-")[:60]
+        ]
+    ]
+    doc_table = Table(doc_data, colWidths=[2.5*cm, 2.5*cm, 2.5*cm, 3*cm, 6.5*cm])
+    doc_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4A000")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+    ]))
+    elements.append(doc_table)
+    elements.append(Spacer(1, 1*cm))
+    
+    # Assinatura
+    elements.append(Paragraph("_" * 60, ParagraphStyle('Linha', parent=styles['Normal'], alignment=1)))
+    elements.append(Paragraph(empresa_nome, ParagraphStyle('Assinatura', parent=styles['Normal'], fontSize=10, alignment=1)))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    await create_audit_log(current_user, "export", "recibo", item_id, f"Recibo: {item.get('descricao', item_id)}")
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=CRA_Recibo_{item_id[:8]}.pdf"}
+    )
+
+
+# Endpoint para gerar Duplicata/Recibo Fatura
+@api_router.get("/export/duplicata/{category}/{item_id}")
+async def export_duplicata(category: str, item_id: str, current_user: dict = Depends(get_current_user)):
+    """Gera uma duplicata/recibo fatura em PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    import io
+    
+    # Determinar coleção
+    collection_map = {
+        "contas_pagar": "contas_pagar", "contas_pagar_pendente": "contas_pagar",
+        "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
+        "contas_receber": "contas_receber", "contas_receber_pendente": "contas_receber",
+        "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
+        "alugueis": "alugueis"
+    }
+    
+    if category not in collection_map:
+        raise HTTPException(status_code=400, detail="Categoria não suporta duplicata")
+    
+    item = await db[collection_map[category]].find_one({"id": item_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    # Buscar dados da empresa
+    empresa = await db.empresa_config.find_one({}, {"_id": 0}) or {}
+    
+    # Criar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, alignment=1, spaceAfter=10, textColor=colors.HexColor("#333333"))
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=9, alignment=1, textColor=colors.gray)
+    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=8, textColor=colors.gray)
+    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=10)
+    small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=8)
+    
+    elements = []
+    
+    # Cabeçalho da empresa (SACADOR/CEDENTE)
+    empresa_nome = empresa.get("razao_social", "CRA LOCAÇÕES")
+    empresa_cnpj = empresa.get("cnpj", "")
+    empresa_ie = empresa.get("ie", "")
+    empresa_endereco = empresa.get("endereco", "")
+    empresa_telefone = empresa.get("telefone", "")
+    
+    # Header com logo e dados
+    header_data = [
+        [Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('Nome', parent=styles['Normal'], fontSize=12))],
+        [Paragraph(f"CNPJ: {empresa_cnpj} | IE: {empresa_ie}", small_style)],
+        [Paragraph(f"{empresa_endereco}", small_style)],
+        [Paragraph(f"Tel: {empresa_telefone}", small_style)],
+    ]
+    header_table = Table(header_data, colWidths=[17*cm])
+    header_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    elements.append(header_table)
+    elements.append(Spacer(1, 0.3*cm))
+    
+    # Título DUPLICATA
+    elements.append(Paragraph("DUPLICATA", title_style))
+    elements.append(Spacer(1, 0.3*cm))
+    
+    # Dados principais
+    valor = item.get("valor_final") or item.get("valor", 0)
+    valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    pessoa_nome = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
+    pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_cnpj") or "-"
+    pessoa_endereco = item.get("fornecedor_endereco") or item.get("cliente_endereco") or "-"
+    
+    # Grid de informações principais
+    main_data = [
+        [Paragraph("VALOR", label_style), Paragraph("NÚMERO", label_style), Paragraph("DOCUMENTO", label_style)],
+        [Paragraph(f"<b>{valor_str}</b>", ParagraphStyle('V', fontSize=14)), Paragraph(item_id[:8].upper(), value_style), Paragraph(item_id[:12].upper(), value_style)],
+    ]
+    main_table = Table(main_data, colWidths=[5.5*cm, 5.5*cm, 6*cm])
+    main_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.gray),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(main_table)
+    elements.append(Spacer(1, 0.3*cm))
+    
+    # Dados do Sacado
+    sacado_data = [
+        [Paragraph("NOME DO SACADO", label_style), Paragraph("ENDEREÇO", label_style)],
+        [Paragraph(pessoa_nome, value_style), Paragraph(pessoa_endereco[:50], value_style)],
+        [Paragraph("MUNICÍPIO", label_style), Paragraph("PRAÇA DE PAGAMENTO", label_style), Paragraph("CPF/CNPJ", label_style)],
+        [Paragraph(item.get("cidade", "-"), value_style), Paragraph(item.get("cidade", "-"), value_style), Paragraph(pessoa_doc, value_style)],
+    ]
+    sacado_table = Table(sacado_data, colWidths=[8.5*cm, 8.5*cm])
+    sacado_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.gray),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
+        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#f0f0f0")),
+        ('SPAN', (0, 0), (0, 0)), ('SPAN', (1, 0), (1, 0)),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(sacado_table)
+    elements.append(Spacer(1, 0.3*cm))
+    
+    # Valor por extenso e vencimento
+    extenso_data = [
+        [Paragraph("VALOR POR EXTENSO", label_style), Paragraph("VENCIMENTO", label_style)],
+        [Paragraph(valor_por_extenso(valor), value_style), Paragraph(f"<b>{item.get('data_vencimento', '-')}</b>", ParagraphStyle('Venc', fontSize=12))],
+    ]
+    extenso_table = Table(extenso_data, colWidths=[13*cm, 4*cm])
+    extenso_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.gray),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(extenso_table)
+    elements.append(Spacer(1, 0.3*cm))
+    
+    # Descrição
+    desc_data = [
+        [Paragraph("DESCRIÇÃO DO SERVIÇO/PRODUTO", label_style)],
+        [Paragraph(item.get("descricao", "-"), value_style)],
+    ]
+    desc_table = Table(desc_data, colWidths=[17*cm])
+    desc_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(desc_table)
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Reconhecimento de dívida
+    elements.append(Paragraph("<b>RECONHEÇO(EMOS) A EXATIDÃO DESTA DUPLICATA DE PRESTAÇÃO DE SERVIÇOS NA IMPORTÂNCIA ACIMA QUE PAGAREI(EMOS) A CRA LOCAÇÕES OU À SUA ORDEM NA PRAÇA E VENCIMENTO INDICADOS.</b>", ParagraphStyle('Reconhece', fontSize=8, alignment=1, leading=10)))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Assinaturas
+    assin_data = [
+        [Paragraph("DATA DO ACEITE", label_style), Paragraph("ASSINATURA DO SACADO", label_style), Paragraph("ASSINATURA DO SACADOR", label_style)],
+        [Paragraph("____/____/________", value_style), Paragraph("_" * 30, value_style), Paragraph("_" * 30, value_style)],
+    ]
+    assin_table = Table(assin_data, colWidths=[5*cm, 6*cm, 6*cm])
+    assin_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    elements.append(assin_table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    await create_audit_log(current_user, "export", "duplicata", item_id, f"Duplicata: {item.get('descricao', item_id)}")
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=CRA_Duplicata_{item_id[:8]}.pdf"}
+    )
+
+
 # Endpoint para exportar extrato de conta bancária
 @api_router.get("/export/extrato-bancario/{conta_id}")
 async def export_extrato_bancario(
