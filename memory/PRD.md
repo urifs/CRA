@@ -64,6 +64,37 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - **Menu**: Link "Horímetro" adicionado ao menu lateral do Gerenciamento
 - **Atualização automática**: Horímetro atual da máquina é atualizado ao criar registro
 
+#### ✅ Módulo de Combustível - COMPLETO (26/02/2026)
+- **Nova funcionalidade**: Registro de consumo de combustível das máquinas
+- **Frontend**: Página `CombustivelPage.jsx` com CRUD completo
+- **Backend**: Endpoints `/api/combustivel` para criar, listar, editar e excluir registros
+- **Formulário**: 
+  - Dropdown de máquinas cadastradas
+  - Tipo de medição: Litros/Hora ou Litros/Km
+  - Hora/Km inicial, Litros inicial e final
+  - Cálculo automático de litros consumidos
+- **Estatísticas**: Total consumido, registros hoje, média por registro
+- **Integração**: Registros aparecem no card de detalhes da máquina
+- **Menu**: Link "Combustível" adicionado ao menu lateral
+
+#### ✅ Campo Chassi/Número de Série - COMPLETO (26/02/2026)
+- Adicionado dropdown para selecionar tipo: "Chassi" ou "Número de Série"
+- Campo para digitar o número do identificador
+- Exibição no card de detalhes da máquina
+- Backend atualizado com campos `identificador_tipo` e `identificador_numero`
+
+#### ✅ Anexar Arquivos no Chatbot - COMPLETO (26/02/2026)
+- Botão de anexar arquivos (📎) adicionado ao ChatbotWidget
+- Suporte a imagens, PDFs, documentos (.doc, .docx, .xls, .xlsx, .txt)
+- Limite de 10MB por arquivo
+- Preview dos arquivos anexados antes de enviar
+- Endpoint `/api/chatbot/ask-with-files` para processar arquivos
+- IA analisa e comenta sobre os arquivos anexados
+
+#### ✅ Correção de Navegação de Máquinas - COMPLETO (26/02/2026)
+- Corrigidos links de navegação em `MachinesPage.jsx`
+- Botões "Ver" agora direcionam corretamente para `/gerenciamento/machines/{id}`
+
 ### Sessão Anterior (26/02/2026) - Parte 6
 
 #### ✅ Exportação de Extrato Bancário - COMPLETO
