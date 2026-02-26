@@ -1,17 +1,81 @@
 # PRD - Sistema de Gerenciamento ERP
 
 ## Problema Original
-Sistema de gerenciamento de máquinas e manutenções com módulos administrativos (financeiro, estoque, cadastros), aluguéis, notificações, painel de super administrador, chatbot com IA, exportação PDF/Excel/OFX e sistema de armazenamento de arquivos.
+Sistema de gerenciamento de máquinas e manutenções com módulos administrativos (financeiro, estoque, cadastros), aluguéis, notificações, painel de super administrador, chatbot com IA, exportação PDF/Excel/OFX, sistema de armazenamento de arquivos e **Sistema de RH completo**.
 
 ## Arquitetura
 - **Frontend**: React + TailwindCSS + Shadcn/UI
 - **Backend**: FastAPI + MongoDB (Motor)
 - **Auth**: JWT com bcrypt
-- **Integração**: Gemini AI para chatbot
+- **Integração**: Gemini AI para chatbot e sugestão de EPIs
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026) - Parte 7
+### Sessão Atual (26/02/2026) - Parte 8
+
+#### ✅ Sistema de RH Completo - IMPLEMENTADO
+Novo sistema de Recursos Humanos adicionado à plataforma com:
+
+**1. Cadastro de Funcionários**
+- Formulário completo: Nome, CPF, RG, Data Nascimento, Telefone, Celular, Email
+- Endereço com auto-preenchimento por CEP (integração ViaCEP)
+- Dados profissionais: Cargo, Função, Departamento, Salário, Data Admissão
+- Regime de contratação: CLT, PJ, Contrato, Estágio, Prestador de Serviço
+- Sistema de anexos para documentos (contrato, fotos, etc.) com visualização inline
+- Status: Ativo, Férias, Afastado, Desligado
+
+**2. Ponto Eletrônico**
+- Registro de entrada, saída almoço, retorno almoço e saída
+- Jornada configurada: Seg-Sex 08:00-11:30 / 13:30-18:00 | Sábado 08:00-12:00 (carga reduzida)
+- Cálculo automático de horas trabalhadas
+- Identificação de atrasos e saídas antecipadas
+- Resumo do dia: Presentes, Ausentes, Atrasados
+
+**3. Folha de Pagamento e Benefícios**
+- Tabelas de alíquotas atuais 2025 (INSS, IRPF)
+- Cálculo automático: INSS progressivo, IRPF com deduções, FGTS 8%
+- Proventos: Salário base, horas extras, adicional noturno, comissões
+- Descontos: Vale transporte, vale alimentação, plano de saúde
+- Geração de holerite em PDF com layout profissional
+- Geração automática de contas a pagar (salários, INSS, FGTS)
+
+**4. Férias e Escalas**
+- Calendário anual de férias
+- Alertas de período aquisitivo vencendo
+- Abono pecuniário (até 10 dias vendidos)
+- Listagem de funcionários há mais de 1 ano sem férias
+
+**5. Gestão de EPI/EPC**
+- Cadastro de cargos
+- Consulta de EPIs por cargo usando IA Gemini (com fallback para lista padrão)
+- Mapa de risco por função (Alta - vermelho, Média - amarelo, Baixa - verde)
+- Ficha de EPI digital com controle de validade
+- Exportação de Ficha de EPI em PDF para assinatura
+- Exportação de Termo de Responsabilidade em PDF
+
+**6. Sistema de Notificações RH**
+- Aniversariantes do mês
+- Alertas de período aquisitivo de férias
+- Funcionários há mais de 1 ano sem férias
+- EPIs próximos do vencimento
+- Inconsistências de ponto (atrasos fora da janela)
+
+**7. Gestão de Custos**
+- Custo real por funcionário: Salário + FGTS (8%) + INSS Patronal (20%) + Benefícios + EPIs
+- Custo por hora (dividido por 220h CLT)
+- Simulação de dissídio: Impacto mensal e anual de aumento percentual
+- Provisão de rescisão: Cálculo completo (saldo salário, aviso prévio, férias, 13º, FGTS, multa 40%)
+
+**8. Controle de Acesso**
+- Novos roles: "rh", "ambos_rh", "gerenciamento_rh", "administrativo_rh"
+- Sistema RH aparece na página de seleção de sistemas
+- Integração com Painel Administrativo para gerenciar permissões
+
+**9. Integração com Gerenciamento**
+- Funcionários do RH aparecem como opção de "Operador" nas máquinas
+- Remoção da opção "Funcionário" do Cadastros do Administrativo (agora só no RH)
+
+### Sessão Anterior (26/02/2026) - Parte 7
 
 #### ✅ Correção de Roteamento (P0 - Crítico) - COMPLETO
 - **Problema**: Sistema abria diretamente na página de gerenciamento ao invés da página de login
