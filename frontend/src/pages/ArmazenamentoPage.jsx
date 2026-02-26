@@ -192,16 +192,93 @@ export default function ArmazenamentoPage() {
     }
     try {
       await axios.post(`${API}/storage/folder`, 
-        { name: newFolderName, parent_path: currentPath },
+        { 
+          name: newFolderName, 
+          parent_path: currentPath,
+          password: newFolderPassword || null
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("Pasta criada com sucesso!");
+      toast.success("Pasta criada com sucesso!" + (newFolderPassword ? " (protegida com senha)" : ""));
       setShowNewFolderModal(false);
       setNewFolderName("");
+      setNewFolderPassword("");
       fetchItems();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao criar pasta");
     }
+  };
+
+  // Verificar senha e navegar para pasta
+  const handleFolderClick = async (folder) => {
+    if (folder.has_password && !unlockedFolders.has(folder.path)) {
+      // Pasta protegida - mostrar modal de senha
+      setPasswordFolder(folder);
+      setFolderPassword("");
+      setPasswordError("");
+      setShowPasswordModal(true);
+    } else {
+      // Pasta não protegida ou já desbloqueada - navegar
+      navigateToFolder(folder.path);
+    }
+  };
+
+  const navigateToFolder = (path) => {
+    setCurrentPath(path);
+    setSearchParams({ path });
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!folderPassword) {
+      setPasswordError("Digite a senha");
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/storage/folder/check-password`, 
+        { path: passwordFolder.path, password: folderPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Senha correta - desbloquear e navegar
+      setUnlockedFolders(prev => new Set([...prev, passwordFolder.path]));
+      setShowPasswordModal(false);
+      setFolderPassword("");
+      navigateToFolder(passwordFolder.path);
+    } catch (error) {
+      setPasswordError("Senha incorreta");
+    }
+  };
+
+  // Definir/remover senha de pasta
+  const handleSetPassword = async () => {
+    if (newPassword && newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/storage/folder/set-password`, 
+        { path: setPasswordFolder.path, password: newPassword || null },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success(newPassword ? "Senha definida com sucesso!" : "Senha removida com sucesso!");
+      setShowSetPasswordModal(false);
+      setSetPasswordFolder(null);
+      setNewPassword("");
+      setConfirmPassword("");
+      fetchItems();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao definir senha");
+    }
+  };
+
+  const openSetPasswordModal = (folder) => {
+    setSetPasswordFolder(folder);
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowSetPasswordModal(true);
   };
 
   const handleUpload = async (e) => {
