@@ -441,7 +441,7 @@ export default function MachineDetailPage() {
                 <div
                   key={maintenance.id}
                   className="flex items-center justify-between p-4 hover:bg-white cursor-pointer transition-colors"
-                  onClick={() => navigate(`/maintenances/${maintenance.id}`)}
+                  onClick={() => navigate(`/gerenciamento/maintenances/${maintenance.id}`)}
                   data-testid={`maintenance-history-item-${maintenance.id}`}
                 >
                   <div className="flex items-center gap-4">
