@@ -1,73 +1,91 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { API } from "@/App";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
+import { API } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Tags, 
   Plus, 
-  Trash2,
-  Edit,
+  Edit, 
+  Trash2, 
+  Tags, 
+  ChevronRight,
   Loader2,
-  Construction,
   Search,
-  X
+  Truck
 } from "lucide-react";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showDialog, setShowDialog] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
+  
+  // Modal states
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: ""
-  });
+  const [editingSubcategory, setEditingSubcategory] = useState(null);
+  
+  // Form states
+  const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
+  const [subcategoryForm, setSubcategoryForm] = useState({ name: "", category_id: "", description: "" });
+  
+  const [formLoading, setFormLoading] = useState(false);
+
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetchCategories();
+    fetchData();
   }, []);
 
-  const fetchCategories = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get(`${API}/categories`);
-      setCategories(response.data);
+      const [categoriesRes, subcategoriesRes, machinesRes] = await Promise.all([
+        axios.get(`${API}/categories`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/subcategories`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/machines`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      setCategories(categoriesRes.data);
+      setSubcategories(subcategoriesRes.data);
+      setMachines(machinesRes.data);
     } catch (error) {
-      toast.error("Erro ao carregar categorias");
+      toast.error("Erro ao carregar dados");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Category CRUD
+  const handleSaveCategory = async () => {
+    if (!categoryForm.name.trim()) {
+      toast.error("Digite o nome da categoria");
+      return;
+    }
+    
     setFormLoading(true);
-
     try {
       if (editingCategory) {
-        await axios.put(`${API}/categories/${editingCategory.id}`, formData);
-        toast.success("Categoria atualizada com sucesso!");
+        await axios.put(`${API}/categories/${editingCategory.id}`, categoryForm, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success("Categoria atualizada!");
       } else {
-        await axios.post(`${API}/categories`, formData);
-        toast.success("Categoria criada com sucesso!");
+        await axios.post(`${API}/categories`, categoryForm, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success("Categoria criada!");
       }
-      setShowDialog(false);
-      resetForm();
-      fetchCategories();
+      setShowCategoryModal(false);
+      setEditingCategory(null);
+      setCategoryForm({ name: "", description: "" });
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao salvar categoria");
     } finally {
@@ -75,301 +93,365 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
+  const handleDeleteCategory = async (category) => {
+    if (!confirm(`Excluir a categoria "${category.name}"? As subcategorias também serão excluídas.`)) return;
     
     try {
-      await axios.delete(`${API}/categories/${deleteId}`);
-      toast.success("Categoria removida com sucesso!");
-      setDeleteId(null);
-      fetchCategories();
+      await axios.delete(`${API}/categories/${category.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Categoria excluída!");
+      fetchData();
     } catch (error) {
-      toast.error("Erro ao remover categoria");
+      toast.error(error.response?.data?.detail || "Erro ao excluir categoria");
     }
   };
 
-  const openEditDialog = (category) => {
-    setEditingCategory(category);
-    setFormData({
-      name: category.name,
-      description: category.description || ""
-    });
-    setShowDialog(true);
-  };
-
-  const resetForm = () => {
-    setFormData({ name: "", description: "" });
-    setEditingCategory(null);
-  };
-
-  const defaultCategories = [
-    { name: "Escavadeira", description: "Escavadeiras hidráulicas" },
-    { name: "Retroescavadeira", description: "Retroescavadeiras e pás carregadeiras" },
-    { name: "Trator", description: "Tratores agrícolas e de esteira" },
-    { name: "Caminhão", description: "Caminhões de carga e basculantes" },
-    { name: "Rolo Compactador", description: "Rolos compactadores" }
-  ];
-
-  const createDefaultCategory = async (cat) => {
+  // Subcategory CRUD
+  const handleSaveSubcategory = async () => {
+    if (!subcategoryForm.name.trim()) {
+      toast.error("Digite o nome da subcategoria");
+      return;
+    }
+    if (!subcategoryForm.category_id) {
+      toast.error("Selecione uma categoria");
+      return;
+    }
+    
+    setFormLoading(true);
     try {
-      await axios.post(`${API}/categories`, cat);
-      toast.success(`Categoria "${cat.name}" criada!`);
-      fetchCategories();
+      if (editingSubcategory) {
+        await axios.put(`${API}/subcategories/${editingSubcategory.id}`, {
+          name: subcategoryForm.name,
+          category_id: subcategoryForm.category_id,
+          description: subcategoryForm.description
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success("Subcategoria atualizada!");
+      } else {
+        await axios.post(`${API}/subcategories`, subcategoryForm, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success("Subcategoria criada!");
+      }
+      setShowSubcategoryModal(false);
+      setEditingSubcategory(null);
+      setSubcategoryForm({ name: "", category_id: "", description: "" });
+      fetchData();
     } catch (error) {
-      toast.error(`Erro ao criar categoria "${cat.name}"`);
+      toast.error(error.response?.data?.detail || "Erro ao salvar subcategoria");
+    } finally {
+      setFormLoading(false);
     }
   };
+
+  const handleDeleteSubcategory = async (subcategory) => {
+    if (!confirm(`Excluir a subcategoria "${subcategory.name}"?`)) return;
+    
+    try {
+      await axios.delete(`${API}/subcategories/${subcategory.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Subcategoria excluída!");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao excluir subcategoria");
+    }
+  };
+
+  const openEditCategory = (category) => {
+    setEditingCategory(category);
+    setCategoryForm({ name: category.name, description: category.description || "" });
+    setShowCategoryModal(true);
+  };
+
+  const openEditSubcategory = (subcategory) => {
+    setEditingSubcategory(subcategory);
+    setSubcategoryForm({ name: subcategory.name, category_id: subcategory.category_id, description: subcategory.description || "" });
+    setShowSubcategoryModal(true);
+  };
+
+  const openNewSubcategory = (categoryId = "") => {
+    setEditingSubcategory(null);
+    setSubcategoryForm({ name: "", category_id: categoryId, description: "" });
+    setShowSubcategoryModal(true);
+  };
+
+  const getMachinesByCategory = (categoryId) => machines.filter(m => m.category_id === categoryId);
+  const getMachinesBySubcategory = (subcategoryId) => machines.filter(m => m.subcategory_id === subcategoryId);
+  const getSubcategoriesByCategory = (categoryId) => subcategories.filter(s => s.category_id === categoryId);
+
+  const filteredCategories = categories.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="spinner w-12 h-12"></div>
+        <Loader2 className="animate-spin text-[#E31A1A]" size={48} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in" data-testid="categories-page">
-      {/* Page header */}
-      <div className="page-header">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="page-title font-heading">Categorias</h1>
-          <p className="text-gray-500 mt-1">Gerencie os tipos de máquinas</p>
+          <h1 className="text-2xl font-bold text-black flex items-center gap-2">
+            <Tags className="text-[#E31A1A]" />
+            Categorias de Máquinas
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Organize suas máquinas em categorias e subcategorias
+          </p>
         </div>
-        <Button
-          className="bg-black hover:bg-gray-900 text-white font-bold"
-          onClick={() => {
-            resetForm();
-            setShowDialog(true);
-          }}
-          data-testid="new-category-btn"
-        >
-          <Plus size={18} className="mr-2" />
-          Nova Categoria
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => { setEditingCategory(null); setCategoryForm({ name: "", description: "" }); setShowCategoryModal(true); }} className="bg-[#E31A1A] hover:bg-red-700">
+            <Plus size={18} className="mr-2" />
+            Nova Categoria
+          </Button>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex gap-4 max-w-lg">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <Input
-            type="text"
-            placeholder="Pesquisar categorias..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-10 h-10 bg-white border-gray-200"
-            data-testid="search-categories"
-          />
-          {searchTerm && (
-            <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              onClick={() => setSearchTerm("")}
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-        <Button className="bg-[#E31A1A] hover:bg-[#c41616] text-white">
-          <Search size={16} className="mr-2" />
-          Buscar
-        </Button>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Input
+          placeholder="Buscar categorias..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
-      {/* Categories List */}
-      {categories.filter(c => 
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.description || "").toLowerCase().includes(searchTerm.toLowerCase())
-      ).length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories
-            .filter(c => 
-              c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (c.description || "").toLowerCase().includes(searchTerm.toLowerCase())
-            )
-            .map((category) => (
-            <Card 
-              key={category.id} 
-              className="stat-card group"
-              data-testid={`category-card-${category.id}`}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-orange-50 transition-colors">
-                      <Tags className="text-gray-600 group-hover:text-[#E31A1A] transition-colors" size={24} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-black truncate">{category.name}</h3>
-                      <p className="text-sm text-gray-500 truncate">{category.description || "Sem descrição"}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                      onClick={() => openEditDialog(category)}
-                      data-testid={`edit-category-${category.id}`}
-                    >
-                      <Edit size={18} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => setDeleteId(category.id)}
-                      data-testid={`delete-category-${category.id}`}
-                    >
-                      <Trash2 size={18} />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
-          <CardContent className="py-12">
-            <div className="empty-state">
-              <Tags className="text-gray-300 mb-4" size={64} />
-              <p className="text-lg font-medium text-gray-600">Nenhuma categoria cadastrada</p>
-              <p className="text-gray-400 mb-6">
-                Crie categorias para organizar suas máquinas
-              </p>
-              
-              {/* Quick add default categories */}
-              <div className="space-y-4">
-                <p className="text-sm text-gray-500 font-medium">Sugestões rápidas:</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {defaultCategories.map((cat) => (
-                    <Button
-                      key={cat.name}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => createDefaultCategory(cat)}
-                      className="hover:bg-orange-50 hover:border-[#E31A1A]"
-                      data-testid={`quick-add-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      <Plus size={14} className="mr-1" />
-                      {cat.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+              <Tags className="text-[#E31A1A]" size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{categories.length}</p>
+              <p className="text-sm text-gray-500">Categorias</p>
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Info Card */}
-      <Card className="bg-white border-gray-200">
-        <CardContent className="py-6">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Construction className="text-[#E31A1A]" size={20} />
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <ChevronRight className="text-blue-600" size={24} />
             </div>
             <div>
-              <h3 className="font-bold text-black">Sobre Categorias</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                As categorias ajudam a organizar sua frota por tipo de máquina. 
-                Você pode criar categorias personalizadas como "Escavadeira", "Retroescavadeira", 
-                "Caminhão", ou qualquer outro tipo de equipamento.
-              </p>
+              <p className="text-2xl font-bold">{subcategories.length}</p>
+              <p className="text-sm text-gray-500">Subcategorias</p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <Truck className="text-green-600" size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{machines.length}</p>
+              <p className="text-sm text-gray-500">Máquinas</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      {/* Categories Grid */}
+      {filteredCategories.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Tags size={48} className="mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500">Nenhuma categoria cadastrada</p>
+            <Button onClick={() => setShowCategoryModal(true)} className="mt-4 bg-[#E31A1A] hover:bg-red-700">
+              <Plus size={18} className="mr-2" />
+              Criar Primeira Categoria
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredCategories.map((category) => {
+            const categorySubcategories = getSubcategoriesByCategory(category.id);
+            const categoryMachines = getMachinesByCategory(category.id);
+            
+            return (
+              <Card key={category.id} className="overflow-hidden">
+                <CardHeader className="bg-gray-50 border-b">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#E31A1A] rounded-lg flex items-center justify-center">
+                        <Tags className="text-white" size={20} />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{category.name}</CardTitle>
+                        {category.description && <p className="text-sm text-gray-500">{category.description}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500 mr-4">
+                        {categorySubcategories.length} subcategorias • {categoryMachines.length} máquinas
+                      </span>
+                      <Button variant="outline" size="sm" onClick={() => openNewSubcategory(category.id)}>
+                        <Plus size={14} className="mr-1" /> Subcategoria
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEditCategory(category)}>
+                        <Edit size={14} />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => handleDeleteCategory(category)}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {categorySubcategories.length === 0 && categoryMachines.length === 0 ? (
+                    <p className="text-gray-400 text-center py-4">Nenhuma subcategoria ou máquina nesta categoria</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Subcategories */}
+                      {categorySubcategories.map((subcategory) => {
+                        const subMachines = getMachinesBySubcategory(subcategory.id);
+                        return (
+                          <div key={subcategory.id} className="border rounded-lg p-3 bg-gray-50">
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center gap-2">
+                                <ChevronRight className="text-blue-500" size={18} />
+                                <span className="font-medium">{subcategory.name}</span>
+                                <span className="text-xs text-gray-400">({subMachines.length} máquinas)</span>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => openEditSubcategory(subcategory)}>
+                                  <Edit size={12} />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteSubcategory(subcategory)}>
+                                  <Trash2 size={12} />
+                                </Button>
+                              </div>
+                            </div>
+                            {subMachines.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {subMachines.map((m) => (
+                                  <span key={m.id} className="text-xs bg-white border px-2 py-1 rounded flex items-center gap-1">
+                                    <Truck size={12} className="text-gray-400" />
+                                    {m.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Machines without subcategory */}
+                      {categoryMachines.filter(m => !m.subcategory_id).length > 0 && (
+                        <div className="border rounded-lg p-3">
+                          <p className="text-sm text-gray-500 mb-2">Máquinas sem subcategoria:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {categoryMachines.filter(m => !m.subcategory_id).map((m) => (
+                              <span key={m.id} className="text-xs bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
+                                <Truck size={12} className="text-gray-400" />
+                                {m.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Category Modal */}
+      <Dialog open={showCategoryModal} onOpenChange={setShowCategoryModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-heading text-xl font-bold">
-              {editingCategory ? "Editar Categoria" : "Nova Categoria"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCategory 
-                ? "Atualize as informações da categoria"
-                : "Crie uma nova categoria para organizar suas máquinas"
-              }
-            </DialogDescription>
+            <DialogTitle>{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
           </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label className="form-label">Nome *</Label>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome da Categoria *</Label>
               <Input
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Ex: Escavadeira, Retroescavadeira..."
-                required
-                className="form-input"
-                data-testid="category-name-input"
+                value={categoryForm.name}
+                onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                placeholder="Ex: Tratores"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label className="form-label">Descrição</Label>
+            <div>
+              <Label>Descrição (opcional)</Label>
               <Input
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Descrição opcional..."
-                className="form-input"
-                data-testid="category-description-input"
+                value={categoryForm.description}
+                onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                placeholder="Descrição da categoria"
               />
             </div>
-
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowDialog(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="bg-black hover:bg-gray-900"
-                disabled={formLoading}
-                data-testid="category-submit-btn"
-              >
-                {formLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {editingCategory ? "Atualizando..." : "Criando..."}
-                  </>
-                ) : editingCategory ? (
-                  "Atualizar"
-                ) : (
-                  "Criar Categoria"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryModal(false)}>Cancelar</Button>
+            <Button onClick={handleSaveCategory} disabled={formLoading} className="bg-[#E31A1A] hover:bg-red-700">
+              {formLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              {editingCategory ? "Salvar" : "Criar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      {/* Subcategory Modal */}
+      <Dialog open={showSubcategoryModal} onOpenChange={setShowSubcategoryModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-red-600">Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir esta categoria? Máquinas associadas a ela não serão excluídas, mas ficarão sem categoria.
-            </DialogDescription>
+            <DialogTitle>{editingSubcategory ? "Editar Subcategoria" : "Nova Subcategoria"}</DialogTitle>
           </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Categoria *</Label>
+              <Select 
+                value={subcategoryForm.category_id} 
+                onValueChange={(v) => setSubcategoryForm({ ...subcategoryForm, category_id: v })}
+                disabled={!!editingSubcategory}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Nome da Subcategoria *</Label>
+              <Input
+                value={subcategoryForm.name}
+                onChange={(e) => setSubcategoryForm({ ...subcategoryForm, name: e.target.value })}
+                placeholder="Ex: Tratores de Esteira"
+              />
+            </div>
+            <div>
+              <Label>Descrição (opcional)</Label>
+              <Input
+                value={subcategoryForm.description}
+                onChange={(e) => setSubcategoryForm({ ...subcategoryForm, description: e.target.value })}
+                placeholder="Descrição da subcategoria"
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
-              Cancelar
-            </Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDelete}
-              data-testid="confirm-delete-category-btn"
-            >
-              Excluir
+            <Button variant="outline" onClick={() => setShowSubcategoryModal(false)}>Cancelar</Button>
+            <Button onClick={handleSaveSubcategory} disabled={formLoading} className="bg-[#E31A1A] hover:bg-red-700">
+              {formLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              {editingSubcategory ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
         </DialogContent>
