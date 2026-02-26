@@ -40,7 +40,8 @@ import {
   History,
   Filter,
   Tags,
-  Settings
+  Settings,
+  ChevronRight
 } from "lucide-react";
 
 export default function StockPage() {
