@@ -101,12 +101,15 @@ export default function StockPage() {
   }, [showLowStockOnly]);
 
   const fetchData = async () => {
+    const token = localStorage.getItem("token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    
     try {
       const [itemsRes, movementsRes, categoriesRes, subcategoriesRes] = await Promise.all([
-        axios.get(`${API}/stock/items?low_stock_only=${showLowStockOnly}`),
-        axios.get(`${API}/stock/movements`),
-        axios.get(`${API}/stock/categories`),
-        axios.get(`${API}/stock/subcategories`)
+        axios.get(`${API}/stock/items?low_stock_only=${showLowStockOnly}`, { headers }),
+        axios.get(`${API}/stock/movements`, { headers }),
+        axios.get(`${API}/stock/categories`, { headers }),
+        axios.get(`${API}/stock/subcategories`, { headers })
       ]);
       setItems(itemsRes.data);
       setMovements(movementsRes.data);
