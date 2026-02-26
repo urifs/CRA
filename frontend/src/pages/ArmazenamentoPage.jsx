@@ -497,6 +497,153 @@ export default function ArmazenamentoPage() {
   const folders = filteredItems.filter(i => i.type === "folder");
   const files = filteredItems.filter(i => i.type === "file");
 
+  // Selection functions
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedItems(new Set());
+  };
+
+  const toggleItemSelection = (item) => {
+    const newSelected = new Set(selectedItems);
+    const itemKey = item.path;
+    if (newSelected.has(itemKey)) {
+      newSelected.delete(itemKey);
+    } else {
+      newSelected.add(itemKey);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const selectAll = () => {
+    const allPaths = filteredItems.map(item => item.path);
+    setSelectedItems(new Set(allPaths));
+  };
+
+  const deselectAll = () => {
+    setSelectedItems(new Set());
+  };
+
+  const getSelectedItemsArray = () => {
+    return filteredItems.filter(item => selectedItems.has(item.path));
+  };
+
+  // Fetch all folders for move/copy destination
+  const fetchAllFolders = async (basePath = "/") => {
+    try {
+      const response = await axios.get(`${API}/storage/list`, {
+        params: { path: basePath },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const folders = response.data.items.filter(item => item.type === "folder");
+      return folders;
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const openMoveModal = async (items = null) => {
+    const itemsToProcess = items || getSelectedItemsArray();
+    if (itemsToProcess.length === 0) {
+      toast.error("Selecione pelo menos um item");
+      return;
+    }
+    setItemsToMove(itemsToProcess);
+    setMoveTargetPath("/");
+    const folders = await fetchAllFolders("/");
+    setAvailableFolders(folders);
+    setShowMoveModal(true);
+  };
+
+  const openCopyModal = async (items = null) => {
+    const itemsToProcess = items || getSelectedItemsArray();
+    if (itemsToProcess.length === 0) {
+      toast.error("Selecione pelo menos um item");
+      return;
+    }
+    setItemsToCopy(itemsToProcess);
+    setMoveTargetPath("/");
+    const folders = await fetchAllFolders("/");
+    setAvailableFolders(folders);
+    setShowCopyModal(true);
+  };
+
+  const handleMove = async () => {
+    if (itemsToMove.length === 0) return;
+    
+    try {
+      for (const item of itemsToMove) {
+        await axios.post(`${API}/storage/move`, {
+          source_path: item.path,
+          destination_path: moveTargetPath
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      toast.success(`${itemsToMove.length} item(s) movido(s) com sucesso!`);
+      setShowMoveModal(false);
+      setItemsToMove([]);
+      setSelectedItems(new Set());
+      setSelectionMode(false);
+      fetchItems();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao mover itens");
+    }
+  };
+
+  const handleCopy = async () => {
+    if (itemsToCopy.length === 0) return;
+    
+    try {
+      for (const item of itemsToCopy) {
+        await axios.post(`${API}/storage/copy`, {
+          source_path: item.path,
+          destination_path: moveTargetPath
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      toast.success(`${itemsToCopy.length} item(s) copiado(s) com sucesso!`);
+      setShowCopyModal(false);
+      setItemsToCopy([]);
+      setSelectedItems(new Set());
+      setSelectionMode(false);
+      fetchItems();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao copiar itens");
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    const selectedItemsArray = getSelectedItemsArray();
+    if (selectedItemsArray.length === 0) {
+      toast.error("Selecione pelo menos um item");
+      return;
+    }
+    
+    if (!confirm(`Excluir ${selectedItemsArray.length} item(s) selecionado(s)?`)) return;
+    
+    try {
+      for (const item of selectedItemsArray) {
+        await axios.delete(`${API}/storage/delete`, {
+          params: { path: item.path },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      toast.success(`${selectedItemsArray.length} item(s) movido(s) para lixeira!`);
+      setSelectedItems(new Set());
+      setSelectionMode(false);
+      fetchItems();
+    } catch (error) {
+      toast.error("Erro ao excluir itens");
+    }
+  };
+
+  const navigateToFolder = async (folderPath) => {
+    setMoveTargetPath(folderPath);
+    const folders = await fetchAllFolders(folderPath);
+    setAvailableFolders(folders);
+  };
+
   return (
     <div className="min-h-screen bg-black">
       {/* Background pattern - same as login */}
