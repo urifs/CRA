@@ -6434,6 +6434,7 @@ async def get_export_items(collection: str, current_user: dict = Depends(get_cur
         "fleets": {"name_field": "name", "id_field": "id"},
         "cadastros": {"name_field": "nome", "id_field": "id"},
         "formas_pagamento": {"name_field": "nome", "id_field": "id"},
+        "contas_bancarias": {"name_field": "nome", "id_field": "id"},
     }
     
     if collection not in valid_collections:
@@ -6443,6 +6444,170 @@ async def get_export_items(collection: str, current_user: dict = Depends(get_cur
     items = await db[collection].find({}, {"_id": 0, config["id_field"]: 1, config["name_field"]: 1}).to_list(100)
     
     return [{"id": item.get(config["id_field"]), "name": item.get(config["name_field"], "Sem nome")} for item in items]
+
+
+# Endpoint para exportar extrato de conta bancária
+@api_router.get("/export/extrato-bancario/{conta_id}")
+async def export_extrato_bancario(
+    conta_id: str,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Exporta extrato de uma conta bancária específica em PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    
+    # Buscar a conta bancária
+    conta = await db.contas_bancarias.find_one({"id": conta_id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
+    
+    # Buscar movimentações (contas a pagar quitadas + contas a receber quitadas vinculadas a esta conta)
+    movimentacoes = []
+    
+    # Filtro de data
+    date_filter = {}
+    if data_inicio:
+        date_filter["$gte"] = data_inicio
+    if data_fim:
+        date_filter["$lte"] = data_fim
+    
+    # Buscar contas a pagar quitadas desta conta
+    pagar_filter = {"conta_bancaria_id": conta_id, "status": "quitada"}
+    if date_filter:
+        pagar_filter["data_pagamento"] = date_filter
+    
+    contas_pagar = await db.contas_pagar.find(pagar_filter, {"_id": 0}).to_list(500)
+    for cp in contas_pagar:
+        movimentacoes.append({
+            "data": cp.get("data_pagamento", cp.get("data_vencimento", "")),
+            "tipo": "SAÍDA",
+            "descricao": cp.get("descricao", ""),
+            "documento": cp.get("numero_doc", ""),
+            "favorecido": cp.get("fornecedor_nome", ""),
+            "valor": -abs(cp.get("valor_final") or cp.get("valor", 0)),
+        })
+    
+    # Buscar contas a receber quitadas desta conta
+    receber_filter = {"conta_bancaria_id": conta_id, "status": "quitada"}
+    if date_filter:
+        receber_filter["data_recebimento"] = date_filter
+    
+    contas_receber = await db.contas_receber.find(receber_filter, {"_id": 0}).to_list(500)
+    for cr in contas_receber:
+        movimentacoes.append({
+            "data": cr.get("data_recebimento", cr.get("data_vencimento", "")),
+            "tipo": "ENTRADA",
+            "descricao": cr.get("descricao", ""),
+            "documento": cr.get("numero_doc", ""),
+            "favorecido": cr.get("cliente_nome", ""),
+            "valor": abs(cr.get("valor_final") or cr.get("valor", 0)),
+        })
+    
+    # Ordenar por data
+    movimentacoes.sort(key=lambda x: x.get("data", ""))
+    
+    # Calcular totais
+    total_entradas = sum(m["valor"] for m in movimentacoes if m["valor"] > 0)
+    total_saidas = sum(m["valor"] for m in movimentacoes if m["valor"] < 0)
+    
+    # Gerar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#D4A000'), spaceAfter=12)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey, spaceAfter=6)
+    
+    elements = []
+    
+    # Cabeçalho
+    elements.append(Paragraph("CRA Construtora", title_style))
+    elements.append(Paragraph(f"Extrato Bancário - {conta['nome']}", styles['Heading2']))
+    elements.append(Paragraph(f"Banco: {conta['banco']} | Agência: {conta['agencia']} | Conta: {conta['conta']}", subtitle_style))
+    
+    if data_inicio or data_fim:
+        periodo = f"Período: {data_inicio or 'Início'} até {data_fim or 'Atual'}"
+        elements.append(Paragraph(periodo, subtitle_style))
+    
+    elements.append(Spacer(1, 20))
+    
+    # Resumo
+    resumo_data = [
+        ["RESUMO DO PERÍODO", ""],
+        ["Total de Entradas:", f"R$ {total_entradas:,.2f}"],
+        ["Total de Saídas:", f"R$ {abs(total_saidas):,.2f}"],
+        ["Saldo do Período:", f"R$ {(total_entradas + total_saidas):,.2f}"],
+        ["Saldo Atual da Conta:", f"R$ {conta.get('saldo_atual', 0):,.2f}"],
+    ]
+    
+    resumo_table = Table(resumo_data, colWidths=[200, 150])
+    resumo_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#D4A000')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('SPAN', (0, 0), (-1, 0)),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+        ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#F0F0F0')),
+    ]))
+    elements.append(resumo_table)
+    elements.append(Spacer(1, 20))
+    
+    # Tabela de movimentações
+    if movimentacoes:
+        elements.append(Paragraph("Movimentações", styles['Heading3']))
+        elements.append(Spacer(1, 10))
+        
+        mov_data = [["Data", "Tipo", "Descrição", "Documento", "Favorecido", "Valor"]]
+        for m in movimentacoes:
+            valor_str = f"R$ {m['valor']:,.2f}"
+            mov_data.append([
+                m.get("data", "")[:10] if m.get("data") else "",
+                m["tipo"],
+                m["descricao"][:30] if m.get("descricao") else "",
+                m.get("documento", "")[:15] if m.get("documento") else "",
+                m.get("favorecido", "")[:20] if m.get("favorecido") else "",
+                valor_str
+            ])
+        
+        mov_table = Table(mov_data, colWidths=[60, 50, 120, 70, 100, 80])
+        mov_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#D4A000')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (5, 1), (5, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(mov_table)
+    else:
+        elements.append(Paragraph("Nenhuma movimentação encontrada no período.", subtitle_style))
+    
+    # Rodapé
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph(f"Documento gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Registrar na auditoria
+    await create_audit_log(current_user, "export", "extrato_bancario", conta_id, conta["nome"])
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=Extrato_{conta['nome'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        }
+    )
 
 
 # ============ EXCEL/OFX EXPORT ROUTES ============
