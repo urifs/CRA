@@ -977,6 +977,101 @@ export default function ArmazenamentoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Password Entry Modal */}
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="text-yellow-500" size={20} />
+              Pasta Protegida
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-gray-600">
+              A pasta <span className="font-medium text-white">"{passwordFolder?.name}"</span> está protegida com senha.
+            </p>
+            <div>
+              <label className="text-sm font-medium text-gray-300 mb-2 block">Digite a senha:</label>
+              <Input
+                type="password"
+                value={folderPassword}
+                onChange={(e) => { setFolderPassword(e.target.value); setPasswordError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
+                placeholder="Senha da pasta"
+                className={passwordError ? "border-red-500" : ""}
+              />
+              {passwordError && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>Cancelar</Button>
+            <Button onClick={handlePasswordSubmit} className="bg-[#E31A1A] hover:bg-red-700">
+              <KeyRound size={16} className="mr-2" />
+              Desbloquear
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Set Password Modal */}
+      <Dialog open={showSetPasswordModal} onOpenChange={setShowSetPasswordModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {setPasswordFolder?.has_password ? <LockOpen className="text-yellow-500" size={20} /> : <Lock className="text-yellow-500" size={20} />}
+              {setPasswordFolder?.has_password ? "Alterar/Remover Senha" : "Definir Senha"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-gray-600">
+              Pasta: <span className="font-medium text-white">"{setPasswordFolder?.name}"</span>
+            </p>
+            {setPasswordFolder?.has_password && (
+              <div className="bg-yellow-900/20 border border-yellow-600/30 p-3 rounded-lg">
+                <p className="text-yellow-500 text-sm">
+                  ⚠️ Esta pasta já possui senha. Deixe os campos vazios para remover a proteção.
+                </p>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-300 mb-2 block">Nova senha:</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder={setPasswordFolder?.has_password ? "Deixe vazio para remover" : "Digite uma senha"}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-300 mb-2 block">Confirmar senha:</label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSetPassword()}
+                placeholder="Confirme a senha"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSetPasswordModal(false)}>Cancelar</Button>
+            <Button onClick={handleSetPassword} className={newPassword ? "bg-[#E31A1A] hover:bg-red-700" : "bg-yellow-600 hover:bg-yellow-700"}>
+              {newPassword ? (
+                <>
+                  <Lock size={16} className="mr-2" />
+                  Definir Senha
+                </>
+              ) : (
+                <>
+                  <LockOpen size={16} className="mr-2" />
+                  Remover Senha
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
