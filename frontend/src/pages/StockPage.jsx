@@ -221,6 +221,7 @@ export default function StockPage() {
       name: item.name,
       code: item.code,
       category: item.category,
+      subcategory_id: item.subcategory_id || "",
       unit: item.unit,
       quantity: item.quantity.toString(),
       min_quantity: item.min_quantity.toString(),
@@ -248,6 +249,7 @@ export default function StockPage() {
       name: "",
       code: "",
       category: "",
+      subcategory_id: "",
       unit: "un",
       quantity: "",
       min_quantity: "",
@@ -257,6 +259,46 @@ export default function StockPage() {
     });
     setEditingItem(null);
   };
+
+  // Subcategory functions
+  const handleSubcategorySubmit = async () => {
+    if (!newSubcategoryForm.name.trim() || !newSubcategoryForm.category_id) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+    setFormLoading(true);
+    try {
+      await axios.post(`${API}/stock/subcategories`, newSubcategoryForm);
+      toast.success("Subcategoria criada!");
+      setShowSubcategoryDialog(false);
+      setNewSubcategoryForm({ name: "", category_id: "" });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao criar subcategoria");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteSubcategory = async () => {
+    if (!deleteSubcategoryId) return;
+    try {
+      await axios.delete(`${API}/stock/subcategories/${deleteSubcategoryId}`);
+      toast.success("Subcategoria excluída!");
+      setDeleteSubcategoryId(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao excluir subcategoria");
+    }
+  };
+
+  // Filtrar subcategorias baseado na categoria selecionada
+  const filteredSubcategories = itemForm.category 
+    ? subcategories.filter(s => {
+        const cat = categories.find(c => c.name === itemForm.category);
+        return cat && s.category_id === cat.id;
+      })
+    : [];
 
   const resetMovementForm = () => {
     setMovementForm({
