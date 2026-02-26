@@ -509,13 +509,13 @@ export default function MachinesPage() {
                 </Label>
                 <Select
                   value={formData.fleet_id}
-                  onValueChange={(value) => setFormData({...formData, fleet_id: value, subfleet_id: ""})}
+                  onValueChange={(value) => setFormData({...formData, fleet_id: value === "__none__" ? "" : value, subfleet_id: ""})}
                 >
                   <SelectTrigger className="form-input" data-testid="machine-fleet-select">
                     <SelectValue placeholder="Selecione uma frota" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="__none__">Nenhuma</SelectItem>
                     {fleets.map((fleet) => (
                       <SelectItem key={fleet.id} value={fleet.id}>
                         {fleet.name}
