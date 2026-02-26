@@ -6017,6 +6017,16 @@ EXPORT_CATEGORIES_V2 = {
             ]
         },
         {
+            "id": "imoveis_cat",
+            "label": "Imóveis para Locação",
+            "icon": "building",
+            "subcategories": [
+                {"id": "imoveis", "label": "Todos os Imóveis", "description": "Lista completa"},
+                {"id": "imoveis_ativo", "label": "Imóveis Locados", "description": "Com inquilino"},
+                {"id": "imoveis_pendente", "label": "Imóveis Disponíveis", "description": "Sem inquilino"},
+            ]
+        },
+        {
             "id": "contabil",
             "label": "Contabilidade",
             "icon": "dollar",
