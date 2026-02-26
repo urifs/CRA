@@ -7013,11 +7013,12 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     
     # Criar PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
     styles = getSampleStyleSheet()
     
     title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, spaceAfter=10)
     subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.gray, spaceAfter=15)
+    value_style = ParagraphStyle('Value', fontSize=9, leading=11, wordWrap='CJK')
     
     elements = []
     
@@ -7026,38 +7027,188 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
     elements.append(Spacer(1, 0.5*cm))
     
-    # Tabela com todos os itens
-    if "contas" in data.category:
-        headers = ["Descrição", "Fornecedor/Cliente", "Valor", "Vencimento", "Status"]
+    # Função para formatar valor
+    def fmt_valor(v):
+        if v is None or v == "":
+            return "-"
+        try:
+            return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except:
+            return str(v)
+    
+    # Tabela com todos os itens baseado no tipo
+    if "contas_pagar" in data.category or "contas_receber" in data.category:
+        headers = [Paragraph("<b>Descrição</b>", value_style), 
+                   Paragraph("<b>Fornecedor/Cliente</b>", value_style), 
+                   Paragraph("<b>Valor</b>", value_style), 
+                   Paragraph("<b>Vencimento</b>", value_style), 
+                   Paragraph("<b>Status</b>", value_style)]
         table_data = [headers]
         total = 0
         for item in items:
-            desc = item.get("descricao", "-")[:50]
+            desc = item.get("descricao", "-")
             pessoa = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
-            valor = item.get("valor_final") or item.get("valor", 0)
+            valor = float(item.get("valor_final") or item.get("valor", 0) or 0)
             total += valor
-            valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             venc = item.get("data_vencimento", "-")
             status = "Quitada" if item.get("status") == "quitada" else "Em Aberto"
-            table_data.append([desc, pessoa[:30], valor_str, venc, status])
+            table_data.append([
+                Paragraph(desc[:80] if len(desc) > 80 else desc, value_style),
+                Paragraph(pessoa[:40] if len(pessoa) > 40 else pessoa, value_style),
+                Paragraph(fmt_valor(valor), value_style),
+                Paragraph(venc, value_style),
+                Paragraph(status, value_style)
+            ])
         
         # Linha de total
-        total_str = f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        table_data.append(["", "", total_str, "", "TOTAL"])
+        table_data.append([
+            Paragraph("", value_style),
+            Paragraph("<b>TOTAL</b>", value_style),
+            Paragraph(f"<b>{fmt_valor(total)}</b>", value_style),
+            Paragraph("", value_style),
+            Paragraph("", value_style)
+        ])
         
-        table = Table(table_data, colWidths=[6*cm, 4*cm, 3*cm, 2.5*cm, 2*cm])
+        table = Table(table_data, colWidths=[5.5*cm, 4*cm, 3*cm, 2.5*cm, 2*cm])
+        
+    elif data.category == "plano_contas":
+        headers = [Paragraph("<b>Código</b>", value_style), 
+                   Paragraph("<b>Nome</b>", value_style), 
+                   Paragraph("<b>Tipo</b>", value_style), 
+                   Paragraph("<b>Natureza</b>", value_style)]
+        table_data = [headers]
+        for item in items:
+            table_data.append([
+                Paragraph(item.get("codigo", "-"), value_style),
+                Paragraph(item.get("nome", "-"), value_style),
+                Paragraph(item.get("tipo", "-"), value_style),
+                Paragraph(item.get("natureza", "-"), value_style)
+            ])
+        table = Table(table_data, colWidths=[3*cm, 7*cm, 4*cm, 3*cm])
+        
+    elif data.category == "centros_custo":
+        headers = [Paragraph("<b>Código</b>", value_style), 
+                   Paragraph("<b>Nome</b>", value_style), 
+                   Paragraph("<b>Descrição</b>", value_style), 
+                   Paragraph("<b>Status</b>", value_style)]
+        table_data = [headers]
+        for item in items:
+            table_data.append([
+                Paragraph(item.get("codigo", "-"), value_style),
+                Paragraph(item.get("nome", "-"), value_style),
+                Paragraph(item.get("descricao", "-")[:50], value_style),
+                Paragraph("Ativo" if item.get("ativo", True) else "Inativo", value_style)
+            ])
+        table = Table(table_data, colWidths=[3*cm, 5*cm, 7*cm, 2*cm])
+        
+    elif data.category == "cadastros":
+        headers = [Paragraph("<b>Nome/Razão Social</b>", value_style), 
+                   Paragraph("<b>CPF/CNPJ</b>", value_style), 
+                   Paragraph("<b>Tipo</b>", value_style), 
+                   Paragraph("<b>Telefone</b>", value_style)]
+        table_data = [headers]
+        for item in items:
+            nome = item.get("razao_social") or item.get("nome", "-")
+            doc = item.get("cnpj") or item.get("cpf", "-")
+            table_data.append([
+                Paragraph(nome[:40] if len(nome) > 40 else nome, value_style),
+                Paragraph(doc, value_style),
+                Paragraph(item.get("tipo", "-"), value_style),
+                Paragraph(item.get("telefone", "-"), value_style)
+            ])
+        table = Table(table_data, colWidths=[6*cm, 4*cm, 3.5*cm, 3.5*cm])
+        
+    elif data.category == "contas_bancarias":
+        headers = [Paragraph("<b>Nome</b>", value_style), 
+                   Paragraph("<b>Banco</b>", value_style), 
+                   Paragraph("<b>Agência/Conta</b>", value_style), 
+                   Paragraph("<b>Saldo</b>", value_style)]
+        table_data = [headers]
+        total_saldo = 0
+        for item in items:
+            saldo = float(item.get("saldo", 0) or 0)
+            total_saldo += saldo
+            table_data.append([
+                Paragraph(item.get("nome", "-"), value_style),
+                Paragraph(item.get("banco", "-"), value_style),
+                Paragraph(f"{item.get('agencia', '-')}/{item.get('conta', '-')}", value_style),
+                Paragraph(fmt_valor(saldo), value_style)
+            ])
+        table_data.append([
+            Paragraph("", value_style),
+            Paragraph("<b>TOTAL</b>", value_style),
+            Paragraph("", value_style),
+            Paragraph(f"<b>{fmt_valor(total_saldo)}</b>", value_style)
+        ])
+        table = Table(table_data, colWidths=[5*cm, 5*cm, 4*cm, 3*cm])
+        
+    elif "imoveis" in data.category:
+        headers = [Paragraph("<b>Descrição</b>", value_style), 
+                   Paragraph("<b>Tipo</b>", value_style), 
+                   Paragraph("<b>Inquilino</b>", value_style), 
+                   Paragraph("<b>Valor Aluguel</b>", value_style)]
+        table_data = [headers]
+        total = 0
+        for item in items:
+            valor = float(item.get("valor_aluguel", 0) or 0)
+            total += valor
+            table_data.append([
+                Paragraph(item.get("descricao", "-")[:50], value_style),
+                Paragraph(item.get("tipo", "-"), value_style),
+                Paragraph(item.get("inquilino_nome", "-")[:30], value_style),
+                Paragraph(fmt_valor(valor), value_style)
+            ])
+        table_data.append([
+            Paragraph("", value_style),
+            Paragraph("<b>TOTAL</b>", value_style),
+            Paragraph("", value_style),
+            Paragraph(f"<b>{fmt_valor(total)}</b>", value_style)
+        ])
+        table = Table(table_data, colWidths=[6*cm, 3*cm, 5*cm, 3*cm])
+        
+    elif data.category == "alugueis":
+        headers = [Paragraph("<b>Máquina</b>", value_style), 
+                   Paragraph("<b>Cliente</b>", value_style), 
+                   Paragraph("<b>Período</b>", value_style), 
+                   Paragraph("<b>Valor</b>", value_style)]
+        table_data = [headers]
+        total = 0
+        for item in items:
+            valor = float(item.get("valor_total") or item.get("valor", 0) or 0)
+            total += valor
+            periodo = f"{item.get('data_inicio', '-')} a {item.get('data_fim', '-')}"
+            table_data.append([
+                Paragraph(item.get("maquina_nome", "-")[:30], value_style),
+                Paragraph(item.get("cliente_nome", "-")[:30], value_style),
+                Paragraph(periodo, value_style),
+                Paragraph(fmt_valor(valor), value_style)
+            ])
+        table_data.append([
+            Paragraph("", value_style),
+            Paragraph("<b>TOTAL</b>", value_style),
+            Paragraph("", value_style),
+            Paragraph(f"<b>{fmt_valor(total)}</b>", value_style)
+        ])
+        table = Table(table_data, colWidths=[5*cm, 5*cm, 4*cm, 3*cm])
+        
     else:
-        headers = ["Nome/Descrição", "Detalhes", "Valor/Info"]
+        # Genérico para machines, maintenances, stock, obras, etc
+        headers = [Paragraph("<b>Nome/Descrição</b>", value_style), 
+                   Paragraph("<b>Detalhes</b>", value_style), 
+                   Paragraph("<b>Valor/Info</b>", value_style)]
         table_data = [headers]
         for item in items:
             nome = item.get("descricao") or item.get("name") or item.get("nome", "-")
-            detalhes = item.get("machine_name") or item.get("model") or item.get("category") or "-"
+            detalhes = item.get("machine_name") or item.get("model") or item.get("category") or item.get("tipo") or "-"
             valor = item.get("valor") or item.get("cost") or item.get("quantity") or "-"
             if isinstance(valor, (int, float)):
-                valor = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            table_data.append([str(nome)[:40], str(detalhes)[:30], str(valor)])
-        
-        table = Table(table_data, colWidths=[8*cm, 5*cm, 4*cm])
+                valor = fmt_valor(valor)
+            table_data.append([
+                Paragraph(str(nome)[:50] if len(str(nome)) > 50 else str(nome), value_style),
+                Paragraph(str(detalhes)[:40] if len(str(detalhes)) > 40 else str(detalhes), value_style),
+                Paragraph(str(valor), value_style)
+            ])
+        table = Table(table_data, colWidths=[7*cm, 6*cm, 4*cm])
     
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4A000")),
