@@ -738,7 +738,7 @@ export default function StockPage() {
                 <Label className="form-label">Categoria</Label>
                 <Select
                   value={itemForm.category}
-                  onValueChange={(value) => setItemForm({...itemForm, category: value})}
+                  onValueChange={(value) => setItemForm({...itemForm, category: value, subcategory_id: ""})}
                 >
                   <SelectTrigger className="form-input" data-testid="item-category-select">
                     <SelectValue placeholder="Selecione" />
@@ -766,21 +766,40 @@ export default function StockPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label className="form-label">Unidade</Label>
+                <Label className="form-label">Subcategoria (opcional)</Label>
                 <Select
-                  value={itemForm.unit}
-                  onValueChange={(value) => setItemForm({...itemForm, unit: value})}
+                  value={itemForm.subcategory_id}
+                  onValueChange={(value) => setItemForm({...itemForm, subcategory_id: value === "__none__" ? "" : value})}
+                  disabled={!itemForm.category || filteredSubcategories.length === 0}
                 >
-                  <SelectTrigger className="form-input" data-testid="item-unit-select">
-                    <SelectValue />
+                  <SelectTrigger className="form-input" data-testid="item-subcategory-select">
+                    <SelectValue placeholder={!itemForm.category ? "Selecione categoria" : filteredSubcategories.length === 0 ? "Sem subcategorias" : "Selecione"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {units.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                    <SelectItem value="__none__">Nenhuma</SelectItem>
+                    {filteredSubcategories.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="form-label">Unidade</Label>
+              <Select
+                value={itemForm.unit}
+                onValueChange={(value) => setItemForm({...itemForm, unit: value})}
+              >
+                <SelectTrigger className="form-input" data-testid="item-unit-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {!editingItem && (
