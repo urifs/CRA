@@ -707,12 +707,12 @@ export default function ArmazenamentoPage() {
               <Card
                 key={item.path}
                 className="bg-gray-900 border-gray-800 hover:shadow-lg hover:border-gray-700 cursor-pointer transition-all group"
-                onClick={() => handleNavigate(item.path)}
+                onClick={() => handleFolderClick(item)}
               >
                 <CardContent className="p-4 text-center relative">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
+                      <Button variant="ghost" size="sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white" onClick={(e) => e.stopPropagation()}>
                         <MoreVertical size={16} />
                       </Button>
                     </DropdownMenuTrigger>
@@ -720,12 +720,21 @@ export default function ArmazenamentoPage() {
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
                         <Edit size={14} className="mr-2" /> Renomear
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSetPasswordModal(item); }}>
+                        {item.has_password ? <LockOpen size={14} className="mr-2" /> : <Lock size={14} className="mr-2" />}
+                        {item.has_password ? "Alterar/Remover Senha" : "Definir Senha"}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
                         <Trash2 size={14} className="mr-2" /> Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <FolderOpen size={48} className="mx-auto text-[#D4A000] mb-2" />
+                  <div className="relative inline-block">
+                    <FolderOpen size={48} className="mx-auto text-[#D4A000] mb-2" />
+                    {item.has_password && (
+                      <Lock size={16} className="absolute -bottom-1 -right-1 text-yellow-500 bg-gray-900 rounded-full p-0.5" />
+                    )}
+                  </div>
                   <p className="text-sm font-medium truncate text-white">{item.name}</p>
                   <p className="text-xs text-gray-500">{item.items_count || 0} itens</p>
                 </CardContent>
