@@ -66,11 +66,12 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## Arquivos Criados/Modificados
 - `frontend/src/pages/admin/ContasBancariasPage.jsx` - Nova página
+- `frontend/src/pages/ExportPage.jsx` - Dropdown de seleção de conta para extrato
 - `frontend/src/App.js` - Nova rota adicionada
 - `frontend/src/components/AdminLayout.jsx` - Link no menu
 - `frontend/src/pages/admin/ContasPagarPage.jsx` - Dropdown conta bancária
 - `frontend/src/pages/admin/ContasReceberPage.jsx` - Dropdown conta bancária
-- `backend/server.py` - Modelo e endpoints de contas bancárias
+- `backend/server.py` - Modelo e endpoints de contas bancárias e extrato
 
 ## Credenciais de Teste
 - Email: test@test.com
