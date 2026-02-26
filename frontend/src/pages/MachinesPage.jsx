@@ -235,10 +235,10 @@ export default function MachinesPage() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-4 max-w-lg">
+      {/* Search Bar */}
+      <div className="flex items-center gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <Input
             placeholder="Buscar por nome, placa ou categoria..."
             value={searchTerm}
@@ -247,10 +247,24 @@ export default function MachinesPage() {
             data-testid="machines-search-input"
           />
         </div>
-        <Button className="bg-[#E31A1A] hover:bg-[#c41616] text-white">
-          <Search size={16} className="mr-2" />
-          Buscar
-        </Button>
+        <div className="flex border rounded-lg overflow-hidden">
+          <Button 
+            variant={viewMode === "grid" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setViewMode("grid")}
+            className={viewMode === "grid" ? "bg-[#E31A1A] hover:bg-red-700" : ""}
+          >
+            <LayoutGrid size={18} />
+          </Button>
+          <Button 
+            variant={viewMode === "list" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setViewMode("list")}
+            className={viewMode === "list" ? "bg-[#E31A1A] hover:bg-red-700" : ""}
+          >
+            <List size={18} />
+          </Button>
+        </div>
       </div>
 
       {/* Machines Grid */}
