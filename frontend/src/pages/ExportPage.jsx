@@ -591,7 +591,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                       </div>
                         
                         {/* Área de filtros expandíveis */}
-                        {hasFilter && filterData?.expanded && (
+                        {hasFilter && filterData?.expanded && sub.id !== 'extrato_bancario' && (
                           <div className="bg-blue-50 border-t border-blue-100 px-4 py-3 pl-20">
                             <p className="text-xs text-blue-700 font-medium mb-2">
                               Selecione itens específicos para exportar (deixe vazio para exportar todos):
@@ -624,6 +624,58 @@ export default function ExportPage({ module = "gerenciamento" }) {
                               </div>
                             ) : (
                               <p className="text-sm text-gray-500">Nenhum item cadastrado</p>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Seleção específica para Extrato Bancário */}
+                        {sub.id === 'extrato_bancario' && isSubSelected && (
+                          <div className="bg-amber-50 border-t border-amber-200 px-4 py-3 pl-20">
+                            <p className="text-xs text-amber-700 font-medium mb-2">
+                              Selecione a conta bancária para exportar o extrato:
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <Select
+                                value={selectedContaBancaria || ""}
+                                onValueChange={(value) => setSelectedContaBancaria(value)}
+                              >
+                                <SelectTrigger className="w-[300px] bg-white" data-testid="select-conta-extrato">
+                                  <SelectValue placeholder="Selecione uma conta bancária" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {contasBancarias.length > 0 ? (
+                                    contasBancarias.map((conta) => (
+                                      <SelectItem key={conta.id} value={conta.id}>
+                                        {conta.nome_conta} - {conta.banco}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    <SelectItem value="" disabled>
+                                      Nenhuma conta cadastrada
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                size="sm"
+                                onClick={() => exportExtratoBancario()}
+                                disabled={!selectedContaBancaria || exporting === 'extrato_bancario'}
+                                style={{ backgroundColor: accentColor }}
+                                className="text-white"
+                                data-testid="btn-exportar-extrato"
+                              >
+                                {exporting === 'extrato_bancario' ? (
+                                  <Loader2 size={14} className="animate-spin mr-2" />
+                                ) : (
+                                  <FileText size={14} className="mr-2" />
+                                )}
+                                Exportar Extrato
+                              </Button>
+                            </div>
+                            {contasBancarias.length === 0 && (
+                              <p className="text-xs text-amber-600 mt-2">
+                                Cadastre contas bancárias em Administrativo → Contas Bancárias
+                              </p>
                             )}
                           </div>
                         )}
