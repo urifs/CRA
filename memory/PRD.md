@@ -48,6 +48,22 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - **Aluguéis**: Dados completos com período, valores e horímetro
 - Todas as exportações múltiplas agora incluem linha de TOTAL
 
+#### ✅ Exportar Selecionados - Modelo Novo - COMPLETO
+- Cada item exportado em página separada com PageBreak
+- Informações completas de cada item (Nº, Status, Fornecedor, CNPJ, Documento, Datas, Valores, etc.)
+- Word-wrap adequado para descrições longas
+
+#### ✅ Módulo de Horímetro - COMPLETO (26/02/2026)
+- **Nova funcionalidade**: Registro de horas de utilização das máquinas
+- **Frontend**: Página `HorimetroPage.jsx` com CRUD completo
+- **Backend**: Endpoints `/api/horimetro` para criar, listar, editar e excluir registros
+- **Formulário**: Dropdown com máquinas cadastradas, data, hora inicial, hora final, operador, observações
+- **Cálculo automático**: Horas trabalhadas calculadas automaticamente
+- **Estatísticas**: Total de horas, registros hoje, média por registro
+- **Integração**: Registros aparecem no card de detalhes da máquina
+- **Menu**: Link "Horímetro" adicionado ao menu lateral do Gerenciamento
+- **Atualização automática**: Horímetro atual da máquina é atualizado ao criar registro
+
 ### Sessão Anterior (26/02/2026) - Parte 6
 
 #### ✅ Exportação de Extrato Bancário - COMPLETO
