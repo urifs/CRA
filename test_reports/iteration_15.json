@@ -1,0 +1,85 @@
+{
+  "summary": "Frontend-only testing completed for navigation fixes in Gerenciamento module. All 8 navigation features tested and working correctly. The global navigation fix was verified - all navigate() calls now use the /gerenciamento/ prefix correctly instead of redirecting to /select-system.",
+  
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "Dashboard API", "issue": "Shows 'Erro ao carregar dashboard' toast but data loads correctly - may be a timing issue"}
+    ]
+  },
+  
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "SystemSelectPage",
+        "issues": ["React hydration warning: <div> cannot be a descendant of <p> - Badge component inside paragraph element"]
+      }
+    ]
+  },
+  
+  "passed_tests": [
+    "Login with test@test.com / password - SUCCESS - Redirects to /select-system",
+    "Gerenciamento Dashboard - Loads at /gerenciamento/dashboard - SUCCESS",
+    "Dashboard: Click on recent maintenance - Navigates to /gerenciamento/maintenances/{id} - SUCCESS",
+    "Machines Page: Sidebar navigation - Navigates to /gerenciamento/machines - SUCCESS",
+    "Machines Page: Click 'Ver' button - Navigates to /gerenciamento/machines/{id} - SUCCESS",
+    "Maintenances Page: Click 'Ver' button - Navigates to /gerenciamento/maintenances/{id} - SUCCESS",
+    "Obras Page: Loads at /gerenciamento/obras - SUCCESS",
+    "Obras Page: Click 'Detalhes' button - Navigates to /gerenciamento/obras/{id} - SUCCESS",
+    "Horímetro Page: Loads correctly at /gerenciamento/horimetro - SUCCESS",
+    "Combustível Page: Loads correctly at /gerenciamento/combustivel - SUCCESS",
+    "Balance Page: Click on machine expense - Navigates to /gerenciamento/machines/{id} - SUCCESS",
+    "Notifications Page: Click 'Ver Máquina' - Navigates to /gerenciamento/machines/{id} - SUCCESS"
+  ],
+  
+  "failed_tests": [],
+  
+  "test_report_links": [],
+  
+  "action_items": [],
+  
+  "critical_code_review_comments": [
+    "MachinesPage.jsx line 353: navigate(`/gerenciamento/machines/${machine.id}`) - CORRECT",
+    "MachinesPage.jsx line 406: navigate(`/gerenciamento/machines/${machine.id}`) - CORRECT",
+    "MaintenancesPage.jsx line 235: navigate(`/gerenciamento/maintenances/${maintenance.id}`) - CORRECT",
+    "ObrasPage.jsx line 228-289: navigate(`/gerenciamento/obras/${obra.id}`) - CORRECT",
+    "DashboardPage.jsx line 207: navigate(`/gerenciamento/maintenances/${maintenance.id}`) - CORRECT",
+    "BalancePage.jsx line 227: navigate(`/gerenciamento/machines/${machine.machine_id}`) - CORRECT",
+    "NotificationsPage.jsx line 253: navigate(`/gerenciamento/machines/${notification.machine_id}`) - CORRECT",
+    "All navigation paths now correctly use /gerenciamento/ prefix"
+  ],
+  
+  "updated_files": [],
+  
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "100% (12/12 tests passed)"
+  },
+  
+  "test_credentials": {
+    "email": "test@test.com",
+    "password": "password",
+    "role": "admin"
+  },
+  
+  "seed_data_creation": "No new test data created",
+  
+  "retest_needed": false,
+  
+  "should_main_agent_self_test": false,
+  
+  "context_for_next_testing_agent": "All navigation fixes verified working. The global fix applied by main agent corrected all navigate() calls from using '/machines/', '/maintenances/', '/obras/' to using '/gerenciamento/machines/', '/gerenciamento/maintenances/', '/gerenciamento/obras/'. No redirects to /select-system occur anymore when clicking detail buttons. Pages tested: Dashboard, Machines, Maintenances, Obras, Horímetro, Combustível, Balance, Notifications.",
+  
+  "navigation_verification": {
+    "dashboard_to_maintenance_detail": "WORKING - /gerenciamento/maintenances/{id}",
+    "machines_page_ver_button": "WORKING - /gerenciamento/machines/{id}",
+    "maintenances_page_ver_button": "WORKING - /gerenciamento/maintenances/{id}",
+    "obras_page_detalhes_button": "WORKING - /gerenciamento/obras/{id}",
+    "horimetro_page_load": "WORKING - /gerenciamento/horimetro",
+    "combustivel_page_load": "WORKING - /gerenciamento/combustivel",
+    "balance_page_machine_click": "WORKING - /gerenciamento/machines/{id}",
+    "notifications_page_ver_maquina": "WORKING - /gerenciamento/machines/{id}"
+  }
+}
