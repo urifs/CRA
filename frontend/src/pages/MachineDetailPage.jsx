@@ -84,6 +84,7 @@ export default function MachineDetailPage() {
   const preventiveCount = maintenances.filter(m => m.maintenance_type === "preventiva").length;
   const correctiveCount = maintenances.filter(m => m.maintenance_type === "corretiva").length;
   const totalHorasTrabalhadas = horimetros.reduce((sum, h) => sum + (h.horas_trabalhadas || 0), 0);
+  const totalLitrosConsumidos = combustiveis.reduce((sum, c) => sum + (c.litros_consumidos || 0), 0);
 
   if (loading) {
     return (
