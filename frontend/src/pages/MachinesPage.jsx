@@ -82,7 +82,7 @@ export default function MachinesPage() {
         axios.get(`${API}/categories`, { headers }),
         axios.get(`${API}/fleets`, { headers }),
         axios.get(`${API}/subfleets`, { headers }),
-        axios.get(`${API}/cadastros`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/cadastros`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API}/subcategories`, { headers })
       ]);
       setMachines(machinesRes.data);
