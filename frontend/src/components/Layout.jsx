@@ -18,7 +18,8 @@ import {
   MoreHorizontal,
   ArrowLeft,
   HardHat,
-  FileDown
+  FileDown,
+  FolderTree
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatbotWidget from "@/components/ChatbotWidget";
