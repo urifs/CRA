@@ -56,7 +56,7 @@ const ICONS = {
 const EXPANDABLE_SUBCATEGORIES = [
   'contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
   'contas_receber', 'contas_receber_pendente', 'contas_receber_recebidas', 'contas_receber_vencidas',
-  'machines', 'maintenances', 'stock_items', 'obras', 'alugueis',
+  'machines', 'maintenances', 'stock_items', 'obras', 'alugueis', 'imoveis', 'imoveis_ativo', 'imoveis_pendente',
   'plano_contas', 'centros_custo', 'cadastros', 'contas_bancarias', 'formas_pagamento',
   'fleets', 'extrato_bancario'
 ];
