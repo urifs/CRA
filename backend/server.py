@@ -1186,12 +1186,18 @@ async def get_machines(obra_id: Optional[str] = None, fleet_id: Optional[str] = 
     cadastros = await db.cadastros.find({}, {"_id": 0}).to_list(1000)
     operator_map = {c["id"]: c.get("nome_razao", "") for c in cadastros}
     
+    # Get all subcategories
+    subcategories = await db.subcategories.find({}, {"_id": 0}).to_list(500)
+    subcategory_map = {s["id"]: s["name"] for s in subcategories}
+    
     return [MachineResponse(
         id=m["id"],
         name=m["name"],
         plate=m.get("plate", ""),
         category_id=m["category_id"],
         category_name=category_map.get(m["category_id"], ""),
+        subcategory_id=m.get("subcategory_id"),
+        subcategory_name=subcategory_map.get(m.get("subcategory_id", ""), ""),
         brand=m.get("brand", ""),
         model=m.get("model", ""),
         year=m.get("year"),
