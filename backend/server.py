@@ -2087,6 +2087,71 @@ async def delete_stock_category(category_id: str, current_user: dict = Depends(g
     
     return {"message": "Categoria removida com sucesso"}
 
+# Stock Subcategories
+@api_router.post("/stock/subcategories", response_model=StockSubcategoryResponse)
+async def create_stock_subcategory(subcategory: StockSubcategoryCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new stock subcategory"""
+    # Verify category exists
+    category = await db.stock_categories.find_one({"id": subcategory.category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Categoria de estoque não encontrada")
+    
+    subcategory_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    doc = {
+        "id": subcategory_id,
+        "name": subcategory.name,
+        "category_id": subcategory.category_id,
+        "created_at": now
+    }
+    
+    await db.stock_subcategories.insert_one(doc)
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="subcategoria de estoque",
+        entity_id=subcategory_id,
+        entity_name=subcategory.name
+    )
+    
+    return StockSubcategoryResponse(**doc, category_name=category["name"])
+
+@api_router.get("/stock/subcategories", response_model=List[StockSubcategoryResponse])
+async def list_stock_subcategories(category_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """List all stock subcategories, optionally filtered by category"""
+    query = {"category_id": category_id} if category_id else {}
+    subcategories = await db.stock_subcategories.find(query, {"_id": 0}).to_list(500)
+    
+    # Get category names
+    categories = await db.stock_categories.find({}, {"_id": 0}).to_list(100)
+    category_map = {c["id"]: c["name"] for c in categories}
+    
+    return [StockSubcategoryResponse(**s, category_name=category_map.get(s["category_id"], "")) for s in subcategories]
+
+@api_router.delete("/stock/subcategories/{subcategory_id}")
+async def delete_stock_subcategory(subcategory_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a stock subcategory"""
+    subcategory = await db.stock_subcategories.find_one({"id": subcategory_id}, {"_id": 0})
+    if not subcategory:
+        raise HTTPException(status_code=404, detail="Subcategoria não encontrada")
+    
+    # Remove subcategory from items
+    await db.stock_items.update_many({"subcategory_id": subcategory_id}, {"$set": {"subcategory_id": None}})
+    
+    await db.stock_subcategories.delete_one({"id": subcategory_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="subcategoria de estoque",
+        entity_id=subcategory_id,
+        entity_name=subcategory["name"]
+    )
+    
+    return {"message": "Subcategoria removida com sucesso"}
+
 # Stock Items
 @api_router.post("/stock/items", response_model=StockItemResponse)
 async def create_stock_item(item: StockItemCreate, current_user: dict = Depends(get_current_user)):
