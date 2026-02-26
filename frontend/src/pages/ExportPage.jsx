@@ -817,67 +817,148 @@ export default function ExportPage({ module = "gerenciamento" }) {
                         {/* Lista de itens individuais expandida */}
                         {isSubExpanded && (
                           <div className="bg-purple-50 border-t border-purple-100 px-4 py-3 pl-20">
-                            <p className="text-xs text-purple-700 font-medium mb-3">
-                              Itens individuais - clique para exportar apenas um:
-                            </p>
+                            {/* Header com ações em lote */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <Checkbox 
+                                  checked={items.length > 0 && (selectedIndividualItems[sub.id] || []).length === items.length}
+                                  onCheckedChange={() => toggleAllIndividualItems(sub.id)}
+                                  className="shrink-0"
+                                />
+                                <p className="text-xs text-purple-700 font-medium">
+                                  Itens individuais ({(selectedIndividualItems[sub.id] || []).length} selecionados)
+                                </p>
+                              </div>
+                              {(selectedIndividualItems[sub.id] || []).length > 0 && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => exportSelectedIndividualItems(sub.id)}
+                                  disabled={exporting === `multi-${sub.id}`}
+                                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                                >
+                                  {exporting === `multi-${sub.id}` ? (
+                                    <Loader2 size={14} className="animate-spin mr-1" />
+                                  ) : (
+                                    <Download size={14} className="mr-1" />
+                                  )}
+                                  Exportar Selecionados
+                                </Button>
+                              )}
+                            </div>
+                            
                             {isLoadingItems ? (
                               <div className="flex items-center gap-2 text-purple-600">
                                 <Loader2 size={14} className="animate-spin" />
                                 <span className="text-sm">Carregando itens...</span>
                               </div>
                             ) : items.length > 0 ? (
-                              <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {items.map(item => (
-                                  <div
-                                    key={item.id}
-                                    className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-purple-200 hover:border-purple-400 transition-colors"
-                                  >
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-gray-900 truncate">
-                                        {item.name || "Sem descrição"}
-                                      </p>
-                                      {/* Informações extras dependendo do tipo */}
-                                      <div className="flex gap-3 text-xs text-gray-500">
-                                        {item.valor !== undefined && (
-                                          <span>R$ {Number(item.valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                              <div className="space-y-2 max-h-80 overflow-y-auto">
+                                {items.map(item => {
+                                  const isItemSelected = (selectedIndividualItems[sub.id] || []).includes(item.id);
+                                  const supportsReceipt = RECEIPT_CATEGORIES.includes(sub.id);
+                                  
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className={`flex items-center gap-3 bg-white rounded-lg px-3 py-2 border transition-colors ${
+                                        isItemSelected ? 'border-purple-500 bg-purple-50' : 'border-purple-200 hover:border-purple-400'
+                                      }`}
+                                    >
+                                      <Checkbox 
+                                        checked={isItemSelected}
+                                        onCheckedChange={() => toggleIndividualItem(sub.id, item.id)}
+                                        className="shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900" title={item.name}>
+                                          {item.name || "Sem descrição"}
+                                        </p>
+                                        {/* Informações extras dependendo do tipo */}
+                                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                                          {item.valor !== undefined && (
+                                            <span className="font-medium text-green-600">R$ {Number(item.valor || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                          )}
+                                          {item.data_vencimento && (
+                                            <span>Venc: {item.data_vencimento}</span>
+                                          )}
+                                          {item.fornecedor_nome && (
+                                            <span title={item.fornecedor_nome}>{item.fornecedor_nome}</span>
+                                          )}
+                                          {item.cliente_nome && (
+                                            <span title={item.cliente_nome}>{item.cliente_nome}</span>
+                                          )}
+                                          {item.model && (
+                                            <span>{item.model}</span>
+                                          )}
+                                          {item.plate && (
+                                            <span>{item.plate}</span>
+                                          )}
+                                          {item.banco && (
+                                            <span>{item.banco}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {/* Botão Recibo - apenas para categorias que suportam */}
+                                        {supportsReceipt && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => exportRecibo(sub.id, item.id, item.name)}
+                                            disabled={exporting === `recibo-${item.id}`}
+                                            className="text-green-600 border-green-300 hover:bg-green-50"
+                                            title="Gerar Recibo"
+                                          >
+                                            {exporting === `recibo-${item.id}` ? (
+                                              <Loader2 size={14} className="animate-spin" />
+                                            ) : (
+                                              <Receipt size={14} />
+                                            )}
+                                          </Button>
                                         )}
-                                        {item.data_vencimento && (
-                                          <span>Venc: {item.data_vencimento}</span>
+                                        {/* Botão Duplicata/Recibo Fatura - apenas para categorias que suportam */}
+                                        {supportsReceipt && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => exportDuplicata(sub.id, item.id, item.name)}
+                                            disabled={exporting === `duplicata-${item.id}`}
+                                            className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                                            title="Gerar Duplicata/Recibo Fatura"
+                                          >
+                                            {exporting === `duplicata-${item.id}` ? (
+                                              <Loader2 size={14} className="animate-spin" />
+                                            ) : (
+                                              <FileCheck size={14} />
+                                            )}
+                                          </Button>
                                         )}
-                                        {item.fornecedor_nome && (
-                                          <span>{item.fornecedor_nome}</span>
-                                        )}
-                                        {item.cliente_nome && (
-                                          <span>{item.cliente_nome}</span>
-                                        )}
-                                        {item.model && (
-                                          <span>{item.model}</span>
-                                        )}
-                                        {item.plate && (
-                                          <span>{item.plate}</span>
-                                        )}
-                                        {item.banco && (
-                                          <span>{item.banco}</span>
-                                        )}
+                                        {/* Botão PDF */}
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => exportIndividualItem(sub.id, item.id, item.name)}
+                                          disabled={exporting === `individual-${item.id}`}
+                                          className="text-purple-600 border-purple-300 hover:bg-purple-100"
+                                          data-testid={`export-individual-${item.id}`}
+                                          title="Exportar PDF"
+                                        >
+                                          {exporting === `individual-${item.id}` ? (
+                                            <Loader2 size={14} className="animate-spin" />
+                                          ) : (
+                                            <FileText size={14} />
+                                          )}
+                                        </Button>
                                       </div>
                                     </div>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => exportIndividualItem(sub.id, item.id, item.name)}
-                                      disabled={exporting === `individual-${item.id}`}
-                                      className="ml-2 text-purple-600 border-purple-300 hover:bg-purple-100"
-                                      data-testid={`export-individual-${item.id}`}
-                                    >
-                                      {exporting === `individual-${item.id}` ? (
-                                        <Loader2 size={14} className="animate-spin" />
-                                      ) : (
-                                        <>
-                                          <FileText size={14} className="mr-1" />
-                                          PDF
-                                        </>
-                                      )}
-                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">Nenhum item cadastrado nesta categoria</p>
+                            )}
+                          </div>
+                        )}
                                   </div>
                                 ))}
                               </div>
