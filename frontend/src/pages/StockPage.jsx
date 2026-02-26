@@ -422,8 +422,8 @@ export default function StockPage() {
 
         {/* Items Tab */}
         <TabsContent value="items" className="space-y-4">
-          {/* Search */}
-          <div className="flex gap-4">
+          {/* Search and View Toggle */}
+          <div className="flex gap-4 items-center">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <Input
@@ -446,11 +446,90 @@ export default function StockPage() {
               <Filter size={16} className="mr-2" />
               Estoque Baixo
             </Button>
+            <div className="flex border rounded-lg overflow-hidden">
+              <Button 
+                variant={viewMode === "list" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setViewMode("list")}
+                className={viewMode === "list" ? "bg-[#E31A1A] hover:bg-red-700" : ""}
+                data-testid="stock-view-list"
+              >
+                <List size={18} />
+              </Button>
+              <Button 
+                variant={viewMode === "grid" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setViewMode("grid")}
+                className={viewMode === "grid" ? "bg-[#E31A1A] hover:bg-red-700" : ""}
+                data-testid="stock-view-grid"
+              >
+                <LayoutGrid size={18} />
+              </Button>
+            </div>
           </div>
 
-          {/* Items Grid */}
+          {/* Items List/Grid */}
           {filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            viewMode === "list" ? (
+              /* Lista (Tabela) */
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Item</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Código</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Categoria</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Quantidade</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Mínimo</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Preço Unit.</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Local</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredItems.map((item) => (
+                      <tr key={item.id} className={`hover:bg-gray-50 ${item.is_low_stock ? "bg-orange-50" : ""}`} data-testid={`stock-item-row-${item.id}`}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Package className={`${item.is_low_stock ? "text-orange-500" : "text-gray-400"}`} size={18} />
+                            <span className="font-medium">{item.name}</span>
+                            {item.is_low_stock && (
+                              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Baixo</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 font-mono text-sm">{item.code || "-"}</td>
+                        <td className="px-4 py-3 text-gray-600">{item.category || "-"}</td>
+                        <td className={`px-4 py-3 text-right font-bold ${item.is_low_stock ? "text-orange-600" : "text-gray-900"}`}>
+                          {item.quantity} {item.unit}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">{item.min_quantity} {item.unit}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{item.unit_price > 0 ? formatCurrency(item.unit_price) : "-"}</td>
+                        <td className="px-4 py-3 text-gray-600">{item.location || "-"}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-center gap-1">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-600 hover:bg-green-50" onClick={() => openMovementDialog(item, "entrada")} title="Entrada">
+                              <ArrowUpCircle size={16} />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600 hover:bg-red-50" onClick={() => openMovementDialog(item, "saida")} title="Saída">
+                              <ArrowDownCircle size={16} />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEditDialog(item)} title="Editar">
+                              <Edit size={16} />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600 hover:bg-red-50" onClick={() => setDeleteId(item.id)} title="Excluir">
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Grid de Cards */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredItems.map((item) => (
                 <Card 
                   key={item.id} 
