@@ -483,7 +483,7 @@ export default function MachineDetailPage() {
               <p className="text-gray-500">Nenhuma manutenção registrada para esta máquina</p>
               <Button
                 className="mt-4 bg-[#E31A1A] hover:bg-[#E31A1A]"
-                onClick={() => navigate(`/maintenances/new?machine=${machine.id}`)}
+                onClick={() => navigate(`/gerenciamento/maintenances/new?machine=${machine.id}`)}
               >
                 <Plus size={18} className="mr-2" />
                 Registrar Manutenção
