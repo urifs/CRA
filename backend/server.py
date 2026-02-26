@@ -7219,6 +7219,88 @@ async def download_storage_file(
         media_type=content_type
     )
 
+@api_router.get("/storage/preview-office")
+async def preview_office_file(
+    path: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Preview Word/Excel files as HTML"""
+    current_user = await get_current_user(credentials)
+    
+    # Normalize path
+    if not path.startswith("/"):
+        path = "/" + path
+    
+    abs_path = STORAGE_DIR / path.lstrip("/")
+    
+    if not abs_path.exists() or not abs_path.is_file():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    ext = abs_path.suffix.lower()
+    
+    try:
+        if ext in ['.doc', '.docx']:
+            # Preview Word document
+            from docx import Document
+            doc = Document(str(abs_path))
+            
+            html_content = '<div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">'
+            for para in doc.paragraphs:
+                style = para.style.name if para.style else ''
+                if 'Heading 1' in style:
+                    html_content += f'<h1 style="color: #333; border-bottom: 2px solid #E31A1A; padding-bottom: 10px;">{para.text}</h1>'
+                elif 'Heading 2' in style:
+                    html_content += f'<h2 style="color: #444;">{para.text}</h2>'
+                elif 'Heading 3' in style:
+                    html_content += f'<h3 style="color: #555;">{para.text}</h3>'
+                else:
+                    html_content += f'<p style="line-height: 1.6; margin: 10px 0;">{para.text}</p>'
+            
+            # Add tables
+            for table in doc.tables:
+                html_content += '<table style="width: 100%; border-collapse: collapse; margin: 15px 0;">'
+                for row in table.rows:
+                    html_content += '<tr>'
+                    for cell in row.cells:
+                        html_content += f'<td style="border: 1px solid #ddd; padding: 8px;">{cell.text}</td>'
+                    html_content += '</tr>'
+                html_content += '</table>'
+            
+            html_content += '</div>'
+            return {"html": html_content, "type": "word"}
+            
+        elif ext in ['.xls', '.xlsx']:
+            # Preview Excel file
+            import openpyxl
+            wb = openpyxl.load_workbook(str(abs_path), data_only=True)
+            
+            html_content = '<div style="font-family: Arial, sans-serif; padding: 20px;">'
+            
+            for sheet_name in wb.sheetnames:
+                sheet = wb[sheet_name]
+                html_content += f'<h3 style="color: #E31A1A; margin-top: 20px;">Planilha: {sheet_name}</h3>'
+                html_content += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">'
+                
+                for row in sheet.iter_rows(max_row=100, max_col=20):  # Limit to prevent huge tables
+                    html_content += '<tr>'
+                    for cell in row:
+                        value = cell.value if cell.value is not None else ''
+                        style = 'border: 1px solid #ddd; padding: 8px; '
+                        if cell.row == 1:
+                            style += 'background: #f5f5f5; font-weight: bold;'
+                        html_content += f'<td style="{style}">{value}</td>'
+                    html_content += '</tr>'
+                
+                html_content += '</table>'
+            
+            html_content += '</div>'
+            return {"html": html_content, "type": "excel"}
+        else:
+            raise HTTPException(status_code=400, detail="Tipo de arquivo não suportado para preview")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar arquivo: {str(e)}")
+
 # Trash directory for storage system
 STORAGE_TRASH_DIR = ROOT_DIR / "storage_trash"
 STORAGE_TRASH_DIR.mkdir(exist_ok=True)
