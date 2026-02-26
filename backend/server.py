@@ -6084,7 +6084,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
     try:
         logo_path = "/app/frontend/public/logo.png"
         if os.path.exists(logo_path):
-            logo = RLImage(logo_path, width=4*cm, height=1.5*cm)
+            logo = RLImage(logo_path, width=3*cm, height=3*cm, kind='proportional')
             elements.append(logo)
             elements.append(Spacer(1, 10))
     except Exception as e:
