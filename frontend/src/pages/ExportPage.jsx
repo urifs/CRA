@@ -82,7 +82,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
   // Categorias que suportam recibo/duplicata
   const RECEIPT_CATEGORIES = ['contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
     'contas_receber', 'contas_receber_pendente', 'contas_receber_recebidas', 'contas_receber_vencidas',
-    'alugueis'];
+    'alugueis', 'imoveis', 'imoveis_ativo', 'imoveis_pendente'];
 
   // State para extrato bancário
   const [selectedContaBancaria, setSelectedContaBancaria] = useState(null);
