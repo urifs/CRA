@@ -52,6 +52,7 @@ export default function MachinesPage() {
     name: "",
     plate: "",
     category_id: "",
+    subcategory_id: "",
     brand: "",
     model: "",
     year: "",
@@ -60,6 +61,8 @@ export default function MachinesPage() {
     subfleet_id: "",
     operator_id: ""
   });
+
+  const [subcategories, setSubcategories] = useState([]);
 
   useEffect(() => {
     fetchData();
