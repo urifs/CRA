@@ -6056,14 +6056,6 @@ EXPORT_CATEGORIES_V2 = {
                 {"id": "users", "label": "Lista de Usuários", "description": "Todos os usuários"},
             ]
         },
-        {
-            "id": "auditoria_admin",
-            "label": "Auditoria",
-            "icon": "clipboard",
-            "subcategories": [
-                {"id": "audit_logs", "label": "Logs de Auditoria", "description": "Atividades registradas"},
-            ]
-        },
     ]
 }
 
