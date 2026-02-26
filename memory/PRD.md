@@ -85,15 +85,30 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 #### ✅ Anexar Arquivos no Chatbot - COMPLETO (26/02/2026)
 - Botão de anexar arquivos (📎) adicionado ao ChatbotWidget
-- Suporte a imagens, PDFs, documentos (.doc, .docx, .xls, .xlsx, .txt)
+- Suporte a imagens, PDFs, documentos (.doc, .docx, .xls, .xlsx, .txt, .csv, .json, .xml)
 - Limite de 10MB por arquivo
 - Preview dos arquivos anexados antes de enviar
 - Endpoint `/api/chatbot/ask-with-files` para processar arquivos
-- IA analisa e comenta sobre os arquivos anexados
+- **Extração de conteúdo implementada**:
+  - PDFs: extrai texto de até 10 páginas usando PyPDF2
+  - Word (.docx): extrai texto dos parágrafos
+  - Excel (.xlsx): extrai dados de até 3 abas e 50 linhas
+  - CSV/TXT/JSON/XML: extrai conteúdo completo de texto
+  - Imagens: identifica formato, dimensões e modo de cor
+- IA analisa conteúdo extraído e relaciona com dados da plataforma
 
-#### ✅ Correção de Navegação de Máquinas - COMPLETO (26/02/2026)
-- Corrigidos links de navegação em `MachinesPage.jsx`
-- Botões "Ver" agora direcionam corretamente para `/gerenciamento/machines/{id}`
+#### ✅ Correção Global de Navegação - COMPLETO (26/02/2026)
+- Corrigidos TODOS os links de navegação no módulo de Gerenciamento
+- Arquivos corrigidos:
+  - `MachinesPage.jsx` - botão "Ver" → `/gerenciamento/machines/{id}`
+  - `MaintenancesPage.jsx` - botão "Ver" → `/gerenciamento/maintenances/{id}`
+  - `ObrasPage.jsx` - botão "Detalhes" → `/gerenciamento/obras/{id}`
+  - `DashboardPage.jsx` - manutenção recente → `/gerenciamento/maintenances/{id}`
+  - `BalancePage.jsx` - máquina → `/gerenciamento/machines/{id}`
+  - `NotificationsPage.jsx` - ver máquina → `/gerenciamento/machines/{id}`
+  - `MaintenanceDetailPage.jsx` - máquina → `/gerenciamento/machines/{id}`
+  - `NewMaintenancePage.jsx` - após criar → `/gerenciamento/maintenances/{id}`
+- 100% dos testes de navegação passaram (12/12)
 
 ### Sessão Anterior (26/02/2026) - Parte 6
 
