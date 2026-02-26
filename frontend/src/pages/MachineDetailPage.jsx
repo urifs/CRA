@@ -159,6 +159,20 @@ export default function MachineDetailPage() {
             </div>
           </div>
 
+          {/* Chassi/Número de Série */}
+          {machine.identificador_numero && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                  {machine.identificador_tipo === "chassi" ? "Chassi" : "Número de Série"}
+                </p>
+              </div>
+              <p className="font-mono text-lg text-black mt-1 bg-gray-50 px-3 py-2 rounded-lg inline-block">
+                {machine.identificador_numero}
+              </p>
+            </div>
+          )}
+
           {machine.notes && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Observações</p>
