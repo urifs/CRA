@@ -36,6 +36,18 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - Testado com descrições longas (300+ caracteres) - funcionando corretamente
 - Funções corrigidas: `export_recibo`, `export_duplicata`
 
+#### ✅ Exportação Completa de Todas as Categorias - COMPLETO
+- **Problema**: Exportar Selecionados não funcionava para algumas categorias e Plano de Contas não mostrava contas vinculadas
+- **Solução**: Refatoração completa das funções de exportação no `server.py`
+- **Exportação Múltipla**: Adicionadas categorias faltantes: `plano_contas`, `centros_custo`, `cadastros`, `contas_bancarias`, `formas_pagamento`, `imoveis`, `fleets`
+- **Plano de Contas**: Agora mostra tabela de contas a pagar/receber vinculadas com valores e totais, mais resumo financeiro
+- **Centros de Custo**: Mostra totais de contas vinculadas
+- **Cadastros**: Exportação completa com todos os campos (razão social, CNPJ, telefone, email, endereço)
+- **Contas Bancárias**: Inclui saldo e dados completos
+- **Imóveis**: Endereço completo, valores de aluguel, condomínio, IPTU
+- **Aluguéis**: Dados completos com período, valores e horímetro
+- Todas as exportações múltiplas agora incluem linha de TOTAL
+
 ### Sessão Anterior (26/02/2026) - Parte 6
 
 #### ✅ Exportação de Extrato Bancário - COMPLETO
