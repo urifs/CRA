@@ -6443,7 +6443,7 @@ async def create_folder(
         
         # Se tiver senha, salvar no MongoDB
         if data.password:
-            password_hash = pwd_context.hash(data.password)
+            password_hash = hash_password(data.password)
             await db.folder_passwords.update_one(
                 {"path": folder_path},
                 {"$set": {
@@ -6489,7 +6489,7 @@ async def check_folder_password(
         return {"valid": True, "message": "Pasta não possui senha"}
     
     # Verificar senha
-    if pwd_context.verify(data.password, folder_record["password_hash"]):
+    if verify_password(data.password, folder_record["password_hash"]):
         return {"valid": True, "message": "Senha correta"}
     else:
         raise HTTPException(status_code=401, detail="Senha incorreta")
@@ -6512,7 +6512,7 @@ async def set_folder_password(
     
     if data.password:
         # Definir nova senha
-        password_hash = pwd_context.hash(data.password)
+        password_hash = hash_password(data.password)
         await db.folder_passwords.update_one(
             {"path": path},
             {"$set": {
