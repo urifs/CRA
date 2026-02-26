@@ -111,6 +111,13 @@ export default function ContasReceberPage() {
     } catch (error) { console.error(error); }
   };
 
+  const fetchFrotas = async () => {
+    try {
+      const response = await axios.get(`${API}/fleets`);
+      setFrotas(response.data);
+    } catch (error) { console.error(error); }
+  };
+
   const handleNovoCadastro = async (e) => {
     e.preventDefault();
     if (!novoCadastroData.nome_razao.trim()) {
