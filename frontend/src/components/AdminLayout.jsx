@@ -75,6 +75,7 @@ export const AdminLayout = () => {
     { path: "/administrativo/plano-contas", icon: DollarSign, label: "Plano de Contas" },
     { path: "/administrativo/centro-custo", icon: Building2, label: "Centro de Custo" },
     { path: "/administrativo/formas-pagamento", icon: CreditCard, label: "Formas Pagamento" },
+    { path: "/administrativo/contas-bancarias", icon: Building2, label: "Contas Bancárias" },
     { path: "/administrativo/cadastros", icon: Users, label: "Cadastros" },
     { path: "/administrativo/produtos", icon: Package, label: "Produtos" },
     { path: "/administrativo/ordens-servico", icon: ClipboardList, label: "Ordens de Serviço" },
