@@ -526,6 +526,23 @@ export default function ContasReceberPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <label className="form-label">Conta Bancária</label>
+                <Select value={formData.conta_bancaria_id || "none"} onValueChange={(value) => {
+                  if (value === "none") {
+                    setFormData({...formData, conta_bancaria_id: "", conta_bancaria_nome: ""});
+                  } else {
+                    const conta = contasBancarias.find(c => c.id === value);
+                    setFormData({...formData, conta_bancaria_id: value, conta_bancaria_nome: conta?.nome || ""});
+                  }
+                }}>
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione uma conta..." /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {contasBancarias.map(c => <SelectItem key={c.id} value={c.id}>{c.nome} - {c.banco}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
               <label className="form-label">Observações</label>
