@@ -7236,15 +7236,16 @@ async def export_duplicata(category: str, item_id: str, empresa: str = "locadora
     except Exception as e:
         logging.warning(f"Logo não carregado: {e}")
     
-    # Cabeçalho
-    elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', fontSize=12, alignment=1)))
-    elements.append(Paragraph(f"CNPJ: {empresa_cnpj} | IE: {empresa_ie}", ParagraphStyle('Sub', fontSize=8, alignment=1, textColor=colors.gray)))
-    elements.append(Paragraph(empresa_endereco, ParagraphStyle('Sub', fontSize=8, alignment=1, textColor=colors.gray)))
-    elements.append(Paragraph(f"Tel: {empresa_telefone}", ParagraphStyle('Sub', fontSize=8, alignment=1, textColor=colors.gray)))
-    elements.append(Spacer(1, 0.3*cm))
+    # Cabeçalho com espaçamento
+    elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', fontSize=14, alignment=1, spaceAfter=6)))
+    elements.append(Spacer(1, 0.15*cm))
+    elements.append(Paragraph(f"CNPJ: {empresa_cnpj}", ParagraphStyle('Sub', fontSize=9, alignment=1, textColor=colors.gray, spaceBefore=2, spaceAfter=2)))
+    elements.append(Paragraph(empresa_endereco, ParagraphStyle('Sub', fontSize=8, alignment=1, textColor=colors.gray, spaceBefore=2, spaceAfter=2)))
+    elements.append(Paragraph(f"Tel: {empresa_telefone}", ParagraphStyle('Sub', fontSize=9, alignment=1, textColor=colors.gray, spaceBefore=2, spaceAfter=2)))
+    elements.append(Spacer(1, 0.4*cm))
     
     elements.append(Paragraph("DUPLICATA", ParagraphStyle('Title', fontSize=18, alignment=1, spaceAfter=5)))
-    elements.append(Spacer(1, 0.2*cm))
+    elements.append(Spacer(1, 0.3*cm))
     
     # Dados principais
     valor = item.get("valor_final") or item.get("valor") or item.get("valor_aluguel") or 0
