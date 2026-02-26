@@ -1218,7 +1218,7 @@ export default function ArmazenamentoPage() {
               <Label>Selecione o destino:</Label>
               <div className="mt-2 border rounded-lg p-2 bg-gray-50 max-h-60 overflow-y-auto">
                 <button
-                  onClick={() => navigateToFolder("/")}
+                  onClick={() => navigateToDestinationFolder("/")}
                   className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-100 ${moveTargetPath === "/" ? "bg-blue-100 text-blue-700" : ""}`}
                 >
                   <FolderOpen size={18} className="text-yellow-500" />
@@ -1265,7 +1265,7 @@ export default function ArmazenamentoPage() {
               <Label>Selecione o destino:</Label>
               <div className="mt-2 border rounded-lg p-2 bg-gray-50 max-h-60 overflow-y-auto">
                 <button
-                  onClick={() => navigateToFolder("/")}
+                  onClick={() => navigateToDestinationFolder("/")}
                   className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-100 ${moveTargetPath === "/" ? "bg-green-100 text-green-700" : ""}`}
                 >
                   <FolderOpen size={18} className="text-yellow-500" />
