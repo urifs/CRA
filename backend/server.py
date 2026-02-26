@@ -7170,12 +7170,11 @@ async def export_duplicata(category: str, item_id: str, current_user: dict = Dep
     """Gera uma duplicata/recibo fatura em PDF"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
     import io
     
-    # Determinar coleção
     collection_map = {
         "contas_pagar": "contas_pagar", "contas_pagar_pendente": "contas_pagar",
         "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
@@ -7192,137 +7191,150 @@ async def export_duplicata(category: str, item_id: str, current_user: dict = Dep
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
-    # Buscar dados da empresa
     empresa = await db.empresa_config.find_one({}, {"_id": 0}) or {}
     
-    # Criar PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1*cm, leftMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
     styles = getSampleStyleSheet()
-    
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, alignment=1, spaceAfter=10, textColor=colors.HexColor("#333333"))
-    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=9, alignment=1, textColor=colors.gray)
-    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=8, textColor=colors.gray)
-    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=10)
-    small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=8)
     
     elements = []
     
-    # Cabeçalho da empresa (SACADOR/CEDENTE)
+    # Dados da empresa
     empresa_nome = empresa.get("razao_social", "CRA LOCAÇÕES")
     empresa_cnpj = empresa.get("cnpj", "")
     empresa_ie = empresa.get("ie", "")
     empresa_endereco = empresa.get("endereco", "")
     empresa_telefone = empresa.get("telefone", "")
     
-    # Header com logo e dados
-    header_data = [
-        [Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('Nome', parent=styles['Normal'], fontSize=12))],
-        [Paragraph(f"CNPJ: {empresa_cnpj} | IE: {empresa_ie}", small_style)],
-        [Paragraph(f"{empresa_endereco}", small_style)],
-        [Paragraph(f"Tel: {empresa_telefone}", small_style)],
-    ]
-    header_table = Table(header_data, colWidths=[17*cm])
-    header_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-    ]))
-    elements.append(header_table)
+    # Logo
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            logo = RLImage(logo_path, width=2.5*cm, height=2.5*cm, kind='proportional')
+            elements.append(logo)
+    except Exception as e:
+        logging.warning(f"Logo não carregado: {e}")
+    
+    # Cabeçalho
+    elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', fontSize=12, alignment=1)))
+    elements.append(Paragraph(f"CNPJ: {empresa_cnpj} | IE: {empresa_ie}", ParagraphStyle('Sub', fontSize=8, alignment=1, textColor=colors.gray)))
+    elements.append(Paragraph(empresa_endereco, ParagraphStyle('Sub', fontSize=8, alignment=1, textColor=colors.gray)))
+    elements.append(Paragraph(f"Tel: {empresa_telefone}", ParagraphStyle('Sub', fontSize=8, alignment=1, textColor=colors.gray)))
     elements.append(Spacer(1, 0.3*cm))
     
-    # Título DUPLICATA
-    elements.append(Paragraph("DUPLICATA", title_style))
-    elements.append(Spacer(1, 0.3*cm))
+    elements.append(Paragraph("DUPLICATA", ParagraphStyle('Title', fontSize=18, alignment=1, spaceAfter=5)))
+    elements.append(Spacer(1, 0.2*cm))
     
     # Dados principais
-    valor = item.get("valor_final") or item.get("valor", 0)
+    valor = item.get("valor_final") or item.get("valor") or item.get("valor_aluguel") or 0
     valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     pessoa_nome = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
-    pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_cnpj") or "-"
-    pessoa_endereco = item.get("fornecedor_endereco") or item.get("cliente_endereco") or "-"
+    pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_documento") or item.get("cliente_cnpj") or "-"
+    pessoa_endereco = item.get("fornecedor_endereco") or item.get("endereco") or item.get("cliente_endereco") or "-"
+    pessoa_telefone = item.get("fornecedor_telefone") or item.get("cliente_telefone") or "-"
+    cidade = item.get("cidade", "-")
     
-    # Grid de informações principais
-    main_data = [
-        [Paragraph("VALOR", label_style), Paragraph("NÚMERO", label_style), Paragraph("DOCUMENTO", label_style)],
-        [Paragraph(f"<b>{valor_str}</b>", ParagraphStyle('V', fontSize=14)), Paragraph(item_id[:8].upper(), value_style), Paragraph(item_id[:12].upper(), value_style)],
+    label_style = ParagraphStyle('Label', fontSize=7, textColor=colors.gray)
+    value_style = ParagraphStyle('Value', fontSize=9)
+    
+    # Linha 1: Valor, Número, Vencimento
+    row1_data = [
+        [Paragraph("VALOR", label_style), Paragraph("Nº DOCUMENTO", label_style), Paragraph("VENCIMENTO", label_style)],
+        [Paragraph(f"<b>{valor_str}</b>", ParagraphStyle('V', fontSize=14)), 
+         Paragraph(item_id[:12].upper(), value_style), 
+         Paragraph(f"<b>{item.get('data_vencimento', '-')}</b>", ParagraphStyle('Venc', fontSize=11))]
     ]
-    main_table = Table(main_data, colWidths=[5.5*cm, 5.5*cm, 6*cm])
-    main_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+    row1_table = Table(row1_data, colWidths=[6*cm, 6.5*cm, 6.5*cm])
+    row1_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.gray),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
     ]))
-    elements.append(main_table)
-    elements.append(Spacer(1, 0.3*cm))
+    elements.append(row1_table)
     
     # Dados do Sacado
     sacado_data = [
-        [Paragraph("NOME DO SACADO", label_style), Paragraph("ENDEREÇO", label_style)],
-        [Paragraph(pessoa_nome, value_style), Paragraph(pessoa_endereco[:50], value_style)],
-        [Paragraph("MUNICÍPIO", label_style), Paragraph("PRAÇA DE PAGAMENTO", label_style), Paragraph("CPF/CNPJ", label_style)],
-        [Paragraph(item.get("cidade", "-"), value_style), Paragraph(item.get("cidade", "-"), value_style), Paragraph(pessoa_doc, value_style)],
+        [Paragraph("SACADO (PAGADOR)", label_style), "", ""],
+        [Paragraph("Nome:", label_style), Paragraph(pessoa_nome, value_style), ""],
+        [Paragraph("CPF/CNPJ:", label_style), Paragraph(pessoa_doc, value_style), Paragraph(f"Tel: {pessoa_telefone}", value_style)],
+        [Paragraph("Endereço:", label_style), Paragraph(pessoa_endereco, value_style), Paragraph(f"Cidade: {cidade}", value_style)],
     ]
-    sacado_table = Table(sacado_data, colWidths=[8.5*cm, 8.5*cm])
+    sacado_table = Table(sacado_data, colWidths=[3*cm, 9*cm, 7*cm])
     sacado_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.black),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.gray),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
-        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#f0f0f0")),
-        ('SPAN', (0, 0), (0, 0)), ('SPAN', (1, 0), (1, 0)),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
+        ('SPAN', (0, 0), (-1, 0)),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4A000")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
     ]))
     elements.append(sacado_table)
-    elements.append(Spacer(1, 0.3*cm))
     
-    # Valor por extenso e vencimento
+    # Valor por extenso
     extenso_data = [
-        [Paragraph("VALOR POR EXTENSO", label_style), Paragraph("VENCIMENTO", label_style)],
-        [Paragraph(valor_por_extenso(valor), value_style), Paragraph(f"<b>{item.get('data_vencimento', '-')}</b>", ParagraphStyle('Venc', fontSize=12))],
+        [Paragraph("VALOR POR EXTENSO", label_style)],
+        [Paragraph(valor_por_extenso(valor), ParagraphStyle('Ext', fontSize=9))],
     ]
-    extenso_table = Table(extenso_data, colWidths=[13*cm, 4*cm])
+    extenso_table = Table(extenso_data, colWidths=[19*cm])
     extenso_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.black),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.gray),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
     ]))
     elements.append(extenso_table)
-    elements.append(Spacer(1, 0.3*cm))
     
-    # Descrição
+    # Descrição completa
+    descricao = item.get("descricao", "-")
+    plano_contas = item.get("plano_contas_nome", "-")
+    centro_custo = item.get("centro_custo_nome", "-")
+    forma_pag = item.get("forma_pagamento_nome", "-")
+    obs = item.get("observacoes", "")
+    
     desc_data = [
-        [Paragraph("DESCRIÇÃO DO SERVIÇO/PRODUTO", label_style)],
-        [Paragraph(item.get("descricao", "-"), value_style)],
+        [Paragraph("DESCRIÇÃO / REFERÊNCIA", label_style)],
+        [Paragraph(descricao, ParagraphStyle('Desc', fontSize=9))],
+        [Paragraph(f"<b>Plano de Contas:</b> {plano_contas} | <b>Centro de Custo:</b> {centro_custo} | <b>Forma Pagamento:</b> {forma_pag}", ParagraphStyle('Info', fontSize=8))],
     ]
-    desc_table = Table(desc_data, colWidths=[17*cm])
+    if obs:
+        desc_data.append([Paragraph(f"<b>Obs:</b> {obs}", ParagraphStyle('Obs', fontSize=8, textColor=colors.gray))])
+    
+    desc_table = Table(desc_data, colWidths=[19*cm])
     desc_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.black),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f0f0f0")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
+        ('BACKGROUND', (0, 0), (0, 0), colors.HexColor("#f0f0f0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
     ]))
     elements.append(desc_table)
-    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Spacer(1, 0.3*cm))
     
-    # Reconhecimento de dívida
-    elements.append(Paragraph("<b>RECONHEÇO(EMOS) A EXATIDÃO DESTA DUPLICATA DE PRESTAÇÃO DE SERVIÇOS NA IMPORTÂNCIA ACIMA QUE PAGAREI(EMOS) A CRA LOCAÇÕES OU À SUA ORDEM NA PRAÇA E VENCIMENTO INDICADOS.</b>", ParagraphStyle('Reconhece', fontSize=8, alignment=1, leading=10)))
-    elements.append(Spacer(1, 0.5*cm))
+    # Texto de reconhecimento
+    elements.append(Paragraph(
+        "<b>RECONHEÇO(EMOS) A EXATIDÃO DESTA DUPLICATA NA IMPORTÂNCIA ACIMA QUE PAGAREI(EMOS) À " +
+        f"{empresa_nome} OU À SUA ORDEM NA PRAÇA E VENCIMENTO INDICADOS.</b>",
+        ParagraphStyle('Reconhece', fontSize=7, alignment=1, leading=9)
+    ))
+    elements.append(Spacer(1, 0.4*cm))
     
     # Assinaturas
     assin_data = [
         [Paragraph("DATA DO ACEITE", label_style), Paragraph("ASSINATURA DO SACADO", label_style), Paragraph("ASSINATURA DO SACADOR", label_style)],
-        [Paragraph("____/____/________", value_style), Paragraph("_" * 30, value_style), Paragraph("_" * 30, value_style)],
+        [Paragraph("____/____/________", value_style), Paragraph("_" * 25, value_style), Paragraph("_" * 25, value_style)],
     ]
-    assin_table = Table(assin_data, colWidths=[5*cm, 6*cm, 6*cm])
+    assin_table = Table(assin_data, colWidths=[6*cm, 6.5*cm, 6.5*cm])
     assin_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
     ]))
     elements.append(assin_table)
     
