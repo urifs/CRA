@@ -134,12 +134,15 @@ export default function MachinesPage() {
     setEditingMachine(machine);
     setFormData({
       name: machine.name,
-      plate: machine.plate,
+      plate: machine.plate || "",
       category_id: machine.category_id,
       brand: machine.brand || "",
       model: machine.model || "",
       year: machine.year?.toString() || "",
-      notes: machine.notes || ""
+      notes: machine.notes || "",
+      fleet_id: machine.fleet_id || "",
+      subfleet_id: machine.subfleet_id || "",
+      operator_id: machine.operator_id || ""
     });
     setShowDialog(true);
   };
@@ -152,10 +155,18 @@ export default function MachinesPage() {
       brand: "",
       model: "",
       year: "",
-      notes: ""
+      notes: "",
+      fleet_id: "",
+      subfleet_id: "",
+      operator_id: ""
     });
     setEditingMachine(null);
   };
+
+  // Filtrar subfrotas com base na frota selecionada
+  const filteredSubfleets = formData.fleet_id 
+    ? subfleets.filter(s => s.fleet_id === formData.fleet_id)
+    : [];
 
   const filteredMachines = machines.filter(
     (m) =>
