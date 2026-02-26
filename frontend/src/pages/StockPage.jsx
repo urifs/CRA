@@ -623,6 +623,103 @@ export default function StockPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* Categories Tab */}
+        <TabsContent value="categories" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Categories Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tags className="text-[#E31A1A]" size={20} />
+                  Categorias
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <form onSubmit={handleCreateCategory} className="flex gap-2">
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Nova categoria..."
+                    className="form-input flex-1"
+                  />
+                  <Button type="submit" className="bg-[#E31A1A] hover:bg-red-700" disabled={!newCategoryName.trim()}>
+                    <Plus size={18} />
+                  </Button>
+                </form>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {categories.map((cat) => (
+                    <div key={cat.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Tags className="text-gray-400" size={16} />
+                        <span className="font-medium">{cat.name}</span>
+                        <span className="text-xs text-gray-400">
+                          ({subcategories.filter(s => s.category_id === cat.id).length} subcategorias)
+                        </span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteCategoryId(cat.id)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                  {categories.length === 0 && (
+                    <p className="text-gray-400 text-center py-4">Nenhuma categoria</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Subcategories Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ChevronRight className="text-blue-500" size={20} />
+                  Subcategorias
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Select value={newSubcategoryForm.category_id} onValueChange={(v) => setNewSubcategoryForm({...newSubcategoryForm, category_id: v})}>
+                    <SelectTrigger className="w-1/2">
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={newSubcategoryForm.name}
+                    onChange={(e) => setNewSubcategoryForm({...newSubcategoryForm, name: e.target.value})}
+                    placeholder="Nova subcategoria..."
+                    className="flex-1"
+                  />
+                  <Button onClick={handleSubcategorySubmit} className="bg-blue-600 hover:bg-blue-700" disabled={!newSubcategoryForm.name.trim() || !newSubcategoryForm.category_id}>
+                    <Plus size={18} />
+                  </Button>
+                </div>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {subcategories.map((sub) => (
+                    <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <ChevronRight className="text-blue-400" size={16} />
+                        <span className="font-medium">{sub.name}</span>
+                        <span className="text-xs text-gray-400">({sub.category_name})</span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteSubcategoryId(sub.id)}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                  {subcategories.length === 0 && (
+                    <p className="text-gray-400 text-center py-4">Nenhuma subcategoria</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Manage Categories Dialog */}
