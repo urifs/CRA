@@ -65,6 +65,7 @@ export default function StockPage() {
   const [deleteCategoryId, setDeleteCategoryId] = useState(null);
   const [deleteSubcategoryId, setDeleteSubcategoryId] = useState(null);
   const [activeTab, setActiveTab] = useState("items");
+  const [viewMode, setViewMode] = useState("list"); // list como padrão
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubcategoryForm, setNewSubcategoryForm] = useState({ name: "", category_id: "" });
 
