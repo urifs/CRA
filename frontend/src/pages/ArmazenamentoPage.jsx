@@ -802,11 +802,17 @@ export default function ArmazenamentoPage() {
                 </thead>
                 <tbody>
                   {folders.map((item) => (
-                    <tr key={item.path} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer" onClick={() => handleNavigate(item.path)}>
+                    <tr key={item.path} className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer" onClick={() => handleFolderClick(item)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
-                          <FolderOpen size={24} className="text-[#D4A000]" />
+                          <div className="relative">
+                            <FolderOpen size={24} className="text-[#D4A000]" />
+                            {item.has_password && (
+                              <Lock size={10} className="absolute -bottom-0.5 -right-0.5 text-yellow-500 bg-gray-900 rounded-full p-0.5" />
+                            )}
+                          </div>
                           <span className="font-medium text-white">{item.name}</span>
+                          {item.has_password && <Lock size={12} className="text-yellow-500" />}
                         </div>
                       </td>
                       <td className="p-3 text-gray-400 hidden sm:table-cell">{item.items_count || 0} itens</td>
@@ -819,6 +825,10 @@ export default function ArmazenamentoPage() {
                           <DropdownMenuContent>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
                               <Edit size={14} className="mr-2" /> Renomear
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSetPasswordModal(item); }}>
+                              {item.has_password ? <LockOpen size={14} className="mr-2" /> : <Lock size={14} className="mr-2" />}
+                              {item.has_password ? "Alterar/Remover Senha" : "Definir Senha"}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="text-red-600">
                               <Trash2 size={14} className="mr-2" /> Excluir
