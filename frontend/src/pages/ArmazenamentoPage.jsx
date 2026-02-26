@@ -108,7 +108,7 @@ export default function ArmazenamentoPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // Password protection
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+111|  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordFolder, setPasswordFolder] = useState(null);
   const [folderPassword, setFolderPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -117,6 +117,18 @@ export default function ArmazenamentoPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [unlockedFolders, setUnlockedFolders] = useState(new Set()); // Track unlocked folders in session
+
+  // Selection mode
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  
+  // Move/Copy modals
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [moveTargetPath, setMoveTargetPath] = useState("/");
+  const [availableFolders, setAvailableFolders] = useState([]);
+  const [itemsToMove, setItemsToMove] = useState([]);
+  const [itemsToCopy, setItemsToCopy] = useState([]);
 
   const token = localStorage.getItem("token");
 
