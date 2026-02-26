@@ -427,6 +427,35 @@ class HorimetroResponse(BaseModel):
     created_by: str
     created_at: str
 
+# ============ COMBUSTIVEL MODELS ============
+
+class CombustivelCreate(BaseModel):
+    machine_id: str
+    data: str
+    tipo_medicao: str  # 'litros_hora' ou 'litros_km'
+    hora_km_inicial: Optional[float] = None
+    litros_inicial: float
+    litros_final: float
+    litros_consumidos: Optional[float] = None
+    operador: Optional[str] = None
+    observacoes: Optional[str] = None
+
+class CombustivelResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    machine_id: str
+    machine_name: Optional[str] = None
+    data: str
+    tipo_medicao: str
+    hora_km_inicial: Optional[float] = None
+    litros_inicial: float
+    litros_final: float
+    litros_consumidos: float
+    operador: Optional[str] = None
+    observacoes: Optional[str] = None
+    created_by: str
+    created_at: str
+
 # ============ AUDIT LOG MODELS ============
 
 class AuditLogResponse(BaseModel):
