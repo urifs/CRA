@@ -115,7 +115,7 @@ export default function NewMaintenancePage() {
       {/* Back button */}
       <Button
         variant="ghost"
-        onClick={() => navigate("/maintenances")}
+        onClick={() => navigate("/gerenciamento/maintenances")}
         className="text-gray-600 hover:text-black"
         data-testid="back-btn"
       >
@@ -163,7 +163,7 @@ export default function NewMaintenancePage() {
                     <button
                       type="button"
                       className="underline"
-                      onClick={() => navigate("/machines")}
+                      onClick={() => navigate("/gerenciamento/machines")}
                     >
                       Cadastrar máquina
                     </button>
@@ -321,7 +321,7 @@ export default function NewMaintenancePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate("/maintenances")}
+                  onClick={() => navigate("/gerenciamento/maintenances")}
                   className="flex-1"
                 >
                   Cancelar

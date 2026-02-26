@@ -170,7 +170,7 @@ export default function DashboardPage() {
               </div>
               <Button
                 className="bg-[#E31A1A] hover:bg-[#E31A1A]"
-                onClick={() => navigate("/stock")}
+                onClick={() => navigate("/gerenciamento/stock")}
               >
                 Ver Estoque
                 <ArrowRight size={16} className="ml-2" />
@@ -190,7 +190,7 @@ export default function DashboardPage() {
             <Button
               variant="ghost"
               className="text-gray-600 hover:text-black"
-              onClick={() => navigate("/maintenances")}
+              onClick={() => navigate("/gerenciamento/maintenances")}
             >
               Ver Todas
               <ArrowRight size={16} className="ml-2" />
@@ -262,7 +262,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card
           className="stat-card cursor-pointer group"
-          onClick={() => navigate("/machines")}
+          onClick={() => navigate("/gerenciamento/machines")}
           data-testid="quick-action-machines"
         >
           <CardContent className="pt-6">
@@ -298,7 +298,7 @@ export default function DashboardPage() {
 
         <Card
           className="stat-card cursor-pointer group"
-          onClick={() => navigate("/stock")}
+          onClick={() => navigate("/gerenciamento/stock")}
           data-testid="quick-action-stock"
         >
           <CardContent className="pt-6">
@@ -316,7 +316,7 @@ export default function DashboardPage() {
 
         <Card
           className="stat-card cursor-pointer group"
-          onClick={() => navigate("/categories")}
+          onClick={() => navigate("/gerenciamento/categories")}
           data-testid="quick-action-categories"
         >
           <CardContent className="pt-6">

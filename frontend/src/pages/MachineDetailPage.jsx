@@ -37,7 +37,7 @@ export default function MachineDetailPage() {
       setMaintenances(maintenancesRes.data);
     } catch (error) {
       toast.error("Erro ao carregar dados da máquina");
-      navigate("/machines");
+      navigate("/gerenciamento/machines");
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function MachineDetailPage() {
       {/* Back button */}
       <Button
         variant="ghost"
-        onClick={() => navigate("/machines")}
+        onClick={() => navigate("/gerenciamento/machines")}
         className="text-gray-600 hover:text-black"
         data-testid="back-btn"
       >

@@ -61,7 +61,7 @@ export default function ObraDetailPage() {
       setAllMachines(machinesRes.data);
     } catch (error) {
       toast.error("Erro ao carregar dados da obra");
-      navigate("/obras");
+      navigate("/gerenciamento/obras");
     } finally {
       setLoading(false);
     }
@@ -170,7 +170,7 @@ export default function ObraDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">Obra não encontrada</p>
-        <Button variant="outline" onClick={() => navigate("/obras")} className="mt-4">
+        <Button variant="outline" onClick={() => navigate("/gerenciamento/obras")} className="mt-4">
           Voltar para Obras
         </Button>
       </div>
@@ -184,7 +184,7 @@ export default function ObraDetailPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/obras")}
+          onClick={() => navigate("/gerenciamento/obras")}
           data-testid="back-btn"
         >
           <ArrowLeft size={20} />
