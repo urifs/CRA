@@ -63,7 +63,9 @@ export default function MachinesPage() {
     notes: "",
     fleet_id: "",
     subfleet_id: "",
-    operator_id: ""
+    operator_id: "",
+    identificador_tipo: "",  // "chassi" ou "serie"
+    identificador_numero: ""
   });
 
   const [subcategories, setSubcategories] = useState([]);
