@@ -410,9 +410,34 @@ export default function ArmazenamentoPage() {
     }
   };
 
-  const handlePreview = (item) => {
+  const handlePreview = async (item) => {
     setPreviewItem(item);
     setShowPreviewModal(true);
+    setPreviewLoading(true);
+    setPreviewBlobUrl(null);
+    
+    try {
+      const response = await axios.get(`${API}/storage/download`, {
+        params: { path: item.path },
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob"
+      });
+      const blobUrl = window.URL.createObjectURL(response.data);
+      setPreviewBlobUrl(blobUrl);
+    } catch (error) {
+      toast.error("Erro ao carregar preview");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePreviewModal = () => {
+    if (previewBlobUrl) {
+      window.URL.revokeObjectURL(previewBlobUrl);
+    }
+    setPreviewBlobUrl(null);
+    setPreviewItem(null);
+    setShowPreviewModal(false);
   };
 
   const isPreviewable = (filename) => {
