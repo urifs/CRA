@@ -101,14 +101,16 @@ export default function StockPage() {
 
   const fetchData = async () => {
     try {
-      const [itemsRes, movementsRes, categoriesRes] = await Promise.all([
+      const [itemsRes, movementsRes, categoriesRes, subcategoriesRes] = await Promise.all([
         axios.get(`${API}/stock/items?low_stock_only=${showLowStockOnly}`),
         axios.get(`${API}/stock/movements`),
-        axios.get(`${API}/stock/categories`)
+        axios.get(`${API}/stock/categories`),
+        axios.get(`${API}/stock/subcategories`)
       ]);
       setItems(itemsRes.data);
       setMovements(movementsRes.data);
       setCategories(categoriesRes.data);
+      setSubcategories(subcategoriesRes.data);
     } catch (error) {
       toast.error("Erro ao carregar dados do estoque");
     } finally {
@@ -125,7 +127,8 @@ export default function StockPage() {
         ...itemForm,
         quantity: parseFloat(itemForm.quantity) || 0,
         min_quantity: parseFloat(itemForm.min_quantity) || 0,
-        unit_price: parseFloat(itemForm.unit_price) || 0
+        unit_price: parseFloat(itemForm.unit_price) || 0,
+        subcategory_id: itemForm.subcategory_id || null
       };
 
       if (editingItem) {
