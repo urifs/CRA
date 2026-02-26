@@ -50,6 +50,7 @@ import {
   RotateCcw,
   Trash
 } from "lucide-react";
+import { Lock, LockOpen, KeyRound } from "lucide-react";
 
 const getFileIcon = (filename) => {
   const ext = filename.split('.').pop()?.toLowerCase();
