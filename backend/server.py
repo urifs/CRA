@@ -9520,6 +9520,1405 @@ async def delete_task(
     return {"message": "Tarefa excluída com sucesso"}
 
 
+# ============ RH SYSTEM (RECURSOS HUMANOS) ============
+
+# Directory for funcionarios files
+FUNCIONARIOS_UPLOAD_DIR = UPLOAD_DIR / "funcionarios"
+FUNCIONARIOS_UPLOAD_DIR.mkdir(exist_ok=True)
+
+# Coleções MongoDB para RH
+funcionarios_collection = db["funcionarios"]
+ponto_collection = db["ponto_registros"]
+folha_pagamento_collection = db["folha_pagamento"]
+ferias_collection = db["ferias"]
+epi_fichas_collection = db["epi_fichas"]
+epi_cargos_collection = db["epi_cargos"]
+
+# ===== Jornada de trabalho padrão =====
+JORNADA_PADRAO = {
+    "seg_sex": {
+        "entrada": "08:00",
+        "saida_almoco": "11:30",
+        "retorno_almoco": "13:30",
+        "saida": "18:00",
+        "horas_diarias": 8.0
+    },
+    "sabado": {
+        "entrada": "08:00",
+        "saida": "12:00",
+        "horas_diarias": 4.0
+    }
+}
+
+# ===== Tabelas de alíquotas 2025 =====
+TABELA_INSS_2025 = [
+    {"ate": 1518.00, "aliquota": 7.5},
+    {"ate": 2793.88, "aliquota": 9.0},
+    {"ate": 4190.83, "aliquota": 12.0},
+    {"ate": 8157.41, "aliquota": 14.0}
+]
+TETO_INSS = 951.01
+
+TABELA_IRPF_2025 = [
+    {"ate": 2259.20, "aliquota": 0, "deducao": 0},
+    {"ate": 2826.65, "aliquota": 7.5, "deducao": 169.44},
+    {"ate": 3751.05, "aliquota": 15.0, "deducao": 381.44},
+    {"ate": 4664.68, "aliquota": 22.5, "deducao": 662.77},
+    {"ate": float('inf'), "aliquota": 27.5, "deducao": 896.00}
+]
+
+FGTS_ALIQUOTA = 8.0
+INSS_PATRONAL_ALIQUOTA = 20.0
+
+
+# ===== Helper Functions para RH =====
+def calcular_inss(salario_bruto: float) -> float:
+    inss = 0.0
+    salario_restante = salario_bruto
+    faixa_anterior = 0.0
+    
+    for faixa in TABELA_INSS_2025:
+        if salario_restante <= 0:
+            break
+        base = min(salario_restante, faixa["ate"] - faixa_anterior)
+        inss += base * (faixa["aliquota"] / 100)
+        salario_restante -= base
+        faixa_anterior = faixa["ate"]
+    
+    return min(inss, TETO_INSS)
+
+
+def calcular_irpf(base_calculo: float) -> float:
+    for faixa in TABELA_IRPF_2025:
+        if base_calculo <= faixa["ate"]:
+            return max(0, (base_calculo * faixa["aliquota"] / 100) - faixa["deducao"])
+    return 0.0
+
+
+# ===== FUNCIONARIOS ROUTES =====
+class FuncionarioCreate(BaseModel):
+    nome: str
+    cpf: Optional[str] = None
+    rg: Optional[str] = None
+    data_nascimento: Optional[str] = None
+    telefone: Optional[str] = None
+    celular: Optional[str] = None
+    email: Optional[str] = None
+    cep: Optional[str] = None
+    endereco: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    uf: Optional[str] = None
+    cargo: str
+    funcao: Optional[str] = None
+    departamento: Optional[str] = None
+    salario: float = 0
+    data_admissao: str
+    regime_contratacao: str = "CLT"
+    status: str = "ativo"
+    observacoes: Optional[str] = None
+
+
+@api_router.get("/rh/dashboard")
+async def get_rh_dashboard():
+    """Dashboard do RH com estatísticas"""
+    try:
+        # Contagem de funcionários
+        total_funcionarios = await funcionarios_collection.count_documents({})
+        funcionarios_ativos = await funcionarios_collection.count_documents({"status": "ativo"})
+        funcionarios_ferias = await funcionarios_collection.count_documents({"status": "ferias"})
+        funcionarios_afastados = await funcionarios_collection.count_documents({"status": "afastado"})
+        
+        # Folha total (soma dos salários ativos)
+        pipeline = [
+            {"$match": {"status": "ativo"}},
+            {"$group": {"_id": None, "total": {"$sum": "$salario"}}}
+        ]
+        result = await funcionarios_collection.aggregate(pipeline).to_list(1)
+        total_folha = result[0]["total"] if result else 0
+        
+        # Aniversariantes do mês
+        mes_atual = datetime.now().month
+        aniversariantes = []
+        async for func in funcionarios_collection.find({"status": "ativo"}):
+            if func.get("data_nascimento"):
+                try:
+                    data_nasc = datetime.strptime(func["data_nascimento"], "%Y-%m-%d")
+                    if data_nasc.month == mes_atual:
+                        aniversariantes.append({
+                            "nome": func["nome"],
+                            "data_nascimento_formatada": data_nasc.strftime("%d/%m")
+                        })
+                except:
+                    pass
+        
+        # Alertas de férias (período aquisitivo vencendo)
+        alertas_ferias = []
+        hoje = datetime.now()
+        async for func in funcionarios_collection.find({"status": "ativo"}):
+            if func.get("data_admissao"):
+                try:
+                    data_adm = datetime.strptime(func["data_admissao"], "%Y-%m-%d")
+                    meses_trabalhados = (hoje.year - data_adm.year) * 12 + (hoje.month - data_adm.month)
+                    if meses_trabalhados >= 11 and meses_trabalhados <= 14:
+                        alertas_ferias.append({
+                            "nome": func["nome"],
+                            "mensagem": f"Completou {meses_trabalhados} meses - período aquisitivo"
+                        })
+                except:
+                    pass
+        
+        # Alertas de EPI
+        alertas_epi = []
+        async for ficha in epi_fichas_collection.find({}):
+            func = await funcionarios_collection.find_one({"id": ficha.get("funcionario_id")})
+            if func and ficha.get("epis"):
+                for epi in ficha["epis"]:
+                    if epi.get("validade"):
+                        try:
+                            validade = datetime.strptime(epi["validade"], "%Y-%m-%d")
+                            dias_restantes = (validade - hoje).days
+                            if 0 < dias_restantes <= 30:
+                                alertas_epi.append({
+                                    "funcionario": func["nome"],
+                                    "epi": epi["nome"],
+                                    "dias_restantes": dias_restantes
+                                })
+                        except:
+                            pass
+        
+        # Ponto de hoje
+        hoje_str = hoje.strftime("%Y-%m-%d")
+        registros_hoje = await ponto_collection.count_documents({"data": hoje_str, "entrada": {"$exists": True, "$ne": ""}})
+        total_ativos = funcionarios_ativos
+        
+        # Verificar atrasados
+        atrasados = 0
+        async for reg in ponto_collection.find({"data": hoje_str}):
+            if reg.get("entrada"):
+                try:
+                    h, m = map(int, reg["entrada"].split(":"))
+                    if h > 8 or (h == 8 and m > 0):
+                        atrasados += 1
+                except:
+                    pass
+        
+        return {
+            "total_funcionarios": total_funcionarios,
+            "funcionarios_ativos": funcionarios_ativos,
+            "funcionarios_ferias": funcionarios_ferias,
+            "funcionarios_afastados": funcionarios_afastados,
+            "total_folha": total_folha,
+            "aniversariantes_mes": aniversariantes,
+            "alertas_ferias": alertas_ferias,
+            "alertas_epi": alertas_epi[:10],
+            "ponto_hoje": {
+                "presentes": registros_hoje,
+                "ausentes": max(0, total_ativos - registros_hoje),
+                "atrasados": atrasados
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error in RH dashboard: {e}")
+        return {
+            "total_funcionarios": 0,
+            "funcionarios_ativos": 0,
+            "funcionarios_ferias": 0,
+            "funcionarios_afastados": 0,
+            "total_folha": 0,
+            "aniversariantes_mes": [],
+            "alertas_ferias": [],
+            "alertas_epi": [],
+            "ponto_hoje": {"presentes": 0, "ausentes": 0, "atrasados": 0}
+        }
+
+
+@api_router.get("/rh/funcionarios")
+async def list_funcionarios(status: Optional[str] = None, regime: Optional[str] = None):
+    """Listar funcionários com filtros"""
+    query = {}
+    if status:
+        query["status"] = status
+    if regime:
+        query["regime_contratacao"] = regime
+    
+    funcionarios = []
+    async for func in funcionarios_collection.find(query).sort("nome", 1):
+        func["_id"] = str(func["_id"])
+        funcionarios.append(func)
+    
+    return funcionarios
+
+
+@api_router.get("/rh/funcionarios/{funcionario_id}")
+async def get_funcionario(funcionario_id: str):
+    """Obter funcionário por ID"""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    func["_id"] = str(func["_id"])
+    return func
+
+
+@api_router.post("/rh/funcionarios")
+async def create_funcionario(data: FuncionarioCreate, current_user: dict = Depends(get_current_user)):
+    """Criar novo funcionário"""
+    funcionario = data.dict()
+    funcionario["id"] = str(uuid.uuid4())
+    funcionario["created_at"] = datetime.now().isoformat()
+    funcionario["anexos"] = []
+    
+    await funcionarios_collection.insert_one(funcionario)
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="funcionario",
+        entity_id=funcionario["id"],
+        entity_name=funcionario["nome"],
+        details=f"Funcionário criado: {funcionario['nome']}",
+        module="RH"
+    )
+    
+    funcionario["_id"] = str(funcionario.get("_id", ""))
+    return funcionario
+
+
+@api_router.put("/rh/funcionarios/{funcionario_id}")
+async def update_funcionario(funcionario_id: str, data: FuncionarioCreate, current_user: dict = Depends(get_current_user)):
+    """Atualizar funcionário"""
+    existing = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    update_data = data.dict()
+    update_data["updated_at"] = datetime.now().isoformat()
+    
+    await funcionarios_collection.update_one(
+        {"id": funcionario_id},
+        {"$set": update_data}
+    )
+    
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="funcionario",
+        entity_id=funcionario_id,
+        entity_name=data.nome,
+        details=f"Funcionário atualizado: {data.nome}",
+        module="RH"
+    )
+    
+    return {"message": "Funcionário atualizado com sucesso"}
+
+
+@api_router.delete("/rh/funcionarios/{funcionario_id}")
+async def delete_funcionario(funcionario_id: str, current_user: dict = Depends(get_current_user)):
+    """Excluir funcionário"""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    await funcionarios_collection.delete_one({"id": funcionario_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="funcionario",
+        entity_id=funcionario_id,
+        entity_name=func["nome"],
+        details=f"Funcionário excluído: {func['nome']}",
+        module="RH"
+    )
+    
+    return {"message": "Funcionário excluído com sucesso"}
+
+
+@api_router.post("/rh/funcionarios/{funcionario_id}/anexos")
+async def upload_funcionario_anexo(funcionario_id: str, file: UploadFile = File(...)):
+    """Upload de anexo para funcionário"""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    # Salvar arquivo
+    file_ext = file.filename.split(".")[-1] if "." in file.filename else ""
+    safe_filename = f"{funcionario_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
+    file_path = FUNCIONARIOS_UPLOAD_DIR / safe_filename
+    
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    anexo = {
+        "id": str(uuid.uuid4()),
+        "filename": safe_filename,
+        "original_name": file.filename,
+        "uploaded_at": datetime.now().isoformat()
+    }
+    
+    await funcionarios_collection.update_one(
+        {"id": funcionario_id},
+        {"$push": {"anexos": anexo}}
+    )
+    
+    return anexo
+
+
+@api_router.delete("/rh/funcionarios/{funcionario_id}/anexos/{anexo_id}")
+async def delete_funcionario_anexo(funcionario_id: str, anexo_id: str):
+    """Excluir anexo de funcionário"""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    anexo = next((a for a in func.get("anexos", []) if a["id"] == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    # Remover arquivo físico
+    file_path = FUNCIONARIOS_UPLOAD_DIR / anexo["filename"]
+    if file_path.exists():
+        file_path.unlink()
+    
+    await funcionarios_collection.update_one(
+        {"id": funcionario_id},
+        {"$pull": {"anexos": {"id": anexo_id}}}
+    )
+    
+    return {"message": "Anexo excluído com sucesso"}
+
+
+@api_router.get("/rh/funcionarios/{funcionario_id}/anexos/{anexo_id}/download")
+async def download_funcionario_anexo(funcionario_id: str, anexo_id: str):
+    """Download de anexo"""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    anexo = next((a for a in func.get("anexos", []) if a["id"] == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+    
+    file_path = FUNCIONARIOS_UPLOAD_DIR / anexo["filename"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=anexo.get("original_name", anexo["filename"]),
+        media_type="application/octet-stream"
+    )
+
+
+# ===== PONTO ELETRÔNICO =====
+class PontoCreate(BaseModel):
+    funcionario_id: str
+    data: str
+    entrada: Optional[str] = None
+    saida_almoco: Optional[str] = None
+    retorno_almoco: Optional[str] = None
+    saida: Optional[str] = None
+    observacoes: Optional[str] = None
+
+
+@api_router.get("/rh/ponto")
+async def list_ponto(data: str, funcionario_id: Optional[str] = None):
+    """Listar registros de ponto por data"""
+    query = {"data": data}
+    if funcionario_id:
+        query["funcionario_id"] = funcionario_id
+    
+    registros = []
+    async for reg in ponto_collection.find(query):
+        reg["_id"] = str(reg["_id"])
+        registros.append(reg)
+    
+    # Calcular resumo do dia
+    funcionarios_ativos = await funcionarios_collection.count_documents({"status": "ativo"})
+    presentes = len([r for r in registros if r.get("entrada")])
+    atrasados = 0
+    
+    for reg in registros:
+        if reg.get("entrada"):
+            try:
+                h, m = map(int, reg["entrada"].split(":"))
+                if h > 8 or (h == 8 and m > 0):
+                    atrasados += 1
+            except:
+                pass
+    
+    return {
+        "registros": registros,
+        "resumo": {
+            "presentes": presentes,
+            "ausentes": max(0, funcionarios_ativos - presentes),
+            "atrasados": atrasados
+        }
+    }
+
+
+@api_router.post("/rh/ponto")
+async def create_ponto(data: PontoCreate, current_user: dict = Depends(get_current_user)):
+    """Registrar ponto"""
+    # Verificar se já existe registro para este funcionário nesta data
+    existing = await ponto_collection.find_one({
+        "funcionario_id": data.funcionario_id,
+        "data": data.data
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Já existe registro de ponto para esta data")
+    
+    registro = data.dict()
+    registro["id"] = str(uuid.uuid4())
+    registro["created_at"] = datetime.now().isoformat()
+    
+    await ponto_collection.insert_one(registro)
+    
+    registro["_id"] = str(registro.get("_id", ""))
+    return registro
+
+
+@api_router.put("/rh/ponto/{ponto_id}")
+async def update_ponto(ponto_id: str, data: PontoCreate):
+    """Atualizar registro de ponto"""
+    existing = await ponto_collection.find_one({"id": ponto_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    
+    update_data = data.dict()
+    update_data["updated_at"] = datetime.now().isoformat()
+    
+    await ponto_collection.update_one({"id": ponto_id}, {"$set": update_data})
+    
+    return {"message": "Registro atualizado com sucesso"}
+
+
+@api_router.delete("/rh/ponto/{ponto_id}")
+async def delete_ponto(ponto_id: str):
+    """Excluir registro de ponto"""
+    result = await ponto_collection.delete_one({"id": ponto_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    return {"message": "Registro excluído com sucesso"}
+
+
+# ===== FOLHA DE PAGAMENTO =====
+class FolhaCreate(BaseModel):
+    funcionario_id: str
+    mes: int
+    ano: int
+    salario_base: float = 0
+    horas_extras: float = 0
+    valor_hora_extra: float = 0
+    adicional_noturno: float = 0
+    comissoes: float = 0
+    vale_transporte: float = 0
+    vale_alimentacao: float = 0
+    plano_saude: float = 0
+    outros_descontos: float = 0
+    observacoes: Optional[str] = None
+    salario_bruto: float = 0
+    inss: float = 0
+    irpf: float = 0
+    fgts: float = 0
+    total_descontos: float = 0
+    salario_liquido: float = 0
+
+
+@api_router.get("/rh/folha-pagamento")
+async def list_folha_pagamento(mes: int, ano: int):
+    """Listar folhas de pagamento"""
+    folhas = []
+    async for folha in folha_pagamento_collection.find({"mes": mes, "ano": ano}):
+        folha["_id"] = str(folha["_id"])
+        folhas.append(folha)
+    return folhas
+
+
+@api_router.post("/rh/folha-pagamento")
+async def create_folha_pagamento(data: FolhaCreate, current_user: dict = Depends(get_current_user)):
+    """Criar folha de pagamento"""
+    # Verificar se já existe folha para este funcionário neste mês
+    existing = await folha_pagamento_collection.find_one({
+        "funcionario_id": data.funcionario_id,
+        "mes": data.mes,
+        "ano": data.ano
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Já existe folha para este funcionário neste período")
+    
+    folha = data.dict()
+    folha["id"] = str(uuid.uuid4())
+    folha["created_at"] = datetime.now().isoformat()
+    
+    await folha_pagamento_collection.insert_one(folha)
+    
+    folha["_id"] = str(folha.get("_id", ""))
+    return folha
+
+
+@api_router.delete("/rh/folha-pagamento/{folha_id}")
+async def delete_folha_pagamento(folha_id: str):
+    """Excluir folha de pagamento"""
+    result = await folha_pagamento_collection.delete_one({"id": folha_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Folha não encontrada")
+    return {"message": "Folha excluída com sucesso"}
+
+
+@api_router.get("/rh/folha-pagamento/{folha_id}/holerite")
+async def generate_holerite_pdf(folha_id: str):
+    """Gerar PDF do holerite"""
+    folha = await folha_pagamento_collection.find_one({"id": folha_id})
+    if not folha:
+        raise HTTPException(status_code=404, detail="Folha não encontrada")
+    
+    func = await funcionarios_collection.find_one({"id": folha["funcionario_id"]})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    # Criar PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Título
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=20)
+    elements.append(Paragraph("DEMONSTRATIVO DE PAGAMENTO", title_style))
+    
+    # Dados do funcionário
+    meses_nomes = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+                   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    
+    info_data = [
+        ["Nome:", func["nome"], "Cargo:", func.get("cargo", "-")],
+        ["CPF:", func.get("cpf", "-"), "Admissão:", func.get("data_admissao", "-")],
+        ["Período:", f"{meses_nomes[folha['mes']]}/{folha['ano']}", "Regime:", func.get("regime_contratacao", "-")]
+    ]
+    
+    info_table = Table(info_data, colWidths=[60, 180, 60, 180])
+    info_table.setStyle(TableStyle([
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+    
+    # Proventos e Descontos
+    proventos_data = [
+        ["PROVENTOS", "VALOR"],
+        ["Salário Base", f"R$ {folha['salario_base']:,.2f}"],
+        ["Horas Extras", f"R$ {(folha.get('horas_extras', 0) * folha.get('valor_hora_extra', 0)):,.2f}"],
+        ["Adicional Noturno", f"R$ {folha.get('adicional_noturno', 0):,.2f}"],
+        ["Comissões", f"R$ {folha.get('comissoes', 0):,.2f}"],
+        ["TOTAL PROVENTOS", f"R$ {folha['salario_bruto']:,.2f}"]
+    ]
+    
+    descontos_data = [
+        ["DESCONTOS", "VALOR"],
+        ["INSS", f"R$ {folha['inss']:,.2f}"],
+        ["IRPF", f"R$ {folha['irpf']:,.2f}"],
+        ["Vale Transporte", f"R$ {folha.get('vale_transporte', 0):,.2f}"],
+        ["Vale Alimentação", f"R$ {folha.get('vale_alimentacao', 0):,.2f}"],
+        ["Plano de Saúde", f"R$ {folha.get('plano_saude', 0):,.2f}"],
+        ["TOTAL DESCONTOS", f"R$ {folha['total_descontos']:,.2f}"]
+    ]
+    
+    proventos_table = Table(proventos_data, colWidths=[200, 100])
+    proventos_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#10B981')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+    ]))
+    elements.append(proventos_table)
+    elements.append(Spacer(1, 10))
+    
+    descontos_table = Table(descontos_data, colWidths=[200, 100])
+    descontos_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E31A1A')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+    ]))
+    elements.append(descontos_table)
+    elements.append(Spacer(1, 20))
+    
+    # Salário Líquido
+    liquido_data = [["SALÁRIO LÍQUIDO", f"R$ {folha['salario_liquido']:,.2f}"]]
+    liquido_table = Table(liquido_data, colWidths=[200, 100])
+    liquido_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1F2937')),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('BOX', (0, 0), (-1, -1), 2, colors.HexColor('#10B981')),
+    ]))
+    elements.append(liquido_table)
+    elements.append(Spacer(1, 10))
+    
+    # FGTS (informativo)
+    fgts_data = [["FGTS (depósito mensal)", f"R$ {folha['fgts']:,.2f}"]]
+    fgts_table = Table(fgts_data, colWidths=[200, 100])
+    fgts_table.setStyle(TableStyle([
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.grey),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+    ]))
+    elements.append(fgts_table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=holerite_{func['nome']}_{folha['mes']}_{folha['ano']}.pdf"}
+    )
+
+
+@api_router.post("/rh/folha-pagamento/gerar-contas-pagar")
+async def gerar_contas_pagar_folha(mes: int = Body(...), ano: int = Body(...), current_user: dict = Depends(get_current_user)):
+    """Gerar contas a pagar para a folha de pagamento"""
+    folhas = await folha_pagamento_collection.find({"mes": mes, "ano": ano}).to_list(None)
+    
+    if not folhas:
+        raise HTTPException(status_code=400, detail="Nenhuma folha encontrada para este período")
+    
+    meses_nomes = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+                   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    
+    total_salarios = sum(f["salario_liquido"] for f in folhas)
+    total_inss = sum(f["inss"] for f in folhas)
+    total_fgts = sum(f["fgts"] for f in folhas)
+    
+    # Data de vencimento: dia 5 do mês seguinte
+    if mes == 12:
+        vencimento = f"{ano + 1}-01-05"
+    else:
+        vencimento = f"{ano}-{mes + 1:02d}-05"
+    
+    contas_criadas = []
+    
+    # Conta para salários
+    conta_salarios = {
+        "id": str(uuid.uuid4()),
+        "descricao": f"Folha de Pagamento - {meses_nomes[mes]}/{ano}",
+        "valor": total_salarios,
+        "data_vencimento": vencimento,
+        "categoria": "Pessoal",
+        "status": "pendente",
+        "tipo": "despesa",
+        "origem": "rh",
+        "created_at": datetime.now().isoformat()
+    }
+    await contas_pagar_collection.insert_one(conta_salarios)
+    contas_criadas.append("Salários")
+    
+    # Conta para INSS
+    if total_inss > 0:
+        conta_inss = {
+            "id": str(uuid.uuid4()),
+            "descricao": f"INSS - {meses_nomes[mes]}/{ano}",
+            "valor": total_inss,
+            "data_vencimento": vencimento,
+            "categoria": "Impostos",
+            "status": "pendente",
+            "tipo": "despesa",
+            "origem": "rh",
+            "created_at": datetime.now().isoformat()
+        }
+        await contas_pagar_collection.insert_one(conta_inss)
+        contas_criadas.append("INSS")
+    
+    # Conta para FGTS
+    if total_fgts > 0:
+        conta_fgts = {
+            "id": str(uuid.uuid4()),
+            "descricao": f"FGTS - {meses_nomes[mes]}/{ano}",
+            "valor": total_fgts,
+            "data_vencimento": vencimento,
+            "categoria": "Impostos",
+            "status": "pendente",
+            "tipo": "despesa",
+            "origem": "rh",
+            "created_at": datetime.now().isoformat()
+        }
+        await contas_pagar_collection.insert_one(conta_fgts)
+        contas_criadas.append("FGTS")
+    
+    return {"message": f"Contas criadas: {', '.join(contas_criadas)}", "total": len(contas_criadas)}
+
+
+# ===== FÉRIAS =====
+class FeriasCreate(BaseModel):
+    funcionario_id: str
+    data_inicio: str
+    data_fim: str
+    dias_vendidos: int = 0
+    observacoes: Optional[str] = None
+
+
+@api_router.get("/rh/ferias")
+async def list_ferias(ano: int):
+    """Listar férias do ano"""
+    ferias_list = []
+    async for f in ferias_collection.find({}):
+        try:
+            inicio = datetime.strptime(f["data_inicio"], "%Y-%m-%d")
+            if inicio.year == ano:
+                f["_id"] = str(f["_id"])
+                ferias_list.append(f)
+        except:
+            pass
+    return ferias_list
+
+
+@api_router.get("/rh/ferias/alertas")
+async def get_ferias_alertas():
+    """Alertas de período aquisitivo"""
+    alertas = []
+    hoje = datetime.now()
+    
+    async for func in funcionarios_collection.find({"status": "ativo"}):
+        if func.get("data_admissao"):
+            try:
+                data_adm = datetime.strptime(func["data_admissao"], "%Y-%m-%d")
+                meses_trabalhados = (hoje.year - data_adm.year) * 12 + (hoje.month - data_adm.month)
+                
+                if meses_trabalhados >= 11:
+                    # Verificar última férias
+                    ultima_ferias = await ferias_collection.find_one(
+                        {"funcionario_id": func["id"]},
+                        sort=[("data_inicio", -1)]
+                    )
+                    
+                    if not ultima_ferias or (hoje - datetime.strptime(ultima_ferias["data_inicio"], "%Y-%m-%d")).days > 365:
+                        alertas.append({
+                            "funcionario_id": func["id"],
+                            "funcionario_nome": func["nome"],
+                            "mensagem": f"Completou {meses_trabalhados} meses - programar férias"
+                        })
+            except:
+                pass
+    
+    return alertas
+
+
+@api_router.post("/rh/ferias")
+async def create_ferias(data: FeriasCreate, current_user: dict = Depends(get_current_user)):
+    """Agendar férias"""
+    ferias_doc = data.dict()
+    ferias_doc["id"] = str(uuid.uuid4())
+    ferias_doc["created_at"] = datetime.now().isoformat()
+    
+    await ferias_collection.insert_one(ferias_doc)
+    
+    func = await funcionarios_collection.find_one({"id": data.funcionario_id})
+    if func:
+        await create_audit_log(
+            user=current_user,
+            action="criar",
+            entity_type="ferias",
+            entity_id=ferias_doc["id"],
+            entity_name=func["nome"],
+            details=f"Férias agendadas para {func['nome']}: {data.data_inicio} a {data.data_fim}",
+            module="RH"
+        )
+    
+    ferias_doc["_id"] = str(ferias_doc.get("_id", ""))
+    return ferias_doc
+
+
+@api_router.put("/rh/ferias/{ferias_id}")
+async def update_ferias(ferias_id: str, data: FeriasCreate):
+    """Atualizar férias"""
+    existing = await ferias_collection.find_one({"id": ferias_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Férias não encontradas")
+    
+    update_data = data.dict()
+    update_data["updated_at"] = datetime.now().isoformat()
+    
+    await ferias_collection.update_one({"id": ferias_id}, {"$set": update_data})
+    
+    return {"message": "Férias atualizadas com sucesso"}
+
+
+@api_router.delete("/rh/ferias/{ferias_id}")
+async def delete_ferias(ferias_id: str):
+    """Excluir férias"""
+    result = await ferias_collection.delete_one({"id": ferias_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Férias não encontradas")
+    return {"message": "Férias excluídas com sucesso"}
+
+
+# ===== GESTÃO DE EPI =====
+class CargoCreate(BaseModel):
+    nome: str
+
+
+class FichaEPICreate(BaseModel):
+    funcionario_id: str
+    cargo: str
+    data_entrega: str
+    epis: list = []
+    observacoes: Optional[str] = None
+
+
+@api_router.get("/rh/epi/cargos")
+async def list_cargos():
+    """Listar cargos cadastrados"""
+    cargos = []
+    async for c in epi_cargos_collection.find({}).sort("nome", 1):
+        c["_id"] = str(c["_id"])
+        cargos.append(c)
+    return cargos
+
+
+@api_router.post("/rh/epi/cargos")
+async def create_cargo(data: CargoCreate):
+    """Criar novo cargo"""
+    cargo = {"id": str(uuid.uuid4()), "nome": data.nome}
+    await epi_cargos_collection.insert_one(cargo)
+    cargo["_id"] = str(cargo.get("_id", ""))
+    return cargo
+
+
+@api_router.post("/rh/epi/consultar-epis")
+async def consultar_epis_ia(cargo: str = Body(..., embed=True)):
+    """Consultar EPIs recomendados para um cargo usando Gemini"""
+    try:
+        from emergentintegrations.llm.chat import chat, Message
+        
+        prompt = f"""Você é um especialista em segurança do trabalho no Brasil.
+Para o cargo de "{cargo}", liste TODOS os Equipamentos de Proteção Individual (EPIs) obrigatórios e recomendados.
+
+Para cada EPI, forneça:
+1. Nome do EPI
+2. CA (Certificado de Aprovação) - coloque "A definir" se não souber o específico
+3. Validade média em meses
+4. Prioridade: "Alta" (obrigatório por lei), "Média" (recomendado), "Baixa" (opcional)
+
+Também forneça um mapa de risco com os principais riscos da função e o EPI correspondente.
+
+Responda APENAS em formato JSON válido seguindo este modelo:
+{{
+  "epis": [
+    {{"nome": "Capacete de segurança", "ca": "A definir", "validade_meses": 24, "prioridade": "Alta"}},
+    {{"nome": "Óculos de proteção", "ca": "A definir", "validade_meses": 12, "prioridade": "Alta"}}
+  ],
+  "mapa_risco": [
+    {{"risco": "Queda de objetos", "prioridade": "Alta", "epi_recomendado": "Capacete de segurança"}},
+    {{"risco": "Projeção de partículas", "prioridade": "Média", "epi_recomendado": "Óculos de proteção"}}
+  ]
+}}"""
+        
+        messages = [Message(role="user", content=prompt)]
+        response = await chat(
+            api_key=os.environ.get("EMERGENT_LLM_KEY"),
+            model="gemini-2.0-flash",
+            messages=messages
+        )
+        
+        # Parse JSON da resposta
+        response_text = response.content
+        # Limpar possíveis marcadores de código
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0]
+        
+        import json
+        result = json.loads(response_text.strip())
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error consulting EPIs: {e}")
+        # Retornar lista padrão em caso de erro
+        return {
+            "epis": [
+                {"nome": "Capacete de segurança", "ca": "A definir", "validade_meses": 24, "prioridade": "Alta"},
+                {"nome": "Óculos de proteção", "ca": "A definir", "validade_meses": 12, "prioridade": "Média"},
+                {"nome": "Protetor auricular", "ca": "A definir", "validade_meses": 6, "prioridade": "Média"},
+                {"nome": "Luvas de proteção", "ca": "A definir", "validade_meses": 3, "prioridade": "Alta"},
+                {"nome": "Botina de segurança", "ca": "A definir", "validade_meses": 12, "prioridade": "Alta"}
+            ],
+            "mapa_risco": [
+                {"risco": "Queda de objetos", "prioridade": "Alta", "epi_recomendado": "Capacete de segurança"},
+                {"risco": "Ruído excessivo", "prioridade": "Média", "epi_recomendado": "Protetor auricular"}
+            ]
+        }
+
+
+@api_router.get("/rh/epi/fichas")
+async def list_fichas_epi(funcionario_id: Optional[str] = None):
+    """Listar fichas de EPI"""
+    query = {}
+    if funcionario_id:
+        query["funcionario_id"] = funcionario_id
+    
+    fichas = []
+    async for f in epi_fichas_collection.find(query):
+        f["_id"] = str(f["_id"])
+        fichas.append(f)
+    return fichas
+
+
+@api_router.post("/rh/epi/fichas")
+async def create_ficha_epi(data: FichaEPICreate, current_user: dict = Depends(get_current_user)):
+    """Criar ficha de EPI"""
+    ficha = data.dict()
+    ficha["id"] = str(uuid.uuid4())
+    ficha["created_at"] = datetime.now().isoformat()
+    
+    # Calcular validade dos EPIs
+    data_entrega = datetime.strptime(data.data_entrega, "%Y-%m-%d")
+    for epi in ficha["epis"]:
+        validade_meses = epi.get("validade_meses", 12)
+        epi["validade"] = (data_entrega + timedelta(days=validade_meses * 30)).strftime("%Y-%m-%d")
+    
+    await epi_fichas_collection.insert_one(ficha)
+    
+    func = await funcionarios_collection.find_one({"id": data.funcionario_id})
+    if func:
+        await create_audit_log(
+            user=current_user,
+            action="criar",
+            entity_type="ficha_epi",
+            entity_id=ficha["id"],
+            entity_name=func["nome"],
+            details=f"Ficha de EPI criada para {func['nome']}",
+            module="RH"
+        )
+    
+    ficha["_id"] = str(ficha.get("_id", ""))
+    return ficha
+
+
+@api_router.get("/rh/epi/fichas/{ficha_id}/exportar")
+async def exportar_ficha_epi(ficha_id: str):
+    """Exportar ficha de EPI em PDF"""
+    ficha = await epi_fichas_collection.find_one({"id": ficha_id})
+    if not ficha:
+        raise HTTPException(status_code=404, detail="Ficha não encontrada")
+    
+    func = await funcionarios_collection.find_one({"id": ficha["funcionario_id"]})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Título
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=20)
+    elements.append(Paragraph("FICHA DE ENTREGA DE EPI", title_style))
+    
+    # Dados do funcionário
+    info_data = [
+        ["Nome:", func["nome"], "CPF:", func.get("cpf", "-")],
+        ["Cargo:", ficha.get("cargo", func.get("cargo", "-")), "Admissão:", func.get("data_admissao", "-")],
+        ["Data Entrega:", ficha.get("data_entrega", "-"), "", ""]
+    ]
+    
+    info_table = Table(info_data, colWidths=[70, 170, 70, 170])
+    info_table.setStyle(TableStyle([
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+    
+    # Lista de EPIs
+    epi_data = [["EPI", "CA", "Validade", "Prioridade"]]
+    for epi in ficha.get("epis", []):
+        epi_data.append([
+            epi.get("nome", "-"),
+            epi.get("ca", "-"),
+            epi.get("validade", "-"),
+            epi.get("prioridade", "Média")
+        ])
+    
+    epi_table = Table(epi_data, colWidths=[200, 80, 100, 100])
+    epi_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#10B981')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+    ]))
+    elements.append(epi_table)
+    elements.append(Spacer(1, 40))
+    
+    # Assinatura
+    elements.append(Paragraph("Declaro que recebi os EPIs acima listados em perfeitas condições de uso.", styles['Normal']))
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph("_" * 50, styles['Normal']))
+    elements.append(Paragraph(f"Assinatura do Funcionário: {func['nome']}", styles['Normal']))
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(f"Data: ____/____/______", styles['Normal']))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=ficha_epi_{func['nome']}.pdf"}
+    )
+
+
+@api_router.get("/rh/epi/fichas/{ficha_id}/termo-responsabilidade")
+async def exportar_termo_responsabilidade(ficha_id: str):
+    """Exportar termo de responsabilidade em PDF"""
+    ficha = await epi_fichas_collection.find_one({"id": ficha_id})
+    if not ficha:
+        raise HTTPException(status_code=404, detail="Ficha não encontrada")
+    
+    func = await funcionarios_collection.find_one({"id": ficha["funcionario_id"]})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Título
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=20)
+    elements.append(Paragraph("TERMO DE RESPONSABILIDADE", title_style))
+    elements.append(Paragraph("EQUIPAMENTOS DE PROTEÇÃO INDIVIDUAL", ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=12, alignment=1, spaceAfter=20)))
+    
+    # Texto do termo
+    termo_text = f"""
+    Eu, <b>{func['nome']}</b>, portador(a) do CPF nº <b>{func.get('cpf', '_______________')}</b>, 
+    funcionário(a) desta empresa, no cargo de <b>{ficha.get('cargo', func.get('cargo', '_______________'))}</b>, 
+    declaro ter recebido os Equipamentos de Proteção Individual (EPIs) relacionados na Ficha de Entrega de EPI, 
+    em perfeitas condições de uso e conservação.
+    <br/><br/>
+    Comprometo-me a:
+    <br/><br/>
+    1. Utilizar os EPIs somente para a finalidade a que se destinam;<br/>
+    2. Responsabilizar-me pela guarda e conservação dos EPIs;<br/>
+    3. Comunicar ao empregador qualquer alteração que torne os EPIs impróprios para uso;<br/>
+    4. Cumprir as determinações do empregador sobre o uso adequado dos EPIs;<br/>
+    5. Devolver os EPIs quando solicitado ou no caso de rescisão do contrato de trabalho.
+    <br/><br/>
+    Declaro ainda estar ciente de que o não uso dos EPIs pode resultar em advertência, suspensão 
+    ou demissão por justa causa, conforme estabelece a legislação trabalhista vigente.
+    """
+    
+    elements.append(Paragraph(termo_text, styles['Normal']))
+    elements.append(Spacer(1, 40))
+    
+    # Data e assinatura
+    elements.append(Paragraph(f"Local e Data: ________________________________, ____/____/______", styles['Normal']))
+    elements.append(Spacer(1, 40))
+    elements.append(Paragraph("_" * 50, styles['Normal']))
+    elements.append(Paragraph(f"Assinatura do Funcionário", styles['Normal']))
+    elements.append(Paragraph(f"{func['nome']}", styles['Normal']))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=termo_responsabilidade_{func['nome']}.pdf"}
+    )
+
+
+# ===== NOTIFICAÇÕES RH =====
+@api_router.get("/rh/notificacoes")
+async def get_rh_notificacoes():
+    """Obter todas as notificações do RH"""
+    hoje = datetime.now()
+    mes_atual = hoje.month
+    
+    # Aniversariantes
+    aniversariantes = []
+    async for func in funcionarios_collection.find({"status": "ativo"}):
+        if func.get("data_nascimento"):
+            try:
+                data_nasc = datetime.strptime(func["data_nascimento"], "%Y-%m-%d")
+                if data_nasc.month == mes_atual:
+                    idade = hoje.year - data_nasc.year
+                    aniversariantes.append({
+                        "nome": func["nome"],
+                        "cargo": func.get("cargo", "-"),
+                        "data_formatada": data_nasc.strftime("%d/%m"),
+                        "idade": idade
+                    })
+            except:
+                pass
+    
+    # Alertas de férias
+    alertas_ferias = []
+    funcionarios_sem_ferias = []
+    async for func in funcionarios_collection.find({"status": "ativo"}):
+        if func.get("data_admissao"):
+            try:
+                data_adm = datetime.strptime(func["data_admissao"], "%Y-%m-%d")
+                meses_trabalhados = (hoje.year - data_adm.year) * 12 + (hoje.month - data_adm.month)
+                
+                # Verificar última férias
+                ultima_ferias = await ferias_collection.find_one(
+                    {"funcionario_id": func["id"]},
+                    sort=[("data_inicio", -1)]
+                )
+                
+                if meses_trabalhados >= 11 and meses_trabalhados <= 14:
+                    alertas_ferias.append({
+                        "nome": func["nome"],
+                        "mensagem": f"Período aquisitivo completando"
+                    })
+                
+                # Mais de 1 ano sem férias
+                if meses_trabalhados >= 12:
+                    if not ultima_ferias:
+                        funcionarios_sem_ferias.append({
+                            "nome": func["nome"],
+                            "ultima_ferias": "Nunca tirou férias"
+                        })
+                    else:
+                        ultima = datetime.strptime(ultima_ferias["data_inicio"], "%Y-%m-%d")
+                        if (hoje - ultima).days > 365:
+                            funcionarios_sem_ferias.append({
+                                "nome": func["nome"],
+                                "ultima_ferias": ultima.strftime("%d/%m/%Y")
+                            })
+            except:
+                pass
+    
+    # Alertas de EPI
+    alertas_epi = []
+    async for ficha in epi_fichas_collection.find({}):
+        func = await funcionarios_collection.find_one({"id": ficha.get("funcionario_id")})
+        if func and ficha.get("epis"):
+            for epi in ficha["epis"]:
+                if epi.get("validade"):
+                    try:
+                        validade = datetime.strptime(epi["validade"], "%Y-%m-%d")
+                        dias_restantes = (validade - hoje).days
+                        if 0 < dias_restantes <= 30:
+                            alertas_epi.append({
+                                "funcionario": func["nome"],
+                                "epi": epi["nome"],
+                                "dias_restantes": dias_restantes
+                            })
+                    except:
+                        pass
+    
+    # Inconsistências de ponto (hoje)
+    inconsistencias_ponto = []
+    hoje_str = hoje.strftime("%Y-%m-%d")
+    dia_semana = hoje.weekday()  # 0=segunda, 5=sábado, 6=domingo
+    
+    if dia_semana < 6:  # Não é domingo
+        async for reg in ponto_collection.find({"data": hoje_str}):
+            func = await funcionarios_collection.find_one({"id": reg.get("funcionario_id")})
+            if func and reg.get("entrada"):
+                try:
+                    h, m = map(int, reg["entrada"].split(":"))
+                    hora_limite = 8
+                    minuto_limite = 15  # 15 min de tolerância
+                    
+                    if h > hora_limite or (h == hora_limite and m > minuto_limite):
+                        atraso = (h - 8) * 60 + m
+                        inconsistencias_ponto.append({
+                            "funcionario": func["nome"],
+                            "tipo": "Atraso",
+                            "detalhe": f"Entrada às {reg['entrada']} ({atraso} min de atraso)"
+                        })
+                except:
+                    pass
+    
+    return {
+        "aniversariantes": aniversariantes,
+        "alertas_ferias": alertas_ferias,
+        "funcionarios_sem_ferias": funcionarios_sem_ferias,
+        "alertas_epi": alertas_epi,
+        "alertas_atestados": [],  # Pode ser implementado depois
+        "inconsistencias_ponto": inconsistencias_ponto
+    }
+
+
+@api_router.get("/rh/notificacoes/contagem")
+async def get_rh_notificacoes_contagem():
+    """Contagem de notificações para badge"""
+    notifs = await get_rh_notificacoes()
+    
+    total = (
+        len(notifs["alertas_ferias"]) +
+        len(notifs["funcionarios_sem_ferias"]) +
+        len(notifs["alertas_epi"]) +
+        len(notifs["inconsistencias_ponto"])
+    )
+    
+    urgentes = len(notifs["funcionarios_sem_ferias"]) + len([e for e in notifs["alertas_epi"] if e.get("dias_restantes", 30) <= 7])
+    
+    return {"total": total, "urgentes": urgentes}
+
+
+# ===== GESTÃO DE CUSTOS RH =====
+@api_router.get("/rh/custos")
+async def get_custos_rh():
+    """Obter custos detalhados de RH"""
+    custos_funcionarios = []
+    total_salarios = 0
+    total_encargos = 0
+    total_beneficios = 0
+    total_epis = 0
+    
+    async for func in funcionarios_collection.find({"status": "ativo"}):
+        salario = func.get("salario", 0)
+        fgts = salario * (FGTS_ALIQUOTA / 100)
+        inss_patronal = salario * (INSS_PATRONAL_ALIQUOTA / 100)
+        
+        # Estimativa de benefícios (pode ser personalizado por funcionário)
+        beneficios = salario * 0.15  # 15% estimado para VT, VA, etc.
+        
+        # Estimativa de EPIs (valor médio mensal)
+        epis_mensal = 100  # Valor fixo estimado
+        
+        custo_total = salario + fgts + inss_patronal + beneficios + epis_mensal
+        custo_hora = custo_total / 220 if salario > 0 else 0  # 220 horas mensais CLT
+        
+        custos_funcionarios.append({
+            "funcionario_id": func["id"],
+            "nome": func["nome"],
+            "cargo": func.get("cargo", "-"),
+            "salario": salario,
+            "fgts": fgts,
+            "inss_patronal": inss_patronal,
+            "beneficios": beneficios,
+            "epis": epis_mensal,
+            "custo_total": custo_total,
+            "custo_hora": custo_hora
+        })
+        
+        total_salarios += salario
+        total_encargos += fgts + inss_patronal
+        total_beneficios += beneficios
+        total_epis += epis_mensal
+    
+    return {
+        "funcionarios": custos_funcionarios,
+        "resumo": {
+            "total_salarios": total_salarios,
+            "total_encargos": total_encargos,
+            "total_beneficios": total_beneficios,
+            "total_epis": total_epis,
+            "custo_total": total_salarios + total_encargos + total_beneficios + total_epis
+        }
+    }
+
+
+@api_router.post("/rh/custos/simular-dissidio")
+async def simular_dissidio(percentual: float = Body(..., embed=True)):
+    """Simular impacto de dissídio coletivo"""
+    folha_atual = 0
+    async for func in funcionarios_collection.find({"status": "ativo"}):
+        salario = func.get("salario", 0)
+        fgts = salario * (FGTS_ALIQUOTA / 100)
+        inss_patronal = salario * (INSS_PATRONAL_ALIQUOTA / 100)
+        folha_atual += salario + fgts + inss_patronal
+    
+    fator = 1 + (percentual / 100)
+    folha_com_dissidio = folha_atual * fator
+    impacto_mensal = folha_com_dissidio - folha_atual
+    impacto_anual = impacto_mensal * 12
+    
+    return {
+        "percentual": percentual,
+        "folha_atual": folha_atual,
+        "folha_com_dissidio": folha_com_dissidio,
+        "impacto_mensal": impacto_mensal,
+        "impacto_anual": impacto_anual
+    }
+
+
+@api_router.post("/rh/custos/simular-rescisao")
+async def simular_rescisao(funcionario_id: str = Body(..., embed=True)):
+    """Simular custo de rescisão de funcionário"""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    
+    salario = func.get("salario", 0)
+    hoje = datetime.now()
+    
+    # Calcular tempo de empresa
+    meses_trabalhados = 12
+    if func.get("data_admissao"):
+        try:
+            data_adm = datetime.strptime(func["data_admissao"], "%Y-%m-%d")
+            meses_trabalhados = (hoje.year - data_adm.year) * 12 + (hoje.month - data_adm.month)
+        except:
+            pass
+    
+    # Saldo de salário (estimativa de 15 dias)
+    saldo_salario = salario / 2
+    
+    # Aviso prévio (30 dias + 3 dias por ano trabalhado, máx 90 dias)
+    anos_trabalhados = meses_trabalhados // 12
+    dias_aviso_previo = min(30 + (anos_trabalhados * 3), 90)
+    aviso_previo = (salario / 30) * dias_aviso_previo
+    
+    # Férias vencidas + 1/3 (se houver)
+    ferias_vencidas = (salario + salario / 3) if meses_trabalhados >= 12 else 0
+    
+    # Férias proporcionais + 1/3
+    meses_ferias = meses_trabalhados % 12
+    ferias_proporcionais = ((salario / 12) * meses_ferias) * (4/3)
+    
+    # 13º proporcional
+    meses_13 = hoje.month
+    decimo_terceiro = (salario / 12) * meses_13
+    
+    # FGTS acumulado (estimativa: 8% do salário * meses)
+    fgts_saldo = salario * (FGTS_ALIQUOTA / 100) * meses_trabalhados
+    
+    # Multa de 40% do FGTS
+    multa_fgts = fgts_saldo * 0.4
+    
+    total = saldo_salario + aviso_previo + ferias_vencidas + ferias_proporcionais + decimo_terceiro + multa_fgts
+    
+    return {
+        "funcionario": func["nome"],
+        "meses_trabalhados": meses_trabalhados,
+        "salario": salario,
+        "saldo_salario": saldo_salario,
+        "dias_aviso_previo": dias_aviso_previo,
+        "aviso_previo": aviso_previo,
+        "ferias_vencidas": ferias_vencidas,
+        "ferias_proporcionais": ferias_proporcionais,
+        "decimo_terceiro": decimo_terceiro,
+        "fgts_saldo": fgts_saldo,
+        "multa_fgts": multa_fgts,
+        "total": total
+    }
+
+
 # ============ STORAGE SYSTEM (FILE MANAGER) ============
 
 # Directory for storage system
