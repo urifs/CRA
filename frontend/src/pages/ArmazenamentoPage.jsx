@@ -259,13 +259,13 @@ export default function ArmazenamentoPage() {
     
     try {
       await axios.post(`${API}/storage/folder/set-password`, 
-        { path: setPasswordFolder.path, password: newPassword || null },
+        { path: passwordTargetFolder.path, password: newPassword || null },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       toast.success(newPassword ? "Senha definida com sucesso!" : "Senha removida com sucesso!");
       setShowSetPasswordModal(false);
-      setSetPasswordFolder(null);
+      setPasswordTargetFolder(null);
       setNewPassword("");
       setConfirmPassword("");
       fetchItems();
@@ -275,7 +275,7 @@ export default function ArmazenamentoPage() {
   };
 
   const openSetPasswordModal = (folder) => {
-    setSetPasswordFolder(folder);
+    setPasswordTargetFolder(folder);
     setNewPassword("");
     setConfirmPassword("");
     setShowSetPasswordModal(true);
