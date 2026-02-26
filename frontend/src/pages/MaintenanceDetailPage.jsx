@@ -179,7 +179,7 @@ export default function MaintenanceDetailPage() {
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div 
               className="flex items-center gap-4 p-4 bg-white rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => navigate(`/machines/${maintenance.machine_id}`)}
+              onClick={() => navigate(`/gerenciamento/machines/${maintenance.machine_id}`)}
             >
               <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                 <Truck className="text-gray-600" size={24} />

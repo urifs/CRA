@@ -249,7 +249,7 @@ export default function NotificationsPage() {
                       variant="outline"
                       size="sm"
                       className="shrink-0"
-                      onClick={() => navigate(`/machines/${notification.machine_id}`)}
+                      onClick={() => navigate(`/gerenciamento/machines/${notification.machine_id}`)}
                     >
                       Ver Máquina
                       <ArrowRight size={14} className="ml-1" />

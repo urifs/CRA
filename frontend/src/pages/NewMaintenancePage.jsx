@@ -92,7 +92,7 @@ export default function NewMaintenancePage() {
 
       const response = await axios.post(`${API}/maintenances`, payload);
       toast.success("Manutenção registrada com sucesso!");
-      navigate(`/maintenances/${response.data.id}`);
+      navigate(`/gerenciamento/maintenances/${response.data.id}`);
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao registrar manutenção");
     } finally {

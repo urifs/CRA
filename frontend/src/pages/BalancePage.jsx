@@ -224,7 +224,7 @@ export default function BalancePage() {
                 <Card 
                   key={machine.machine_id}
                   className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/machines/${machine.machine_id}`)}
+                  onClick={() => navigate(`/gerenciamento/machines/${machine.machine_id}`)}
                   data-testid={`machine-expense-${machine.machine_id}`}
                 >
                   <CardContent className="py-4">

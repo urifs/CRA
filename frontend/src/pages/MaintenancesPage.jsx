@@ -232,7 +232,7 @@ export default function MaintenancesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/maintenances/${maintenance.id}`)}
+                            onClick={() => navigate(`/gerenciamento/maintenances/${maintenance.id}`)}
                             data-testid={`view-maintenance-${maintenance.id}`}
                           >
                             <Eye size={16} />
