@@ -73,14 +73,17 @@ export default function MachinesPage() {
   }, []);
 
   const fetchData = async () => {
+    const token = localStorage.getItem("token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    
     try {
       const [machinesRes, categoriesRes, fleetsRes, subfleetsRes, cadastrosRes, subcategoriesRes] = await Promise.all([
-        axios.get(`${API}/machines`),
-        axios.get(`${API}/categories`),
-        axios.get(`${API}/fleets`),
-        axios.get(`${API}/subfleets`),
-        axios.get(`${API}/cadastros`),
-        axios.get(`${API}/subcategories`)
+        axios.get(`${API}/machines`, { headers }),
+        axios.get(`${API}/categories`, { headers }),
+        axios.get(`${API}/fleets`, { headers }),
+        axios.get(`${API}/subfleets`, { headers }),
+        axios.get(`${API}/cadastros`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/subcategories`, { headers })
       ]);
       setMachines(machinesRes.data);
       setCategories(categoriesRes.data);
