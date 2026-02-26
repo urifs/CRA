@@ -6428,12 +6428,27 @@ async def create_folder(
     
     # Build full path
     full_path = STORAGE_DIR / parent.lstrip("/") / data.name
+    folder_path = "/" + str(full_path.relative_to(STORAGE_DIR)).replace("\\", "/")
     
     if full_path.exists():
         raise HTTPException(status_code=400, detail="Pasta já existe")
     
     try:
         full_path.mkdir(parents=True, exist_ok=False)
+        
+        # Se tiver senha, salvar no MongoDB
+        if data.password:
+            password_hash = pwd_context.hash(data.password)
+            await db.folder_passwords.update_one(
+                {"path": folder_path},
+                {"$set": {
+                    "path": folder_path,
+                    "password_hash": password_hash,
+                    "created_by": current_user["id"],
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }},
+                upsert=True
+            )
         
         # Auditoria
         await create_audit_log(
@@ -6442,11 +6457,11 @@ async def create_folder(
             entity_type="storage",
             entity_id=data.name,
             entity_name=data.name,
-            details=f"Pasta criada em {parent}",
+            details=f"Pasta criada em {parent}" + (" (protegida com senha)" if data.password else ""),
             module="Armazenamento"
         )
         
-        return {"message": "Pasta criada com sucesso", "path": "/" + str(full_path.relative_to(STORAGE_DIR)).replace("\\", "/")}
+        return {"message": "Pasta criada com sucesso", "path": folder_path, "has_password": bool(data.password)}
     except Exception as e:
         logger.error(f"Error creating folder: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao criar pasta: {str(e)}")
