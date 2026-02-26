@@ -225,7 +225,7 @@ export default function ObrasPage() {
               key={obra.id} 
               className="machine-card hover:shadow-lg transition-shadow cursor-pointer"
               data-testid={`obra-card-${obra.id}`}
-              onClick={() => navigate(`/obras/${obra.id}`)}
+              onClick={() => navigate(`/gerenciamento/obras/${obra.id}`)}
             >
               <CardContent className="p-0">
                 {/* Card Header */}
