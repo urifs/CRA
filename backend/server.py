@@ -5946,22 +5946,14 @@ EXPORT_CATEGORIES_V2 = {
             ]
         },
         {
-            "id": "usuarios",
-            "label": "Usuários",
-            "icon": "users",
-            "subcategories": [
-                {"id": "users", "label": "Lista de Usuários", "description": "Todos os usuários do sistema"},
-            ]
-        },
-        {
-            "id": "auditoria",
-            "label": "Auditoria",
-            "icon": "clipboard",
-            "subcategories": [
-                {"id": "audit_logs", "label": "Logs de Auditoria", "description": "Todas as atividades registradas"},
-            ]
-        },
-    ],
+5955|            "id": "usuarios",
+5956|            "label": "Usuários",
+5957|            "icon": "users",
+5958|            "subcategories": [
+5959|                {"id": "users", "label": "Lista de Usuários", "description": "Todos os usuários do sistema"},
+5960|            ]
+5961|        },
+5962|    ],
     "administrativo": [
         {
             "id": "financeiro_pagar",
