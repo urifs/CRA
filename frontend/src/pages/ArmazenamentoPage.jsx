@@ -990,11 +990,24 @@ export default function ArmazenamentoPage() {
               </div>
             ) : previewItem && previewBlobUrl ? (
               getPreviewType(previewItem.name) === 'pdf' ? (
-                <iframe
-                  src={previewBlobUrl}
-                  className="w-full h-[70vh]"
-                  title={previewItem.name}
-                />
+                <div className="w-full h-[70vh] flex flex-col">
+                  <object
+                    data={previewBlobUrl}
+                    type="application/pdf"
+                    className="w-full flex-1"
+                  >
+                    <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                      <FileText size={48} className="mb-4 opacity-50" />
+                      <p>Seu navegador não suporta visualização de PDF inline.</p>
+                      <Button 
+                        onClick={() => window.open(previewBlobUrl, '_blank')}
+                        className="mt-4 bg-[#E31A1A] hover:bg-red-700"
+                      >
+                        Abrir em nova aba
+                      </Button>
+                    </div>
+                  </object>
+                </div>
               ) : getPreviewType(previewItem.name) === 'video' ? (
                 <video
                   src={previewBlobUrl}
