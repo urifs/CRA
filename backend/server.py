@@ -1027,10 +1027,12 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
     )
 
 @api_router.get("/machines", response_model=List[MachineResponse])
-async def get_machines(obra_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+async def get_machines(obra_id: Optional[str] = None, fleet_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     query = {}
     if obra_id:
         query["obra_id"] = obra_id
+    if fleet_id:
+        query["fleet_id"] = fleet_id
     
     machines = await db.machines.find(query, {"_id": 0}).to_list(1000)
     
@@ -1042,10 +1044,21 @@ async def get_machines(obra_id: Optional[str] = None, current_user: dict = Depen
     obras = await db.obras.find({}, {"_id": 0}).to_list(100)
     obra_map = {o["id"]: o["name"] for o in obras}
     
+    # Get all fleets and subfleets
+    fleets = await db.fleets.find({}, {"_id": 0}).to_list(100)
+    fleet_map = {f["id"]: f["name"] for f in fleets}
+    
+    subfleets = await db.subfleets.find({}, {"_id": 0}).to_list(500)
+    subfleet_map = {s["id"]: s["name"] for s in subfleets}
+    
+    # Get all cadastros (operators)
+    cadastros = await db.cadastros.find({}, {"_id": 0}).to_list(1000)
+    operator_map = {c["id"]: c.get("nome_razao", "") for c in cadastros}
+    
     return [MachineResponse(
         id=m["id"],
         name=m["name"],
-        plate=m["plate"],
+        plate=m.get("plate", ""),
         category_id=m["category_id"],
         category_name=category_map.get(m["category_id"], ""),
         brand=m.get("brand", ""),
@@ -1055,6 +1068,12 @@ async def get_machines(obra_id: Optional[str] = None, current_user: dict = Depen
         status=m.get("status", "operational"),
         obra_id=m.get("obra_id"),
         obra_name=obra_map.get(m.get("obra_id", ""), ""),
+        fleet_id=m.get("fleet_id"),
+        fleet_name=fleet_map.get(m.get("fleet_id", ""), ""),
+        subfleet_id=m.get("subfleet_id"),
+        subfleet_name=subfleet_map.get(m.get("subfleet_id", ""), ""),
+        operator_id=m.get("operator_id"),
+        operator_name=operator_map.get(m.get("operator_id", ""), ""),
         created_at=m["created_at"]
     ) for m in machines]
 
@@ -1072,10 +1091,25 @@ async def get_machine(machine_id: str, current_user: dict = Depends(get_current_
         obra = await db.obras.find_one({"id": machine["obra_id"]}, {"_id": 0})
         obra_name = obra["name"] if obra else ""
     
+    fleet_name = ""
+    if machine.get("fleet_id"):
+        fleet = await db.fleets.find_one({"id": machine["fleet_id"]}, {"_id": 0})
+        fleet_name = fleet["name"] if fleet else ""
+    
+    subfleet_name = ""
+    if machine.get("subfleet_id"):
+        subfleet = await db.subfleets.find_one({"id": machine["subfleet_id"]}, {"_id": 0})
+        subfleet_name = subfleet["name"] if subfleet else ""
+    
+    operator_name = ""
+    if machine.get("operator_id"):
+        operator = await db.cadastros.find_one({"id": machine["operator_id"]}, {"_id": 0})
+        operator_name = operator.get("nome_razao", "") if operator else ""
+    
     return MachineResponse(
         id=machine["id"],
         name=machine["name"],
-        plate=machine["plate"],
+        plate=machine.get("plate", ""),
         category_id=machine["category_id"],
         category_name=category_name,
         brand=machine.get("brand", ""),
@@ -1085,6 +1119,12 @@ async def get_machine(machine_id: str, current_user: dict = Depends(get_current_
         status=machine.get("status", "operational"),
         obra_id=machine.get("obra_id"),
         obra_name=obra_name,
+        fleet_id=machine.get("fleet_id"),
+        fleet_name=fleet_name,
+        subfleet_id=machine.get("subfleet_id"),
+        subfleet_name=subfleet_name,
+        operator_id=machine.get("operator_id"),
+        operator_name=operator_name,
         created_at=machine["created_at"]
     )
 
