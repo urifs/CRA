@@ -7008,9 +7008,27 @@ def valor_por_extenso(valor):
     return resultado.upper()
 
 
+# Dados das empresas CRA
+EMPRESAS_CRA = {
+    "construtora": {
+        "nome": "CRA CONSTRUTORA",
+        "cnpj": "04.887.879/0001-96",
+        "ie": "",
+        "telefone": "(63) 98407-1513",
+        "endereco": "Q. ASR SE, 75, AVENIDA LO 15, QI 10, LOTE 51A, PLANO DIRETOR SUL, CEP 77022-418, PALMAS - TO"
+    },
+    "locadora": {
+        "nome": "CRA LOCADORA",
+        "cnpj": "39.543.761/0001-25",
+        "ie": "",
+        "telefone": "(63) 98407-1513",
+        "endereco": "Q. ASR SE, 75, AVENIDA LO 15, QI 10, LOTE 51A, PLANO DIRETOR SUL, CEP 77022-418, PALMAS - TO"
+    }
+}
+
 # Endpoint para gerar Recibo
 @api_router.get("/export/recibo/{category}/{item_id}")
-async def export_recibo(category: str, item_id: str, current_user: dict = Depends(get_current_user)):
+async def export_recibo(category: str, item_id: str, empresa: str = "locadora", current_user: dict = Depends(get_current_user)):
     """Gera um recibo de pagamento em PDF"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -7035,7 +7053,8 @@ async def export_recibo(category: str, item_id: str, current_user: dict = Depend
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
-    empresa = await db.empresa_config.find_one({}, {"_id": 0}) or {}
+    # Usar dados da empresa selecionada
+    empresa_data = EMPRESAS_CRA.get(empresa, EMPRESAS_CRA["locadora"])
     
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1*cm, bottomMargin=1*cm)
@@ -7048,6 +7067,15 @@ async def export_recibo(category: str, item_id: str, current_user: dict = Depend
         logo_path = "/app/frontend/public/logo.png"
         if os.path.exists(logo_path):
             logo = RLImage(logo_path, width=3*cm, height=3*cm, kind='proportional')
+            elements.append(logo)
+    except Exception as e:
+        logging.warning(f"Não foi possível carregar o logo: {e}")
+    
+    # Cabeçalho com dados da empresa selecionada
+    empresa_nome = empresa_data["nome"]
+    empresa_cnpj = empresa_data["cnpj"]
+    empresa_endereco = empresa_data["endereco"]
+    empresa_telefone = empresa_data["telefone"]
             elements.append(logo)
     except Exception as e:
         logging.warning(f"Não foi possível carregar o logo: {e}")
