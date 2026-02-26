@@ -6991,6 +6991,15 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
         "stock_items": {"collection": "stock_items", "title": "Itens de Estoque"},
         "obras": {"collection": "obras", "title": "Obras"},
         "alugueis": {"collection": "alugueis", "title": "Aluguéis"},
+        "imoveis": {"collection": "imoveis", "title": "Imóveis"},
+        "imoveis_ativo": {"collection": "imoveis", "title": "Imóveis Ativos"},
+        "imoveis_pendente": {"collection": "imoveis", "title": "Imóveis Pendentes"},
+        "plano_contas": {"collection": "plano_contas", "title": "Plano de Contas"},
+        "centros_custo": {"collection": "centros_custo", "title": "Centros de Custo"},
+        "cadastros": {"collection": "cadastros", "title": "Cadastros"},
+        "contas_bancarias": {"collection": "contas_bancarias", "title": "Contas Bancárias"},
+        "formas_pagamento": {"collection": "formas_pagamento", "title": "Formas de Pagamento"},
+        "fleets": {"collection": "fleets", "title": "Frotas"},
     }
     
     if data.category not in category_config:
