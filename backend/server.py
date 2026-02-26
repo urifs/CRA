@@ -6663,7 +6663,7 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
     """Exporta um item individual em PDF"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
     import io
@@ -6699,85 +6699,260 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
+    # Função auxiliar para formatar valor
+    def fmt_valor(v):
+        if v is None or v == "":
+            return "-"
+        try:
+            return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except:
+            return str(v)
+    
     # Criar PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
     styles = getSampleStyleSheet()
     
-    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=20, textColor=colors.HexColor("#1a1a1a"))
-    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.gray, spaceAfter=20)
-    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=10, textColor=colors.gray)
-    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=12, textColor=colors.HexColor("#1a1a1a"))
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, spaceAfter=15, textColor=colors.HexColor("#1a1a1a"))
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=9, textColor=colors.gray, spaceAfter=15)
+    section_style = ParagraphStyle('Section', parent=styles['Heading2'], fontSize=11, spaceBefore=10, spaceAfter=5, textColor=colors.HexColor("#D4A000"))
+    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=8, textColor=colors.gray, wordWrap='LTR')
+    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor("#1a1a1a"), wordWrap='LTR', leading=12)
     
     elements = []
+    
+    # Logo
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            logo = RLImage(logo_path, width=2.5*cm, height=2.5*cm, kind='proportional')
+            elements.append(logo)
+            elements.append(Spacer(1, 0.3*cm))
+    except:
+        pass
     
     # Título
     elements.append(Paragraph(config["title"], title_style))
     elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
     
-    # Dados do item em tabela
-    table_data = []
-    
     # Campos específicos por tipo
-    if "contas_pagar" in category:
-        fields = [
-            ("Descrição", item.get("descricao", "-")),
-            ("Fornecedor", item.get("fornecedor_nome", "-")),
-            ("Valor Original", f"R$ {item.get('valor', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
-            ("Valor Final", f"R$ {item.get('valor_final', item.get('valor', 0)):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
-            ("Vencimento", item.get("data_vencimento", "-")),
-            ("Status", "Quitada" if item.get("status") == "quitada" else "Em Aberto"),
-            ("Forma de Pagamento", item.get("forma_pagamento_nome", "-")),
-            ("Centro de Custo", item.get("centro_custo_nome", "-")),
-            ("Plano de Contas", item.get("plano_contas_nome", "-")),
-            ("Observações", item.get("observacoes", "-")),
+    if "contas_pagar" in category or "contas_receber" in category:
+        is_pagar = "contas_pagar" in category
+        pessoa_label = "Fornecedor" if is_pagar else "Cliente"
+        pessoa_nome = item.get("fornecedor_nome" if is_pagar else "cliente_nome", "-")
+        pessoa_doc = item.get("fornecedor_cnpj" if is_pagar else "cliente_documento", "-")
+        
+        # Seção: Identificação
+        elements.append(Paragraph("IDENTIFICAÇÃO", section_style))
+        id_data = [
+            [Paragraph("Nº Documento:", label_style), Paragraph(item.get("numero_documento", item.get("id", "-")[:12]), value_style),
+             Paragraph("Conta Movimento:", label_style), Paragraph(item.get("conta_bancaria_nome", "-"), value_style)],
+            [Paragraph(f"{pessoa_label}:", label_style), Paragraph(pessoa_nome, value_style),
+             Paragraph("CPF/CNPJ:", label_style), Paragraph(pessoa_doc, value_style)],
         ]
-        if item.get("data_pagamento"):
-            fields.insert(6, ("Data Pagamento", item.get("data_pagamento")))
-    elif "contas_receber" in category:
-        fields = [
-            ("Descrição", item.get("descricao", "-")),
-            ("Cliente", item.get("cliente_nome", "-")),
-            ("Valor Original", f"R$ {item.get('valor', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
-            ("Valor Final", f"R$ {item.get('valor_final', item.get('valor', 0)):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
-            ("Vencimento", item.get("data_vencimento", "-")),
-            ("Status", "Recebida" if item.get("status") == "quitada" else "Em Aberto"),
-            ("Forma de Recebimento", item.get("forma_pagamento_nome", "-")),
-            ("Centro de Custo", item.get("centro_custo_nome", "-")),
-            ("Plano de Contas", item.get("plano_contas_nome", "-")),
-            ("Observações", item.get("observacoes", "-")),
+        id_table = Table(id_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+        id_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(id_table)
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Seção: Descrição
+        elements.append(Paragraph("DESCRIÇÃO", section_style))
+        desc_text = item.get("descricao", "-")
+        desc_table = Table([[Paragraph(desc_text, value_style)]], colWidths=[18*cm])
+        desc_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(desc_table)
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Seção: Datas
+        elements.append(Paragraph("DATAS", section_style))
+        data_emissao = item.get("data_emissao", item.get("created_at", "-")[:10] if item.get("created_at") else "-")
+        data_venc = item.get("data_vencimento", "-")
+        data_pag = item.get("data_pagamento" if is_pagar else "data_recebimento", "-")
+        dates_data = [
+            [Paragraph("Data Emissão:", label_style), Paragraph(data_emissao, value_style),
+             Paragraph("Data Vencimento:", label_style), Paragraph(data_venc, value_style),
+             Paragraph("Data Pagamento:" if is_pagar else "Data Recebimento:", label_style), Paragraph(data_pag if data_pag else "-", value_style)],
         ]
-        if item.get("data_recebimento"):
-            fields.insert(6, ("Data Recebimento", item.get("data_recebimento")))
+        dates_table = Table(dates_data, colWidths=[3*cm, 3*cm, 3*cm, 3*cm, 3*cm, 3*cm])
+        dates_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (4, 0), (4, -1), colors.HexColor("#f8f8f8")),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+        ]))
+        elements.append(dates_table)
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Seção: Classificação
+        elements.append(Paragraph("CLASSIFICAÇÃO", section_style))
+        class_data = [
+            [Paragraph("Plano de Contas:", label_style), Paragraph(item.get("plano_contas_nome", "-"), value_style),
+             Paragraph("Subconta:", label_style), Paragraph(item.get("subconta_nome", "-"), value_style)],
+            [Paragraph("Centro de Custo:", label_style), Paragraph(item.get("centro_custo_nome", "-"), value_style),
+             Paragraph("Frota:", label_style), Paragraph(item.get("fleet_nome", "-"), value_style)],
+            [Paragraph("Forma Pagamento:", label_style), Paragraph(item.get("forma_pagamento_nome", "-"), value_style),
+             Paragraph("Conta Bancária:", label_style), Paragraph(item.get("conta_bancaria_nome", "-"), value_style)],
+        ]
+        class_table = Table(class_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+        class_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(class_table)
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Seção: Valores
+        elements.append(Paragraph("VALORES", section_style))
+        valor = float(item.get("valor", 0) or 0)
+        desconto = float(item.get("desconto", 0) or 0)
+        multa = float(item.get("multa", 0) or 0)
+        juros = float(item.get("juros", 0) or 0)
+        valor_final = float(item.get("valor_final", valor) or valor)
+        
+        valores_data = [
+            [Paragraph("Valor Original:", label_style), Paragraph(fmt_valor(valor), value_style),
+             Paragraph("Desconto:", label_style), Paragraph(fmt_valor(desconto), value_style)],
+            [Paragraph("Multa:", label_style), Paragraph(fmt_valor(multa), value_style),
+             Paragraph("Juros:", label_style), Paragraph(fmt_valor(juros), value_style)],
+        ]
+        valores_table = Table(valores_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+        valores_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+        ]))
+        elements.append(valores_table)
+        
+        # Total
+        total_data = [[Paragraph("VALOR TOTAL:", ParagraphStyle('TotalLabel', fontSize=10, textColor=colors.white)), 
+                       Paragraph(fmt_valor(valor_final), ParagraphStyle('TotalValue', fontSize=12, textColor=colors.white))]]
+        total_table = Table(total_data, colWidths=[9*cm, 9*cm])
+        total_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#D4A000")),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(total_table)
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Seção: Observações
+        obs = item.get("observacoes", "")
+        if obs:
+            elements.append(Paragraph("OBSERVAÇÕES", section_style))
+            obs_table = Table([[Paragraph(obs, value_style)]], colWidths=[18*cm])
+            obs_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            elements.append(obs_table)
+        
+        # Status
+        status = item.get("status", "em_aberto")
+        status_text = "QUITADA" if status == "quitada" else "EM ABERTO"
+        status_color = colors.HexColor("#28a745") if status == "quitada" else colors.HexColor("#dc3545")
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(f"<b>Status: {status_text}</b>", ParagraphStyle('Status', fontSize=12, alignment=1, textColor=status_color)))
+        
     elif category == "machines":
-        fields = [
-            ("Nome", item.get("name", "-")),
-            ("Modelo", item.get("model", "-")),
-            ("Placa", item.get("plate", "-")),
-            ("Categoria", item.get("category", "-")),
-            ("Ano", item.get("year", "-")),
-            ("Horímetro", item.get("horimeter", "-")),
-            ("Status", item.get("status", "-")),
+        table_data = [
+            [Paragraph("Nome:", label_style), Paragraph(item.get("name", "-"), value_style)],
+            [Paragraph("Modelo:", label_style), Paragraph(item.get("model", "-"), value_style)],
+            [Paragraph("Placa:", label_style), Paragraph(item.get("plate", "-"), value_style)],
+            [Paragraph("Categoria:", label_style), Paragraph(item.get("category", "-"), value_style)],
+            [Paragraph("Ano:", label_style), Paragraph(str(item.get("year", "-")), value_style)],
+            [Paragraph("Horímetro:", label_style), Paragraph(str(item.get("horimeter", "-")), value_style)],
+            [Paragraph("Status:", label_style), Paragraph(item.get("status", "-"), value_style)],
+            [Paragraph("Frota:", label_style), Paragraph(item.get("fleet_name", "-"), value_style)],
+            [Paragraph("Observações:", label_style), Paragraph(item.get("observations", "-"), value_style)],
         ]
+        table = Table(table_data, colWidths=[4*cm, 14*cm])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(table)
+        
     elif category == "maintenances":
-        fields = [
-            ("Descrição", item.get("description", "-")),
-            ("Máquina", item.get("machine_name", "-")),
-            ("Data", item.get("date", "-")),
-            ("Tipo", item.get("type", "-")),
-            ("Custo", f"R$ {item.get('cost', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
-            ("Status", item.get("status", "-")),
+        table_data = [
+            [Paragraph("Descrição:", label_style), Paragraph(item.get("description", "-"), value_style)],
+            [Paragraph("Máquina:", label_style), Paragraph(item.get("machine_name", "-"), value_style)],
+            [Paragraph("Data:", label_style), Paragraph(item.get("date", "-"), value_style)],
+            [Paragraph("Tipo:", label_style), Paragraph(item.get("type", "-"), value_style)],
+            [Paragraph("Custo:", label_style), Paragraph(fmt_valor(item.get("cost", 0)), value_style)],
+            [Paragraph("Status:", label_style), Paragraph(item.get("status", "-"), value_style)],
+            [Paragraph("Mecânico:", label_style), Paragraph(item.get("mechanic", "-"), value_style)],
+            [Paragraph("Observações:", label_style), Paragraph(item.get("observations", "-"), value_style)],
         ]
+        table = Table(table_data, colWidths=[4*cm, 14*cm])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(table)
+        
     else:
         # Genérico para outros tipos
-        fields = [(k.replace("_", " ").title(), str(v)) for k, v in item.items() if k not in ["id", "created_at", "updated_at", "created_by"]]
+        table_data = []
+        for k, v in item.items():
+            if k not in ["id", "created_at", "updated_at", "created_by", "_id"]:
+                label = k.replace("_", " ").title()
+                value = str(v) if v is not None else "-"
+                table_data.append([Paragraph(f"{label}:", label_style), Paragraph(value, value_style)])
+        
+        if table_data:
+            table = Table(table_data, colWidths=[4*cm, 14*cm])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            elements.append(table)
     
-    for label, value in fields:
-        table_data.append([Paragraph(label, label_style), Paragraph(str(value) if value else "-", value_style)])
+    doc.build(elements)
+    buffer.seek(0)
     
-    table = Table(table_data, colWidths=[5*cm, 12*cm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+    # Log de auditoria
+    item_name = item.get("descricao") or item.get("name") or item.get("nome") or item_id
+    await create_audit_log(current_user, "export", category, item_id, f"Item individual: {item_name}")
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
