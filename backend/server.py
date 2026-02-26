@@ -6628,6 +6628,7 @@ async def get_export_items(collection: str, status: str = None, current_user: di
         "stock_items": {"name_field": "name", "id_field": "id", "collection": "stock_items", "extra_fields": ["quantity", "category"]},
         "obras": {"name_field": "nome", "id_field": "id", "collection": "obras", "extra_fields": ["cliente", "status"]},
         "alugueis": {"name_field": "descricao", "id_field": "id", "collection": "alugueis", "extra_fields": ["valor", "data_inicio"]},
+        "imoveis": {"name_field": "descricao", "id_field": "id", "collection": "imoveis", "extra_fields": ["valor_aluguel", "endereco", "cliente_nome"]},
         "usuarios": {"name_field": "name", "id_field": "id", "collection": "users", "extra_fields": ["email", "role"]},
     }
     
