@@ -142,6 +142,8 @@ class MachineCreate(BaseModel):
     fleet_id: Optional[str] = None
     subfleet_id: Optional[str] = None
     operator_id: Optional[str] = None  # ID do funcionário/operador
+    identificador_tipo: Optional[str] = None  # 'chassi' ou 'serie'
+    identificador_numero: Optional[str] = None
 
 class MachineResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -165,6 +167,9 @@ class MachineResponse(BaseModel):
     subfleet_name: Optional[str] = ""
     operator_id: Optional[str] = None
     operator_name: Optional[str] = ""
+    identificador_tipo: Optional[str] = None
+    identificador_numero: Optional[str] = None
+    horimetro_atual: Optional[float] = None
     created_at: str
 
 class MaintenanceCreate(BaseModel):
