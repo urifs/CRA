@@ -6413,6 +6413,11 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
         "alugueis_ativo": {"collection": "alugueis", "title": "Aluguéis Ativos", "filter": {"status": "ativo"}},
         "alugueis_finalizado": {"collection": "alugueis", "title": "Aluguéis Finalizados", "filter": {"status": "finalizado"}},
         
+        # Imóveis
+        "imoveis": {"collection": "imoveis", "title": "Imóveis para Locação", "filter": {}},
+        "imoveis_ativo": {"collection": "imoveis", "title": "Imóveis Locados", "filter": {"status": "ativo"}},
+        "imoveis_pendente": {"collection": "imoveis", "title": "Imóveis Disponíveis", "filter": {"status": "pendente"}},
+        
         # Contabilidade
         "plano_contas": {"collection": "plano_contas", "title": "Plano de Contas", "filter": {}},
         "plano_contas_receita": {"collection": "plano_contas", "title": "Contas de Receita", "filter": {"tipo": "receita"}},
