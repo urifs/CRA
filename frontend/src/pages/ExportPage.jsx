@@ -95,58 +95,110 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
-  const fetchFilterItems = async (subcategoryId) => {
-    const collection = filterableCategories[subcategoryId];
-    if (!collection) return;
+  // Buscar itens individuais de uma subcategoria
+  const fetchSubcategoryItems = async (subcategoryId) => {
+    // Mapear subcategoria para coleção correta
+    const collectionMap = {
+      'extrato_bancario': 'contas_bancarias',
+    };
+    const collection = collectionMap[subcategoryId] || subcategoryId;
     
-    setLoadingFilters(prev => ({...prev, [subcategoryId]: true}));
+    setLoadingSubcategory(prev => ({...prev, [subcategoryId]: true}));
     try {
       const response = await axios.get(`${API}/export/items/${collection}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSpecificFilters(prev => ({
+      setSubcategoryItems(prev => ({
         ...prev,
-        [subcategoryId]: {
-          expanded: prev[subcategoryId]?.expanded || false,
-          selectedIds: prev[subcategoryId]?.selectedIds || [],
-          items: response.data
-        }
+        [subcategoryId]: response.data
       }));
     } catch (error) {
       console.error("Erro ao carregar itens:", error);
+      toast.error("Erro ao carregar itens da subcategoria");
     } finally {
-      setLoadingFilters(prev => ({...prev, [subcategoryId]: false}));
+      setLoadingSubcategory(prev => ({...prev, [subcategoryId]: false}));
     }
   };
 
-  const toggleFilterExpand = (subcategoryId) => {
-    const current = specificFilters[subcategoryId];
-    if (!current?.items?.length) {
-      fetchFilterItems(subcategoryId);
+  // Toggle expansão de subcategoria
+  const toggleSubcategoryExpand = (subcategoryId) => {
+    const isExpanded = expandedSubcategories[subcategoryId];
+    
+    // Se vai expandir e não tem itens carregados, buscar
+    if (!isExpanded && !subcategoryItems[subcategoryId]) {
+      fetchSubcategoryItems(subcategoryId);
     }
-    setSpecificFilters(prev => ({
+    
+    setExpandedSubcategories(prev => ({
       ...prev,
-      [subcategoryId]: {
-        ...prev[subcategoryId],
-        expanded: !prev[subcategoryId]?.expanded
-      }
+      [subcategoryId]: !prev[subcategoryId]
     }));
   };
 
-  const toggleFilterItem = (subcategoryId, itemId) => {
-    setSpecificFilters(prev => {
-      const current = prev[subcategoryId] || { expanded: false, selectedIds: [], items: [] };
-      const isSelected = current.selectedIds.includes(itemId);
-      return {
-        ...prev,
-        [subcategoryId]: {
-          ...current,
-          selectedIds: isSelected 
-            ? current.selectedIds.filter(id => id !== itemId)
-            : [...current.selectedIds, itemId]
+  // Exportar item individual
+  const exportIndividualItem = async (subcategoryId, itemId, itemName) => {
+    // Para extrato bancário, usar endpoint específico
+    if (subcategoryId === 'extrato_bancario') {
+      setExporting(`individual-${itemId}`);
+      try {
+        const response = await axios.get(`${API}/export/extrato-bancario/${itemId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+        
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `CRA_Extrato_${itemName.replace(/\s/g, '_')}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        
+        toast.success(`Extrato de "${itemName}" exportado!`);
+      } catch (error) {
+        console.error("Erro ao exportar extrato:", error);
+        toast.error("Erro ao exportar extrato");
+      } finally {
+        setExporting(null);
+      }
+      return;
+    }
+    
+    // Para outros tipos, usar endpoint genérico de item individual
+    setExporting(`individual-${itemId}`);
+    try {
+      const response = await axios.get(`${API}/export/individual/${subcategoryId}/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `CRA_${subcategoryId}_${itemId.slice(0, 8)}.pdf`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/"/g, '');
         }
-      };
-    });
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`"${itemName}" exportado com sucesso!`);
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      toast.error(error.response?.data?.detail || "Erro ao exportar item");
+    } finally {
+      setExporting(null);
+    }
   };
 
   const fetchCategories = async () => {
