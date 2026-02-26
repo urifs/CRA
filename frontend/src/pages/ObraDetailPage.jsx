@@ -401,7 +401,7 @@ export default function ObraDetailPage() {
                 <div
                   key={maintenance.id}
                   className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/maintenances/${maintenance.id}`)}
+                  onClick={() => navigate(`/gerenciamento/maintenances/${maintenance.id}`)}
                   data-testid={`obra-maintenance-${maintenance.id}`}
                 >
                   <div className="flex items-center gap-3">
