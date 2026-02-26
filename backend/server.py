@@ -3333,6 +3333,48 @@ class FormaPagamentoResponse(BaseModel):
     observacoes: Optional[str] = None
     created_at: str
 
+# --- Contas Bancárias ---
+class ContaBancariaCreate(BaseModel):
+    nome: str  # Nome identificador da conta (ex: "Conta Principal", "Conta Poupança")
+    banco: str  # Nome do banco
+    codigo_banco: Optional[str] = None  # Código do banco (ex: 001, 341)
+    agencia: str
+    agencia_digito: Optional[str] = None
+    conta: str
+    conta_digito: Optional[str] = None
+    tipo_conta: str = "corrente"  # corrente, poupanca, investimento, caixa
+    titular: Optional[str] = None
+    cpf_cnpj_titular: Optional[str] = None
+    chave_pix: Optional[str] = None
+    tipo_chave_pix: Optional[str] = None  # cpf, cnpj, email, telefone, aleatoria
+    saldo_inicial: Optional[float] = 0
+    saldo_atual: Optional[float] = 0
+    ativo: bool = True
+    cor: Optional[str] = "#3B82F6"  # Cor para identificação visual
+    observacoes: Optional[str] = None
+
+class ContaBancariaResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    nome: str
+    banco: str
+    codigo_banco: Optional[str] = None
+    agencia: str
+    agencia_digito: Optional[str] = None
+    conta: str
+    conta_digito: Optional[str] = None
+    tipo_conta: str
+    titular: Optional[str] = None
+    cpf_cnpj_titular: Optional[str] = None
+    chave_pix: Optional[str] = None
+    tipo_chave_pix: Optional[str] = None
+    saldo_inicial: Optional[float] = 0
+    saldo_atual: Optional[float] = 0
+    ativo: bool
+    cor: Optional[str] = "#3B82F6"
+    observacoes: Optional[str] = None
+    created_at: str
+
 # --- Aluguéis de Máquinas ---
 class AluguelCreate(BaseModel):
     # Máquina
