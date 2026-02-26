@@ -70,8 +70,16 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [expandedSubcategories, setExpandedSubcategories] = useState({});
   const [subcategoryItems, setSubcategoryItems] = useState({});
   const [loadingSubcategory, setLoadingSubcategory] = useState({});
+  
+  // Estado para seleção múltipla de itens individuais
+  const [selectedIndividualItems, setSelectedIndividualItems] = useState({});  // {subcategoryId: [itemIds]}
 
   const accentColor = module === "gerenciamento" ? "#E31A1A" : "#D4A000";
+
+  // Categorias que suportam recibo/duplicata
+  const RECEIPT_CATEGORIES = ['contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
+    'contas_receber', 'contas_receber_pendente', 'contas_receber_recebidas', 'contas_receber_vencidas',
+    'alugueis'];
 
   // State para extrato bancário
   const [selectedContaBancaria, setSelectedContaBancaria] = useState(null);
