@@ -4918,6 +4918,168 @@ async def download_contrato(
         media_type="application/octet-stream"
     )
 
+# --- IMÓVEIS PARA LOCAÇÃO ---
+class ImovelCreate(BaseModel):
+    tipo_imovel: str = "apartamento"
+    descricao: str
+    endereco: str
+    numero: Optional[str] = ""
+    complemento: Optional[str] = ""
+    bairro: Optional[str] = ""
+    cidade: Optional[str] = ""
+    estado: Optional[str] = "TO"
+    cep: Optional[str] = ""
+    area_m2: Optional[float] = 0
+    quartos: Optional[int] = 0
+    banheiros: Optional[int] = 0
+    vagas_garagem: Optional[int] = 0
+    cliente_nome: str
+    cliente_telefone: Optional[str] = ""
+    cliente_documento: Optional[str] = ""
+    numero_contrato: Optional[str] = ""
+    tipo_periodo: str = "mensal"
+    periodo_especificado: Optional[str] = ""
+    data_inicio: str
+    data_vencimento: Optional[str] = ""
+    valor_aluguel: float
+    valor_condominio: Optional[float] = 0
+    valor_iptu: Optional[float] = 0
+    valor_caucao: Optional[float] = 0
+    dia_vencimento: Optional[int] = 10
+    observacoes: Optional[str] = ""
+    gerar_conta_receber: bool = True
+
+@api_router.get("/admin/imoveis")
+async def get_imoveis(current_user: dict = Depends(get_current_user)):
+    imoveis = await db.imoveis.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return imoveis
+
+@api_router.get("/admin/imoveis/{id}")
+async def get_imovel(id: str, current_user: dict = Depends(get_current_user)):
+    imovel = await db.imoveis.find_one({"id": id}, {"_id": 0})
+    if not imovel:
+        raise HTTPException(status_code=404, detail="Imóvel não encontrado")
+    return imovel
+
+@api_router.post("/admin/imoveis")
+async def create_imovel(imovel: ImovelCreate, current_user: dict = Depends(get_current_user)):
+    imovel_dict = imovel.model_dump()
+    imovel_dict["id"] = str(uuid.uuid4())
+    imovel_dict["status"] = "ativo" if imovel_dict["cliente_nome"] else "pendente"
+    imovel_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    imovel_dict["created_by"] = current_user.get("user_id")
+    
+    # Gerar conta a receber
+    if imovel_dict["gerar_conta_receber"] and imovel_dict["valor_aluguel"] > 0:
+        valor_total = imovel_dict["valor_aluguel"] + imovel_dict.get("valor_condominio", 0) + imovel_dict.get("valor_iptu", 0)
+        
+        # Calcular próximo vencimento
+        hoje = datetime.now()
+        dia_venc = imovel_dict.get("dia_vencimento", 10)
+        if hoje.day > dia_venc:
+            prox_mes = hoje.month + 1 if hoje.month < 12 else 1
+            prox_ano = hoje.year if hoje.month < 12 else hoje.year + 1
+        else:
+            prox_mes = hoje.month
+            prox_ano = hoje.year
+        
+        data_vencimento = f"{prox_ano}-{prox_mes:02d}-{dia_venc:02d}"
+        
+        conta_receber = {
+            "id": str(uuid.uuid4()),
+            "descricao": f"Aluguel - {imovel_dict['descricao']}",
+            "cliente_nome": imovel_dict["cliente_nome"],
+            "cliente_documento": imovel_dict.get("cliente_documento", ""),
+            "valor": valor_total,
+            "valor_final": valor_total,
+            "data_vencimento": data_vencimento,
+            "status": "em_aberto",
+            "origem": "imovel",
+            "imovel_id": imovel_dict["id"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": current_user.get("user_id")
+        }
+        await db.contas_receber.insert_one(conta_receber)
+        imovel_dict["conta_receber_id"] = conta_receber["id"]
+    
+    await db.imoveis.insert_one(imovel_dict)
+    await create_audit_log(current_user, "create", "imovel", imovel_dict["id"], f"Imóvel: {imovel_dict['descricao']}")
+    
+    created = await db.imoveis.find_one({"id": imovel_dict["id"]}, {"_id": 0})
+    return created
+
+@api_router.put("/admin/imoveis/{id}")
+async def update_imovel(id: str, imovel: ImovelCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.imoveis.find_one({"id": id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Imóvel não encontrado")
+    
+    update_data = imovel.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.imoveis.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "imovel", id, f"Imóvel: {update_data['descricao']}")
+    
+    updated = await db.imoveis.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.patch("/admin/imoveis/{id}/status")
+async def update_imovel_status(id: str, status_data: dict, current_user: dict = Depends(get_current_user)):
+    imovel = await db.imoveis.find_one({"id": id}, {"_id": 0})
+    if not imovel:
+        raise HTTPException(status_code=404, detail="Imóvel não encontrado")
+    
+    new_status = status_data.get("status")
+    await db.imoveis.update_one({"id": id}, {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await create_audit_log(current_user, "update", "imovel", id, f"Status: {new_status}")
+    
+    updated = await db.imoveis.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/imoveis/{id}")
+async def delete_imovel(id: str, current_user: dict = Depends(get_current_user)):
+    imovel = await db.imoveis.find_one({"id": id}, {"_id": 0})
+    if not imovel:
+        raise HTTPException(status_code=404, detail="Imóvel não encontrado")
+    
+    if imovel.get("conta_receber_id"):
+        await db.contas_receber.delete_one({"id": imovel["conta_receber_id"]})
+    
+    await db.imoveis.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "imovel", id, f"Imóvel: {imovel['descricao']}")
+    return {"message": "Imóvel excluído"}
+
+CONTRATOS_IMOVEIS_DIR = ROOT_DIR / "uploads" / "contratos_imoveis"
+CONTRATOS_IMOVEIS_DIR.mkdir(parents=True, exist_ok=True)
+
+@api_router.post("/admin/imoveis/{id}/contrato")
+async def upload_contrato_imovel(id: str, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    imovel = await db.imoveis.find_one({"id": id}, {"_id": 0})
+    if not imovel:
+        raise HTTPException(status_code=404, detail="Imóvel não encontrado")
+    
+    ext = Path(file.filename).suffix.lower()
+    allowed_extensions = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"]
+    if ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Tipo não permitido. Use: {', '.join(allowed_extensions)}")
+    
+    content = await file.read()
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 50MB")
+    
+    unique_filename = f"{id}_{uuid.uuid4()}{ext}"
+    file_path = CONTRATOS_IMOVEIS_DIR / unique_filename
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    await db.imoveis.update_one({"id": id}, {"$set": {
+        "contrato_arquivo": unique_filename,
+        "contrato_nome": file.filename,
+        "contrato_uploaded_at": datetime.now(timezone.utc).isoformat()
+    }})
+    
+    return {"message": "Contrato anexado", "filename": unique_filename}
+
 # --- Buscar máquinas do sistema de gerenciamento ---
 @api_router.get("/admin/maquinas-disponiveis")
 async def get_maquinas_disponiveis(current_user: dict = Depends(get_current_user)):
