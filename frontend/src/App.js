@@ -25,6 +25,7 @@ import MedicoesPage from "@/pages/MedicoesPage";
 import AuditPage from "@/pages/AuditPage";
 import MorePage from "@/pages/MorePage";
 import FrotasPage from "@/pages/FrotasPage";
+import HorimetroPage from "@/pages/HorimetroPage";
 import SystemSelectPage from "@/pages/SystemSelectPage";
 import PainelAdminPage from "@/pages/PainelAdminPage";
 import ExportPage from "@/pages/ExportPage";
