@@ -403,7 +403,7 @@ export default function MachinesPage() {
                       <td>{getStatusBadge(machine.status)}</td>
                       <td className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => navigate(`/machines/${machine.id}`)}>
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/gerenciamento/machines/${machine.id}`)}>
                             <Eye size={16} />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => openEditDialog(machine)}>
