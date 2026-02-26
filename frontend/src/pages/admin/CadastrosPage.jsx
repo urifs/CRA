@@ -68,8 +68,7 @@ export default function CadastrosPage() {
     { value: "cliente", label: "Cliente" },
     { value: "fornecedor", label: "Fornecedor" },
     { value: "cli_forn", label: "Cliente/Fornecedor" },
-    { value: "transportador", label: "Transportador" },
-    { value: "funcionario", label: "Funcionário" }
+    { value: "transportador", label: "Transportador" }
   ];
 
   useEffect(() => {
