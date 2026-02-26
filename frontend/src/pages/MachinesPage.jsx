@@ -267,94 +267,151 @@ export default function MachinesPage() {
         </div>
       </div>
 
-      {/* Machines Grid */}
+      {/* Machines Grid/List */}
       {filteredMachines.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMachines.map((machine) => (
-            <Card 
-              key={machine.id} 
-              className="machine-card"
-              data-testid={`machine-card-${machine.id}`}
-            >
-              <CardContent className="p-0">
-                {/* Card Header */}
-                <div className="p-4 border-b border-gray-100">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Truck className="text-gray-600" size={24} />
+        viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredMachines.map((machine) => (
+              <Card 
+                key={machine.id} 
+                className="machine-card"
+                data-testid={`machine-card-${machine.id}`}
+              >
+                <CardContent className="p-0">
+                  {/* Card Header */}
+                  <div className="p-4 border-b border-gray-100">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Truck className="text-gray-600" size={24} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-black">{machine.name}</h3>
+                          {machine.plate && <p className="font-mono text-sm text-gray-500">{machine.plate}</p>}
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-black">{machine.name}</h3>
-                        <p className="font-mono text-sm text-gray-500">{machine.plate}</p>
+                      {getStatusBadge(machine.status)}
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-4 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Categoria:</span>
+                      <span className="font-medium text-black">{machine.category_name || "-"}</span>
+                    </div>
+                    {machine.brand && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Marca:</span>
+                        <span className="font-medium text-black">{machine.brand}</span>
                       </div>
-                    </div>
-                    {getStatusBadge(machine.status)}
+                    )}
+                    {machine.fleet_name && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 flex items-center gap-1">
+                          <FolderTree size={12} /> Frota:
+                        </span>
+                        <span className="font-medium text-black">{machine.fleet_name}</span>
+                      </div>
+                    )}
+                    {machine.subfleet_name && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 flex items-center gap-1">
+                          <ChevronRight size={12} /> Subfrota:
+                        </span>
+                        <span className="font-medium text-black">{machine.subfleet_name}</span>
+                      </div>
+                    )}
+                    {machine.operator_name && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 flex items-center gap-1">
+                          <User size={12} /> Operador:
+                        </span>
+                        <span className="font-medium text-black truncate max-w-[120px]">{machine.operator_name}</span>
+                      </div>
+                    )}
+                    {machine.notes && (
+                      <div className="pt-1 border-t mt-1">
+                        <p className="text-gray-500 text-xs truncate" title={machine.notes}>
+                          📝 {machine.notes}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Card Body */}
-                <div className="p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Categoria:</span>
-                    <span className="font-medium text-black">{machine.category_name || "-"}</span>
+                  {/* Card Actions */}
+                  <div className="p-4 pt-0 flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/machines/${machine.id}`)} data-testid={`view-machine-${machine.id}`}>
+                      <Eye size={16} className="mr-1" /> Ver
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditDialog(machine)} data-testid={`edit-machine-${machine.id}`}>
+                      <Edit size={16} className="mr-1" /> Editar
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteId(machine.id)} data-testid={`delete-machine-${machine.id}`}>
+                      <Trash2 size={16} />
+                    </Button>
                   </div>
-                  {machine.brand && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Marca:</span>
-                      <span className="font-medium text-black">{machine.brand}</span>
-                    </div>
-                  )}
-                  {machine.model && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Modelo:</span>
-                      <span className="font-medium text-black">{machine.model}</span>
-                    </div>
-                  )}
-                  {machine.year && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Ano:</span>
-                      <span className="font-mono text-black">{machine.year}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Card Actions */}
-                <div className="p-4 pt-0 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => navigate(`/machines/${machine.id}`)}
-                    data-testid={`view-machine-${machine.id}`}
-                  >
-                    <Eye size={16} className="mr-1" />
-                    Ver
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => openEditDialog(machine)}
-                    data-testid={`edit-machine-${machine.id}`}
-                  >
-                    <Edit size={16} className="mr-1" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => setDeleteId(machine.id)}
-                    data-testid={`delete-machine-${machine.id}`}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* List View */
+          <Card>
+            <CardContent className="p-0">
+              <table className="data-table w-full">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Placa</th>
+                    <th>Categoria</th>
+                    <th>Frota</th>
+                    <th>Operador</th>
+                    <th>Status</th>
+                    <th className="text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMachines.map((machine) => (
+                    <tr key={machine.id} data-testid={`machine-row-${machine.id}`}>
+                      <td className="font-medium text-black">
+                        <div className="flex items-center gap-2">
+                          <Truck size={16} className="text-gray-400" />
+                          {machine.name}
+                        </div>
+                      </td>
+                      <td className="font-mono text-gray-500">{machine.plate || "-"}</td>
+                      <td>{machine.category_name || "-"}</td>
+                      <td>
+                        {machine.fleet_name ? (
+                          <span className="text-sm">
+                            {machine.fleet_name}
+                            {machine.subfleet_name && <span className="text-gray-400"> / {machine.subfleet_name}</span>}
+                          </span>
+                        ) : "-"}
+                      </td>
+                      <td className="truncate max-w-[150px]">{machine.operator_name || "-"}</td>
+                      <td>{getStatusBadge(machine.status)}</td>
+                      <td className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/machines/${machine.id}`)}>
+                            <Eye size={16} />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(machine)}>
+                            <Edit size={16} />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-600" onClick={() => setDeleteId(machine.id)}>
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        )
       ) : (
         <div className="empty-state">
           <Truck className="text-gray-300 mb-4" size={64} />
