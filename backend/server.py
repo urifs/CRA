@@ -1616,6 +1616,156 @@ async def get_horimetro_by_machine(machine_id: str, limit: int = 50, current_use
     
     return registros
 
+# ============ COMBUSTIVEL ROUTES ============
+
+@api_router.get("/combustivel", response_model=List[CombustivelResponse])
+async def list_combustivel(
+    machine_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
+):
+    """Lista todos os registros de combustível"""
+    query = {}
+    if machine_id:
+        query["machine_id"] = machine_id
+    
+    registros = await db.combustivel.find(query, {"_id": 0}).sort("data", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for registro in registros:
+        machine = await db.machines.find_one({"id": registro["machine_id"]}, {"_id": 0, "name": 1})
+        registro["machine_name"] = machine["name"] if machine else "Máquina não encontrada"
+    
+    return registros
+
+@api_router.get("/combustivel/{registro_id}", response_model=CombustivelResponse)
+async def get_combustivel(registro_id: str, current_user: dict = Depends(get_current_user)):
+    """Obtém um registro de combustível específico"""
+    registro = await db.combustivel.find_one({"id": registro_id}, {"_id": 0})
+    if not registro:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    
+    machine = await db.machines.find_one({"id": registro["machine_id"]}, {"_id": 0, "name": 1})
+    registro["machine_name"] = machine["name"] if machine else "Máquina não encontrada"
+    
+    return registro
+
+@api_router.post("/combustivel", response_model=CombustivelResponse)
+async def create_combustivel(data: CombustivelCreate, current_user: dict = Depends(get_current_user)):
+    """Cria um novo registro de combustível"""
+    machine = await db.machines.find_one({"id": data.machine_id}, {"_id": 0})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    litros_consumidos = data.litros_consumidos
+    if litros_consumidos is None:
+        litros_consumidos = data.litros_final - data.litros_inicial
+    
+    registro_id = str(uuid.uuid4())
+    registro_doc = {
+        "id": registro_id,
+        "machine_id": data.machine_id,
+        "data": data.data,
+        "tipo_medicao": data.tipo_medicao,
+        "hora_km_inicial": data.hora_km_inicial or 0,
+        "litros_inicial": data.litros_inicial,
+        "litros_final": data.litros_final,
+        "litros_consumidos": litros_consumidos,
+        "operador": data.operador or "",
+        "observacoes": data.observacoes or "",
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.combustivel.insert_one(registro_doc)
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="combustível",
+        entity_id=registro_id,
+        entity_name=f"{machine['name']} - {data.data}"
+    )
+    
+    registro_doc["machine_name"] = machine["name"]
+    return registro_doc
+
+@api_router.put("/combustivel/{registro_id}", response_model=CombustivelResponse)
+async def update_combustivel(registro_id: str, data: CombustivelCreate, current_user: dict = Depends(get_current_user)):
+    """Atualiza um registro de combustível"""
+    existing = await db.combustivel.find_one({"id": registro_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    
+    machine = await db.machines.find_one({"id": data.machine_id}, {"_id": 0})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    litros_consumidos = data.litros_consumidos
+    if litros_consumidos is None:
+        litros_consumidos = data.litros_final - data.litros_inicial
+    
+    update_doc = {
+        "machine_id": data.machine_id,
+        "data": data.data,
+        "tipo_medicao": data.tipo_medicao,
+        "hora_km_inicial": data.hora_km_inicial or 0,
+        "litros_inicial": data.litros_inicial,
+        "litros_final": data.litros_final,
+        "litros_consumidos": litros_consumidos,
+        "operador": data.operador or "",
+        "observacoes": data.observacoes or ""
+    }
+    
+    await db.combustivel.update_one({"id": registro_id}, {"$set": update_doc})
+    
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="combustível",
+        entity_id=registro_id,
+        entity_name=f"{machine['name']} - {data.data}"
+    )
+    
+    updated = await db.combustivel.find_one({"id": registro_id}, {"_id": 0})
+    updated["machine_name"] = machine["name"]
+    return updated
+
+@api_router.delete("/combustivel/{registro_id}")
+async def delete_combustivel(registro_id: str, current_user: dict = Depends(get_current_user)):
+    """Exclui um registro de combustível"""
+    existing = await db.combustivel.find_one({"id": registro_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    
+    machine = await db.machines.find_one({"id": existing["machine_id"]}, {"_id": 0, "name": 1})
+    
+    await db.combustivel.delete_one({"id": registro_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="combustível",
+        entity_id=registro_id,
+        entity_name=f"{machine['name'] if machine else 'Máquina'} - {existing['data']}"
+    )
+    
+    return {"message": "Registro excluído com sucesso"}
+
+@api_router.get("/combustivel/machine/{machine_id}", response_model=List[CombustivelResponse])
+async def get_combustivel_by_machine(machine_id: str, limit: int = 50, current_user: dict = Depends(get_current_user)):
+    """Obtém registros de combustível de uma máquina específica"""
+    machine = await db.machines.find_one({"id": machine_id}, {"_id": 0, "name": 1})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    registros = await db.combustivel.find({"machine_id": machine_id}, {"_id": 0}).sort("data", -1).limit(limit).to_list(limit)
+    
+    for registro in registros:
+        registro["machine_name"] = machine["name"]
+    
+    return registros
+
 # ============ MAINTENANCE ROUTES ============
 
 @api_router.post("/maintenances", response_model=MaintenanceResponse)
