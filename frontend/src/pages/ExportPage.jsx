@@ -47,12 +47,77 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(null);
+  const [specificFilters, setSpecificFilters] = useState({}); // {plano_contas: {expanded: true, selectedIds: [], items: []}}
+  const [loadingFilters, setLoadingFilters] = useState({});
 
   const accentColor = module === "gerenciamento" ? "#E31A1A" : "#D4A000";
+
+  // Subcategorias que suportam seleção específica
+  const filterableCategories = {
+    'plano_contas': 'plano_contas',
+    'centros_custo': 'centros_custo',
+    'fleets': 'fleets',
+    'cadastros': 'cadastros',
+    'formas_pagamento': 'formas_pagamento'
+  };
 
   useEffect(() => {
     fetchCategories();
   }, [module]);
+
+  const fetchFilterItems = async (subcategoryId) => {
+    const collection = filterableCategories[subcategoryId];
+    if (!collection) return;
+    
+    setLoadingFilters(prev => ({...prev, [subcategoryId]: true}));
+    try {
+      const response = await axios.get(`${API}/export/items/${collection}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSpecificFilters(prev => ({
+        ...prev,
+        [subcategoryId]: {
+          expanded: prev[subcategoryId]?.expanded || false,
+          selectedIds: prev[subcategoryId]?.selectedIds || [],
+          items: response.data
+        }
+      }));
+    } catch (error) {
+      console.error("Erro ao carregar itens:", error);
+    } finally {
+      setLoadingFilters(prev => ({...prev, [subcategoryId]: false}));
+    }
+  };
+
+  const toggleFilterExpand = (subcategoryId) => {
+    const current = specificFilters[subcategoryId];
+    if (!current?.items?.length) {
+      fetchFilterItems(subcategoryId);
+    }
+    setSpecificFilters(prev => ({
+      ...prev,
+      [subcategoryId]: {
+        ...prev[subcategoryId],
+        expanded: !prev[subcategoryId]?.expanded
+      }
+    }));
+  };
+
+  const toggleFilterItem = (subcategoryId, itemId) => {
+    setSpecificFilters(prev => {
+      const current = prev[subcategoryId] || { expanded: false, selectedIds: [], items: [] };
+      const isSelected = current.selectedIds.includes(itemId);
+      return {
+        ...prev,
+        [subcategoryId]: {
+          ...current,
+          selectedIds: isSelected 
+            ? current.selectedIds.filter(id => id !== itemId)
+            : [...current.selectedIds, itemId]
+        }
+      };
+    });
+  };
 
   const fetchCategories = async () => {
     try {
