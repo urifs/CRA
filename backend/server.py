@@ -6471,6 +6471,101 @@ async def create_folder(
         logger.error(f"Error creating folder: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao criar pasta: {str(e)}")
 
+@api_router.post("/storage/folder/check-password")
+async def check_folder_password(
+    data: FolderPasswordCheck,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Verifica se a senha da pasta está correta"""
+    await get_current_user(credentials)
+    
+    # Normalizar path
+    path = data.path if data.path.startswith("/") else "/" + data.path
+    
+    # Buscar senha da pasta
+    folder_record = await db.folder_passwords.find_one({"path": path}, {"_id": 0})
+    
+    if not folder_record:
+        return {"valid": True, "message": "Pasta não possui senha"}
+    
+    # Verificar senha
+    if pwd_context.verify(data.password, folder_record["password_hash"]):
+        return {"valid": True, "message": "Senha correta"}
+    else:
+        raise HTTPException(status_code=401, detail="Senha incorreta")
+
+@api_router.post("/storage/folder/set-password")
+async def set_folder_password(
+    data: FolderPasswordSet,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Define ou remove a senha de uma pasta"""
+    current_user = await get_current_user(credentials)
+    
+    # Normalizar path
+    path = data.path if data.path.startswith("/") else "/" + data.path
+    
+    # Verificar se a pasta existe
+    abs_path = STORAGE_DIR / path.lstrip("/")
+    if not abs_path.exists() or not abs_path.is_dir():
+        raise HTTPException(status_code=404, detail="Pasta não encontrada")
+    
+    if data.password:
+        # Definir nova senha
+        password_hash = pwd_context.hash(data.password)
+        await db.folder_passwords.update_one(
+            {"path": path},
+            {"$set": {
+                "path": path,
+                "password_hash": password_hash,
+                "updated_by": current_user["id"],
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        
+        await create_audit_log(
+            user=current_user,
+            action="definir senha",
+            entity_type="storage",
+            entity_id=path,
+            entity_name=path.split("/")[-1],
+            details=f"Senha definida para pasta {path}",
+            module="Armazenamento"
+        )
+        
+        return {"message": "Senha definida com sucesso", "has_password": True}
+    else:
+        # Remover senha
+        await db.folder_passwords.delete_one({"path": path})
+        
+        await create_audit_log(
+            user=current_user,
+            action="remover senha",
+            entity_type="storage",
+            entity_id=path,
+            entity_name=path.split("/")[-1],
+            details=f"Senha removida da pasta {path}",
+            module="Armazenamento"
+        )
+        
+        return {"message": "Senha removida com sucesso", "has_password": False}
+
+@api_router.get("/storage/folder/has-password")
+async def check_folder_has_password(
+    path: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Verifica se uma pasta possui senha"""
+    await get_current_user(credentials)
+    
+    # Normalizar path
+    if not path.startswith("/"):
+        path = "/" + path
+    
+    folder_record = await db.folder_passwords.find_one({"path": path}, {"_id": 0})
+    return {"has_password": folder_record is not None}
+
 @api_router.post("/storage/upload")
 async def upload_storage_file(
     file: UploadFile = File(...),
