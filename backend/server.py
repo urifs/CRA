@@ -10403,7 +10403,7 @@ async def create_cargo(data: CargoCreate):
 async def consultar_epis_ia(cargo: str = Body(..., embed=True)):
     """Consultar EPIs recomendados para um cargo usando Gemini"""
     try:
-        from emergentintegrations.llm.chat import chat, Message
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         prompt = f"""Você é um especialista em segurança do trabalho no Brasil.
 Para o cargo de "{cargo}", liste TODOS os Equipamentos de Proteção Individual (EPIs) obrigatórios e recomendados.
@@ -10428,12 +10428,12 @@ Responda APENAS em formato JSON válido seguindo este modelo:
   ]
 }}"""
         
-        messages = [Message(role="user", content=prompt)]
-        response = await chat(
+        llm = LlmChat(
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
-            model="gemini-2.0-flash",
-            messages=messages
+            model="gemini-2.0-flash"
         )
+        
+        response = await llm.chat([UserMessage(content=prompt)])
         
         # Parse JSON da resposta
         response_text = response.content
