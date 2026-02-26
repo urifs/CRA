@@ -721,6 +721,224 @@ async def update_category(category_id: str, category: CategoryCreate, current_us
         created_at=existing["created_at"]
     )
 
+# ============ FLEET ROUTES ============
+
+@api_router.post("/fleets", response_model=FleetResponse)
+async def create_fleet(fleet: FleetCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new fleet"""
+    fleet_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    fleet_doc = {
+        "id": fleet_id,
+        "name": fleet.name,
+        "description": fleet.description or "",
+        "created_at": now
+    }
+    
+    await db.fleets.insert_one(fleet_doc)
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="frota",
+        entity_id=fleet_id,
+        entity_name=fleet.name,
+        module="Gerenciamento"
+    )
+    
+    return FleetResponse(**fleet_doc, machines_count=0, subfleets_count=0)
+
+@api_router.get("/fleets", response_model=List[FleetResponse])
+async def list_fleets(current_user: dict = Depends(get_current_user)):
+    """List all fleets"""
+    fleets = await db.fleets.find({}, {"_id": 0}).to_list(500)
+    
+    result = []
+    for f in fleets:
+        # Count machines in this fleet
+        machines_count = await db.machines.count_documents({"fleet_id": f["id"]})
+        # Count subfleets
+        subfleets_count = await db.subfleets.count_documents({"fleet_id": f["id"]})
+        result.append(FleetResponse(
+            **f,
+            machines_count=machines_count,
+            subfleets_count=subfleets_count
+        ))
+    
+    return result
+
+@api_router.get("/fleets/{fleet_id}", response_model=FleetResponse)
+async def get_fleet(fleet_id: str, current_user: dict = Depends(get_current_user)):
+    """Get a specific fleet"""
+    fleet = await db.fleets.find_one({"id": fleet_id}, {"_id": 0})
+    if not fleet:
+        raise HTTPException(status_code=404, detail="Frota não encontrada")
+    
+    machines_count = await db.machines.count_documents({"fleet_id": fleet_id})
+    subfleets_count = await db.subfleets.count_documents({"fleet_id": fleet_id})
+    
+    return FleetResponse(**fleet, machines_count=machines_count, subfleets_count=subfleets_count)
+
+@api_router.put("/fleets/{fleet_id}", response_model=FleetResponse)
+async def update_fleet(fleet_id: str, fleet: FleetUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a fleet"""
+    existing = await db.fleets.find_one({"id": fleet_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Frota não encontrada")
+    
+    update_data = {k: v for k, v in fleet.dict().items() if v is not None}
+    if update_data:
+        await db.fleets.update_one({"id": fleet_id}, {"$set": update_data})
+    
+    updated = await db.fleets.find_one({"id": fleet_id}, {"_id": 0})
+    machines_count = await db.machines.count_documents({"fleet_id": fleet_id})
+    subfleets_count = await db.subfleets.count_documents({"fleet_id": fleet_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="atualizar",
+        entity_type="frota",
+        entity_id=fleet_id,
+        entity_name=updated["name"],
+        module="Gerenciamento"
+    )
+    
+    return FleetResponse(**updated, machines_count=machines_count, subfleets_count=subfleets_count)
+
+@api_router.delete("/fleets/{fleet_id}")
+async def delete_fleet(fleet_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a fleet"""
+    fleet = await db.fleets.find_one({"id": fleet_id}, {"_id": 0})
+    if not fleet:
+        raise HTTPException(status_code=404, detail="Frota não encontrada")
+    
+    # Remove fleet reference from machines
+    await db.machines.update_many({"fleet_id": fleet_id}, {"$set": {"fleet_id": None, "subfleet_id": None}})
+    
+    # Delete subfleets
+    await db.subfleets.delete_many({"fleet_id": fleet_id})
+    
+    # Delete fleet
+    await db.fleets.delete_one({"id": fleet_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="frota",
+        entity_id=fleet_id,
+        entity_name=fleet["name"],
+        module="Gerenciamento"
+    )
+    
+    return {"message": "Frota excluída com sucesso"}
+
+# ============ SUBFLEET ROUTES ============
+
+@api_router.post("/subfleets", response_model=SubfleetResponse)
+async def create_subfleet(subfleet: SubfleetCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new subfleet"""
+    # Check if fleet exists
+    fleet = await db.fleets.find_one({"id": subfleet.fleet_id}, {"_id": 0})
+    if not fleet:
+        raise HTTPException(status_code=404, detail="Frota não encontrada")
+    
+    subfleet_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    subfleet_doc = {
+        "id": subfleet_id,
+        "name": subfleet.name,
+        "fleet_id": subfleet.fleet_id,
+        "description": subfleet.description or "",
+        "created_at": now
+    }
+    
+    await db.subfleets.insert_one(subfleet_doc)
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="subfrota",
+        entity_id=subfleet_id,
+        entity_name=subfleet.name,
+        module="Gerenciamento"
+    )
+    
+    return SubfleetResponse(**subfleet_doc, fleet_name=fleet["name"], machines_count=0)
+
+@api_router.get("/subfleets", response_model=List[SubfleetResponse])
+async def list_subfleets(fleet_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """List subfleets, optionally filtered by fleet"""
+    query = {"fleet_id": fleet_id} if fleet_id else {}
+    subfleets = await db.subfleets.find(query, {"_id": 0}).to_list(500)
+    
+    # Get fleet names
+    fleet_ids = list(set(s["fleet_id"] for s in subfleets))
+    fleets = await db.fleets.find({"id": {"$in": fleet_ids}}, {"_id": 0}).to_list(500)
+    fleet_map = {f["id"]: f["name"] for f in fleets}
+    
+    result = []
+    for s in subfleets:
+        machines_count = await db.machines.count_documents({"subfleet_id": s["id"]})
+        result.append(SubfleetResponse(
+            **s,
+            fleet_name=fleet_map.get(s["fleet_id"], ""),
+            machines_count=machines_count
+        ))
+    
+    return result
+
+@api_router.put("/subfleets/{subfleet_id}", response_model=SubfleetResponse)
+async def update_subfleet(subfleet_id: str, subfleet: SubfleetUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a subfleet"""
+    existing = await db.subfleets.find_one({"id": subfleet_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Subfrota não encontrada")
+    
+    update_data = {k: v for k, v in subfleet.dict().items() if v is not None}
+    if update_data:
+        await db.subfleets.update_one({"id": subfleet_id}, {"$set": update_data})
+    
+    updated = await db.subfleets.find_one({"id": subfleet_id}, {"_id": 0})
+    fleet = await db.fleets.find_one({"id": updated["fleet_id"]}, {"_id": 0})
+    machines_count = await db.machines.count_documents({"subfleet_id": subfleet_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="atualizar",
+        entity_type="subfrota",
+        entity_id=subfleet_id,
+        entity_name=updated["name"],
+        module="Gerenciamento"
+    )
+    
+    return SubfleetResponse(**updated, fleet_name=fleet["name"] if fleet else "", machines_count=machines_count)
+
+@api_router.delete("/subfleets/{subfleet_id}")
+async def delete_subfleet(subfleet_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a subfleet"""
+    subfleet = await db.subfleets.find_one({"id": subfleet_id}, {"_id": 0})
+    if not subfleet:
+        raise HTTPException(status_code=404, detail="Subfrota não encontrada")
+    
+    # Remove subfleet reference from machines
+    await db.machines.update_many({"subfleet_id": subfleet_id}, {"$set": {"subfleet_id": None}})
+    
+    # Delete subfleet
+    await db.subfleets.delete_one({"id": subfleet_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="subfrota",
+        entity_id=subfleet_id,
+        entity_name=subfleet["name"],
+        module="Gerenciamento"
+    )
+    
+    return {"message": "Subfrota excluída com sucesso"}
+
 # ============ MACHINE ROUTES ============
 
 @api_router.post("/machines", response_model=MachineResponse)
