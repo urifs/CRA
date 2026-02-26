@@ -11,7 +11,11 @@ import {
   Bot, 
   User,
   Minimize2,
-  Maximize2
+  Maximize2,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  File
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL;
