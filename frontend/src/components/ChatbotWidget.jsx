@@ -333,7 +333,48 @@ Como posso ajudar?`
 
           {/* Input */}
           <div className="p-3 border-t border-gray-700 bg-gray-900">
+            {/* Arquivos Anexados */}
+            {attachedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-800 rounded-lg">
+                {attachedFiles.map((file, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-1.5 bg-gray-700 text-gray-200 px-2 py-1 rounded text-xs"
+                  >
+                    {getFileIcon(file)}
+                    <span className="max-w-[100px] truncate">{file.name}</span>
+                    <button 
+                      onClick={() => removeFile(index)}
+                      className="ml-1 text-gray-400 hover:text-red-400"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="flex gap-2">
+              {/* Botão de Anexar */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                className="shrink-0 text-gray-400 hover:text-white hover:bg-gray-700"
+                disabled={isLoading}
+                title="Anexar arquivo"
+              >
+                <Paperclip size={18} />
+              </Button>
+              
               <Input
                 ref={inputRef}
                 value={inputValue}
@@ -346,7 +387,7 @@ Como posso ajudar?`
               />
               <Button
                 onClick={handleSend}
-                disabled={!inputValue.trim() || isLoading}
+                disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
                 className="shrink-0"
                 style={{ backgroundColor: accentColor }}
                 data-testid="chatbot-send-btn"
