@@ -1418,6 +1418,170 @@ async def delete_machine(machine_id: str, current_user: dict = Depends(get_curre
     
     return {"message": "Máquina removida com sucesso"}
 
+# ============ HORIMETRO ROUTES ============
+
+@api_router.get("/horimetro", response_model=List[HorimetroResponse])
+async def list_horimetro(
+    machine_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
+):
+    """Lista todos os registros de horímetro"""
+    query = {}
+    if machine_id:
+        query["machine_id"] = machine_id
+    
+    registros = await db.horimetro.find(query, {"_id": 0}).sort("data", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Adicionar nome da máquina
+    for registro in registros:
+        machine = await db.machines.find_one({"id": registro["machine_id"]}, {"_id": 0, "name": 1})
+        registro["machine_name"] = machine["name"] if machine else "Máquina não encontrada"
+    
+    return registros
+
+@api_router.get("/horimetro/{registro_id}", response_model=HorimetroResponse)
+async def get_horimetro(registro_id: str, current_user: dict = Depends(get_current_user)):
+    """Obtém um registro de horímetro específico"""
+    registro = await db.horimetro.find_one({"id": registro_id}, {"_id": 0})
+    if not registro:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    
+    machine = await db.machines.find_one({"id": registro["machine_id"]}, {"_id": 0, "name": 1})
+    registro["machine_name"] = machine["name"] if machine else "Máquina não encontrada"
+    
+    return registro
+
+@api_router.post("/horimetro", response_model=HorimetroResponse)
+async def create_horimetro(data: HorimetroCreate, current_user: dict = Depends(get_current_user)):
+    """Cria um novo registro de horímetro"""
+    # Verificar se a máquina existe
+    machine = await db.machines.find_one({"id": data.machine_id}, {"_id": 0})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    # Calcular horas trabalhadas se não fornecido
+    horas_trabalhadas = data.horas_trabalhadas
+    if horas_trabalhadas is None:
+        horas_trabalhadas = data.hora_final - data.hora_inicial
+    
+    registro_id = str(uuid.uuid4())
+    registro_doc = {
+        "id": registro_id,
+        "machine_id": data.machine_id,
+        "data": data.data,
+        "hora_inicial": data.hora_inicial,
+        "hora_final": data.hora_final,
+        "horas_trabalhadas": horas_trabalhadas,
+        "operador": data.operador or "",
+        "observacoes": data.observacoes or "",
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.horimetro.insert_one(registro_doc)
+    
+    # Atualizar horímetro atual da máquina
+    await db.machines.update_one(
+        {"id": data.machine_id},
+        {"$set": {"horimetro_atual": data.hora_final}}
+    )
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="horímetro",
+        entity_id=registro_id,
+        entity_name=f"{machine['name']} - {data.data}"
+    )
+    
+    registro_doc["machine_name"] = machine["name"]
+    return registro_doc
+
+@api_router.put("/horimetro/{registro_id}", response_model=HorimetroResponse)
+async def update_horimetro(registro_id: str, data: HorimetroCreate, current_user: dict = Depends(get_current_user)):
+    """Atualiza um registro de horímetro"""
+    existing = await db.horimetro.find_one({"id": registro_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    
+    machine = await db.machines.find_one({"id": data.machine_id}, {"_id": 0})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    horas_trabalhadas = data.horas_trabalhadas
+    if horas_trabalhadas is None:
+        horas_trabalhadas = data.hora_final - data.hora_inicial
+    
+    update_doc = {
+        "machine_id": data.machine_id,
+        "data": data.data,
+        "hora_inicial": data.hora_inicial,
+        "hora_final": data.hora_final,
+        "horas_trabalhadas": horas_trabalhadas,
+        "operador": data.operador or "",
+        "observacoes": data.observacoes or ""
+    }
+    
+    await db.horimetro.update_one({"id": registro_id}, {"$set": update_doc})
+    
+    # Atualizar horímetro atual da máquina se for o registro mais recente
+    await db.machines.update_one(
+        {"id": data.machine_id},
+        {"$set": {"horimetro_atual": data.hora_final}}
+    )
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="horímetro",
+        entity_id=registro_id,
+        entity_name=f"{machine['name']} - {data.data}"
+    )
+    
+    updated = await db.horimetro.find_one({"id": registro_id}, {"_id": 0})
+    updated["machine_name"] = machine["name"]
+    return updated
+
+@api_router.delete("/horimetro/{registro_id}")
+async def delete_horimetro(registro_id: str, current_user: dict = Depends(get_current_user)):
+    """Exclui um registro de horímetro"""
+    existing = await db.horimetro.find_one({"id": registro_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Registro não encontrado")
+    
+    machine = await db.machines.find_one({"id": existing["machine_id"]}, {"_id": 0, "name": 1})
+    
+    await db.horimetro.delete_one({"id": registro_id})
+    
+    # Audit log
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="horímetro",
+        entity_id=registro_id,
+        entity_name=f"{machine['name'] if machine else 'Máquina'} - {existing['data']}"
+    )
+    
+    return {"message": "Registro excluído com sucesso"}
+
+@api_router.get("/horimetro/machine/{machine_id}", response_model=List[HorimetroResponse])
+async def get_horimetro_by_machine(machine_id: str, limit: int = 50, current_user: dict = Depends(get_current_user)):
+    """Obtém registros de horímetro de uma máquina específica"""
+    machine = await db.machines.find_one({"id": machine_id}, {"_id": 0, "name": 1})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    registros = await db.horimetro.find({"machine_id": machine_id}, {"_id": 0}).sort("data", -1).limit(limit).to_list(limit)
+    
+    for registro in registros:
+        registro["machine_name"] = machine["name"]
+    
+    return registros
+
 # ============ MAINTENANCE ROUTES ============
 
 @api_router.post("/maintenances", response_model=MaintenanceResponse)
