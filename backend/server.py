@@ -6379,6 +6379,10 @@ async def list_storage_items(
     if not abs_path.exists():
         abs_path.mkdir(parents=True, exist_ok=True)
     
+    # Buscar todas as pastas protegidas de uma vez
+    protected_folders = await db.folder_passwords.find({}, {"_id": 0, "path": 1}).to_list(1000)
+    protected_paths = {f["path"] for f in protected_folders}
+    
     items = []
     try:
         for entry in abs_path.iterdir():
@@ -6392,7 +6396,8 @@ async def list_storage_items(
                     "type": "folder",
                     "path": rel_path,
                     "items_count": items_count,
-                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat()
+                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat(),
+                    "has_password": rel_path in protected_paths
                 })
             else:
                 items.append({
