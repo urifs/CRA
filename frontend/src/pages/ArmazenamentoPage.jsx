@@ -113,7 +113,7 @@ export default function ArmazenamentoPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // Password protection
-111|  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordFolder, setPasswordFolder] = useState(null);
   const [folderPassword, setFolderPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
