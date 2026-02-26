@@ -960,7 +960,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => exportRecibo(sub.id, item.id, item.name)}
+                                            onClick={() => openReciboModal(sub.id, item.id, item.name)}
                                             disabled={exporting === `recibo-${item.id}`}
                                             className="text-green-600 border-green-300 hover:bg-green-50"
                                             title="Gerar Recibo"
@@ -977,7 +977,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => exportDuplicata(sub.id, item.id, item.name)}
+                                            onClick={() => openDuplicataModal(sub.id, item.id, item.name)}
                                             disabled={exporting === `duplicata-${item.id}`}
                                             className="text-amber-600 border-amber-300 hover:bg-amber-50"
                                             title="Gerar Duplicata/Recibo Fatura"
