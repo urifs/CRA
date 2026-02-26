@@ -10432,7 +10432,7 @@ Responda APENAS em formato JSON válido seguindo este modelo:
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
             session_id=f"epi_consulta_{cargo}",
             system_message="Você é um especialista em segurança do trabalho e EPIs no Brasil."
-        ).with_model("google", "gemini-2.0-flash")
+        ).with_model("google", "gemini-2.0-flash-exp")
         
         response_text = await llm.send_message(UserMessage(text=prompt))
         
