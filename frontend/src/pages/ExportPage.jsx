@@ -287,11 +287,56 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
+  // Abrir modal de seleção de empresa para Recibo
+  const openReciboModal = (subcategoryId, itemId, itemName) => {
+    setEmpresaModal({
+      open: true,
+      type: 'recibo',
+      subcategoryId,
+      itemId,
+      itemName
+    });
+  };
+
+  // Abrir modal de seleção de empresa para Duplicata
+  const openDuplicataModal = (subcategoryId, itemId, itemName) => {
+    setEmpresaModal({
+      open: true,
+      type: 'duplicata',
+      subcategoryId,
+      itemId,
+      itemName
+    });
+  };
+
+  // Fechar modal
+  const closeEmpresaModal = () => {
+    setEmpresaModal({
+      open: false,
+      type: null,
+      subcategoryId: null,
+      itemId: null,
+      itemName: null
+    });
+  };
+
+  // Gerar documento com empresa selecionada
+  const generateWithEmpresa = async (empresa) => {
+    const { type, subcategoryId, itemId, itemName } = empresaModal;
+    closeEmpresaModal();
+    
+    if (type === 'recibo') {
+      await exportRecibo(subcategoryId, itemId, itemName, empresa);
+    } else {
+      await exportDuplicata(subcategoryId, itemId, itemName, empresa);
+    }
+  };
+
   // Exportar Recibo
-  const exportRecibo = async (subcategoryId, itemId, itemName) => {
+  const exportRecibo = async (subcategoryId, itemId, itemName, empresa = 'locadora') => {
     setExporting(`recibo-${itemId}`);
     try {
-      const response = await axios.get(`${API}/export/recibo/${subcategoryId}/${itemId}`, {
+      const response = await axios.get(`${API}/export/recibo/${subcategoryId}/${itemId}?empresa=${empresa}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -299,7 +344,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `CRA_Recibo_${itemId.slice(0, 8)}.pdf`);
+      link.setAttribute('download', `CRA_Recibo_${empresa === 'construtora' ? 'Construtora' : 'Locadora'}_${itemId.slice(0, 8)}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -315,10 +360,10 @@ export default function ExportPage({ module = "gerenciamento" }) {
   };
 
   // Exportar Duplicata/Recibo Fatura
-  const exportDuplicata = async (subcategoryId, itemId, itemName) => {
+  const exportDuplicata = async (subcategoryId, itemId, itemName, empresa = 'locadora') => {
     setExporting(`duplicata-${itemId}`);
     try {
-      const response = await axios.get(`${API}/export/duplicata/${subcategoryId}/${itemId}`, {
+      const response = await axios.get(`${API}/export/duplicata/${subcategoryId}/${itemId}?empresa=${empresa}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -326,7 +371,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `CRA_Duplicata_${itemId.slice(0, 8)}.pdf`);
+      link.setAttribute('download', `CRA_Duplicata_${empresa === 'construtora' ? 'Construtora' : 'Locadora'}_${itemId.slice(0, 8)}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
