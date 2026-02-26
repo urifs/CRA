@@ -286,7 +286,7 @@ export default function ObrasPage() {
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => navigate(`/obras/${obra.id}`)}
+                    onClick={() => navigate(`/gerenciamento/obras/${obra.id}`)}
                     data-testid={`view-obra-${obra.id}`}
                   >
                     <Eye size={16} className="mr-1" />
