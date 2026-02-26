@@ -18,6 +18,7 @@ export default function MorePage() {
   const menuItems = [
     { path: "/gerenciamento/balance", icon: DollarSign, label: "Balanço", description: "Custos e despesas" },
     { path: "/gerenciamento/usage", icon: Clock, label: "Tempo de Uso", description: "Registrar horas" },
+    { path: "/gerenciamento/horimetro", icon: Clock, label: "Horímetro", description: "Horas das máquinas" },
     { path: "/gerenciamento/notifications", icon: Bell, label: "Notificações", description: "Alertas do sistema" },
     { path: "/gerenciamento/stock", icon: Package, label: "Estoque", description: "Controle de peças" },
     { path: "/gerenciamento/categories", icon: Tags, label: "Categorias", description: "Tipos de máquinas" },
