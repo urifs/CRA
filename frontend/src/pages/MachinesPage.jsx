@@ -350,7 +350,7 @@ export default function MachinesPage() {
 
                   {/* Card Actions */}
                   <div className="p-4 pt-0 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/machines/${machine.id}`)} data-testid={`view-machine-${machine.id}`}>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/gerenciamento/machines/${machine.id}`)} data-testid={`view-machine-${machine.id}`}>
                       <Eye size={16} className="mr-1" /> Ver
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditDialog(machine)} data-testid={`edit-machine-${machine.id}`}>
