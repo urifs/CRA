@@ -943,10 +943,11 @@ async def delete_subfleet(subfleet_id: str, current_user: dict = Depends(get_cur
 
 @api_router.post("/machines", response_model=MachineResponse)
 async def create_machine(machine: MachineCreate, current_user: dict = Depends(get_current_user)):
-    # Check if plate already exists
-    existing = await db.machines.find_one({"plate": machine.plate.upper()})
-    if existing:
-        raise HTTPException(status_code=400, detail="Placa já cadastrada")
+    # Check if plate already exists (only if plate is provided)
+    if machine.plate:
+        existing = await db.machines.find_one({"plate": machine.plate.upper()})
+        if existing:
+            raise HTTPException(status_code=400, detail="Placa já cadastrada")
     
     # Get category name
     category = await db.categories.find_one({"id": machine.category_id}, {"_id": 0})
@@ -958,17 +959,36 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         obra = await db.obras.find_one({"id": machine.obra_id}, {"_id": 0})
         obra_name = obra["name"] if obra else ""
     
+    # Get fleet and subfleet names
+    fleet_name = ""
+    subfleet_name = ""
+    if machine.fleet_id:
+        fleet = await db.fleets.find_one({"id": machine.fleet_id}, {"_id": 0})
+        fleet_name = fleet["name"] if fleet else ""
+    if machine.subfleet_id:
+        subfleet = await db.subfleets.find_one({"id": machine.subfleet_id}, {"_id": 0})
+        subfleet_name = subfleet["name"] if subfleet else ""
+    
+    # Get operator name
+    operator_name = ""
+    if machine.operator_id:
+        operator = await db.cadastros.find_one({"id": machine.operator_id}, {"_id": 0})
+        operator_name = operator.get("nome_razao", "") if operator else ""
+    
     machine_id = str(uuid.uuid4())
     machine_doc = {
         "id": machine_id,
         "name": machine.name,
-        "plate": machine.plate.upper(),
+        "plate": (machine.plate or "").upper(),
         "category_id": machine.category_id,
         "brand": machine.brand or "",
         "model": machine.model or "",
         "year": machine.year,
         "notes": machine.notes or "",
         "obra_id": machine.obra_id,
+        "fleet_id": machine.fleet_id,
+        "subfleet_id": machine.subfleet_id,
+        "operator_id": machine.operator_id,
         "status": "operational",
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -981,13 +1001,13 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         action="criar",
         entity_type="máquina",
         entity_id=machine_id,
-        entity_name=f"{machine.name} ({machine.plate.upper()})"
+        entity_name=f"{machine.name} ({(machine.plate or '').upper()})"
     )
     
     return MachineResponse(
         id=machine_id,
         name=machine.name,
-        plate=machine.plate.upper(),
+        plate=(machine.plate or "").upper(),
         category_id=machine.category_id,
         category_name=category_name,
         brand=machine.brand or "",
@@ -996,6 +1016,12 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         notes=machine.notes or "",
         obra_id=machine.obra_id,
         obra_name=obra_name,
+        fleet_id=machine.fleet_id,
+        fleet_name=fleet_name,
+        subfleet_id=machine.subfleet_id,
+        subfleet_name=subfleet_name,
+        operator_id=machine.operator_id,
+        operator_name=operator_name,
         status="operational",
         created_at=machine_doc["created_at"]
     )
