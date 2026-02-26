@@ -209,6 +209,124 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
+  // Toggle seleção de item individual
+  const toggleIndividualItem = (subcategoryId, itemId) => {
+    setSelectedIndividualItems(prev => {
+      const current = prev[subcategoryId] || [];
+      const isSelected = current.includes(itemId);
+      return {
+        ...prev,
+        [subcategoryId]: isSelected 
+          ? current.filter(id => id !== itemId)
+          : [...current, itemId]
+      };
+    });
+  };
+
+  // Selecionar/desselecionar todos os itens de uma subcategoria
+  const toggleAllIndividualItems = (subcategoryId) => {
+    const items = subcategoryItems[subcategoryId] || [];
+    const selected = selectedIndividualItems[subcategoryId] || [];
+    const allSelected = items.length > 0 && items.every(item => selected.includes(item.id));
+    
+    setSelectedIndividualItems(prev => ({
+      ...prev,
+      [subcategoryId]: allSelected ? [] : items.map(item => item.id)
+    }));
+  };
+
+  // Exportar múltiplos itens selecionados
+  const exportSelectedIndividualItems = async (subcategoryId) => {
+    const selectedIds = selectedIndividualItems[subcategoryId] || [];
+    if (selectedIds.length === 0) {
+      toast.error("Selecione pelo menos um item");
+      return;
+    }
+    
+    setExporting(`multi-${subcategoryId}`);
+    try {
+      const response = await axios.post(`${API}/export/individual-multiple`, {
+        category: subcategoryId,
+        item_ids: selectedIds
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CRA_${subcategoryId}_${selectedIds.length}_itens.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`${selectedIds.length} itens exportados!`);
+      // Limpar seleção após exportar
+      setSelectedIndividualItems(prev => ({...prev, [subcategoryId]: []}));
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      toast.error(error.response?.data?.detail || "Erro ao exportar itens");
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  // Exportar Recibo
+  const exportRecibo = async (subcategoryId, itemId, itemName) => {
+    setExporting(`recibo-${itemId}`);
+    try {
+      const response = await axios.get(`${API}/export/recibo/${subcategoryId}/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CRA_Recibo_${itemId.slice(0, 8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Recibo de "${itemName}" gerado!`);
+    } catch (error) {
+      console.error("Erro ao gerar recibo:", error);
+      toast.error(error.response?.data?.detail || "Erro ao gerar recibo");
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  // Exportar Duplicata/Recibo Fatura
+  const exportDuplicata = async (subcategoryId, itemId, itemName) => {
+    setExporting(`duplicata-${itemId}`);
+    try {
+      const response = await axios.get(`${API}/export/duplicata/${subcategoryId}/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CRA_Duplicata_${itemId.slice(0, 8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Duplicata de "${itemName}" gerada!`);
+    } catch (error) {
+      console.error("Erro ao gerar duplicata:", error);
+      toast.error(error.response?.data?.detail || "Erro ao gerar duplicata");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const fetchCategories = async () => {
     try {
       const response = await axios.get(`${API}/export/categories/${module}`, {
