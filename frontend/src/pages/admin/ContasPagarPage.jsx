@@ -44,6 +44,7 @@ export default function ContasPagarPage() {
   const [centrosCusto, setCentrosCusto] = useState([]);
   const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
   const [cadastros, setCadastros] = useState([]);
+  const [frotas, setFrotas] = useState([]);
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
   const [novoCadastroData, setNovoCadastroData] = useState({ nome_razao: "", cnpj_cpf: "", telefone: "", email: "" });
   
@@ -54,10 +55,11 @@ export default function ContasPagarPage() {
     plano_conta_id: "", plano_conta_nome: "", 
     subconta_id: "", subconta_nome: "",
     centro_custo: "",
+    frota_id: "", frota_nome: "",
     forma_pagamento: "boleto", conta_movimento: "", observacoes: ""
   });
 
-  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); }, [filterStatus, filterVencimento, filterFormaPag]);
+  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); fetchFrotas(); }, [filterStatus, filterVencimento, filterFormaPag]);
 
   const fetchContas = async () => {
     try {
