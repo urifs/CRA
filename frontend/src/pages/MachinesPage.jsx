@@ -158,7 +158,9 @@ export default function MachinesPage() {
       notes: machine.notes || "",
       fleet_id: machine.fleet_id || "",
       subfleet_id: machine.subfleet_id || "",
-      operator_id: machine.operator_id || ""
+      operator_id: machine.operator_id || "",
+      identificador_tipo: machine.identificador_tipo || "",
+      identificador_numero: machine.identificador_numero || ""
     });
     setShowDialog(true);
   };
@@ -175,7 +177,9 @@ export default function MachinesPage() {
       notes: "",
       fleet_id: "",
       subfleet_id: "",
-      operator_id: ""
+      operator_id: "",
+      identificador_tipo: "",
+      identificador_numero: ""
     });
     setEditingMachine(null);
   };
