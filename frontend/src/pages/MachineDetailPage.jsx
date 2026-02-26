@@ -79,6 +79,7 @@ export default function MachineDetailPage() {
   const totalSpent = maintenances.reduce((sum, m) => sum + m.part_value, 0);
   const preventiveCount = maintenances.filter(m => m.maintenance_type === "preventiva").length;
   const correctiveCount = maintenances.filter(m => m.maintenance_type === "corretiva").length;
+  const totalHorasTrabalhadas = horimetros.reduce((sum, h) => sum + (h.horas_trabalhadas || 0), 0);
 
   if (loading) {
     return (
