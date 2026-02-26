@@ -5875,6 +5875,16 @@ EXPORT_CATEGORIES_V2 = {
             ]
         },
         {
+            "id": "contas_bancarias_cat",
+            "label": "Contas Bancárias",
+            "icon": "building",
+            "subcategories": [
+                {"id": "contas_bancarias", "label": "Todas as Contas", "description": "Lista completa de contas"},
+                {"id": "contas_bancarias_ativas", "label": "Contas Ativas", "description": "Apenas contas ativas"},
+                {"id": "extrato_bancario", "label": "Extrato Bancário", "description": "Extrato por conta"},
+            ]
+        },
+        {
             "id": "usuarios_admin",
             "label": "Usuários",
             "icon": "users",
