@@ -6247,6 +6247,109 @@ INSTRUÇÕES DE CONTEÚDO:
         logging.error(f"Erro no chatbot: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro ao processar pergunta: {str(e)}")
 
+@api_router.post("/chatbot/ask-with-files", response_model=ChatResponse)
+async def chatbot_ask_with_files(
+    message: str = Form(...),
+    module: str = Form("gerenciamento"),
+    files: List[UploadFile] = File(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Endpoint do chatbot que processa arquivos anexados"""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    import base64
+    
+    try:
+        # Processar arquivos anexados
+        files_info = []
+        file_contents = []
+        
+        if files:
+            for file in files:
+                content = await file.read()
+                file_size = len(content)
+                
+                # Informações básicas do arquivo
+                files_info.append({
+                    "nome": file.filename,
+                    "tipo": file.content_type,
+                    "tamanho": f"{file_size / 1024:.1f} KB"
+                })
+                
+                # Para arquivos de texto, extrair conteúdo
+                if file.content_type and ('text' in file.content_type or 
+                    file.filename.endswith(('.txt', '.csv', '.json', '.xml'))):
+                    try:
+                        text_content = content.decode('utf-8')
+                        file_contents.append(f"Conteúdo de {file.filename}:\n{text_content[:3000]}...")
+                    except:
+                        file_contents.append(f"Arquivo {file.filename}: conteúdo binário não extraível")
+                
+                # Reset file pointer
+                await file.seek(0)
+        
+        # Construir contexto dos arquivos
+        files_context = ""
+        if files_info:
+            files_context = "\n\nARQUIVOS ANEXADOS PELO USUÁRIO:\n"
+            for info in files_info:
+                files_context += f"• {info['nome']} ({info['tipo']}, {info['tamanho']})\n"
+            
+            if file_contents:
+                files_context += "\nCONTEÚDO DOS ARQUIVOS:\n" + "\n".join(file_contents)
+        
+        # Coletar contexto da plataforma
+        platform_context = await get_full_platform_context()
+        
+        # Sistema message com contexto
+        system_message = f"""Você é o assistente virtual inteligente da CRA Construtora.
+Você tem ACESSO COMPLETO E TOTAL a TODAS as informações do banco de dados da plataforma.
+
+DADOS COMPLETOS DO SISTEMA:
+{platform_context}
+
+{files_context}
+
+SUAS CAPACIDADES:
+- Você pode analisar arquivos anexados (imagens, PDFs, documentos)
+- Você pode extrair informações de documentos
+- Você pode comparar dados dos arquivos com dados da plataforma
+- Você conhece TODOS os usuários, máquinas, manutenções, estoque, obras, contas, etc.
+
+INSTRUÇÕES:
+1. SEMPRE responda em português brasileiro
+2. Use QUEBRAS DE LINHA para separar parágrafos
+3. Use listas com "•" para enumerar itens
+4. Formate valores monetários como R$ 1.234,56
+5. Se o usuário anexou arquivos, analise e comente sobre eles
+6. NÃO use markdown com asteriscos
+"""
+        
+        # Inicializar chat com Gemini
+        llm_key = os.environ.get("EMERGENT_LLM_KEY")
+        
+        llm_chat = LlmChat(
+            api_key=llm_key,
+            session_id=f"chatbot-files-{current_user['id']}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            system_message=system_message
+        ).with_model("gemini", "gemini-2.0-flash")
+        
+        # Mensagem do usuário
+        user_text = message if message else "Analise os arquivos que anexei"
+        if files_info:
+            user_text += f"\n\n[Arquivos anexados: {', '.join([f['nome'] for f in files_info])}]"
+        
+        user_message = UserMessage(text=user_text)
+        response = await llm_chat.send_message(user_message)
+        
+        return ChatResponse(
+            response=response,
+            context_used=["arquivos", "todos_os_modulos"]
+        )
+        
+    except Exception as e:
+        logging.error(f"Erro no chatbot com arquivos: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao processar: {str(e)}")
+
 
 # ============ PDF EXPORT ROUTES ============
 
