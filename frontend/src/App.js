@@ -172,6 +172,7 @@ function App() {
             <Route path="plano-contas" element={<PlanoContasPage />} />
             <Route path="centro-custo" element={<CentroCustoPage />} />
             <Route path="formas-pagamento" element={<FormasPagamentoPage />} />
+            <Route path="contas-bancarias" element={<ContasBancariasPage />} />
             <Route path="alugueis" element={<AlugueisPage />} />
             <Route path="notificacoes" element={<AdminNotificacoesPage />} />
             <Route path="nfe" element={<NFEPage />} />
