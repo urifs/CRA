@@ -66,12 +66,32 @@ export default function ExportPage({ module = "gerenciamento" }) {
     'centros_custo': 'centros_custo',
     'fleets': 'fleets',
     'cadastros': 'cadastros',
-    'formas_pagamento': 'formas_pagamento'
+    'formas_pagamento': 'formas_pagamento',
+    'contas_bancarias': 'contas_bancarias',
+    'extrato_bancario': 'contas_bancarias'  // Para extrato, busca contas bancárias
   };
+
+  // State para extrato bancário
+  const [selectedContaBancaria, setSelectedContaBancaria] = useState(null);
+  const [contasBancarias, setContasBancarias] = useState([]);
 
   useEffect(() => {
     fetchCategories();
+    if (module === "administrativo") {
+      fetchContasBancarias();
+    }
   }, [module]);
+
+  const fetchContasBancarias = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/contas-bancarias?ativo=true`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setContasBancarias(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar contas bancárias:", error);
+    }
+  };
 
   const fetchFilterItems = async (subcategoryId) => {
     const collection = filterableCategories[subcategoryId];
