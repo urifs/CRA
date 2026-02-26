@@ -228,6 +228,8 @@ export default function ContasPagarPage() {
         plano_conta_id: "", plano_conta_nome: "", 
         subconta_id: "", subconta_nome: "",
         centro_custo: "",
+        frota_id: "", frota_nome: "",
+        conta_bancaria_id: "", conta_bancaria_nome: "",
         forma_pagamento: "boleto", conta_movimento: "", observacoes: ""
       });
     }
