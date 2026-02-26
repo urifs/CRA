@@ -1,104 +1,80 @@
 <analysis>**original_problem_statement**:
-O usuário solicitou inicialmente um sistema de gerenciamento de máquinas e manutenções, que evoluiu para um sistema ERP completo. Nesta sessão, o usuário solicitou uma série de novas funcionalidades e correções:
-
-1.  **Dashboard Financeiro**: Criar uma seção dedicada para Contas Vencidas.
-2.  **Gerenciamento de Tempo de Uso**:
-    *   Adicionar função para excluir registros individuais do histórico de uso.
-    *   Adicionar função para excluir os cards de status da máquina (excluindo a própria máquina).
-    *   Reduzir o tamanho dos cards de status da máquina para melhor visualização e tornar o campo placa opcional.
-3.  **Novas Funcionalidades (Batch 1)**:
-    *   **Senhas em Pastas**: Proteger pastas no sistema de armazenamento com senha.
-    *   **Sistema de Frotas**: Criar frotas e subfrotas, e anexar máquinas a elas.
-    *   **Vincular Funcionário**: Anexar funcionários (dos cadastros) a uma máquina.
-    *   **Subcategorias de Máquinas**: Criar e gerenciar subcategorias para as categorias de máquinas.
-    *   **Subcategorias de Estoque**: Criar e gerenciar subcategorias para as categorias de estoque.
-4.  **Correções e Melhorias de UI (Batch 2)**:
-    *   Exibir informações de frota e observações no card da máquina sem aumentar seu tamanho.
-    *   Corrigir o dropdown de seleção de categoria no formulário de criação de máquinas.
-    *   Criar uma página para gerenciamento de categorias/subcategorias de máquinas, com o mesmo layout da página de Frotas.
-    *   Fazer a página de Estoque abrir na visualização em lista por padrão.
-    *   Adicionar um seletor de visualização (grid/lista) na página de Máquinas, mantendo o grid como padrão.
+O usuário solicitou uma série de funcionalidades, melhorias e correções para um sistema ERP. As solicitações mais recentes nesta sessão foram:
+1.  **Exportação de Itens Individuais**: Permitir expandir subcategorias na página de exportação para selecionar e exportar um único item (ex: uma conta a pagar específica).
+2.  **Geração de Recibos e Duplicatas**: Ao visualizar um item individual, adicionar botões para gerar um Recibo e uma Duplicata/Fatura em PDF, baseados em modelos fornecidos.
+3.  **Seleção de Empresa para Recibos**: Antes de gerar um recibo/duplicata, exibir um modal para o usuário escolher entre duas empresas (CRA CONSTRUTORA ou CRA LOCADORA), cada uma com seu próprio CNPJ e dados, que devem constar no PDF.
+4.  **Módulo de Imóveis**: Criar uma nova seção para Registrar Imóveis, funcionando de forma similar ao módulo existente de Aluguel de Máquinas, incluindo um formulário com busca automática de endereço por CEP.
+5.  **Correções de Exportação (PDF)**:
+    *   Resolver problemas de layout nos PDFs gerados (textos cortados, falta de espaçamento, logo achatada).
+    *   Garantir que **todas** as informações de um item (ex: todos os campos de uma conta a pagar) sejam exibidas no PDF.
+    *   Adicionar as novas categorias (Imóveis, Contas Bancárias) à página de exportação e remover as de Auditoria.
+6.  **Correção de Roteamento**: A aplicação está abrindo diretamente na dashboard, e deveria abrir na página de login primeiro.
 
 **User's preferred language**: Portuguese (Brazil). The next agent MUST respond in Portuguese.
 
 **what currently exists?**
-Um aplicativo full-stack (React + FastAPI + MongoDB). O agente implementou um grande número de funcionalidades solicitadas pelo usuário nesta sessão. Foi criada a seção de Contas Vencidas no dashboard financeiro, implementadas as funções de exclusão e a reestilização dos cards na página de Tempo de Uso. O agente também implementou a funcionalidade de senhas em pastas, um sistema completo de frotas com uma nova página de gerenciamento, e a lógica de backend e frontend para subcategorias de máquinas e de estoque. Por fim, o agente começou a trabalhar em um lote final de correções de UI e melhorias solicitadas pelo usuário.
+Um aplicativo ERP full-stack (React + FastAPI + MongoDB). Nesta sessão, o agente implementou com sucesso a exportação de itens individuais, a geração de recibos/duplicatas com seleção de empresa e um novo módulo completo para gerenciamento de imóveis, incluindo a integração na página de exportação. Foram feitas várias tentativas de corrigir o layout e o conteúdo dos PDFs gerados, como o ajuste da logo e a adição de mais campos de dados.
 
 **Last working item**:
-    - Last item agent was working: O agente estava finalizando um lote de solicitações do usuário. A última ação foi modificar a página de Estoque () para que a visualização em lista seja o padrão na abertura da página. Este é o último item de uma lista de correções e melhorias que o usuário solicitou.
-    - Status: IN PROGRESS
+    - Last item agent was working: Corrigir o roteamento inicial da aplicação. O usuário reportou que o sistema está carregando diretamente a página de gerenciamento () em vez da página de login (), o que representa uma falha de segurança e usabilidade.
+    - Status: NOT STARTED
     - Agent Testing Done: N
-    - Which testing method agent to use? Frontend testing agent. Como as últimas alterações afetam várias páginas (, ) e introduzem novas UIs (), uma verificação completa da interface do usuário é necessária para garantir que todas as novas funcionalidades e correções funcionem juntas corretamente.
+    - Which testing method agent to use? Frontend testing agent. O agente deve criar testes para validar os seguintes cenários de roteamento: 1) Usuário não autenticado tentando acessar uma rota protegida é redirecionado para . 2) Usuário autenticado acessando a raiz () é redirecionado para a dashboard correta. 3) A rota de login funciona corretamente.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Corrigir visualização de anexos (PRIORITY: P0)
-  - Issue 2: Dropdown de categoria de máquina não funciona (PRIORITY: P1)
-  
+  - Issue 1:  Roteamento inicial da aplicação está quebrado (PRIORITY: P0)
+  - Issue 2:  Layout e conteúdo dos PDFs de exportação ainda estão incorretos (PRIORITY: P1)
+
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: Na sessão anterior, o agente modificou  para incluir um link de download como fallback, mas a correção não foi verificada. Nenhum trabalho foi feito neste item na sessão atual.
+     - Attempted fixes: Nenhum. O agente acabou de receber a solicitação.
      - Next debug checklist: 
-        1. Pedir ao usuário para navegar até a seção Armazenamento ou outra área com anexos.
-        2. Tentar visualizar um anexo (PDF, imagem).
-        3. Inspecionar o console do navegador em busca de erros (CORS, etc.).
-        4. Verificar o endpoint  no  para garantir que os cabeçalhos  e  estejam corretos.
-     - Why fix this issue and what will be achieved with the fix? É uma funcionalidade central do sistema, bloqueando o acesso do usuário a documentos importantes.
+       - Verificar : Analisar a lógica de roteamento, especialmente os componentes  e o redirecionamento na rota raiz ().
+       - Verificar  (ou equivalente): Inspecionar como o estado de autenticação é inicializado e verificado no carregamento da página.
+       - Assegurar que o token de autenticação não está sendo lido de forma incorreta ou considerado válido por padrão.
+     - Why fix this issue and what will be achieved with the fix? Corrige uma falha crítica de segurança, garantindo que apenas usuários autenticados acessem as áreas internas do sistema. Restaura o fluxo de login padrão.
      - Status:  NOT STARTED
-     - Is recurring issue? Y
-     - Should Test frontend/backend/both after fix? Both.
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend
      - Blocked on other issue: Não.
   - Issue 2: 
-     - Attempted fixes: O agente verificou que o endpoint da API retorna as categorias, mas não confirmou se o erro no formulário de  foi resolvido. O agente presumiu que o problema estava resolvido e passou para outras tarefas.
-     - Next debug checklist:
-        1. Navegar para a página Máquinas.
-        2. Abrir o modal Nova Máquina.
-        3. Clicar no dropdown Categoria e verificar se as opções são carregadas e selecionáveis.
-        4. Inspecionar o console em busca de erros de estado ou de rede relacionados ao carregamento das categorias.
-     - Why fix this issue and what will be achieved with the fix? Impede a correta categorização de novas máquinas.
+     - Attempted fixes: O agente reescreveu as funções de geração de PDF (, , ) no  para adicionar mais campos, quebras de linha com  do  e ajustar o espaçamento.
+     - Next debug checklist: 
+       - : Revisar a função . É provável que o cálculo da altura das linhas e a quebra de texto (word wrapping) dentro das células da tabela estejam incorretos, fazendo com que textos longos (como a descrição) sobreponham outras células.
+       - : Verificar se **todos** os campos solicitados pelo usuário (fornecedor, documento, n de doc, conta movimento, etc.) estão sendo buscados do banco de dados e adicionados aos dados do PDF.
+       - : Na função de exportação de múltiplos itens e de categorias completas, verificar se o valor total está sendo calculado e adicionado ao PDF.
+     - Why fix this issue and what will be achieved with the fix? Os relatórios gerados se tornarão legíveis e completos, contendo todas as informações necessárias para o usuário, o que é essencial para um sistema ERP.
      - Status:  IN PROGRESS
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Frontend.
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Backend (via curl para gerar PDFs) e Frontend (verificar se a ação de exportar funciona).
      - Blocked on other issue: Não.
 
 **In progress Task List**:
-  - Task 1:  Finalizar e validar o último lote de solicitações de UI (PRIORITY: P0)
-
- Task Detail:
-  - Task 1: 
-     - Where to resume: O agente acabou de modificar . O próximo passo é testar essa mudança. Em seguida, o agente deve:
-        1.  Integrar e testar a nova página  (adicionar ao menu, verificar funcionalidade).
-        2.  Testar a visualização em lista/grade e as novas informações nos cards na página .
-        3.  Validar a correção do dropdown de categorias em .
-     - What will be achieved with this? Concluirá todas as solicitações de UI feitas pelo usuário na última mensagem.
-     - Status:  IN PROGRESS
-     - Should Test frontend/backend/both after fix? Frontend.
-     - Blocked on something: Não.
+  - Nenhum.
 
 **Upcoming and Future Tasks**
  **Upcoming Tasks:**
- - **P1: Visualização de Outros Tipos de Arquivo**: Adicionar suporte para preview de arquivos do Word e Excel no sistema de armazenamento.
- - **P2: Refatoração Parcial do Backend**: Executar a refatoração parcial do  movendo as rotas para arquivos separados em .
+ - **P1: Refatoração Crítica do Backend**: Executar a refatoração do  movendo as rotas para arquivos separados em . A complexidade do arquivo (>9000 linhas) é o maior risco técnico do projeto.
+ - **P2: Refatoração Crítica do Frontend**: Quebrar a página  (>1000 linhas) em componentes menores e mais gerenciáveis.
 
  **Future Tasks:**
- - **P2: Refatoração Crítica do Backend**: Completar a refatoração do monolito .
+ - **P2: Drag and Drop no Armazenamento**: Implementar uma interface de arrastar e soltar para mover arquivos.
  - **P2: Integração Estoque ↔ Manutenção**: Implementar a baixa automática de peças do estoque ao registrar uma manutenção.
  - **P2: Notificações Externas**: Envio de notificações por email/WhatsApp.
- - **P2: Reativar PWA**: Reativar o Service Worker para habilitar a funcionalidade de Progressive Web App.
+ - **P2: Geração de Relatórios Automáticos**: Implementar um job que gera e envia relatórios financeiros mensais.
 
 **Completed work in this session**
-- **Dashboard Financeiro**: Implementada a aba Vencidas com resumos e listas detalhadas em .
-- **Gerenciamento de Tempo de Uso**:
-  - Implementada a exclusão de registros de uso individuais com endpoint .
-  - Implementada a exclusão de máquinas a partir do card de status na .
-  - Redesenhados os cards de status de máquina para serem mais compactos e em um grid de 4 colunas.
-- **Senhas em Pastas**: Implementada a proteção de pastas com senha no sistema de armazenamento, incluindo backend (endpoints para definir/verificar senha) e frontend (modais e ícones).
-- **Sistema de Frotas**: Criados modelos no backend, endpoints CRUD e uma página de gerenciamento completa ().
-- **Subcategorias (Máquinas e Estoque)**: Criados os modelos, endpoints CRUD e UIs de gerenciamento para subcategorias de máquinas e de estoque.
-- **Formulário de Máquinas**: Adicionados os campos de dropdown para Frota, Subfrota, Operador e Subcategoria, e tornado o campo Placa opcional.
+- **Exportação de Itens Individuais**: Adicionada a capacidade de expandir subcategorias na página de exportação e exportar um único item para PDF.
+- **Geração de Recibos e Duplicatas**: Implementados botões Recibo e Duplicata que geram PDFs específicos para cada item.
+- **Modal de Seleção de Empresa**: Criado um modal no frontend que permite ao usuário escolher entre CRA CONSTRUTORA e CRA LOCADORA antes de gerar um recibo/duplicata, enviando os dados corretos para o backend.
+- **Módulo de Imóveis**: Criada a página  com CRUD completo, estatísticas e formulário com busca de CEP. A nova categoria foi integrada à página de exportação.
+- **Correções de Exportação (Parciais)**:
+    - Atualizadas as categorias de exportação nos módulos administrativo e gerenciamento, adicionando Imóveis e removendo Auditoria.
+    - Funções de PDF no  foram reescritas para adicionar mais campos, ajustar espaçamento e corrigir a proporção da logo da empresa.
 
 **Earlier issues found/mentioned but not fixed**
-   - **Issue 1**: O problema de visualização de anexos, mencionado no handover anterior, não foi abordado e continua pendente com alta prioridade.
+   - Nenhum. As questões não resolvidas são listadas como pendentes.
 
 **Known issue recurrence from previous fork**
   - Nenhum.
@@ -107,20 +83,15 @@ Um aplicativo full-stack (React + FastAPI + MongoDB). O agente implementou um gr
 
 
 **Key Technical Concepts**
-- **Backend (FastAPI)**: Extensão de um monolito com múltiplos novos modelos Pydantic (Frota, Subfrota, Subcategorias) e endpoints CRUD completos. Uso de hash de senhas para segurança de pastas.
-- **Frontend (React)**: Criação de novas páginas de gerenciamento (, ), adição de rotas e links de menu. Uso intensivo de componentes Shadcn/UI (, , , ) para construir interfaces complexas. Implementação de lógica de estado para alternar visualizações (grid/lista) e gerenciar dados de formulários aninhados (categorias -> subcategorias).
+- **Backend (FastAPI)**: Adição massiva de lógica ao , incluindo endpoints para CRUD de imóveis, e múltiplas rotas de exportação (, , , ). Uso intensivo e complexo da biblioteca  para desenhar PDFs dinamicamente com tabelas, textos formatados e imagens.
+- **Frontend (React)**: A página  tornou-se um monólito de frontend, gerenciando estado para itens expandidos, itens selecionados para exportação múltipla e o estado de um modal de seleção. Foi criada a nova página de CRUD  replicando padrões existentes.
 
 **key DB schema**
-- **folder_metadata**: 
-- **fleets**: 
-- **subfleets**: 
-- **machine_subcategories**: 
-- **stock_subcategories**: 
-- **machines**: (atualizado para incluir) , , ,  (todos ).
-- **stock_items**: (atualizado para incluir) .
+  - **imoveis**: 
+  - As exportações agora exigem a busca de dados relacionados de múltiplas coleções (ex: buscar nome do fornecedor, centro de custo, plano de contas) para um único item de .
 
 **changes in tech stack**
-- Nenhuma.
+  - Nenhuma nova dependência foi adicionada nesta sessão.
 
 **All files of reference**
 - 
@@ -128,55 +99,58 @@ Um aplicativo full-stack (React + FastAPI + MongoDB). O agente implementou um gr
 - 
 - 
 - 
-- 
-- 
-- 
-- 
-- 
 
 **Areas that need refactoring**:
-- **CRÍTICO**:  cresceu para mais de 7500 linhas. A refatoração aprovada pelo usuário é extremamente necessária para manter a sanidade do projeto.
-- **ALTO**:  (agora com ~1200 linhas) e  (~1000 linhas) se tornaram muito grandes e complexos. Eles devem ser divididos em componentes menores para melhorar a manutenção.
+- **CRÍTICO**: O arquivo  precisa ser refatorado urgentemente. A sua dimensão e complexidade tornam a manutenção extremamente difícil e arriscada.
+- **CRÍTICO**: A página  precisa ser decomposta em componentes menores para ser sustentável (ex: , , , ).
+- **RECOMENDADO**: As páginas  e  partilham muita lógica de CRUD que poderia ser extraída para um hook ou componente genérico.
 
 **key api endpoints**
-- , 
-- CRUD para , , , 
 - 
-- Endpoints  e  para  foram atualizados para incluir os novos campos opcionais.
+- 
+- 
+- 
+- 
+- 
 
 **Critical Info for New Agent**
-- **Trabalho em Lote**: O usuário tende a fornecer listas de requisitos. É eficiente agrupá-los, planejar a implementação e, em seguida, executar.
-- **Débito Técnico Crescente**: O arquivo  é um grande risco para o projeto. A refatoração deve ser priorizada assim que as tarefas de UI atuais forem concluídas e validadas.
-- **Finalizar Implementação Atual**: A prioridade imediata é concluir e testar o último conjunto de solicitações de UI do usuário, que está parcialmente implementado. Resolva o  (dropdown de categoria) como parte desta tarefa.
-- **Bug Persistente**: O bug de visualização de anexos () foi herdado da sessão anterior e ainda não foi resolvido. Ele deve ser tratado como uma alta prioridade após a conclusão do trabalho atual.
+- A prioridade máxima é corrigir o bug de roteamento (Issue 1). É uma falha de segurança.
+- Em seguida, foque em resolver definitivamente os problemas de layout e dados nos PDFs (Issue 2). A solução anterior foi insuficiente. Investigue a geração de tabelas no .
+- Após resolver os bugs críticos, proponha fortemente ao usuário a refatoração do  e do , explicando que isso é essencial para a estabilidade e o futuro desenvolvimento do projeto.
 
 **documents and test reports created in this job**
--  (atualizado múltiplas vezes)
+-  (atualizado)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-- **User 10**: Solicita um lote de 7 correções/melhorias de UI, incluindo visualização em lista/grid para máquinas e estoque, e a criação de uma página de categorias de máquinas. (Status: IN PROGRESS)
-- **User 9**: Solicita que as informações de frota e observações apareçam no card da máquina. (Status: IN PROGRESS)
-- **User 8**:  - Pede para concluir a implementação da subcategoria de estoque no frontend. (Status: COMPLETED)
-- **User 7**:  - Aprova o plano para implementar o sistema de frotas e outras funcionalidades. (Status: COMPLETED)
-- **User 6**: Fornece uma lista de 5 novas funcionalidades principais (senhas em pastas, frotas, funcionários em máquinas, subcategorias de máquinas, subcategorias de estoque). (Status: COMPLETED)
-- **User 5**: Pede para reduzir o tamanho dos cards de máquinas e tornar a placa opcional. (Status: COMPLETED)
-- **User 4**: Pede para adicionar uma opção para excluir os cards de status das máquinas. (Status: COMPLETED)
-- **User 3**: Pede para adicionar a função de excluir os cards de histórico de uso da máquina. (Status: COMPLETED)
-- **User 2**:  - Pede para criar a seção de contas vencidas. (Status: COMPLETED)
-- **User 1**:  - Aprova o plano inicial do agente para as 5 funcionalidades. (Status: COMPLETED)
+ - **1**: A plataforma está abrindo dentro do sistema de gerenciamento, ela tem que abrir na página de login... (Status: NOT STARTED)
+ - **2**: A conta a receber ou a pagar quando exportada a descrição está passando por cima das outras caixas de texto... (Status: IN PROGRESS - Fix attempted but issue persists)
+ - **3**: As informações de cnpj, endereço e etc estão muito colados no texto de cima da CRA na exportação do recibo... (Status: RESOLVED - Spacing added)
+ - **4**: Quando for gerar recibo ou duplicata, mostrar um modal se é para construtora ou locadora... (Status: COMPLETED)
+ - **5**: Nos arquivos de exportação, tem que mostrar a descrição completa, está cortando... (Status: IN PROGRESS - Part of the larger PDF layout issue)
+ - **6**: User gives approval to proceed with P0, P1, and then P2 from the proposed plan, and attaches receipt examples. (Status: COMPLETED)
+ - **7**: User requests combined export, receipt/invoice options, and the real estate module. (Status: COMPLETED)
+ - **8**: User confirms the agent should proceed with the suggested enhancement (combined export). (Status: COMPLETED)
+ - **9**: Dentro das categorias de exportação tem que aparecer a opção para expandir as opções... para serem exportadas de forma individual... (Status: COMPLETED)
+ - **10**: User asks to continue with P0 (finish bank statement export). (Status: COMPLETED)
 
 **Project Health Check:**
-- **Broken**: A funcionalidade de visualização de anexos.
+- **Broken**: Roteamento inicial. Layout dos PDFs de exportação.
 - **Mocked**: Nenhum.
 
 **3rd Party Integrations**
-- Gemini, BrasilAPI, ViaCEP, reportlab, openpyxl, python-ofxparse.
+- Gemini
+- BrasilAPI
+- ViaCEP
+-  (geração de PDF)
+-  (manipulação de Excel)
+-  (manipulação de Word)
+- 
 
 **Testing status**
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: Nenhum.
+  - Known regressions: O roteamento inicial da aplicação quebrou nesta sessão.
 
 **Credentials to test flow:**
 - **Email**: 
@@ -184,5 +158,4 @@ Um aplicativo full-stack (React + FastAPI + MongoDB). O agente implementou um gr
 - **Role**: 
 
 **What agent forgot to execute**
-- O agente não abordou o bug de visualização de anexos, que foi herdado da sessão anterior e continua sendo um problema crítico.
-- O agente não confirmou a correção do dropdown de categorias na página de máquinas antes de prosseguir, deixando-o como um problema pendente.</analysis>
+- O agente não resolveu de forma definitiva os problemas de layout nos PDFs (texto cortado/sobreposto), apesar de múltiplas tentativas e de o usuário ter reportado o mesmo problema mais de uma vez. A complexidade do  foi subestimada.</analysis>
