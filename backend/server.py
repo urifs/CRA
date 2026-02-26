@@ -10430,13 +10430,12 @@ Responda APENAS em formato JSON válido seguindo este modelo:
         
         llm = LlmChat(
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
-            model="gemini-2.0-flash"
-        )
+            session_id=f"epi_consulta_{cargo}",
+            system_message="Você é um especialista em segurança do trabalho e EPIs no Brasil."
+        ).with_model("google", "gemini-2.0-flash")
         
-        response = await llm.chat([UserMessage(content=prompt)])
+        response_text = llm.send_message(UserMessage(content=prompt))
         
-        # Parse JSON da resposta
-        response_text = response.content
         # Limpar possíveis marcadores de código
         if "```json" in response_text:
             response_text = response_text.split("```json")[1].split("```")[0]
