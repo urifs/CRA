@@ -328,6 +328,91 @@ export default function MachineDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Combustível Section */}
+      <Card>
+        <CardHeader className="border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <CardTitle className="font-heading text-xl font-bold flex items-center gap-2">
+              <Fuel className="text-green-500" size={20} />
+              Registros de Combustível
+            </CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Total consumido</p>
+                <p className="text-lg font-bold text-green-600">{totalLitrosConsumidos.toFixed(1)}L</p>
+              </div>
+              <Button
+                size="sm"
+                className="bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => navigate("/gerenciamento/combustivel")}
+              >
+                <Plus size={16} className="mr-1" />
+                Novo Registro
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {combustiveis.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {combustiveis.slice(0, 10).map((combustivel) => (
+                <div
+                  key={combustivel.id}
+                  className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  data-testid={`combustivel-item-${combustivel.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-50">
+                      <Droplets className="text-green-600" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">
+                        {combustivel.litros_consumidos?.toFixed(1)}L abastecidos
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {combustivel.operador ? `Operador: ${combustivel.operador}` : "Sem operador"} • {combustivel.tipo_medicao === "litros_hora" ? "L/hora" : "L/km"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-sm text-gray-700">
+                      {combustivel.litros_inicial}L → {combustivel.litros_final}L
+                    </p>
+                    <p className="text-sm text-gray-500 flex items-center justify-end gap-1">
+                      <Calendar size={14} />
+                      {new Date(combustivel.data + "T00:00:00").toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {combustiveis.length > 10 && (
+                <div className="p-4 text-center">
+                  <Button
+                    variant="link"
+                    onClick={() => navigate("/gerenciamento/combustivel")}
+                    className="text-green-600"
+                  >
+                    Ver todos os {combustiveis.length} registros
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="empty-state py-12">
+              <Fuel className="text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500">Nenhum registro de combustível para esta máquina</p>
+              <Button
+                className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => navigate("/gerenciamento/combustivel")}
+              >
+                <Plus size={18} className="mr-2" />
+                Registrar Abastecimento
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Maintenance History */}
       <Card>
         <CardHeader className="border-b border-gray-200">
