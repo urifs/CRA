@@ -740,6 +740,92 @@ async def update_category(category_id: str, category: CategoryCreate, current_us
         created_at=existing["created_at"]
     )
 
+# ============ SUBCATEGORY ROUTES (Machine Subcategories) ============
+
+@api_router.post("/subcategories", response_model=SubcategoryResponse)
+async def create_subcategory(subcategory: SubcategoryCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new subcategory for machines"""
+    # Verify category exists
+    category = await db.categories.find_one({"id": subcategory.category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    
+    subcategory_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    doc = {
+        "id": subcategory_id,
+        "name": subcategory.name,
+        "category_id": subcategory.category_id,
+        "description": subcategory.description or "",
+        "created_at": now
+    }
+    
+    await db.subcategories.insert_one(doc)
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="subcategoria",
+        entity_id=subcategory_id,
+        entity_name=subcategory.name,
+        module="Gerenciamento"
+    )
+    
+    return SubcategoryResponse(**doc, category_name=category["name"])
+
+@api_router.get("/subcategories", response_model=List[SubcategoryResponse])
+async def list_subcategories(category_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """List all subcategories, optionally filtered by category"""
+    query = {"category_id": category_id} if category_id else {}
+    subcategories = await db.subcategories.find(query, {"_id": 0}).to_list(500)
+    
+    # Get category names
+    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
+    category_map = {c["id"]: c["name"] for c in categories}
+    
+    return [SubcategoryResponse(**s, category_name=category_map.get(s["category_id"], "")) for s in subcategories]
+
+@api_router.put("/subcategories/{subcategory_id}", response_model=SubcategoryResponse)
+async def update_subcategory(subcategory_id: str, data: SubcategoryCreate, current_user: dict = Depends(get_current_user)):
+    """Update a subcategory"""
+    existing = await db.subcategories.find_one({"id": subcategory_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Subcategoria não encontrada")
+    
+    await db.subcategories.update_one(
+        {"id": subcategory_id},
+        {"$set": {"name": data.name, "description": data.description or ""}}
+    )
+    
+    updated = await db.subcategories.find_one({"id": subcategory_id}, {"_id": 0})
+    category = await db.categories.find_one({"id": updated["category_id"]}, {"_id": 0})
+    
+    return SubcategoryResponse(**updated, category_name=category["name"] if category else "")
+
+@api_router.delete("/subcategories/{subcategory_id}")
+async def delete_subcategory(subcategory_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a subcategory"""
+    subcategory = await db.subcategories.find_one({"id": subcategory_id}, {"_id": 0})
+    if not subcategory:
+        raise HTTPException(status_code=404, detail="Subcategoria não encontrada")
+    
+    # Remove subcategory from machines
+    await db.machines.update_many({"subcategory_id": subcategory_id}, {"$set": {"subcategory_id": None}})
+    
+    await db.subcategories.delete_one({"id": subcategory_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="subcategoria",
+        entity_id=subcategory_id,
+        entity_name=subcategory["name"],
+        module="Gerenciamento"
+    )
+    
+    return {"message": "Subcategoria excluída com sucesso"}
+
 # ============ FLEET ROUTES ============
 
 @api_router.post("/fleets", response_model=FleetResponse)
