@@ -10434,7 +10434,7 @@ Responda APENAS em formato JSON válido seguindo este modelo:
             system_message="Você é um especialista em segurança do trabalho e EPIs no Brasil."
         ).with_model("google", "gemini-2.0-flash")
         
-        response_text = llm.send_message(UserMessage(content=prompt))
+        response_text = llm.send_message(UserMessage(text=prompt))
         
         # Limpar possíveis marcadores de código
         if "```json" in response_text:
