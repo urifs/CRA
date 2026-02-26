@@ -6247,6 +6247,10 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
         "plano_contas_despesa": {"collection": "plano_contas", "title": "Contas de Despesa", "filter": {"tipo": "despesa"}},
         "centros_custo": {"collection": "centros_custo", "title": "Centros de Custo", "filter": {}},
         "formas_pagamento": {"collection": "formas_pagamento", "title": "Formas de Pagamento", "filter": {}},
+        
+        # Contas Bancárias
+        "contas_bancarias": {"collection": "contas_bancarias", "title": "Contas Bancárias", "filter": {}},
+        "contas_bancarias_ativas": {"collection": "contas_bancarias", "title": "Contas Bancárias Ativas", "filter": {"ativo": True}},
     }
     
     if category not in category_configs:
