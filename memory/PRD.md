@@ -11,55 +11,57 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026) - Parte 4
+### Sessão Atual (26/02/2026) - Parte 5
 
-#### ✅ Correção Exportação de Contas a Pagar - COMPLETO
-- Corrigido filtro de status: de "pendente" para "em_aberto"
-- PDFs de Contas a Pagar agora contêm os dados corretamente
+#### ✅ Sistema de Contas Bancárias - COMPLETO
+- Nova página `/admin/contas-bancarias` com CRUD completo
+- Modelo Pydantic: ContaBancariaCreate/Response
+- Endpoints: GET, POST, PUT, DELETE, PATCH (saldo)
+- Cards de resumo: Total, Ativas, Saldo Total, Com PIX
+- Formulário completo: Nome, Banco (lista brasileira), Tipo, Agência, Conta, Titular, CPF/CNPJ, PIX, Saldo, Status, Cor
+- Grid de cards com cores personalizadas e ícones por tipo
 
-#### ✅ Exportação Combinada - COMPLETO
-- Novo endpoint `POST /api/export/combined` para exportar múltiplas categorias em um único PDF
-- Frontend atualizado para usar exportação combinada ao clicar em "Exportar (N)"
-- Todos os itens selecionados são exportados em um único arquivo
+#### ✅ Dropdown de Conta Bancária nas Contas a Pagar/Receber
+- Campo `conta_bancaria_id` e `conta_bancaria_nome` adicionados
+- Dropdown integrado nos formulários de criação/edição
 
-#### ✅ Filtros Específicos na Exportação - COMPLETO
-- Novo endpoint `GET /api/export/items/{collection}` para listar itens para filtro
-- UI com botão de filtro (ícone de filtro) nas subcategorias que suportam
-- Área expandível com chips selecionáveis para cada item
-- Suporta: plano_contas, centros_custo, fleets, cadastros, formas_pagamento
-
-#### ✅ Dropdown de Frotas em Contas a Pagar/Receber - COMPLETO
-- Adicionado campo `frota_id` e `frota_nome` nos modelos Pydantic
-- Dropdown "Frota (Opcional)" no formulário de Nova Conta a Pagar
-- Dropdown "Frota (Opcional)" no formulário de Nova Conta a Receber
-- Integração com sistema de frotas existente
+### Sessão Atual - Parte 4 (Exportação)
+- Correção do filtro de status (pendente → em_aberto)
+- Exportação combinada em um único PDF
+- Filtros específicos por item na exportação
+- Dropdown de Frotas em Contas a Pagar/Receber
 
 ### Sessões Anteriores
-- Sistema de seleção múltipla no Armazenamento
-- Funcionalidades de Mover e Copiar arquivos
-- Preview de Word/Excel no armazenamento
-- Correção preview de anexos
+- Sistema de seleção múltipla/mover/copiar no Armazenamento
+- Preview de Word/Excel
 - Sistema de Frotas completo
-- Senhas em Pastas no Armazenamento
 - Dashboard Financeiro com aba "Vencidas"
 
 ## Backlog
 
 ### 🟡 P1 - Pendentes
-- Refatoração parcial do backend (server.py > 7850 linhas)
+- Refatoração parcial do backend (server.py > 7950 linhas)
 
 ### 🔵 P2 - Futuros
-- Integração Estoque ↔ Manutenção (baixa automática de peças)
+- Integração Estoque ↔ Manutenção
 - Notificações email/WhatsApp
 - Reativar PWA
 
 ## Novos Endpoints
-- `POST /api/export/combined` - Exporta múltiplas categorias em um PDF
-- `GET /api/export/items/{collection}` - Lista itens para filtro de exportação
+- `GET /api/admin/contas-bancarias` - Lista contas bancárias
+- `POST /api/admin/contas-bancarias` - Cria conta bancária
+- `GET /api/admin/contas-bancarias/{id}` - Busca conta bancária
+- `PUT /api/admin/contas-bancarias/{id}` - Atualiza conta bancária
+- `DELETE /api/admin/contas-bancarias/{id}` - Exclui conta bancária
+- `PATCH /api/admin/contas-bancarias/{id}/saldo` - Atualiza saldo
 
-## Modelos Atualizados
-- `ContaPagarCreate/Response` - Adicionado `frota_id`, `frota_nome`
-- `ContaReceberCreate/Response` - Adicionado `frota_id`, `frota_nome`
+## Arquivos Criados/Modificados
+- `frontend/src/pages/admin/ContasBancariasPage.jsx` - Nova página
+- `frontend/src/App.js` - Nova rota adicionada
+- `frontend/src/components/AdminLayout.jsx` - Link no menu
+- `frontend/src/pages/admin/ContasPagarPage.jsx` - Dropdown conta bancária
+- `frontend/src/pages/admin/ContasReceberPage.jsx` - Dropdown conta bancária
+- `backend/server.py` - Modelo e endpoints de contas bancárias
 
 ## Credenciais de Teste
 - Email: test@test.com
