@@ -49,6 +49,7 @@ export default function MachinesPage() {
   const [editingMachine, setEditingMachine] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [viewMode, setViewMode] = useState("grid"); // grid ou list
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
