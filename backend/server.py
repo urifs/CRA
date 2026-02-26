@@ -10374,7 +10374,9 @@ class CargoCreate(BaseModel):
 
 class FichaEPICreate(BaseModel):
     funcionario_id: str
-    cargo: str
+    codigo_cbo: Optional[str] = None
+    ocupacao_cbo: Optional[str] = None
+    cargo: Optional[str] = None  # Mantido para compatibilidade
     data_entrega: str
     epis: list = []
     observacoes: Optional[str] = None
