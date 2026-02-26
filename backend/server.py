@@ -6953,24 +6953,6 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
     # Log de auditoria
     item_name = item.get("descricao") or item.get("name") or item.get("nome") or item_id
     await create_audit_log(current_user, "export", category, item_id, f"Item individual: {item_name}")
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
-    ]))
-    
-    elements.append(table)
-    
-    doc.build(elements)
-    buffer.seek(0)
-    
-    # Log de auditoria
-    item_name = item.get("descricao") or item.get("name") or item.get("nome") or item_id
-    await create_audit_log(current_user, "export", category, item_id, f"Item individual: {item_name}")
     
     filename = f"CRA_{config['title'].replace(' ', '_')}_{item_id[:8]}.pdf"
     return Response(
