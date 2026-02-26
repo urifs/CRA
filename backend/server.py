@@ -6093,15 +6093,15 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
         
         # Contas a Pagar
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar", "filter": {}},
-        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "pendente"}},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "em_aberto"}},
         "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
-        "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas a Pagar Vencidas", "filter": {"status": "pendente", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
+        "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas a Pagar Vencidas", "filter": {"status": "em_aberto", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
         
         # Contas a Receber
         "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber", "filter": {}},
-        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "pendente"}},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "em_aberto"}},
         "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
-        "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas a Receber Vencidas", "filter": {"status": "pendente", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
+        "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas a Receber Vencidas", "filter": {"status": "em_aberto", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
         
         # Cadastros
         "cadastros": {"collection": "cadastros", "title": "Cadastros", "filter": {}},
