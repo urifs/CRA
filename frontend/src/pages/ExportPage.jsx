@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
   FileDown, 
   Loader2, 
   FileText,
@@ -24,7 +31,8 @@ import {
   TrendingDown,
   TrendingUp,
   FileSpreadsheet,
-  FileCode
+  FileCode,
+  Filter
 } from "lucide-react";
 
 const ICONS = {
