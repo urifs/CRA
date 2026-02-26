@@ -101,7 +101,8 @@ export default function MachinesPage() {
         year: formData.year ? parseInt(formData.year) : null,
         fleet_id: formData.fleet_id || null,
         subfleet_id: formData.subfleet_id || null,
-        operator_id: formData.operator_id || null
+        operator_id: formData.operator_id || null,
+        subcategory_id: formData.subcategory_id || null
       };
 
       if (editingMachine) {
