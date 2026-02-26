@@ -1097,12 +1097,19 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         operator = await db.cadastros.find_one({"id": machine.operator_id}, {"_id": 0})
         operator_name = operator.get("nome_razao", "") if operator else ""
     
+    # Get subcategory name
+    subcategory_name = ""
+    if machine.subcategory_id:
+        subcategory = await db.subcategories.find_one({"id": machine.subcategory_id}, {"_id": 0})
+        subcategory_name = subcategory["name"] if subcategory else ""
+    
     machine_id = str(uuid.uuid4())
     machine_doc = {
         "id": machine_id,
         "name": machine.name,
         "plate": (machine.plate or "").upper(),
         "category_id": machine.category_id,
+        "subcategory_id": machine.subcategory_id,
         "brand": machine.brand or "",
         "model": machine.model or "",
         "year": machine.year,
@@ -1132,6 +1139,8 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         plate=(machine.plate or "").upper(),
         category_id=machine.category_id,
         category_name=category_name,
+        subcategory_id=machine.subcategory_id,
+        subcategory_name=subcategory_name,
         brand=machine.brand or "",
         model=machine.model or "",
         year=machine.year,
