@@ -977,22 +977,27 @@ export default function ArmazenamentoPage() {
       </Dialog>
 
       {/* Preview Modal */}
-      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+      <Dialog open={showPreviewModal} onOpenChange={closePreviewModal}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{previewItem?.name}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center min-h-[400px] bg-gray-100 rounded-lg overflow-hidden">
-            {previewItem && (
+            {previewLoading ? (
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="animate-spin text-[#E31A1A]" size={48} />
+                <p className="text-gray-500">Carregando preview...</p>
+              </div>
+            ) : previewItem && previewBlobUrl ? (
               getPreviewType(previewItem.name) === 'pdf' ? (
                 <iframe
-                  src={`${API}/storage/download?path=${encodeURIComponent(previewItem.path)}&token=${token}`}
+                  src={previewBlobUrl}
                   className="w-full h-[70vh]"
                   title={previewItem.name}
                 />
               ) : getPreviewType(previewItem.name) === 'video' ? (
                 <video
-                  src={`${API}/storage/download?path=${encodeURIComponent(previewItem.path)}&token=${token}`}
+                  src={previewBlobUrl}
                   controls
                   className="max-w-full max-h-[70vh]"
                 >
@@ -1000,7 +1005,7 @@ export default function ArmazenamentoPage() {
                 </video>
               ) : getPreviewType(previewItem.name) === 'image' ? (
                 <img
-                  src={`${API}/storage/download?path=${encodeURIComponent(previewItem.path)}&token=${token}`}
+                  src={previewBlobUrl}
                   alt={previewItem.name}
                   className="max-w-full max-h-[70vh] object-contain"
                 />
@@ -1011,10 +1016,16 @@ export default function ArmazenamentoPage() {
                   <p className="text-sm mt-2">Clique em "Baixar" para obter o arquivo.</p>
                 </div>
               )
+            ) : (
+              <div className="text-gray-500 text-center p-8">
+                <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                <p>Erro ao carregar preview.</p>
+                <p className="text-sm mt-2">Clique em "Baixar" para obter o arquivo.</p>
+              </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPreviewModal(false)}>Fechar</Button>
+            <Button variant="outline" onClick={closePreviewModal}>Fechar</Button>
             <Button onClick={() => previewItem && handleDownload(previewItem)} className="bg-[#E31A1A] hover:bg-red-700">
               <Download size={16} className="mr-2" />
               Baixar
