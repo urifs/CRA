@@ -11,7 +11,23 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026) - Parte 6
+### Sessão Atual (26/02/2026) - Parte 7
+
+#### ✅ Correção de Roteamento (P0 - Crítico) - COMPLETO
+- **Problema**: Sistema abria diretamente na página de gerenciamento ao invés da página de login
+- **Solução**: Refatoração completa do sistema de rotas no `App.js`
+- Criado componente `RootRedirect` para gerenciar redirecionamento inteligente
+- Rota raiz `/` agora redireciona para `/login` (não autenticado) ou `/select-system` (autenticado)
+- Rotas de gerenciamento movidas de `/` para `/gerenciamento/*`
+- Catch-all atualizado para usar `RootRedirect`
+- Atualização de todos os links de navegação nos componentes:
+  - `Layout.jsx` - menu lateral e navegação mobile
+  - `MorePage.jsx` - menu "Mais"
+  - `SystemSelectPage.jsx` - path do card de Gerenciamento
+  - `DashboardPage.jsx`, `MachineDetailPage.jsx`, `NewMaintenancePage.jsx`, etc.
+- Fluxo correto: `/` → `/login` → `/select-system` → `/gerenciamento/dashboard`
+
+### Sessão Anterior (26/02/2026) - Parte 6
 
 #### ✅ Exportação de Extrato Bancário - COMPLETO
 - Endpoint: `GET /api/export/extrato-bancario/{conta_id}` 
