@@ -62,6 +62,7 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - `PUT /api/admin/contas-bancarias/{id}` - Atualiza conta bancária
 - `DELETE /api/admin/contas-bancarias/{id}` - Exclui conta bancária
 - `PATCH /api/admin/contas-bancarias/{id}/saldo` - Atualiza saldo
+- `GET /api/export/extrato-bancario/{conta_id}` - Exporta extrato bancário em PDF
 
 ## Arquivos Criados/Modificados
 - `frontend/src/pages/admin/ContasBancariasPage.jsx` - Nova página
