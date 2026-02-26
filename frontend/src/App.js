@@ -51,6 +51,18 @@ import AdminNotificacoesPage from "@/pages/admin/NotificacoesPage";
 import ArmazenamentoPage from "@/pages/ArmazenamentoPage";
 import ContasBancariasPage from "@/pages/admin/ContasBancariasPage";
 
+// RH Pages
+import RHLayout from "@/components/RHLayout";
+import RHDashboardPage from "@/pages/rh/RHDashboardPage";
+import FuncionariosPage from "@/pages/rh/FuncionariosPage";
+import PontoPage from "@/pages/rh/PontoPage";
+import FolhaPagamentoPage from "@/pages/rh/FolhaPagamentoPage";
+import FeriasPage from "@/pages/rh/FeriasPage";
+import EPIPage from "@/pages/rh/EPIPage";
+import CustosPage from "@/pages/rh/CustosPage";
+import RHNotificacoesPage from "@/pages/rh/RHNotificacoesPage";
+import RHMorePage from "@/pages/rh/RHMorePage";
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
@@ -202,6 +214,20 @@ function App() {
             <Route path="ordens-servico" element={<OrdensServicoPage />} />
             <Route path="more" element={<AdminMorePage />} />
             <Route path="exportar" element={<ExportPage module="administrativo" />} />
+          </Route>
+          
+          {/* RH routes */}
+          <Route path="/rh" element={<ProtectedRoute><RHLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/rh/dashboard" replace />} />
+            <Route path="dashboard" element={<RHDashboardPage />} />
+            <Route path="funcionarios" element={<FuncionariosPage />} />
+            <Route path="ponto" element={<PontoPage />} />
+            <Route path="folha-pagamento" element={<FolhaPagamentoPage />} />
+            <Route path="ferias" element={<FeriasPage />} />
+            <Route path="epi" element={<EPIPage />} />
+            <Route path="custos" element={<CustosPage />} />
+            <Route path="notificacoes" element={<RHNotificacoesPage />} />
+            <Route path="more" element={<RHMorePage />} />
           </Route>
           
           {/* Catch all - redirect to login if not authenticated */}
