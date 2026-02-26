@@ -7014,12 +7014,11 @@ async def export_recibo(category: str, item_id: str, current_user: dict = Depend
     """Gera um recibo de pagamento em PDF"""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
     import io
     
-    # Determinar coleção
     collection_map = {
         "contas_pagar": "contas_pagar", "contas_pagar_pendente": "contas_pagar",
         "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
@@ -7036,29 +7035,31 @@ async def export_recibo(category: str, item_id: str, current_user: dict = Depend
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
-    # Buscar dados da empresa
     empresa = await db.empresa_config.find_one({}, {"_id": 0}) or {}
     
-    # Criar PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1*cm, bottomMargin=1*cm)
     styles = getSampleStyleSheet()
-    
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, alignment=1, spaceAfter=20, textColor=colors.HexColor("#333333"))
-    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, alignment=1, textColor=colors.gray)
-    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=9, textColor=colors.gray)
-    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=11)
-    extenso_style = ParagraphStyle('Extenso', parent=styles['Normal'], fontSize=10, leading=14)
     
     elements = []
     
-    # Cabeçalho da empresa
+    # Logo
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            logo = RLImage(logo_path, width=3*cm, height=3*cm, kind='proportional')
+            elements.append(logo)
+    except Exception as e:
+        logging.warning(f"Não foi possível carregar o logo: {e}")
+    
+    # Cabeçalho
     empresa_nome = empresa.get("razao_social", "CRA LOCAÇÕES")
     empresa_cnpj = empresa.get("cnpj", "")
     empresa_endereco = empresa.get("endereco", "")
     empresa_telefone = empresa.get("telefone", "")
     
-    elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', parent=styles['Normal'], fontSize=14, alignment=1)))
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, alignment=1, textColor=colors.gray)
+    elements.append(Paragraph(f"<b>{empresa_nome}</b>", ParagraphStyle('EmpNome', fontSize=14, alignment=1)))
     if empresa_cnpj:
         elements.append(Paragraph(f"CNPJ: {empresa_cnpj}", header_style))
     if empresa_endereco:
@@ -7067,81 +7068,89 @@ async def export_recibo(category: str, item_id: str, current_user: dict = Depend
         elements.append(Paragraph(f"Tel: {empresa_telefone}", header_style))
     
     elements.append(Spacer(1, 0.5*cm))
-    
-    # Título RECIBO
-    elements.append(Paragraph("RECIBO", title_style))
-    
-    # Data
-    elements.append(Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y')}", ParagraphStyle('Data', parent=styles['Normal'], fontSize=10, alignment=2)))
+    elements.append(Paragraph("RECIBO", ParagraphStyle('Title', fontSize=24, alignment=1, spaceAfter=10)))
+    elements.append(Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y')}", ParagraphStyle('Data', fontSize=10, alignment=2)))
     elements.append(Spacer(1, 0.5*cm))
     
     # Dados do cliente/fornecedor
     pessoa_nome = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
-    pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_cnpj") or "-"
+    pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_documento") or item.get("cliente_cnpj") or "-"
+    pessoa_telefone = item.get("fornecedor_telefone") or item.get("cliente_telefone") or "-"
+    pessoa_endereco = item.get("fornecedor_endereco") or item.get("cliente_endereco") or "-"
+    
+    label_style = ParagraphStyle('Label', fontSize=9, textColor=colors.gray)
+    value_style = ParagraphStyle('Value', fontSize=10)
     
     client_data = [
-        [Paragraph("Cliente:", label_style), Paragraph(pessoa_nome, value_style)],
+        [Paragraph("Nome:", label_style), Paragraph(pessoa_nome, value_style)],
         [Paragraph("CPF/CNPJ:", label_style), Paragraph(pessoa_doc, value_style)],
+        [Paragraph("Telefone:", label_style), Paragraph(pessoa_telefone, value_style)],
+        [Paragraph("Endereço:", label_style), Paragraph(pessoa_endereco, value_style)],
     ]
-    client_table = Table(client_data, colWidths=[3*cm, 14*cm])
+    client_table = Table(client_data, colWidths=[2.5*cm, 15*cm])
     client_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     elements.append(client_table)
-    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Spacer(1, 0.4*cm))
     
     # Valor
-    valor = item.get("valor_final") or item.get("valor", 0)
+    valor = item.get("valor_final") or item.get("valor") or item.get("valor_aluguel") or 0
     valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     
-    elements.append(Paragraph(f"Recebi(emos) de <b>{pessoa_nome}</b> a importância de:", extenso_style))
-    elements.append(Spacer(1, 0.3*cm))
-    elements.append(Paragraph(f"<b>{valor_por_extenso(valor)}</b>", ParagraphStyle('ValorExtenso', parent=styles['Normal'], fontSize=11, leading=14)))
+    elements.append(Paragraph(f"Recebi(emos) de <b>{pessoa_nome}</b> a importância de:", ParagraphStyle('Extenso', fontSize=10)))
+    elements.append(Spacer(1, 0.2*cm))
+    elements.append(Paragraph(f"<b>{valor_por_extenso(valor)}</b>", ParagraphStyle('ValorExtenso', fontSize=10)))
     elements.append(Spacer(1, 0.3*cm))
     
-    # Box com valor
-    valor_box = Table([[Paragraph(f"<b>{valor_str}</b>", ParagraphStyle('ValorNum', parent=styles['Normal'], fontSize=16, alignment=1))]], colWidths=[17*cm])
+    valor_box = Table([[Paragraph(f"<b>{valor_str}</b>", ParagraphStyle('ValorNum', fontSize=18, alignment=1))]], colWidths=[17.5*cm])
     valor_box.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 1, colors.black),
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f5f5f5")),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
     ]))
     elements.append(valor_box)
-    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Spacer(1, 0.4*cm))
     
-    # Detalhes do documento
-    elements.append(Paragraph("<b>Proveniente do pagamento do(s) documento(s) abaixo:</b>", extenso_style))
-    elements.append(Spacer(1, 0.3*cm))
+    # Detalhes completos do documento
+    elements.append(Paragraph("<b>Referente a:</b>", ParagraphStyle('Ref', fontSize=10)))
+    elements.append(Spacer(1, 0.2*cm))
     
-    doc_data = [
-        ["Documento", "Emissão", "Vencimento", "Valor", "Descrição"],
-        [
-            item_id[:8],
-            item.get("data_emissao", item.get("created_at", "-")[:10] if item.get("created_at") else "-"),
-            item.get("data_vencimento", "-"),
-            valor_str,
-            item.get("descricao", "-")[:60]
-        ]
+    descricao = item.get("descricao", "-")
+    plano_contas = item.get("plano_contas_nome", "-")
+    centro_custo = item.get("centro_custo_nome", "-")
+    forma_pag = item.get("forma_pagamento_nome", "-")
+    data_venc = item.get("data_vencimento", "-")
+    data_pag = item.get("data_pagamento") or item.get("data_recebimento") or "-"
+    obs = item.get("observacoes", "-")
+    
+    detail_data = [
+        ["Descrição", descricao],
+        ["Data de Vencimento", data_venc],
+        ["Data de Pagamento", data_pag],
+        ["Forma de Pagamento", forma_pag],
+        ["Plano de Contas", plano_contas],
+        ["Centro de Custo", centro_custo],
+        ["Observações", obs if obs else "-"],
     ]
-    doc_table = Table(doc_data, colWidths=[2.5*cm, 2.5*cm, 2.5*cm, 3*cm, 6.5*cm])
-    doc_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4A000")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
+    detail_table = Table(detail_data, colWidths=[4*cm, 13.5*cm])
+    detail_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
-    elements.append(doc_table)
+    elements.append(detail_table)
     elements.append(Spacer(1, 1*cm))
     
     # Assinatura
-    elements.append(Paragraph("_" * 60, ParagraphStyle('Linha', parent=styles['Normal'], alignment=1)))
-    elements.append(Paragraph(empresa_nome, ParagraphStyle('Assinatura', parent=styles['Normal'], fontSize=10, alignment=1)))
+    elements.append(Paragraph("_" * 50, ParagraphStyle('Linha', alignment=1)))
+    elements.append(Paragraph(empresa_nome, ParagraphStyle('Assinatura', fontSize=10, alignment=1)))
     
     doc.build(elements)
     buffer.seek(0)
