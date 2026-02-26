@@ -38,10 +38,12 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 - Filtra subcategorias baseado na categoria selecionada
 - Campo opcional
 
-#### ✅ 5. Subcategorias de Estoque (Gerenciamento) - COMPLETO (Backend)
+#### ✅ 5. Subcategorias de Estoque (Gerenciamento) - COMPLETO
 - Backend com CRUD de subcategorias de estoque (/stock/subcategories)
 - Modelo StockItemCreate/Response atualizado com subcategory_id
-- Falta: integrar dropdown no frontend do estoque
+- Nova aba "Categorias" na página de Estoque
+- Gerenciamento de categorias e subcategorias lado a lado
+- Dropdown de Subcategoria no formulário de novo item (filtra por categoria)
 
 ### Outras Melhorias
 - Placa agora é opcional no cadastro de máquinas
