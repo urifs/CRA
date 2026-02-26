@@ -11,7 +11,15 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026) - Parte 5
+### Sessão Atual (26/02/2026) - Parte 6
+
+#### ✅ Exportação de Extrato Bancário - COMPLETO
+- Endpoint: `GET /api/export/extrato-bancario/{conta_id}` 
+- Frontend: Dropdown de seleção de conta na página de Exportação
+- Ao selecionar "Extrato Bancário", painel amarelo aparece com dropdown de contas
+- Botão "Exportar Extrato" gera PDF do extrato da conta selecionada
+
+### Sessão Anterior (26/02/2026) - Parte 5
 
 #### ✅ Sistema de Contas Bancárias - COMPLETO
 - Nova página `/admin/contas-bancarias` com CRUD completo
