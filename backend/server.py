@@ -290,12 +290,27 @@ class StockCategoryResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     name: str
+    subcategories_count: int = 0
+    created_at: str
+
+# Subcategorias de estoque
+class StockSubcategoryCreate(BaseModel):
+    name: str
+    category_id: str
+
+class StockSubcategoryResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    name: str
+    category_id: str
+    category_name: str = ""
     created_at: str
 
 class StockItemCreate(BaseModel):
     name: str
     code: Optional[str] = ""
     category: Optional[str] = ""  # filtro, óleo, correia, etc.
+    subcategory_id: Optional[str] = None
     unit: str = "un"  # un, L, kg, etc.
     quantity: float = 0
     min_quantity: float = 0
@@ -309,6 +324,8 @@ class StockItemResponse(BaseModel):
     name: str
     code: str
     category: str
+    subcategory_id: Optional[str] = None
+    subcategory_name: Optional[str] = ""
     unit: str
     quantity: float
     min_quantity: float
