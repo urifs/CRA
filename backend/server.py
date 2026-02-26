@@ -10380,6 +10380,253 @@ class FichaEPICreate(BaseModel):
     observacoes: Optional[str] = None
 
 
+# ===== BASE DE DADOS CBO (Classificação Brasileira de Ocupações) =====
+# Lista principal de ocupações com EPIs recomendados
+CBO_DATABASE = [
+    # Construção Civil
+    {"codigo": "7152-10", "ocupacao": "Pedreiro", "familia": "Trabalhadores de estruturas de alvenaria", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Protetor auricular", "Cinto de segurança"]},
+    {"codigo": "7152-15", "ocupacao": "Pedreiro de acabamento", "familia": "Trabalhadores de estruturas de alvenaria", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Máscara"]},
+    {"codigo": "7153-05", "ocupacao": "Carpinteiro de obras", "familia": "Trabalhadores de acabamento de obras", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Protetor auricular"]},
+    {"codigo": "7153-10", "ocupacao": "Carpinteiro de formas para concreto", "familia": "Trabalhadores de acabamento de obras", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Cinto de segurança"]},
+    {"codigo": "7155-05", "ocupacao": "Pintor de obras", "familia": "Pintores de obras e decoradores", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Máscara respiratória"]},
+    {"codigo": "7156-10", "ocupacao": "Eletricista de instalações prediais", "familia": "Eletricistas-eletrônicos de manutenção", "epis_padrao": ["Capacete", "Óculos", "Luvas isolantes", "Botina isolante", "Manga isolante"]},
+    {"codigo": "7241-10", "ocupacao": "Soldador", "familia": "Soldadores e oxicortadores", "epis_padrao": ["Máscara de solda", "Avental de raspa", "Luvas de raspa", "Perneira", "Botina", "Óculos"]},
+    {"codigo": "7170-20", "ocupacao": "Servente de obras", "familia": "Ajudantes de obras civis", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Protetor auricular"]},
+    
+    # Indústria e Mecânica
+    {"codigo": "7211-10", "ocupacao": "Torneiro mecânico", "familia": "Trabalhadores de usinagem de metais", "epis_padrao": ["Óculos", "Protetor auricular", "Botina", "Avental", "Luvas"]},
+    {"codigo": "7212-05", "ocupacao": "Fresador mecânico", "familia": "Trabalhadores de usinagem de metais", "epis_padrao": ["Óculos", "Protetor auricular", "Botina", "Avental", "Luvas"]},
+    {"codigo": "7253-10", "ocupacao": "Mecânico de manutenção de máquinas industriais", "familia": "Mecânicos de manutenção", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Protetor auricular"]},
+    {"codigo": "7255-05", "ocupacao": "Mecânico de automóveis", "familia": "Mecânicos de manutenção de veículos", "epis_padrao": ["Óculos", "Luvas", "Botina", "Protetor auricular"]},
+    {"codigo": "7256-10", "ocupacao": "Mecânico de refrigeração", "familia": "Mecânicos de manutenção", "epis_padrao": ["Óculos", "Luvas isolantes", "Botina", "Máscara"]},
+    
+    # Agricultura e Pecuária
+    {"codigo": "6220-10", "ocupacao": "Operador de máquinas agrícolas", "familia": "Trabalhadores na operação de máquinas agrícolas", "epis_padrao": ["Chapéu/boné árabe", "Protetor auricular", "Botina", "Luvas", "Óculos"]},
+    {"codigo": "6210-05", "ocupacao": "Trabalhador agropecuário em geral", "familia": "Trabalhadores agropecuários em geral", "epis_padrao": ["Chapéu/boné árabe", "Luvas", "Botina", "Perneira", "Óculos"]},
+    {"codigo": "6221-05", "ocupacao": "Tratorista agrícola", "familia": "Trabalhadores na operação de máquinas agrícolas", "epis_padrao": ["Chapéu/boné árabe", "Protetor auricular", "Botina", "Luvas"]},
+    
+    # Transporte e Logística
+    {"codigo": "7832-10", "ocupacao": "Operador de empilhadeira", "familia": "Condutores de veículos sobre rodas", "epis_padrao": ["Capacete", "Colete refletivo", "Botina", "Luvas", "Protetor auricular"]},
+    {"codigo": "7841-05", "ocupacao": "Motorista de caminhão", "familia": "Motoristas de veículos de carga", "epis_padrao": ["Botina", "Luvas", "Colete refletivo"]},
+    {"codigo": "7825-10", "ocupacao": "Operador de pá carregadeira", "familia": "Operadores de máquinas de terraplenagem", "epis_padrao": ["Capacete", "Protetor auricular", "Óculos", "Botina", "Luvas"]},
+    {"codigo": "7826-05", "ocupacao": "Operador de retroescavadeira", "familia": "Operadores de máquinas de terraplenagem", "epis_padrao": ["Capacete", "Protetor auricular", "Óculos", "Botina", "Luvas"]},
+    
+    # Limpeza e Conservação
+    {"codigo": "5143-20", "ocupacao": "Faxineiro", "familia": "Trabalhadores nos serviços de manutenção de edificações", "epis_padrao": ["Luvas", "Botina", "Avental impermeável", "Máscara"]},
+    {"codigo": "5143-25", "ocupacao": "Auxiliar de limpeza", "familia": "Trabalhadores nos serviços de manutenção de edificações", "epis_padrao": ["Luvas", "Botina", "Avental impermeável", "Máscara"]},
+    {"codigo": "5142-05", "ocupacao": "Coletor de lixo domiciliar", "familia": "Trabalhadores de coleta de resíduos", "epis_padrao": ["Luvas", "Botina", "Colete refletivo", "Boné/capacete", "Máscara"]},
+    
+    # Segurança
+    {"codigo": "5173-30", "ocupacao": "Vigilante", "familia": "Vigilantes e guardas de segurança", "epis_padrao": ["Colete balístico", "Botina", "Colete refletivo"]},
+    {"codigo": "5173-05", "ocupacao": "Porteiro de edifícios", "familia": "Porteiros e vigias", "epis_padrao": ["Botina"]},
+    
+    # Alimentação
+    {"codigo": "8481-05", "ocupacao": "Cozinheiro geral", "familia": "Cozinheiros", "epis_padrao": ["Touca", "Avental", "Luvas", "Sapato fechado antiderrapante"]},
+    {"codigo": "5134-25", "ocupacao": "Açougueiro", "familia": "Trabalhadores no atendimento em estabelecimentos de serviços de alimentação", "epis_padrao": ["Luvas de malha de aço", "Avental", "Botina", "Touca"]},
+    
+    # Saúde
+    {"codigo": "3222-05", "ocupacao": "Técnico de enfermagem", "familia": "Técnicos e auxiliares de enfermagem", "epis_padrao": ["Luvas descartáveis", "Máscara", "Avental", "Óculos", "Touca"]},
+    {"codigo": "2235-05", "ocupacao": "Enfermeiro", "familia": "Enfermeiros", "epis_padrao": ["Luvas descartáveis", "Máscara", "Avental", "Óculos", "Touca"]},
+    {"codigo": "2251-25", "ocupacao": "Médico clínico geral", "familia": "Médicos", "epis_padrao": ["Luvas descartáveis", "Máscara", "Avental", "Óculos"]},
+    
+    # Administrativo
+    {"codigo": "4110-10", "ocupacao": "Auxiliar de escritório", "familia": "Agentes, assistentes e auxiliares administrativos", "epis_padrao": []},
+    {"codigo": "4110-05", "ocupacao": "Assistente administrativo", "familia": "Agentes, assistentes e auxiliares administrativos", "epis_padrao": []},
+    {"codigo": "4121-05", "ocupacao": "Recepcionista", "familia": "Recepcionistas", "epis_padrao": []},
+    
+    # Mineração
+    {"codigo": "7111-05", "ocupacao": "Mineiro", "familia": "Trabalhadores da extração de minerais sólidos", "epis_padrao": ["Capacete com lanterna", "Protetor auricular", "Óculos", "Máscara respiratória", "Botina", "Luvas", "Cinto de segurança"]},
+    
+    # Química
+    {"codigo": "8110-05", "ocupacao": "Operador de processos químicos", "familia": "Operadores de instalações químicas", "epis_padrao": ["Óculos", "Máscara respiratória", "Luvas de proteção química", "Avental químico", "Botina"]},
+    
+    # Eletricidade
+    {"codigo": "7321-05", "ocupacao": "Eletricista de manutenção industrial", "familia": "Eletricistas de manutenção", "epis_padrao": ["Capacete isolante", "Óculos", "Luvas isolantes", "Manga isolante", "Botina isolante", "Vestimenta antichama"]},
+    {"codigo": "7321-10", "ocupacao": "Eletricista de rede", "familia": "Eletricistas de manutenção", "epis_padrao": ["Capacete isolante", "Óculos", "Luvas isolantes", "Manga isolante", "Botina isolante", "Cinto de segurança", "Talabarte"]},
+    
+    # Serralheria e Metalurgia
+    {"codigo": "7244-40", "ocupacao": "Serralheiro", "familia": "Trabalhadores de soldagem e corte de metais", "epis_padrao": ["Óculos", "Luvas", "Avental", "Botina", "Protetor auricular", "Máscara de solda"]},
+    {"codigo": "7243-10", "ocupacao": "Caldeireiro", "familia": "Caldeireiros e serralheiros", "epis_padrao": ["Capacete", "Óculos", "Luvas", "Botina", "Protetor auricular", "Avental de raspa"]},
+]
+
+# Mapeamento de EPIs com suas propriedades
+EPI_PROPERTIES = {
+    "Capacete": {"ca": "A definir", "validade_meses": 36, "prioridade": "Alta", "risco": "Queda de objetos/impactos na cabeça"},
+    "Capacete isolante": {"ca": "A definir", "validade_meses": 36, "prioridade": "Alta", "risco": "Choque elétrico"},
+    "Capacete com lanterna": {"ca": "A definir", "validade_meses": 36, "prioridade": "Alta", "risco": "Queda de objetos em ambiente escuro"},
+    "Óculos": {"ca": "A definir", "validade_meses": 24, "prioridade": "Alta", "risco": "Projeção de partículas"},
+    "Óculos de proteção": {"ca": "A definir", "validade_meses": 24, "prioridade": "Alta", "risco": "Projeção de partículas"},
+    "Luvas": {"ca": "A definir", "validade_meses": 6, "prioridade": "Alta", "risco": "Cortes e abrasões"},
+    "Luvas isolantes": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Choque elétrico"},
+    "Luvas de raspa": {"ca": "A definir", "validade_meses": 6, "prioridade": "Alta", "risco": "Queimaduras"},
+    "Luvas descartáveis": {"ca": "A definir", "validade_meses": 1, "prioridade": "Alta", "risco": "Contaminação biológica"},
+    "Luvas de malha de aço": {"ca": "A definir", "validade_meses": 24, "prioridade": "Alta", "risco": "Cortes com objetos cortantes"},
+    "Luvas de proteção química": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Contato com produtos químicos"},
+    "Botina": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Queda de objetos nos pés"},
+    "Botina isolante": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Choque elétrico"},
+    "Sapato fechado antiderrapante": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Quedas por escorregamento"},
+    "Protetor auricular": {"ca": "A definir", "validade_meses": 6, "prioridade": "Média", "risco": "Ruído excessivo"},
+    "Máscara": {"ca": "A definir", "validade_meses": 6, "prioridade": "Média", "risco": "Inalação de partículas"},
+    "Máscara respiratória": {"ca": "A definir", "validade_meses": 6, "prioridade": "Alta", "risco": "Inalação de gases/vapores tóxicos"},
+    "Máscara de solda": {"ca": "A definir", "validade_meses": 24, "prioridade": "Alta", "risco": "Radiação luminosa"},
+    "Avental": {"ca": "A definir", "validade_meses": 12, "prioridade": "Média", "risco": "Respingos e sujeira"},
+    "Avental de raspa": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Respingos de metal quente"},
+    "Avental impermeável": {"ca": "A definir", "validade_meses": 12, "prioridade": "Média", "risco": "Contato com líquidos"},
+    "Avental químico": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Contato com produtos químicos"},
+    "Cinto de segurança": {"ca": "A definir", "validade_meses": 24, "prioridade": "Alta", "risco": "Queda de altura"},
+    "Manga isolante": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Choque elétrico"},
+    "Perneira": {"ca": "A definir", "validade_meses": 12, "prioridade": "Alta", "risco": "Queimaduras nas pernas/picadas de animais"},
+    "Colete refletivo": {"ca": "A definir", "validade_meses": 24, "prioridade": "Média", "risco": "Atropelamento"},
+    "Colete balístico": {"ca": "A definir", "validade_meses": 60, "prioridade": "Alta", "risco": "Projéteis"},
+    "Touca": {"ca": "A definir", "validade_meses": 3, "prioridade": "Média", "risco": "Contaminação"},
+    "Chapéu/boné árabe": {"ca": "A definir", "validade_meses": 12, "prioridade": "Média", "risco": "Exposição solar"},
+    "Vestimenta antichama": {"ca": "A definir", "validade_meses": 24, "prioridade": "Alta", "risco": "Arco elétrico/fogo"},
+    "Talabarte": {"ca": "A definir", "validade_meses": 24, "prioridade": "Alta", "risco": "Queda de altura"},
+}
+
+
+@api_router.get("/rh/epi/cbo/buscar")
+async def buscar_cbo(q: str):
+    """Buscar ocupações CBO por código ou nome"""
+    q_lower = q.lower().strip()
+    q_clean = q.replace("-", "").replace(".", "")
+    
+    resultados = []
+    for cbo in CBO_DATABASE:
+        codigo_clean = cbo["codigo"].replace("-", "")
+        ocupacao_lower = cbo["ocupacao"].lower()
+        familia_lower = cbo.get("familia", "").lower()
+        
+        # Busca por código
+        if q_clean in codigo_clean or codigo_clean.startswith(q_clean):
+            resultados.append({
+                "codigo": cbo["codigo"],
+                "ocupacao": cbo["ocupacao"],
+                "familia": cbo.get("familia", ""),
+                "descricao": f"Família: {cbo.get('familia', '')}"
+            })
+        # Busca por nome da ocupação
+        elif q_lower in ocupacao_lower or q_lower in familia_lower:
+            resultados.append({
+                "codigo": cbo["codigo"],
+                "ocupacao": cbo["ocupacao"],
+                "familia": cbo.get("familia", ""),
+                "descricao": f"Família: {cbo.get('familia', '')}"
+            })
+    
+    return resultados[:20]  # Limita a 20 resultados
+
+
+@api_router.post("/rh/epi/consultar-epis-cbo")
+async def consultar_epis_por_cbo(codigo_cbo: str = Body(...), ocupacao: str = Body(...)):
+    """Consultar EPIs baseado no código CBO"""
+    
+    # Buscar na base de dados local
+    cbo_encontrado = None
+    codigo_clean = codigo_cbo.replace("-", "").replace(".", "")
+    
+    for cbo in CBO_DATABASE:
+        if cbo["codigo"].replace("-", "") == codigo_clean:
+            cbo_encontrado = cbo
+            break
+    
+    if cbo_encontrado and cbo_encontrado.get("epis_padrao"):
+        # Montar lista de EPIs com propriedades
+        epis = []
+        mapa_risco = []
+        
+        for epi_nome in cbo_encontrado["epis_padrao"]:
+            props = EPI_PROPERTIES.get(epi_nome, {
+                "ca": "A definir",
+                "validade_meses": 12,
+                "prioridade": "Média",
+                "risco": "Risco ocupacional"
+            })
+            
+            epis.append({
+                "nome": epi_nome,
+                "ca": props["ca"],
+                "validade_meses": props["validade_meses"],
+                "prioridade": props["prioridade"]
+            })
+            
+            mapa_risco.append({
+                "risco": props.get("risco", "Risco ocupacional"),
+                "prioridade": props["prioridade"],
+                "epi_recomendado": epi_nome
+            })
+        
+        return {
+            "epis": epis,
+            "mapa_risco": mapa_risco,
+            "fonte": "CBO_DATABASE"
+        }
+    
+    # Se não encontrou na base local, tenta com IA
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        prompt = f"""Você é um especialista em segurança do trabalho no Brasil.
+Para a ocupação CBO {codigo_cbo} - "{ocupacao}", liste TODOS os Equipamentos de Proteção Individual (EPIs) obrigatórios e recomendados conforme as Normas Regulamentadoras (NRs).
+
+Para cada EPI, forneça:
+1. Nome do EPI
+2. CA (Certificado de Aprovação) - coloque "A definir" se não souber
+3. Validade média em meses
+4. Prioridade: "Alta" (obrigatório), "Média" (recomendado), "Baixa" (opcional)
+
+Também forneça um mapa de risco com os principais riscos da ocupação.
+
+Responda APENAS em formato JSON:
+{{
+  "epis": [
+    {{"nome": "Capacete de segurança", "ca": "A definir", "validade_meses": 36, "prioridade": "Alta"}}
+  ],
+  "mapa_risco": [
+    {{"risco": "Queda de objetos", "prioridade": "Alta", "epi_recomendado": "Capacete de segurança"}}
+  ]
+}}"""
+        
+        llm = LlmChat(
+            api_key=os.environ.get("EMERGENT_LLM_KEY"),
+            session_id=f"epi_cbo_{codigo_cbo}",
+            system_message="Você é especialista em segurança do trabalho e EPIs no Brasil."
+        ).with_model("google", "gemini-2.0-flash-exp")
+        
+        response_text = await llm.send_message(UserMessage(text=prompt))
+        
+        # Limpar marcadores de código
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0]
+        
+        import json
+        result = json.loads(response_text.strip())
+        result["fonte"] = "IA"
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error consulting EPIs for CBO {codigo_cbo}: {e}")
+        
+        # Fallback genérico
+        return {
+            "epis": [
+                {"nome": "Capacete de segurança", "ca": "A definir", "validade_meses": 36, "prioridade": "Alta"},
+                {"nome": "Óculos de proteção", "ca": "A definir", "validade_meses": 24, "prioridade": "Alta"},
+                {"nome": "Luvas de proteção", "ca": "A definir", "validade_meses": 6, "prioridade": "Alta"},
+                {"nome": "Botina de segurança", "ca": "A definir", "validade_meses": 12, "prioridade": "Alta"},
+                {"nome": "Protetor auricular", "ca": "A definir", "validade_meses": 6, "prioridade": "Média"}
+            ],
+            "mapa_risco": [
+                {"risco": "Queda de objetos", "prioridade": "Alta", "epi_recomendado": "Capacete de segurança"},
+                {"risco": "Projeção de partículas", "prioridade": "Alta", "epi_recomendado": "Óculos de proteção"},
+                {"risco": "Cortes e abrasões", "prioridade": "Alta", "epi_recomendado": "Luvas de proteção"}
+            ],
+            "fonte": "FALLBACK"
+        }
+
+
 @api_router.get("/rh/epi/cargos")
 async def list_cargos():
     """Listar cargos cadastrados"""
