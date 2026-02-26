@@ -372,12 +372,11 @@ export default function MachinesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="form-label">Placa *</Label>
+                <Label className="form-label">Placa (opcional)</Label>
                 <Input
                   value={formData.plate}
                   onChange={(e) => setFormData({...formData, plate: e.target.value.toUpperCase()})}
                   placeholder="Ex: ABC-1234"
-                  required
                   className="form-input font-mono"
                   data-testid="machine-plate-input"
                 />
