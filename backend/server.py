@@ -6436,24 +6436,210 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
 
 # Endpoint para listar itens específicos para filtro de exportação
 @api_router.get("/export/items/{collection}")
-async def get_export_items(collection: str, current_user: dict = Depends(get_current_user)):
+async def get_export_items(collection: str, status: str = None, current_user: dict = Depends(get_current_user)):
     """Retorna itens de uma coleção para seleção em exportação"""
     valid_collections = {
-        "plano_contas": {"name_field": "nome", "id_field": "id"},
-        "centros_custo": {"name_field": "nome", "id_field": "id"},
-        "fleets": {"name_field": "name", "id_field": "id"},
-        "cadastros": {"name_field": "nome", "id_field": "id"},
-        "formas_pagamento": {"name_field": "nome", "id_field": "id"},
-        "contas_bancarias": {"name_field": "nome", "id_field": "id"},
+        "plano_contas": {"name_field": "nome", "id_field": "id", "collection": "plano_contas"},
+        "centros_custo": {"name_field": "nome", "id_field": "id", "collection": "centros_custo"},
+        "fleets": {"name_field": "name", "id_field": "id", "collection": "fleets"},
+        "cadastros": {"name_field": "nome", "id_field": "id", "collection": "cadastros"},
+        "formas_pagamento": {"name_field": "nome", "id_field": "id", "collection": "formas_pagamento"},
+        "contas_bancarias": {"name_field": "nome", "id_field": "id", "collection": "contas_bancarias"},
+        # Contas a Pagar
+        "contas_pagar": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "extra_fields": ["valor", "data_vencimento", "fornecedor_nome"]},
+        "contas_pagar_pendente": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "fornecedor_nome"]},
+        "contas_pagar_quitadas": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": {"status": "quitada"}, "extra_fields": ["valor", "data_vencimento", "fornecedor_nome"]},
+        "contas_pagar_vencidas": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "fornecedor_nome"], "vencidas": True},
+        # Contas a Receber
+        "contas_receber": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "extra_fields": ["valor", "data_vencimento", "cliente_nome"]},
+        "contas_receber_pendente": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "cliente_nome"]},
+        "contas_receber_recebidas": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": {"status": "quitada"}, "extra_fields": ["valor", "data_vencimento", "cliente_nome"]},
+        "contas_receber_vencidas": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "cliente_nome"], "vencidas": True},
+        # Outras
+        "machines": {"name_field": "name", "id_field": "id", "collection": "machines", "extra_fields": ["model", "plate"]},
+        "maintenances": {"name_field": "description", "id_field": "id", "collection": "maintenances", "extra_fields": ["machine_name", "date"]},
+        "stock_items": {"name_field": "name", "id_field": "id", "collection": "stock_items", "extra_fields": ["quantity", "category"]},
+        "obras": {"name_field": "nome", "id_field": "id", "collection": "obras", "extra_fields": ["cliente", "status"]},
+        "alugueis": {"name_field": "descricao", "id_field": "id", "collection": "alugueis", "extra_fields": ["valor", "data_inicio"]},
+        "usuarios": {"name_field": "name", "id_field": "id", "collection": "users", "extra_fields": ["email", "role"]},
     }
     
     if collection not in valid_collections:
         raise HTTPException(status_code=400, detail="Coleção inválida")
     
     config = valid_collections[collection]
-    items = await db[collection].find({}, {"_id": 0, config["id_field"]: 1, config["name_field"]: 1}).to_list(100)
+    db_collection = config.get("collection", collection)
+    query_filter = config.get("filter", {})
     
-    return [{"id": item.get(config["id_field"]), "name": item.get(config["name_field"], "Sem nome")} for item in items]
+    # Se precisa filtrar vencidas
+    if config.get("vencidas"):
+        hoje = datetime.now().strftime("%Y-%m-%d")
+        query_filter["data_vencimento"] = {"$lt": hoje}
+    
+    projection = {"_id": 0, config["id_field"]: 1, config["name_field"]: 1}
+    for field in config.get("extra_fields", []):
+        projection[field] = 1
+    
+    items = await db[db_collection].find(query_filter, projection).to_list(500)
+    
+    result = []
+    for item in items:
+        entry = {
+            "id": item.get(config["id_field"]),
+            "name": item.get(config["name_field"], "Sem descrição")
+        }
+        # Adicionar campos extras para exibição
+        for field in config.get("extra_fields", []):
+            entry[field] = item.get(field)
+        result.append(entry)
+    
+    return result
+
+
+@api_router.get("/export/individual/{category}/{item_id}")
+async def export_individual_item(category: str, item_id: str, current_user: dict = Depends(get_current_user)):
+    """Exporta um item individual em PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    import io
+    
+    # Mapeamento de categorias para coleções
+    category_config = {
+        "contas_pagar": {"collection": "contas_pagar", "title": "Conta a Pagar"},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Conta a Pagar (Pendente)"},
+        "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Conta a Pagar (Quitada)"},
+        "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Conta a Pagar (Vencida)"},
+        "contas_receber": {"collection": "contas_receber", "title": "Conta a Receber"},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Conta a Receber (Pendente)"},
+        "contas_receber_recebidas": {"collection": "contas_receber", "title": "Conta a Receber (Recebida)"},
+        "contas_receber_vencidas": {"collection": "contas_receber", "title": "Conta a Receber (Vencida)"},
+        "machines": {"collection": "machines", "title": "Máquina"},
+        "maintenances": {"collection": "maintenances", "title": "Manutenção"},
+        "stock_items": {"collection": "stock_items", "title": "Item de Estoque"},
+        "obras": {"collection": "obras", "title": "Obra"},
+        "alugueis": {"collection": "alugueis", "title": "Aluguel"},
+        "plano_contas": {"collection": "plano_contas", "title": "Plano de Contas"},
+        "centros_custo": {"collection": "centros_custo", "title": "Centro de Custo"},
+        "cadastros": {"collection": "cadastros", "title": "Cadastro"},
+        "contas_bancarias": {"collection": "contas_bancarias", "title": "Conta Bancária"},
+    }
+    
+    if category not in category_config:
+        raise HTTPException(status_code=400, detail="Categoria inválida")
+    
+    config = category_config[category]
+    item = await db[config["collection"]].find_one({"id": item_id}, {"_id": 0})
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    # Criar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=20, textColor=colors.HexColor("#1a1a1a"))
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.gray, spaceAfter=20)
+    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=10, textColor=colors.gray)
+    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=12, textColor=colors.HexColor("#1a1a1a"))
+    
+    elements = []
+    
+    # Título
+    elements.append(Paragraph(config["title"], title_style))
+    elements.append(Paragraph(f"Exportado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
+    
+    # Dados do item em tabela
+    table_data = []
+    
+    # Campos específicos por tipo
+    if "contas_pagar" in category:
+        fields = [
+            ("Descrição", item.get("descricao", "-")),
+            ("Fornecedor", item.get("fornecedor_nome", "-")),
+            ("Valor Original", f"R$ {item.get('valor', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+            ("Valor Final", f"R$ {item.get('valor_final', item.get('valor', 0)):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+            ("Vencimento", item.get("data_vencimento", "-")),
+            ("Status", "Quitada" if item.get("status") == "quitada" else "Em Aberto"),
+            ("Forma de Pagamento", item.get("forma_pagamento_nome", "-")),
+            ("Centro de Custo", item.get("centro_custo_nome", "-")),
+            ("Plano de Contas", item.get("plano_contas_nome", "-")),
+            ("Observações", item.get("observacoes", "-")),
+        ]
+        if item.get("data_pagamento"):
+            fields.insert(6, ("Data Pagamento", item.get("data_pagamento")))
+    elif "contas_receber" in category:
+        fields = [
+            ("Descrição", item.get("descricao", "-")),
+            ("Cliente", item.get("cliente_nome", "-")),
+            ("Valor Original", f"R$ {item.get('valor', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+            ("Valor Final", f"R$ {item.get('valor_final', item.get('valor', 0)):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+            ("Vencimento", item.get("data_vencimento", "-")),
+            ("Status", "Recebida" if item.get("status") == "quitada" else "Em Aberto"),
+            ("Forma de Recebimento", item.get("forma_pagamento_nome", "-")),
+            ("Centro de Custo", item.get("centro_custo_nome", "-")),
+            ("Plano de Contas", item.get("plano_contas_nome", "-")),
+            ("Observações", item.get("observacoes", "-")),
+        ]
+        if item.get("data_recebimento"):
+            fields.insert(6, ("Data Recebimento", item.get("data_recebimento")))
+    elif category == "machines":
+        fields = [
+            ("Nome", item.get("name", "-")),
+            ("Modelo", item.get("model", "-")),
+            ("Placa", item.get("plate", "-")),
+            ("Categoria", item.get("category", "-")),
+            ("Ano", item.get("year", "-")),
+            ("Horímetro", item.get("horimeter", "-")),
+            ("Status", item.get("status", "-")),
+        ]
+    elif category == "maintenances":
+        fields = [
+            ("Descrição", item.get("description", "-")),
+            ("Máquina", item.get("machine_name", "-")),
+            ("Data", item.get("date", "-")),
+            ("Tipo", item.get("type", "-")),
+            ("Custo", f"R$ {item.get('cost', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+            ("Status", item.get("status", "-")),
+        ]
+    else:
+        # Genérico para outros tipos
+        fields = [(k.replace("_", " ").title(), str(v)) for k, v in item.items() if k not in ["id", "created_at", "updated_at", "created_by"]]
+    
+    for label, value in fields:
+        table_data.append([Paragraph(label, label_style), Paragraph(str(value) if value else "-", value_style)])
+    
+    table = Table(table_data, colWidths=[5*cm, 12*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+    ]))
+    
+    elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Log de auditoria
+    item_name = item.get("descricao") or item.get("name") or item.get("nome") or item_id
+    await create_audit_log(current_user, "export", category, item_id, f"Item individual: {item_name}")
+    
+    filename = f"CRA_{config['title'].replace(' ', '_')}_{item_id[:8]}.pdf"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 # Endpoint para exportar extrato de conta bancária
