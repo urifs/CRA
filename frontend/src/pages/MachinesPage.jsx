@@ -554,13 +554,13 @@ export default function MachinesPage() {
               </Label>
               <Select
                 value={formData.operator_id}
-                onValueChange={(value) => setFormData({...formData, operator_id: value})}
+                onValueChange={(value) => setFormData({...formData, operator_id: value === "__none__" ? "" : value})}
               >
                 <SelectTrigger className="form-input" data-testid="machine-operator-select">
                   <SelectValue placeholder="Selecione um funcionário" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
                   {cadastros.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.nome_razao} {c.cpf_cnpj ? `(${c.cpf_cnpj})` : ""}
