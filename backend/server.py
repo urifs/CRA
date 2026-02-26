@@ -7481,28 +7481,32 @@ async def export_duplicata(category: str, item_id: str, empresa: str = "locadora
     ]))
     elements.append(extenso_table)
     
-    # Descrição completa
+    # Descrição completa com word-wrap
     descricao = item.get("descricao", "-")
     plano_contas = item.get("plano_contas_nome", "-")
     centro_custo = item.get("centro_custo_nome", "-")
     forma_pag = item.get("forma_pagamento_nome", "-")
     obs = item.get("observacoes", "")
     
+    desc_value_style = ParagraphStyle('Desc', fontSize=9, leading=12, wordWrap='CJK')
+    desc_info_style = ParagraphStyle('Info', fontSize=8, leading=11)
+    
     desc_data = [
         [Paragraph("DESCRIÇÃO / REFERÊNCIA", label_style)],
-        [Paragraph(descricao, ParagraphStyle('Desc', fontSize=9))],
-        [Paragraph(f"<b>Plano de Contas:</b> {plano_contas} | <b>Centro de Custo:</b> {centro_custo} | <b>Forma Pagamento:</b> {forma_pag}", ParagraphStyle('Info', fontSize=8))],
+        [Paragraph(descricao if descricao else "-", desc_value_style)],
+        [Paragraph(f"<b>Plano de Contas:</b> {plano_contas if plano_contas else '-'} | <b>Centro de Custo:</b> {centro_custo if centro_custo else '-'} | <b>Forma Pagamento:</b> {forma_pag if forma_pag else '-'}", desc_info_style)],
     ]
     if obs:
-        desc_data.append([Paragraph(f"<b>Obs:</b> {obs}", ParagraphStyle('Obs', fontSize=8, textColor=colors.gray))])
+        desc_data.append([Paragraph(f"<b>Obs:</b> {obs}", ParagraphStyle('Obs', fontSize=8, textColor=colors.gray, leading=11, wordWrap='CJK'))])
     
     desc_table = Table(desc_data, colWidths=[19*cm])
     desc_table.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
         ('BACKGROUND', (0, 0), (0, 0), colors.HexColor("#f0f0f0")),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
     elements.append(desc_table)
     elements.append(Spacer(1, 0.3*cm))
