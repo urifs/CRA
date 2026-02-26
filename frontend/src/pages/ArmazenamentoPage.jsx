@@ -638,7 +638,7 @@ export default function ArmazenamentoPage() {
     }
   };
 
-  const navigateToFolder = async (folderPath) => {
+  const navigateToDestinationFolder = async (folderPath) => {
     setMoveTargetPath(folderPath);
     const folders = await fetchAllFolders(folderPath);
     setAvailableFolders(folders);
