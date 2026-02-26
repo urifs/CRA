@@ -959,14 +959,6 @@ export default function ExportPage({ module = "gerenciamento" }) {
                             )}
                           </div>
                         )}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-500">Nenhum item cadastrado nesta categoria</p>
-                            )}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
