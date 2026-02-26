@@ -500,7 +500,27 @@ export default function ContasReceberPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
+              <div>
+                <label className="form-label">Frota (Opcional)</label>
+                <Select value={formData.frota_id || "none"} onValueChange={(value) => {
+                  if (value === "none") {
+                    setFormData({...formData, frota_id: "", frota_nome: ""});
+                  } else {
+                    const frota = frotas.find(f => f.id === value);
+                    setFormData({...formData, frota_id: value, frota_nome: frota?.name || ""});
+                  }
+                }}>
+                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione uma frota..." /></SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {frotas.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="form-label">Observações</label>
+              <Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} />
             </div>
             
             {/* Seção de Anexos */}
