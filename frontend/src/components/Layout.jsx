@@ -73,6 +73,7 @@ export const Layout = () => {
     { path: "/maintenances", icon: Wrench, label: "Manutenções" },
     { path: "/balance", icon: DollarSign, label: "Balanço" },
     { path: "/usage", icon: Clock, label: "Tempo de Uso" },
+    { path: "/frotas", icon: FolderTree, label: "Frotas" },
     { path: "/notifications", icon: Bell, label: "Notificações", badge: notificationCount },
     { path: "/stock", icon: Package, label: "Estoque" },
     { path: "/categories", icon: Tags, label: "Categorias" },
