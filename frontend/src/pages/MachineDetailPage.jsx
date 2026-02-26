@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { API } from "@/App";
+import { API, useAuth } from "@/App";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,18 @@ import {
   AlertTriangle,
   Wrench,
   Plus,
-  DollarSign
+  DollarSign,
+  Clock,
+  Timer
 } from "lucide-react";
 
 export default function MachineDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [machine, setMachine] = useState(null);
   const [maintenances, setMaintenances] = useState([]);
+  const [horimetros, setHorimetros] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,12 +33,16 @@ export default function MachineDetailPage() {
 
   const fetchData = async () => {
     try {
-      const [machineRes, maintenancesRes] = await Promise.all([
+      const [machineRes, maintenancesRes, horimetroRes] = await Promise.all([
         axios.get(`${API}/machines/${id}`),
-        axios.get(`${API}/maintenances?machine_id=${id}`)
+        axios.get(`${API}/maintenances?machine_id=${id}`),
+        axios.get(`${API}/horimetro/machine/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] }))
       ]);
       setMachine(machineRes.data);
       setMaintenances(maintenancesRes.data);
+      setHorimetros(horimetroRes.data || []);
     } catch (error) {
       toast.error("Erro ao carregar dados da máquina");
       navigate("/gerenciamento/machines");
