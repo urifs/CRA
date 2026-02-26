@@ -131,7 +131,7 @@ export default function MachineDetailPage() {
             </div>
             <Button
               className="bg-[#E31A1A] hover:bg-[#E31A1A]"
-              onClick={() => navigate(`/maintenances/new?machine=${machine.id}`)}
+              onClick={() => navigate(`/gerenciamento/maintenances/new?machine=${machine.id}`)}
               data-testid="new-maintenance-for-machine-btn"
             >
               <Plus size={18} className="mr-2" />
