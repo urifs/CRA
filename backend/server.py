@@ -4645,6 +4645,75 @@ async def delete_forma_pagamento(id: str, current_user: dict = Depends(get_curre
     await create_audit_log(current_user, "delete", "forma_pagamento", id, forma["nome"])
     return {"message": "Forma de pagamento excluída"}
 
+# --- Contas Bancárias ---
+@api_router.get("/admin/contas-bancarias")
+async def get_contas_bancarias(
+    ativo: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if ativo is not None:
+        query["ativo"] = ativo
+    
+    contas = await db.contas_bancarias.find(query, {"_id": 0}).sort("nome", 1).to_list(1000)
+    return contas
+
+@api_router.post("/admin/contas-bancarias")
+async def create_conta_bancaria(data: ContaBancariaCreate, current_user: dict = Depends(get_current_user)):
+    conta = {
+        "id": str(uuid.uuid4()),
+        **data.model_dump(),
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.contas_bancarias.insert_one(conta)
+    await create_audit_log(current_user, "create", "conta_bancaria", conta["id"], data.nome)
+    del conta["_id"]
+    return conta
+
+@api_router.get("/admin/contas-bancarias/{id}")
+async def get_conta_bancaria(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
+    return conta
+
+@api_router.put("/admin/contas-bancarias/{id}")
+async def update_conta_bancaria(id: str, data: ContaBancariaCreate, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
+    
+    update_data = data.model_dump()
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.contas_bancarias.update_one({"id": id}, {"$set": update_data})
+    await create_audit_log(current_user, "update", "conta_bancaria", id, data.nome)
+    
+    updated = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/admin/contas-bancarias/{id}")
+async def delete_conta_bancaria(id: str, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
+    
+    await db.contas_bancarias.delete_one({"id": id})
+    await create_audit_log(current_user, "delete", "conta_bancaria", id, conta["nome"])
+    return {"message": "Conta bancária excluída"}
+
+@api_router.patch("/admin/contas-bancarias/{id}/saldo")
+async def update_saldo_conta_bancaria(id: str, saldo: float, current_user: dict = Depends(get_current_user)):
+    conta = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
+    
+    await db.contas_bancarias.update_one({"id": id}, {"$set": {"saldo_atual": saldo, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await create_audit_log(current_user, "update", "conta_bancaria_saldo", id, f"Saldo: {saldo}")
+    
+    updated = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
+    return updated
+
 # --- Aluguéis de Máquinas ---
 @api_router.get("/admin/alugueis")
 async def get_alugueis(
