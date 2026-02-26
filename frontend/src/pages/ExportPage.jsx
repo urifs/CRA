@@ -346,18 +346,8 @@ export default function ExportPage({ module = "gerenciamento" }) {
   // Categorias que suportam OFX
   const ofxCategories = ["contas_pagar", "contas_pagar_pendente", "contas_receber", "contas_receber_pendente"];
 
-  const exportSelected = async () => {
-    if (selectedItems.length === 0) {
-      toast.error("Selecione pelo menos um item");
-      return;
-    }
-
-    for (const itemId of selectedItems) {
-      await exportPDF(itemId);
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-    toast.success(`${selectedItems.length} relatórios exportados!`);
-  };
+  // Substituído: agora exporta tudo em um único arquivo
+  const exportSelected = exportAllSelected;
 
   if (loading) {
     return (
