@@ -7307,22 +7307,26 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     data_pag = item.get("data_pagamento") or item.get("data_recebimento") or "-"
     obs = item.get("observacoes", "-")
     
+    # Estilo com word-wrap para textos longos
+    detail_value_style = ParagraphStyle('DetailValue', fontSize=9, leading=12, wordWrap='CJK')
+    detail_label_style = ParagraphStyle('DetailLabel', fontSize=9, fontName='Helvetica-Bold')
+    
     detail_data = [
-        ["Descrição", descricao],
-        ["Data de Vencimento", data_venc],
-        ["Data de Pagamento", data_pag],
-        ["Forma de Pagamento", forma_pag],
-        ["Plano de Contas", plano_contas],
-        ["Centro de Custo", centro_custo],
-        ["Observações", obs if obs else "-"],
+        [Paragraph("Descrição", detail_label_style), Paragraph(descricao if descricao else "-", detail_value_style)],
+        [Paragraph("Data de Vencimento", detail_label_style), Paragraph(data_venc if data_venc else "-", detail_value_style)],
+        [Paragraph("Data de Pagamento", detail_label_style), Paragraph(data_pag if data_pag else "-", detail_value_style)],
+        [Paragraph("Forma de Pagamento", detail_label_style), Paragraph(forma_pag if forma_pag else "-", detail_value_style)],
+        [Paragraph("Plano de Contas", detail_label_style), Paragraph(plano_contas if plano_contas else "-", detail_value_style)],
+        [Paragraph("Centro de Custo", detail_label_style), Paragraph(centro_custo if centro_custo else "-", detail_value_style)],
+        [Paragraph("Observações", detail_label_style), Paragraph(obs if obs else "-", detail_value_style)],
     ]
     detail_table = Table(detail_data, colWidths=[4*cm, 13.5*cm])
     detail_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
