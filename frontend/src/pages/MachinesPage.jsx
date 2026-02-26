@@ -435,14 +435,14 @@ export default function MachinesPage() {
                 <Label className="form-label">Subcategoria (opcional)</Label>
                 <Select
                   value={formData.subcategory_id}
-                  onValueChange={(value) => setFormData({...formData, subcategory_id: value})}
+                  onValueChange={(value) => setFormData({...formData, subcategory_id: value === "__none__" ? "" : value})}
                   disabled={!formData.category_id || filteredSubcategories.length === 0}
                 >
                   <SelectTrigger className="form-input" data-testid="machine-subcategory-select">
                     <SelectValue placeholder={!formData.category_id ? "Selecione categoria primeiro" : filteredSubcategories.length === 0 ? "Sem subcategorias" : "Selecione subcategoria"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="__none__">Nenhuma</SelectItem>
                     {filteredSubcategories.map((sub) => (
                       <SelectItem key={sub.id} value={sub.id}>
                         {sub.name}
