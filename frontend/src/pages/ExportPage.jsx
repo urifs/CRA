@@ -368,6 +368,48 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
+  // Função para exportar extrato bancário
+  const exportExtratoBancario = async () => {
+    if (!selectedContaBancaria) {
+      toast.error("Selecione uma conta bancária");
+      return;
+    }
+    
+    setExporting('extrato_bancario');
+    try {
+      const response = await axios.get(`${API}/export/extrato-bancario/${selectedContaBancaria}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `CRA_Extrato_Bancario.pdf`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/"/g, '');
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Extrato bancário exportado!");
+    } catch (error) {
+      console.error("Erro ao exportar extrato:", error);
+      toast.error(error.response?.data?.detail || "Erro ao exportar extrato bancário");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   // Categorias que suportam Excel
   const excelCategories = ["machines", "maintenances", "stock_items", "obras", "contas_pagar", "contas_pagar_pendente", "contas_receber", "contas_receber_pendente", "cadastros", "cadastros_clientes", "cadastros_fornecedores", "produtos_admin", "alugueis", "medicoes"];
   
