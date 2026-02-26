@@ -1197,26 +1197,106 @@ export default function ArmazenamentoPage() {
                       </tr>
                     );
                   })}
-                                <Download size={14} className="mr-2" /> Baixar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setRenameItem(item); setNewName(item.name); setShowRenameModal(true); }}>
-                                <Edit size={14} className="mr-2" /> Renomear
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDelete(item)} className="text-red-600">
-                                <Trash2 size={14} className="mr-2" /> Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    );
-                  })}
                 </tbody>
               </table>
             </CardContent>
           </Card>
         )}
       </div>
+
+      {/* Move Modal */}
+      <Dialog open={showMoveModal} onOpenChange={setShowMoveModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Move className="text-blue-500" size={20} />
+              Mover {itemsToMove.length} item(s)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Selecione o destino:</Label>
+              <div className="mt-2 border rounded-lg p-2 bg-gray-50 max-h-60 overflow-y-auto">
+                <button
+                  onClick={() => navigateToFolder("/")}
+                  className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-100 ${moveTargetPath === "/" ? "bg-blue-100 text-blue-700" : ""}`}
+                >
+                  <FolderOpen size={18} className="text-yellow-500" />
+                  Raiz (/)
+                </button>
+                {availableFolders.map((folder) => (
+                  <button
+                    key={folder.path}
+                    onClick={() => navigateToFolder(folder.path)}
+                    className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-100 ${moveTargetPath === folder.path ? "bg-blue-100 text-blue-700" : ""}`}
+                  >
+                    <FolderOpen size={18} className="text-yellow-500" />
+                    {folder.name}
+                  </button>
+                ))}
+                {availableFolders.length === 0 && moveTargetPath !== "/" && (
+                  <p className="text-gray-500 text-sm px-3 py-2">Nenhuma subpasta</p>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">Destino atual: <strong>{moveTargetPath}</strong></p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMoveModal(false)}>Cancelar</Button>
+            <Button onClick={handleMove} className="bg-blue-600 hover:bg-blue-700">
+              <Move size={16} className="mr-2" />
+              Mover
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Copy Modal */}
+      <Dialog open={showCopyModal} onOpenChange={setShowCopyModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="text-green-500" size={20} />
+              Copiar {itemsToCopy.length} item(s)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Selecione o destino:</Label>
+              <div className="mt-2 border rounded-lg p-2 bg-gray-50 max-h-60 overflow-y-auto">
+                <button
+                  onClick={() => navigateToFolder("/")}
+                  className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-100 ${moveTargetPath === "/" ? "bg-green-100 text-green-700" : ""}`}
+                >
+                  <FolderOpen size={18} className="text-yellow-500" />
+                  Raiz (/)
+                </button>
+                {availableFolders.map((folder) => (
+                  <button
+                    key={folder.path}
+                    onClick={() => navigateToFolder(folder.path)}
+                    className={`w-full text-left px-3 py-2 rounded flex items-center gap-2 hover:bg-gray-100 ${moveTargetPath === folder.path ? "bg-green-100 text-green-700" : ""}`}
+                  >
+                    <FolderOpen size={18} className="text-yellow-500" />
+                    {folder.name}
+                  </button>
+                ))}
+                {availableFolders.length === 0 && moveTargetPath !== "/" && (
+                  <p className="text-gray-500 text-sm px-3 py-2">Nenhuma subpasta</p>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">Destino atual: <strong>{moveTargetPath}</strong></p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCopyModal(false)}>Cancelar</Button>
+            <Button onClick={handleCopy} className="bg-green-600 hover:bg-green-700">
+              <Copy size={16} className="mr-2" />
+              Copiar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New Folder Modal */}
       <Dialog open={showNewFolderModal} onOpenChange={setShowNewFolderModal}>
