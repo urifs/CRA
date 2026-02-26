@@ -111,7 +111,7 @@ export default function ArmazenamentoPage() {
   const [folderPassword, setFolderPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [showSetPasswordModal, setShowSetPasswordModal] = useState(false);
-  const [setPasswordFolder, setSetPasswordFolder] = useState(null);
+  const [passwordTargetFolder, setPasswordTargetFolder] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [unlockedFolders, setUnlockedFolders] = useState(new Set()); // Track unlocked folders in session
