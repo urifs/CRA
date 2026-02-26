@@ -16,12 +16,12 @@ export default function MorePage() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const menuItems = [
-    { path: "/balance", icon: DollarSign, label: "Balanço", description: "Custos e despesas" },
-    { path: "/usage", icon: Clock, label: "Tempo de Uso", description: "Registrar horas" },
-    { path: "/notifications", icon: Bell, label: "Notificações", description: "Alertas do sistema" },
-    { path: "/stock", icon: Package, label: "Estoque", description: "Controle de peças" },
-    { path: "/categories", icon: Tags, label: "Categorias", description: "Tipos de máquinas" },
-    { path: "/audit", icon: ClipboardList, label: "Auditoria", description: "Histórico de alterações" },
+    { path: "/gerenciamento/balance", icon: DollarSign, label: "Balanço", description: "Custos e despesas" },
+    { path: "/gerenciamento/usage", icon: Clock, label: "Tempo de Uso", description: "Registrar horas" },
+    { path: "/gerenciamento/notifications", icon: Bell, label: "Notificações", description: "Alertas do sistema" },
+    { path: "/gerenciamento/stock", icon: Package, label: "Estoque", description: "Controle de peças" },
+    { path: "/gerenciamento/categories", icon: Tags, label: "Categorias", description: "Tipos de máquinas" },
+    { path: "/gerenciamento/audit", icon: ClipboardList, label: "Auditoria", description: "Histórico de alterações" },
   ];
 
   const handleLogout = () => {
