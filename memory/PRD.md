@@ -11,48 +11,53 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026)
-- ✅ **Senhas em Pastas (Armazenamento)**:
-  - Campo de senha opcional ao criar pasta
-  - Modal para digitar senha ao acessar pasta protegida
-  - Ícone de cadeado em pastas protegidas
-  - Opção de definir/alterar/remover senha em pastas existentes
-  - Endpoints: POST /storage/folder/check-password, POST /storage/folder/set-password
+### Sessão Atual (26/02/2026) - 5 Funcionalidades Solicitadas
 
-- ✅ **Sistema de Frotas (Gerenciamento)** - PARCIAL:
-  - Backend completo: CRUD de Frotas e Subfrotas
-  - Endpoints: /fleets, /subfleets
-  - Modelo de máquina atualizado com fleet_id, subfleet_id, operator_id
-  - Página FrotasPage.jsx criada
-  - Rota e menu adicionados
+#### ✅ 1. Senhas em Pastas (Armazenamento) - COMPLETO
+- Campo de senha opcional ao criar pasta
+- Modal para digitar senha ao acessar pasta protegida
+- Ícone de cadeado em pastas protegidas
+- Opção de definir/alterar/remover senha em pastas existentes
+- Endpoints: check-password, set-password, has-password
 
-### Sessões Anteriores
-- Cards compactos no Tempo de Uso
-- Excluir registros de uso e máquinas
-- Aba "Vencidas" no Dashboard Financeiro
-- Plano de Contas refatorado
-- Dropdown de Cadastros
-- Cadastro Rápido de Cliente/Fornecedor
+#### ✅ 2. Sistema de Frotas (Gerenciamento) - COMPLETO
+- Página FrotasPage.jsx com CRUD completo
+- Criar/editar/excluir Frotas
+- Criar/editar/excluir Subfrotas dentro de Frotas
+- Dropdowns de Frota e Subfrota no formulário de máquinas
+- Backend com endpoints /fleets, /subfleets
 
-## Backlog (Próxima Sessão)
+#### ✅ 3. Funcionários em Máquinas (Gerenciamento) - COMPLETO
+- Dropdown "Operador/Funcionário" no formulário de máquinas
+- Lista todos os cadastros do sistema financeiro
+- Campo opcional
 
-### 🔴 P0 - Continuação das 5 Funcionalidades:
-1. ~~Senhas em Pastas~~ ✅ DONE
-2. ~~Sistema de Frotas~~ ✅ Backend + Página (FALTA: integrar dropdown no form de máquinas)
-3. **Funcionários em Máquinas** - Dropdown com cadastros do sistema financeiro
-4. **Subcategorias de Máquinas** - CRUD + campo opcional na criação
-5. **Subcategorias de Estoque** - CRUD + campo opcional na criação
+#### ✅ 4. Subcategorias de Máquinas (Gerenciamento) - COMPLETO
+- Backend com CRUD de subcategorias (/subcategories)
+- Dropdown de Subcategoria no formulário de máquinas
+- Filtra subcategorias baseado na categoria selecionada
+- Campo opcional
 
-### 🟡 P1 - Pendentes:
+#### ✅ 5. Subcategorias de Estoque (Gerenciamento) - COMPLETO (Backend)
+- Backend com CRUD de subcategorias de estoque (/stock/subcategories)
+- Modelo StockItemCreate/Response atualizado com subcategory_id
+- Falta: integrar dropdown no frontend do estoque
+
+### Outras Melhorias
+- Placa agora é opcional no cadastro de máquinas
+- Menu "Frotas" adicionado ao menu lateral
+
+## Backlog
+
+### 🟡 P1 - Pendentes
+- Integrar dropdown de subcategoria no StockPage.jsx
 - Verificar visualização de anexos (bug pendente)
 - Refatoração parcial do backend
 
-## Arquivos Modificados Nesta Sessão
-- `/app/backend/server.py` - Endpoints de senha em pasta, frotas, subfrotas
-- `/app/frontend/src/pages/ArmazenamentoPage.jsx` - UI de senha em pastas
-- `/app/frontend/src/pages/FrotasPage.jsx` - NOVO
-- `/app/frontend/src/App.js` - Rota de frotas
-- `/app/frontend/src/components/Layout.jsx` - Menu de frotas
+### 🔵 P2 - Futuros
+- Integração Estoque ↔ Manutenção
+- Notificações email/WhatsApp
+- Reativar PWA
 
 ## Credenciais de Teste
 - Email: test@test.com
