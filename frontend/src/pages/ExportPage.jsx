@@ -688,7 +688,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                   {contasBancarias.length > 0 ? (
                                     contasBancarias.map((conta) => (
                                       <SelectItem key={conta.id} value={conta.id}>
-                                        {conta.nome_conta} - {conta.banco}
+                                        {conta.nome} - {conta.banco}
                                       </SelectItem>
                                     ))
                                   ) : (
