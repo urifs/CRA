@@ -397,6 +397,31 @@ class ObraDetailResponse(BaseModel):
 class MachineObraUpdate(BaseModel):
     obra_id: Optional[str] = None  # None to remove from obra
 
+# ============ HORIMETRO MODELS ============
+
+class HorimetroCreate(BaseModel):
+    machine_id: str
+    data: str
+    hora_inicial: float
+    hora_final: float
+    horas_trabalhadas: Optional[float] = None
+    operador: Optional[str] = None
+    observacoes: Optional[str] = None
+
+class HorimetroResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    machine_id: str
+    machine_name: Optional[str] = None
+    data: str
+    hora_inicial: float
+    hora_final: float
+    horas_trabalhadas: float
+    operador: Optional[str] = None
+    observacoes: Optional[str] = None
+    created_by: str
+    created_at: str
+
 # ============ AUDIT LOG MODELS ============
 
 class AuditLogResponse(BaseModel):
