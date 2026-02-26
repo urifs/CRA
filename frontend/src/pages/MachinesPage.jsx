@@ -29,12 +29,17 @@ import {
   Edit,
   Trash2,
   Eye,
-  Loader2
+  Loader2,
+  FolderTree,
+  User
 } from "lucide-react";
 
 export default function MachinesPage() {
   const [machines, setMachines] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [fleets, setFleets] = useState([]);
+  const [subfleets, setSubfleets] = useState([]);
+  const [cadastros, setCadastros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -50,7 +55,10 @@ export default function MachinesPage() {
     brand: "",
     model: "",
     year: "",
-    notes: ""
+    notes: "",
+    fleet_id: "",
+    subfleet_id: "",
+    operator_id: ""
   });
 
   useEffect(() => {
