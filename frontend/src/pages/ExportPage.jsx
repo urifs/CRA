@@ -569,6 +569,45 @@ export default function ExportPage({ module = "gerenciamento" }) {
                           )}
                         </div>
                       </div>
+                        
+                        {/* Área de filtros expandíveis */}
+                        {hasFilter && filterData?.expanded && (
+                          <div className="bg-blue-50 border-t border-blue-100 px-4 py-3 pl-20">
+                            <p className="text-xs text-blue-700 font-medium mb-2">
+                              Selecione itens específicos para exportar (deixe vazio para exportar todos):
+                            </p>
+                            {loadingFilters[sub.id] ? (
+                              <div className="flex items-center gap-2 text-blue-600">
+                                <Loader2 size={14} className="animate-spin" />
+                                <span className="text-sm">Carregando itens...</span>
+                              </div>
+                            ) : filterData?.items?.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {filterData.items.map(item => (
+                                  <label
+                                    key={item.id}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm cursor-pointer transition-colors ${
+                                      filterData.selectedIds.includes(item.id)
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white border border-blue-200 text-blue-700 hover:bg-blue-100'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="sr-only"
+                                      checked={filterData.selectedIds.includes(item.id)}
+                                      onChange={() => toggleFilterItem(sub.id, item.id)}
+                                    />
+                                    {item.name}
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">Nenhum item cadastrado</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
