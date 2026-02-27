@@ -113,8 +113,8 @@ export default function AlugueisPage() {
     try {
       const dataToSend = {
         ...formData,
-        valor: parseFloat(formData.valor) || 0,
-        valor_caucao: parseFloat(formData.valor_caucao) || 0
+        valor: parseCurrency(formData.valor) || 0,
+        valor_caucao: parseCurrency(formData.valor_caucao) || 0
       };
 
       let aluguelId = editingAluguel?.id;
