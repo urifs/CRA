@@ -479,7 +479,7 @@ export default function FuncionariosPage() {
                 </div>
                 <div>
                   <Label>CPF *</Label>
-                  <Input value={formData.cpf} onChange={(e) => setFormData({...formData, cpf: e.target.value})} placeholder="000.000.000-00" required />
+                  <Input value={formData.cpf} onChange={(e) => setFormData({...formData, cpf: formatCPF(e.target.value)})} placeholder="000.000.000-00" required />
                 </div>
                 <div>
                   <Label>RG</Label>
@@ -491,11 +491,11 @@ export default function FuncionariosPage() {
                 </div>
                 <div>
                   <Label>Telefone</Label>
-                  <Input value={formData.telefone} onChange={(e) => setFormData({...formData, telefone: e.target.value})} placeholder="(00) 0000-0000" />
+                  <Input value={formData.telefone} onChange={(e) => setFormData({...formData, telefone: formatTelefone(e.target.value)})} placeholder="(00) 0000-0000" />
                 </div>
                 <div>
                   <Label>Celular</Label>
-                  <Input value={formData.celular} onChange={(e) => setFormData({...formData, celular: e.target.value})} placeholder="(00) 00000-0000" />
+                  <Input value={formData.celular} onChange={(e) => setFormData({...formData, celular: formatTelefone(e.target.value)})} placeholder="(00) 00000-0000" />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <Label>Email</Label>
