@@ -664,22 +664,18 @@ export default function AlugueisPage() {
               <div>
                 <label className="form-label">Valor *</label>
                 <Input 
-                  type="number" 
-                  step="0.01" 
                   value={formData.valor} 
-                  onChange={(e) => setFormData({...formData, valor: e.target.value})} 
-                  placeholder="0,00" 
+                  onChange={(e) => setFormData({...formData, valor: formatCurrency(e.target.value)})} 
+                  placeholder="R$ 0,00" 
                   required 
                 />
               </div>
               <div>
                 <label className="form-label">Valor Caução</label>
                 <Input 
-                  type="number" 
-                  step="0.01" 
                   value={formData.valor_caucao} 
-                  onChange={(e) => setFormData({...formData, valor_caucao: e.target.value})} 
-                  placeholder="0,00" 
+                  onChange={(e) => setFormData({...formData, valor_caucao: formatCurrency(e.target.value)})} 
+                  placeholder="R$ 0,00" 
                 />
               </div>
             </div>
