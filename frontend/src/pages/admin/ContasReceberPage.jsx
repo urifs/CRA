@@ -54,6 +54,7 @@ export default function ContasReceberPage() {
   const [quitarContaId, setQuitarContaId] = useState(null);
   const [quitarContaInfo, setQuitarContaInfo] = useState(null);
   const [dataRecebimento, setDataRecebimento] = useState(new Date().toISOString().split("T")[0]);
+  const [quitarContaBancaria, setQuitarContaBancaria] = useState("");
   
   const [formData, setFormData] = useState({
     cliente_nome: "", documento: "", numero_doc: "", descricao: "",
