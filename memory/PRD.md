@@ -1,5 +1,29 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 27/02/2026 (Sessão 20)
+
+### Máscaras de Formatação para Valores Monetários
+- ✅ **Novas funções de máscara** adicionadas em `/app/frontend/src/utils/masks.js`:
+  - `formatCurrency`: Formata valores monetários no padrão brasileiro (R$ 1.500,00)
+  - `parseCurrency`: Converte string formatada de volta para número
+  - `formatDate`: Formata datas no padrão brasileiro (dd/mm/aaaa)
+  - `parseDate`: Converte data formatada para ISO (aaaa-mm-dd)
+
+- ✅ **Formulários atualizados** com máscara de valores monetários:
+  - `ContasPagarPage.jsx` - Valor, Desconto, Juros, Multa
+  - `ContasReceberPage.jsx` - Valor, Desconto, Juros, Multa
+  - `ImoveisPage.jsx` - Aluguel, Condomínio, IPTU, Caução
+  - `AlugueisPage.jsx` - Valor, Valor Caução
+  - `ContasBancariasPage.jsx` - Saldo Inicial, Saldo Atual
+  - `CadastrosPage.jsx` - Limite de Crédito
+  - `CadastroFormModal.jsx` - Limite de Crédito
+
+- ✅ **Comportamento**: Ao digitar números, o campo formata automaticamente para R$ X.XXX,XX
+  - Exemplo: digitar `150000` → exibe `R$ 1.500,00`
+  - Backend recebe valores numéricos (1500.00), não strings formatadas
+
+---
+
 ## Changelog - 27/02/2026 (Sessão 19)
 
 ### Notificações de Combustível Baixo
