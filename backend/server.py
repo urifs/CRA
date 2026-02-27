@@ -5675,10 +5675,14 @@ async def create_user_admin(data: UserCreateAdmin, current_user: dict = Depends(
     if existing:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
     
-    # Validate role
-    valid_roles = ["gerenciamento", "administrativo", "ambos", "admin"]
+    # Validate role - includes all combination roles and custom roles like 'programador'
+    valid_roles = [
+        "gerenciamento", "administrativo", "rh", "ambos", 
+        "ambos_rh", "gerenciamento_rh", "administrativo_rh", 
+        "admin", "programador"
+    ]
     if data.role not in valid_roles:
-        raise HTTPException(status_code=400, detail="Tipo de acesso inválido")
+        raise HTTPException(status_code=400, detail=f"Tipo de acesso inválido. Opções: {', '.join(valid_roles)}")
     
     # Hash password
     hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt())
@@ -5725,7 +5729,12 @@ async def update_user_role(user_id: str, data: UserRoleUpdate, current_user: dic
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Apenas administradores podem alterar permissões")
     
-    valid_roles = ["gerenciamento", "administrativo", "ambos", "admin"]
+    # All valid roles including combination roles and custom roles
+    valid_roles = [
+        "gerenciamento", "administrativo", "rh", "ambos", 
+        "ambos_rh", "gerenciamento_rh", "administrativo_rh", 
+        "admin", "programador"
+    ]
     if data.role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Role inválido. Opções: {', '.join(valid_roles)}")
     
