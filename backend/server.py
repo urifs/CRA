@@ -62,6 +62,8 @@ load_dotenv(ROOT_DIR / '.env')
 
 # Import modular routes
 from routes.rh import rh_router
+from routes.admin import admin_router
+from routes.machines import machines_router
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
