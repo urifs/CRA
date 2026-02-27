@@ -410,6 +410,31 @@ export default function CategoriesPage() {
                 placeholder="Descrição da categoria"
               />
             </div>
+            <div>
+              <Label className="flex items-center gap-2 mb-2">
+                <Palette size={16} />
+                Cor da Categoria
+              </Label>
+              <div className="grid grid-cols-5 gap-2">
+                {CATEGORY_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => setCategoryForm({ ...categoryForm, color: color.value })}
+                    className={`w-full h-10 rounded-lg border-2 transition-all ${
+                      categoryForm.color === color.value 
+                        ? 'border-black scale-110 shadow-lg' 
+                        : 'border-transparent hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                A cor selecionada será aplicada nos cards de máquinas desta categoria
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCategoryModal(false)}>Cancelar</Button>
