@@ -193,8 +193,8 @@ export default function AlugueisPage() {
         periodo_especificado: aluguel.periodo_especificado || "",
         data_entrega: aluguel.data_entrega?.split("T")[0] || "",
         data_vencimento: aluguel.data_vencimento?.split("T")[0] || "",
-        valor: aluguel.valor?.toString() || "",
-        valor_caucao: aluguel.valor_caucao?.toString() || "",
+        valor: aluguel.valor ? formatCurrency((aluguel.valor * 100).toString()) : "",
+        valor_caucao: aluguel.valor_caucao ? formatCurrency((aluguel.valor_caucao * 100).toString()) : "",
         local_entrega: aluguel.local_entrega || "",
         observacoes: aluguel.observacoes || "",
         gerar_conta_receber: false
