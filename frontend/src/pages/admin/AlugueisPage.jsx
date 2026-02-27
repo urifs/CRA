@@ -686,6 +686,11 @@ export default function AlugueisPage() {
                 />
               </div>
             </div>
+            {/* Valor Total Calculado */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-between">
+              <span className="text-sm text-gray-600">Valor Total (Valor + Caução):</span>
+              <span className="text-lg font-semibold text-gray-900">{formatCurrency(calcularValorTotal())}</span>
+            </div>
 
             {/* Local */}
             <div>
