@@ -1,5 +1,18 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 27/02/2026 (Sessão 19)
+
+### Notificações de Combustível Baixo
+- ✅ **Alertas de combustível** adicionados na aba de Notificações do Gerenciamento:
+  - **CRÍTICO** (vermelho): Quando combustível está abaixo de 10%
+  - **BAIXO** (laranja): Quando combustível está entre 10% e 25%
+- ✅ **Novo card de resumo** "Combustível" na página de notificações
+- ✅ Mostra nome da máquina, porcentagem e litros (atual/capacidade)
+- ✅ Ícone de gota d'água (Droplet) para notificações de combustível
+- ✅ Integrado com veículos abastecedores cadastrados no sistema
+
+---
+
 ## Changelog - 27/02/2026 (Sessão 18)
 
 ### Correções de Exportação PDF
