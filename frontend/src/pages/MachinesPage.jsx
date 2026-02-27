@@ -283,10 +283,15 @@ export default function MachinesPage() {
       {filteredMachines.length > 0 ? (
         viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMachines.map((machine) => (
+            {filteredMachines.map((machine) => {
+              // Obter a cor da categoria
+              const categoryColor = categories.find(c => c.id === machine.category_id)?.color || "#E31A1A";
+              
+              return (
               <Card 
                 key={machine.id} 
-                className="machine-card"
+                className="machine-card overflow-hidden"
+                style={{ borderTopWidth: '4px', borderTopColor: categoryColor }}
                 data-testid={`machine-card-${machine.id}`}
               >
                 <CardContent className="p-0">
@@ -294,8 +299,8 @@ export default function MachinesPage() {
                   <div className="p-4 border-b border-gray-100">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Truck className="text-gray-600" size={24} />
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: categoryColor }}>
+                          <Truck className="text-white" size={24} />
                         </div>
                         <div>
                           <h3 className="font-bold text-black">{machine.name}</h3>
@@ -310,7 +315,10 @@ export default function MachinesPage() {
                   <div className="p-4 space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Categoria:</span>
-                      <span className="font-medium text-black">{machine.category_name || "-"}</span>
+                      <span className="font-medium text-black flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColor }}></span>
+                        {machine.category_name || "-"}
+                      </span>
                     </div>
                     {machine.brand && (
                       <div className="flex justify-between">
