@@ -289,8 +289,8 @@ export default function ContasReceberPage() {
   });
 
   // Totais
-  const totalEmAberto = filteredContas.filter(c => c.status === "em_aberto").reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
-  const totalVencidas = filteredContas.filter(c => c.status === "em_aberto" && c.data_vencimento < new Date().toISOString().split("T")[0]).reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
+  const totalEmAberto = filteredContas.filter(c => c.status === "em_aberto" || c.status === "pendente").reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
+  const totalVencidas = filteredContas.filter(c => (c.status === "em_aberto" || c.status === "pendente") && c.data_vencimento < new Date().toISOString().split("T")[0]).reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
   const totalRegistros = filteredContas.length;
 
   if (loading) return <div className="flex items-center justify-center min-h-[400px]"><div className="spinner w-12 h-12"></div></div>;
