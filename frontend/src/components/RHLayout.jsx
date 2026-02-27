@@ -17,7 +17,8 @@ import {
   ArrowLeft,
   MoreHorizontal,
   UserPlus,
-  FileText
+  FileText,
+  FileDown
 } from "lucide-react";
 import ChatbotWidget from "@/components/ChatbotWidget";
 import TasksInbox from "@/components/TasksInbox";
