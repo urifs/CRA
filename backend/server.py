@@ -9523,6 +9523,10 @@ async def delete_task(
     return {"message": "Tarefa excluída com sucesso"}
 
 
+# ============ RH SYSTEM (RECURSOS HUMANOS) ============
+# Movido para: /app/backend/routes/rh.py
+# Incluído via: api_router.include_router(rh_router)
+
 # ============ STORAGE SYSTEM (FILE MANAGER) ============
 
 # Directory for storage system
