@@ -352,7 +352,7 @@ export default function ArmazenamentoPage() {
         });
       }
       toast.success(`${files.length} arquivo(s) enviado(s) com sucesso!`);
-      fetchItems();
+      await fetchItems(true);
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao enviar arquivo");
     } finally {
