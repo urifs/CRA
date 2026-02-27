@@ -43,7 +43,9 @@ import {
   Settings,
   ChevronRight,
   LayoutGrid,
-  List
+  List,
+  Wrench,
+  X
 } from "lucide-react";
 
 export default function StockPage() {
