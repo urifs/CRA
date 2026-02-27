@@ -9305,7 +9305,7 @@ async def create_task(
     """Create a new task/message for a specific system"""
     current_user = await get_current_user(credentials)
     
-    if current_user.get("role") != "admin":
+    if current_user.get("role") not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Apenas administradores podem criar tarefas")
     
     if task.target_system not in ["gerenciamento", "administrativo"]:
