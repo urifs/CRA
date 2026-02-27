@@ -162,12 +162,15 @@ export default function ArmazenamentoPage() {
     setBreadcrumbs(crumbs);
   };
 
-  const fetchItems = async () => {
+  const fetchItems = async (forceRefresh = false) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API}/storage/list`, {
-        params: { path: currentPath },
-        headers: { Authorization: `Bearer ${token}` }
+        params: { path: currentPath, _t: forceRefresh ? Date.now() : undefined },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache'
+        }
       });
       setItems(response.data);
     } catch (error) {
@@ -181,11 +184,15 @@ export default function ArmazenamentoPage() {
     }
   };
 
-  const fetchTrashItems = async () => {
+  const fetchTrashItems = async (forceRefresh = false) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API}/storage/trash`, {
-        headers: { Authorization: `Bearer ${token}` }
+        params: { _t: forceRefresh ? Date.now() : undefined },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache'
+        }
       });
       setTrashItems(response.data);
     } catch (error) {
