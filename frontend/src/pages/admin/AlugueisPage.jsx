@@ -258,6 +258,13 @@ export default function AlugueisPage() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
 
+  // Calcula valor total: Valor + Valor Caução
+  const calcularValorTotal = () => {
+    const valor = parseCurrency(formData.valor) || 0;
+    const caucao = parseCurrency(formData.valor_caucao) || 0;
+    return valor + caucao;
+  };
+
   const getStatusInfo = (status) => {
     switch (status) {
       case "ativo": return { label: "Ativo", color: "bg-green-100 text-green-700", icon: Clock };
