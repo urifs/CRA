@@ -424,6 +424,7 @@ class HorimetroCreate(BaseModel):
     horas_trabalhadas: Optional[float] = None
     operador: Optional[str] = None
     observacoes: Optional[str] = None
+    tipo_medicao: Optional[str] = "hora"  # "hora" ou "km"
 
 class HorimetroResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -436,6 +437,7 @@ class HorimetroResponse(BaseModel):
     horas_trabalhadas: float
     operador: Optional[str] = None
     observacoes: Optional[str] = None
+    tipo_medicao: str = "hora"
     created_by: str
     created_at: str
 
