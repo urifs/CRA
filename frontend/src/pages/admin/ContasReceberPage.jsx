@@ -477,6 +477,11 @@ export default function ContasReceberPage() {
               <div><label className="form-label">Juros</label><Input value={formData.valor_juros} onChange={(e) => setFormData({...formData, valor_juros: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" /></div>
               <div><label className="form-label">Multa</label><Input value={formData.valor_multa} onChange={(e) => setFormData({...formData, valor_multa: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" /></div>
             </div>
+            {/* Valor Final Calculado */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-between">
+              <span className="text-sm text-gray-600">Valor Final (Valor - Desconto + Juros + Multa):</span>
+              <span className="text-lg font-semibold text-gray-900">{formatCurrency(calcularValorFinal())}</span>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className="form-label">Data Emissão</label><Input type="date" value={formData.data_emissao} onChange={(e) => setFormData({...formData, data_emissao: e.target.value})} /></div>
               <div><label className="form-label">Data Vencimento *</label><Input type="date" value={formData.data_vencimento} onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})} required /></div>
