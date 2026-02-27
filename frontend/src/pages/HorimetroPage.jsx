@@ -356,15 +356,19 @@ export default function HorimetroPage() {
                   <TableRow>
                     <TableHead>Máquina</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Hora Inicial</TableHead>
-                    <TableHead className="text-right">Hora Final</TableHead>
-                    <TableHead className="text-right">Horas Trabalhadas</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Inicial</TableHead>
+                    <TableHead className="text-right">Final</TableHead>
+                    <TableHead className="text-right">Trabalhado</TableHead>
                     <TableHead>Operador</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRegistros.map((registro) => (
+                  {filteredRegistros.map((registro) => {
+                    const isKm = registro.tipo_medicao === "km";
+                    const unit = isKm ? "km" : "h";
+                    return (
                     <TableRow key={registro.id} data-testid={`horimetro-row-${registro.id}`}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -373,11 +377,20 @@ export default function HorimetroPage() {
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(registro.data)}</TableCell>
-                      <TableCell className="text-right font-mono">{registro.hora_inicial}h</TableCell>
-                      <TableCell className="text-right font-mono">{registro.hora_final}h</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          isKm ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {isKm ? 'Km' : 'Hora'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">{registro.hora_inicial}{unit}</TableCell>
+                      <TableCell className="text-right font-mono">{registro.hora_final}{unit}</TableCell>
                       <TableCell className="text-right">
-                        <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-medium">
-                          {registro.horas_trabalhadas?.toFixed(1)}h
+                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                          isKm ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {registro.horas_trabalhadas?.toFixed(1)}{unit}
                         </span>
                       </TableCell>
                       <TableCell>{registro.operador || "-"}</TableCell>
@@ -402,7 +415,8 @@ export default function HorimetroPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
