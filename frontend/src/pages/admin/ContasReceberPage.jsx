@@ -147,10 +147,10 @@ export default function ContasReceberPage() {
     try {
       const dataToSend = {
         ...formData,
-        valor: parseFloat(formData.valor) || 0,
-        valor_desconto: parseFloat(formData.valor_desconto) || 0,
-        valor_juros: parseFloat(formData.valor_juros) || 0,
-        valor_multa: parseFloat(formData.valor_multa) || 0,
+        valor: parseCurrency(formData.valor) || 0,
+        valor_desconto: parseCurrency(formData.valor_desconto) || 0,
+        valor_juros: parseCurrency(formData.valor_juros) || 0,
+        valor_multa: parseCurrency(formData.valor_multa) || 0,
       };
       if (editingConta) {
         await axios.put(`${API}/admin/contas-receber/${editingConta.id}`, dataToSend);
