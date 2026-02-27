@@ -684,6 +684,12 @@ export default function ArmazenamentoPage() {
     
     if (!confirm(`Mover ${selectedItemsArray.length} item(s) para a lixeira?`)) return;
     
+    // Atualização otimista - remove itens selecionados da UI imediatamente
+    const selectedPaths = new Set(selectedItemsArray.map(i => i.path));
+    setItems(prev => prev.filter(i => !selectedPaths.has(i.path)));
+    setSelectedItems(new Set());
+    setSelectionMode(false);
+    
     try {
       let successCount = 0;
       for (const item of selectedItemsArray) {
@@ -698,11 +704,10 @@ export default function ArmazenamentoPage() {
         }
       }
       toast.success(`${successCount} item(s) movido(s) para lixeira!`);
-      setSelectedItems(new Set());
-      setSelectionMode(false);
-      fetchItems();
-      fetchTrashItems(); // Atualizar contagem da lixeira
+      await fetchTrashItems(true);
     } catch (error) {
+      // Reverter em caso de erro
+      await fetchItems(true);
       toast.error("Erro ao excluir itens");
     }
   };
