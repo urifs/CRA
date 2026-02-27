@@ -7215,6 +7215,73 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("action", "-")),
                     cell(item.get("module", "-"))
                 ])
+        elif category == "funcionarios":
+            headers = [cell("Nome", True), cell("CPF", True), cell("Cargo", True), cell("Admissão", True), cell("Status", True)]
+            table_data = [headers]
+            for item in data:
+                status_map = {"ativo": "Ativo", "ferias": "Férias", "afastado": "Afastado", "desligado": "Desligado"}
+                table_data.append([
+                    cell(item.get("nome", "-")),
+                    cell(item.get("cpf", "-")),
+                    cell(item.get("cargo", "-")),
+                    cell(item.get("data_admissao", "-")[:10] if item.get("data_admissao") else "-"),
+                    cell(status_map.get(item.get("status", ""), item.get("status", "-")))
+                ])
+        elif category == "ponto_registros":
+            headers = [cell("Funcionário", True), cell("Data", True), cell("Entrada", True), cell("Saída", True), cell("Horas", True)]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    cell(item.get("funcionario_nome", "-")),
+                    cell(item.get("data", "-")[:10] if item.get("data") else "-"),
+                    cell(item.get("entrada", "-")),
+                    cell(item.get("saida", "-")),
+                    cell(item.get("horas_trabalhadas", "-"))
+                ])
+        elif category == "folha_pagamento":
+            headers = [cell("Funcionário", True), cell("Competência", True), cell("Salário", True), cell("Descontos", True), cell("Líquido", True)]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    cell(item.get("funcionario_nome", "-")),
+                    cell(item.get("competencia", "-")),
+                    cell(f"R$ {item.get('salario_bruto', 0):.2f}"),
+                    cell(f"R$ {item.get('total_descontos', 0):.2f}"),
+                    cell(f"R$ {item.get('salario_liquido', 0):.2f}")
+                ])
+        elif category == "ferias":
+            headers = [cell("Funcionário", True), cell("Período Aquisitivo", True), cell("Início", True), cell("Fim", True), cell("Status", True)]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    cell(item.get("funcionario_nome", "-")),
+                    cell(item.get("periodo_aquisitivo", "-")),
+                    cell(item.get("data_inicio", "-")[:10] if item.get("data_inicio") else "-"),
+                    cell(item.get("data_fim", "-")[:10] if item.get("data_fim") else "-"),
+                    cell(item.get("status", "-").upper())
+                ])
+        elif category == "epi_fichas":
+            headers = [cell("Funcionário", True), cell("EPI", True), cell("Entrega", True), cell("Validade", True), cell("CA", True)]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    cell(item.get("funcionario_nome", "-")),
+                    cell(item.get("epi_nome", "-")),
+                    cell(item.get("data_entrega", "-")[:10] if item.get("data_entrega") else "-"),
+                    cell(item.get("data_validade", "-")[:10] if item.get("data_validade") else "-"),
+                    cell(item.get("ca", "-"))
+                ])
+        elif category == "contas_bancarias":
+            headers = [cell("Nome", True), cell("Banco", True), cell("Agência", True), cell("Conta", True), cell("Saldo", True)]
+            table_data = [headers]
+            for item in data:
+                table_data.append([
+                    cell(item.get("nome", "-")),
+                    cell(item.get("banco", "-")),
+                    cell(item.get("agencia", "-")),
+                    cell(item.get("conta", "-")),
+                    cell(f"R$ {item.get('saldo_atual', 0):.2f}")
+                ])
         else:
             # Fallback genérico
             headers = [cell("ID", True), cell("Dados", True)]
