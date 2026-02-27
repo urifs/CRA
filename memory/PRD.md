@@ -1,5 +1,28 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 27/02/2026 (Sessão 18)
+
+### Correções de Exportação PDF
+- ✅ **Quebra de linha automática** em todas as tabelas de exportação PDF
+- Textos longos agora ficam contidos nas células sem invadir outras colunas
+- Implementado via função `cell()` usando `Paragraph` com `wordWrap`
+- Aplicado em TODAS as categorias: Gerenciamento, Administrativo, RH
+
+### Atualização Automática de Saldo Bancário
+- ✅ Ao **quitar conta a PAGAR** → saldo da conta bancária **DIMINUI**
+- ✅ Ao **quitar conta a RECEBER** → saldo da conta bancária **AUMENTA**
+- Atualização automática no campo `saldo_atual` da conta bancária selecionada
+- Testado e validado com valores reais
+
+### Vinculação de Máquinas a Itens de Estoque
+- ✅ Novo campo **"Vincular a Máquinas (opcional)"** no formulário de item
+- Dropdown com todas as máquinas cadastradas
+- Permite vincular **múltiplas máquinas** ao mesmo item
+- Máquinas selecionadas aparecem como tags removíveis
+- API retorna `machine_ids` e `machine_names` nos itens de estoque
+
+---
+
 ## Changelog - 27/02/2026 (Sessão 17)
 
 ### Máscaras de Formatação Automática
