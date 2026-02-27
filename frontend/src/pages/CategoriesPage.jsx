@@ -297,11 +297,11 @@ export default function CategoriesPage() {
             const categoryMachines = getMachinesByCategory(category.id);
             
             return (
-              <Card key={category.id} className="overflow-hidden">
+              <Card key={category.id} className="overflow-hidden" style={{ borderLeftWidth: '4px', borderLeftColor: category.color || '#E31A1A' }}>
                 <CardHeader className="bg-gray-50 border-b">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#E31A1A] rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: category.color || '#E31A1A' }}>
                         <Tags className="text-white" size={20} />
                       </div>
                       <div>
