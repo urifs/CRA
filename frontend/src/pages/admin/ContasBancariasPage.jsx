@@ -555,21 +555,17 @@ export default function ContasBancariasPage() {
               <div>
                 <Label>Saldo Inicial</Label>
                 <Input 
-                  type="number"
-                  step="0.01"
                   value={formData.saldo_inicial} 
-                  onChange={(e) => setFormData({...formData, saldo_inicial: e.target.value})}
-                  placeholder="0.00"
+                  onChange={(e) => setFormData({...formData, saldo_inicial: formatCurrencyMask(e.target.value)})}
+                  placeholder="R$ 0,00"
                 />
               </div>
               <div>
                 <Label>Saldo Atual</Label>
                 <Input 
-                  type="number"
-                  step="0.01"
                   value={formData.saldo_atual} 
-                  onChange={(e) => setFormData({...formData, saldo_atual: e.target.value})}
-                  placeholder="0.00"
+                  onChange={(e) => setFormData({...formData, saldo_atual: formatCurrencyMask(e.target.value)})}
+                  placeholder="R$ 0,00"
                   data-testid="saldo-atual-input"
                 />
                 <p className="text-xs text-gray-500 mt-1">Atualizado automaticamente nas quitações</p>
