@@ -10345,6 +10345,8 @@ api_router.include_router(machines_router)
 api_router.include_router(chatbot_router)
 api_router.include_router(storage_router)
 api_router.include_router(export_router)
+api_router.include_router(stock_router)
+api_router.include_router(obras_router)
 
 # Include the router in the main app
 app.include_router(api_router)
