@@ -347,6 +347,7 @@ export default function ArmazenamentoPage() {
       });
       toast.success("Item movido para lixeira!");
       fetchItems();
+      fetchTrashItems(); // Atualizar contagem da lixeira
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao excluir");
     }
