@@ -175,10 +175,23 @@ export default function ContasPagarPage() {
     } catch (error) { toast.error(error.response?.data?.detail || "Erro ao salvar"); }
   };
 
-  const handleQuitar = async (id) => {
+  const openQuitarModal = (conta) => {
+    setQuitarContaId(conta.id);
+    setQuitarContaInfo(conta);
+    setDataPagamento(new Date().toISOString().split("T")[0]);
+    setShowQuitarModal(true);
+  };
+
+  const handleQuitar = async () => {
     try {
-      await axios.patch(`${API}/admin/contas-pagar/${id}/quitar`);
-      toast.success("Conta quitada!"); fetchContas();
+      await axios.patch(`${API}/admin/contas-pagar/${quitarContaId}/quitar`, {
+        data_pagamento: dataPagamento
+      });
+      toast.success("Conta quitada!"); 
+      setShowQuitarModal(false);
+      setQuitarContaId(null);
+      setQuitarContaInfo(null);
+      fetchContas();
     } catch (error) { toast.error("Erro ao quitar"); }
   };
 
