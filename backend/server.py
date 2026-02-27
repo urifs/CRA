@@ -2436,6 +2436,43 @@ async def get_notifications(current_user: dict = Depends(get_current_user)):
                     created_at=today.isoformat()
                 ))
     
+    # Add fuel low alerts for veiculos abastecedores (tankers)
+    veiculos_abastecedores = await db.veiculos_abastecedores.find({}, {"_id": 0}).to_list(100)
+    for veiculo in veiculos_abastecedores:
+        capacidade = veiculo.get("capacidade_diesel", 0)
+        nivel_atual = veiculo.get("nivel_atual_diesel", 0)
+        machine_name = veiculo.get("machine_name", "Veículo Tanque")
+        
+        if capacidade > 0:
+            porcentagem = (nivel_atual / capacidade) * 100
+            
+            # Critical: less than 10% fuel
+            if porcentagem < 10:
+                notifications.append(NotificationResponse(
+                    id=f"fuel-critical-{veiculo['id']}",
+                    machine_id=veiculo.get("machine_id", ""),
+                    machine_name=machine_name,
+                    machine_plate=veiculo.get("placa", ""),
+                    notification_type="fuel_critical",
+                    message=f"🚨 COMBUSTÍVEL CRÍTICO: {machine_name} está com apenas {porcentagem:.0f}% ({nivel_atual:.0f}L de {capacidade:.0f}L). Reabasteça urgentemente!",
+                    hours_remaining=None,
+                    days_remaining=None,
+                    created_at=today.isoformat()
+                ))
+            # Warning: less than 25% fuel
+            elif porcentagem < 25:
+                notifications.append(NotificationResponse(
+                    id=f"fuel-low-{veiculo['id']}",
+                    machine_id=veiculo.get("machine_id", ""),
+                    machine_name=machine_name,
+                    machine_plate=veiculo.get("placa", ""),
+                    notification_type="fuel_low",
+                    message=f"⚠️ Combustível baixo: {machine_name} está com {porcentagem:.0f}% ({nivel_atual:.0f}L de {capacidade:.0f}L). Considere reabastecer.",
+                    hours_remaining=None,
+                    days_remaining=None,
+                    created_at=today.isoformat()
+                ))
+    
     # Sort by urgency
     def sort_key(n):
         if "urgent" in n.notification_type or "empty" in n.notification_type:
