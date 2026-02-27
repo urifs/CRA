@@ -967,14 +967,83 @@ async def buscar_cbo(q: str):
 
 @rh_router.post("/epi/consultar-epis-cbo")
 async def consultar_epis_por_cbo(codigo_cbo: str = Body(...), ocupacao: str = Body(...)):
-    """Consultar EPIs recomendados por código CBO"""
+    """Consultar EPIs recomendados por código CBO - SEMPRE usa IA Gemini para precisão"""
     
-    categoria = get_categoria_epi(codigo_cbo)
-    epis_base = EPI_POR_CARGO.get(categoria, EPI_POR_CARGO["construcao_civil"])
+    # Normalizar código CBO
+    codigo_cbo = codigo_cbo.strip()
     
-    if codigo_cbo in CBO_DATABASE:
-        epis = []
-        mapa_risco = []
+    # SEMPRE consultar a IA Gemini com o código CBO para garantir precisão
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        prompt = f"""Você é um especialista em segurança do trabalho no Brasil, com profundo conhecimento da Classificação Brasileira de Ocupações (CBO).
+
+CÓDIGO CBO INFORMADO: {codigo_cbo}
+OCUPAÇÃO: {ocupacao}
+
+IMPORTANTE: Primeiro, verifique se o código CBO {codigo_cbo} corresponde EXATAMENTE à ocupação "{ocupacao}". 
+Se houver divergência, informe a ocupação correta para este código CBO.
+
+Com base no código CBO {codigo_cbo}, liste TODOS os Equipamentos de Proteção Individual (EPIs) obrigatórios e recomendados conforme as Normas Regulamentadoras (NRs) brasileiras.
+
+Para cada EPI, forneça:
+1. Nome do EPI
+2. CA (Certificado de Aprovação) - coloque "A definir" se não souber o número específico
+3. Validade média em meses
+4. Prioridade: "Alta" (obrigatório por NR), "Média" (recomendado), "Baixa" (opcional)
+
+Também forneça um mapa de risco com os principais riscos da ocupação segundo a NR correspondente.
+
+Responda APENAS em formato JSON válido:
+{{
+  "codigo_cbo": "{codigo_cbo}",
+  "ocupacao_oficial": "Nome oficial da ocupação segundo CBO",
+  "epis": [
+    {{"nome": "Nome do EPI", "ca": "A definir", "validade_meses": 36, "prioridade": "Alta"}}
+  ],
+  "mapa_risco": [
+    {{"risco": "Descrição do risco", "prioridade": "Alta", "epi_recomendado": "Nome do EPI"}}
+  ]
+}}"""
+        
+        llm = LlmChat(
+            api_key=os.environ.get("EMERGENT_LLM_KEY"),
+            session_id=f"epi_cbo_{codigo_cbo}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            system_message="Você é especialista em segurança do trabalho, CBO e EPIs no Brasil. Sempre responda com precisão baseado no código CBO informado."
+        ).with_model("gemini", "gemini-2.5-flash")
+        
+        response_text = await llm.send_message(UserMessage(text=prompt))
+        
+        if hasattr(response_text, 'content'):
+            response_text = response_text.content
+        
+        response_text = str(response_text).strip()
+        
+        # Limpar resposta para extrair JSON
+        if response_text.startswith("```"):
+            lines = response_text.split("\n")
+            json_lines = []
+            in_json = False
+            for line in lines:
+                if line.startswith("```json"):
+                    in_json = True
+                    continue
+                elif line.startswith("```"):
+                    in_json = False
+                    continue
+                elif in_json:
+                    json_lines.append(line)
+            response_text = "\n".join(json_lines)
+        
+        result = json.loads(response_text)
+        result["fonte"] = "IA_GEMINI"
+        result["codigo_consultado"] = codigo_cbo
+        return result
+        
+    except Exception as e:
+        # Fallback: usar base local se IA falhar
+        categoria = get_categoria_epi(codigo_cbo)
+        epis_base = EPI_POR_CARGO.get(categoria, EPI_POR_CARGO["construcao_civil"])
         
         EPI_RISK_MAP = {
             "Capacete": {"risco": "Queda de objetos/impactos na cabeça", "prioridade": "Alta"},
@@ -993,6 +1062,9 @@ async def consultar_epis_por_cbo(codigo_cbo: str = Body(...), ocupacao: str = Bo
             "Luvas de raspa": {"risco": "Queimaduras nas mãos", "prioridade": "Alta"},
         }
         
+        epis = []
+        mapa_risco = []
+        
         for epi in epis_base:
             epis.append({
                 "nome": epi["nome"],
@@ -1010,42 +1082,13 @@ async def consultar_epis_por_cbo(codigo_cbo: str = Body(...), ocupacao: str = Bo
                 })
         
         return {
+            "codigo_cbo": codigo_cbo,
+            "ocupacao_oficial": ocupacao,
             "epis": epis,
             "mapa_risco": mapa_risco,
-            "fonte": "CBO_DATABASE"
+            "fonte": "FALLBACK_LOCAL",
+            "erro": str(e)
         }
-    
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-        prompt = f"""Você é um especialista em segurança do trabalho no Brasil.
-Para a ocupação CBO {codigo_cbo} - "{ocupacao}", liste TODOS os Equipamentos de Proteção Individual (EPIs) obrigatórios e recomendados conforme as Normas Regulamentadoras (NRs).
-
-Para cada EPI, forneça:
-1. Nome do EPI
-2. CA (Certificado de Aprovação) - coloque "A definir" se não souber
-3. Validade média em meses
-4. Prioridade: "Alta" (obrigatório), "Média" (recomendado), "Baixa" (opcional)
-
-Também forneça um mapa de risco com os principais riscos da ocupação.
-
-Responda APENAS em formato JSON:
-{{
-  "epis": [
-    {{"nome": "Capacete de segurança", "ca": "A definir", "validade_meses": 36, "prioridade": "Alta"}}
-  ],
-  "mapa_risco": [
-    {{"risco": "Queda de objetos", "prioridade": "Alta", "epi_recomendado": "Capacete de segurança"}}
-  ]
-}}"""
-        
-        llm = LlmChat(
-            api_key=os.environ.get("EMERGENT_LLM_KEY"),
-            session_id=f"epi_cbo_{codigo_cbo}",
-            system_message="Você é especialista em segurança do trabalho e EPIs no Brasil."
-        ).with_model("gemini", "gemini-2.5-flash")
-        
-        response_text = await llm.send_message(UserMessage(text=prompt))
         
         if hasattr(response_text, 'content'):
             response_text = response_text.content
