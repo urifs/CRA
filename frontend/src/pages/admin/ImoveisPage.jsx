@@ -312,9 +312,9 @@ export default function ImoveisPage() {
   };
 
   const calcularValorTotal = () => {
-    const aluguel = parseFloat(formData.valor_aluguel) || 0;
-    const condominio = parseFloat(formData.valor_condominio) || 0;
-    const iptu = parseFloat(formData.valor_iptu) || 0;
+    const aluguel = parseCurrency(formData.valor_aluguel) || 0;
+    const condominio = parseCurrency(formData.valor_condominio) || 0;
+    const iptu = parseCurrency(formData.valor_iptu) || 0;
     return aluguel + condominio + iptu;
   };
 
