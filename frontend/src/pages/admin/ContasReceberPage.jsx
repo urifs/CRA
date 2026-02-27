@@ -48,7 +48,6 @@ export default function ContasReceberPage() {
   const [frotas, setFrotas] = useState([]);
   const [contasBancarias, setContasBancarias] = useState([]);
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
-  const [novoCadastroData, setNovoCadastroData] = useState({ nome_razao: "", cnpj_cpf: "", telefone: "", email: "" });
   
   // Modal de Quitação
   const [showQuitarModal, setShowQuitarModal] = useState(false);
