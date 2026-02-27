@@ -115,12 +115,14 @@ class TokenResponse(BaseModel):
 class CategoryCreate(BaseModel):
     name: str
     description: Optional[str] = ""
+    color: Optional[str] = "#E31A1A"  # Cor padrão vermelho
 
 class CategoryResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     name: str
     description: str
+    color: str = "#E31A1A"
     subcategories_count: int = 0
     created_at: str
 
