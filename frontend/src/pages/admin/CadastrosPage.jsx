@@ -277,7 +277,7 @@ export default function CadastrosPage() {
         grupo: cadastro.grupo || "",
         rota: cadastro.rota || "",
         vendedor: cadastro.vendedor || "",
-        limite_credito: cadastro.limite_credito?.toString() || "",
+        limite_credito: cadastro.limite_credito ? formatCurrency((cadastro.limite_credito * 100).toString()) : "",
         observacoes: cadastro.observacoes || ""
       });
     } else {
