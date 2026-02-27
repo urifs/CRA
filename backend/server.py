@@ -7167,81 +7167,79 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("descricao", "-"))
                 ])
         elif category == "categories":
-            headers = ["Nome", "Descrição"]
+            headers = [cell("Nome", True), cell("Descrição", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("name", "-")[:30],
-                    item.get("description", "-")[:50]
+                    cell(item.get("name", "-")),
+                    cell(item.get("description", "-"))
                 ])
         elif category == "stock_movements":
-            headers = ["Tipo", "Quantidade", "Motivo", "Data"]
+            headers = [cell("Tipo", True), cell("Quantidade", True), cell("Motivo", True), cell("Data", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    "ENTRADA" if item.get("movement_type") == "entrada" else "SAÍDA",
-                    str(item.get("quantity", 0)),
-                    item.get("reason", "-")[:30],
-                    item.get("created_at", "-")[:10] if item.get("created_at") else "-"
+                    cell("ENTRADA" if item.get("movement_type") == "entrada" else "SAÍDA"),
+                    cell(str(item.get("quantity", 0))),
+                    cell(item.get("reason", "-")),
+                    cell(item.get("created_at", "-")[:10] if item.get("created_at") else "-")
                 ])
         elif category == "usage_logs":
-            headers = ["Máquina ID", "Horas", "Data", "Observações"]
+            headers = [cell("Máquina ID", True), cell("Horas", True), cell("Data", True), cell("Observações", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("machine_id", "-")[:15] if item.get("machine_id") else "-",
-                    str(item.get("hours", 0)),
-                    item.get("created_at", "-")[:10] if item.get("created_at") else "-",
-                    item.get("notes", "-")[:30]
+                    cell(item.get("machine_id", "-")[:15] if item.get("machine_id") else "-"),
+                    cell(str(item.get("hours", 0))),
+                    cell(item.get("created_at", "-")[:10] if item.get("created_at") else "-"),
+                    cell(item.get("notes", "-"))
                 ])
         elif category == "users":
-            headers = ["Nome", "Email", "Tipo", "Criado em"]
+            headers = [cell("Nome", True), cell("Email", True), cell("Tipo", True), cell("Criado em", True)]
             table_data = [headers]
             for item in data:
                 role_map = {"admin": "Administrador", "gerenciamento": "Gerenciamento", "administrativo": "Administrativo", "ambos": "Ambos"}
                 table_data.append([
-                    item.get("name", "-")[:25],
-                    item.get("email", "-")[:30],
-                    role_map.get(item.get("role", ""), item.get("role", "-")),
-                    item.get("created_at", "-")[:10] if item.get("created_at") else "-"
+                    cell(item.get("name", "-")),
+                    cell(item.get("email", "-")),
+                    cell(role_map.get(item.get("role", ""), item.get("role", "-"))),
+                    cell(item.get("created_at", "-")[:10] if item.get("created_at") else "-")
                 ])
         elif category == "audit_logs":
-            headers = ["Data", "Usuário", "Ação", "Módulo"]
+            headers = [cell("Data", True), cell("Usuário", True), cell("Ação", True), cell("Módulo", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("created_at", "-")[:16] if item.get("created_at") else "-",
-                    item.get("user_name", "-")[:20],
-                    item.get("action", "-")[:30],
-                    item.get("module", "-")[:15]
+                    cell(item.get("created_at", "-")[:16] if item.get("created_at") else "-"),
+                    cell(item.get("user_name", "-")),
+                    cell(item.get("action", "-")),
+                    cell(item.get("module", "-"))
                 ])
         else:
             # Fallback genérico
-            headers = ["ID", "Dados"]
+            headers = [cell("ID", True), cell("Dados", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("id", "-")[:20] if item.get("id") else "-",
-                    str(item)[:60]
+                    cell(item.get("id", "-")[:20] if item.get("id") else "-"),
+                    cell(str(item)[:100])
                 ])
         
-        # Criar e estilizar a tabela
-        col_widths = [doc.width / len(headers)] * len(headers)
+        # Criar e estilizar a tabela - número de colunas baseado no número de headers
+        num_cols = len(table_data[0]) if table_data else 5
+        col_widths = [doc.width / num_cols] * num_cols
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.89, 0.10, 0.10)),  # Vermelho CRA
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-            ('TOPPADDING', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
             ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         elements.append(table)
     
