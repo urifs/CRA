@@ -214,10 +214,10 @@ export default function ContasPagarPage() {
         documento: conta.documento || "",
         numero_doc: conta.numero_doc || "",
         descricao: conta.descricao || "",
-        valor: conta.valor?.toString() || "",
-        valor_desconto: conta.valor_desconto?.toString() || "0",
-        valor_juros: conta.valor_juros?.toString() || "0",
-        valor_multa: conta.valor_multa?.toString() || "0",
+        valor: conta.valor ? formatCurrency((conta.valor * 100).toString()) : "",
+        valor_desconto: conta.valor_desconto ? formatCurrency((conta.valor_desconto * 100).toString()) : "R$ 0,00",
+        valor_juros: conta.valor_juros ? formatCurrency((conta.valor_juros * 100).toString()) : "R$ 0,00",
+        valor_multa: conta.valor_multa ? formatCurrency((conta.valor_multa * 100).toString()) : "R$ 0,00",
         data_emissao: conta.data_emissao || "",
         data_vencimento: conta.data_vencimento || "",
         plano_conta_id: conta.plano_conta_id || "",
@@ -237,7 +237,7 @@ export default function ContasPagarPage() {
       setEditingConta(null);
       setFormData({
         fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
-        valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
+        valor: "", valor_desconto: "R$ 0,00", valor_juros: "R$ 0,00", valor_multa: "R$ 0,00",
         data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "",
         plano_conta_id: "", plano_conta_nome: "", 
         subconta_id: "", subconta_nome: "",
