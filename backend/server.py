@@ -67,6 +67,8 @@ from routes.machines import machines_router
 from routes.chatbot import chatbot_router
 from routes.storage import storage_router
 from routes.exports import export_router
+from routes.stock import stock_router
+from routes.obras import obras_router
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
