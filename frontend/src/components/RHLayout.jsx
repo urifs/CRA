@@ -70,6 +70,7 @@ export const RHLayout = () => {
     { path: "/rh/ferias", icon: Calendar, label: "Férias e Escalas" },
     { path: "/rh/epi", icon: HardHat, label: "Gestão de EPI/EPC" },
     { path: "/rh/custos", icon: Calculator, label: "Gestão de Custos" },
+    { path: "/rh/exportar", icon: FileDown, label: "Exportação" },
   ];
 
   const mobileNavItems = [
