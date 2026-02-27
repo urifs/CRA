@@ -112,16 +112,18 @@ export default function StockPage() {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
     
     try {
-      const [itemsRes, movementsRes, categoriesRes, subcategoriesRes] = await Promise.all([
+      const [itemsRes, movementsRes, categoriesRes, subcategoriesRes, machinesRes] = await Promise.all([
         axios.get(`${API}/stock/items?low_stock_only=${showLowStockOnly}`, { headers }),
         axios.get(`${API}/stock/movements`, { headers }),
         axios.get(`${API}/stock/categories`, { headers }),
-        axios.get(`${API}/stock/subcategories`, { headers })
+        axios.get(`${API}/stock/subcategories`, { headers }),
+        axios.get(`${API}/machines`, { headers })
       ]);
       setItems(itemsRes.data);
       setMovements(movementsRes.data);
       setCategories(categoriesRes.data);
       setSubcategories(subcategoriesRes.data);
+      setMachines(machinesRes.data || []);
     } catch (error) {
       toast.error("Erro ao carregar dados do estoque");
     } finally {
