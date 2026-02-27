@@ -750,6 +750,7 @@ async def create_category(category: CategoryCreate, current_user: dict = Depends
         "id": category_id,
         "name": category.name,
         "description": category.description or "",
+        "color": category.color or "#E31A1A",
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -768,6 +769,7 @@ async def create_category(category: CategoryCreate, current_user: dict = Depends
         id=category_id,
         name=category.name,
         description=category.description or "",
+        color=category.color or "#E31A1A",
         created_at=category_doc["created_at"]
     )
 
@@ -778,6 +780,7 @@ async def get_categories(current_user: dict = Depends(get_current_user)):
         id=c["id"],
         name=c["name"],
         description=c.get("description", ""),
+        color=c.get("color", "#E31A1A"),
         created_at=c["created_at"]
     ) for c in categories]
 
@@ -808,7 +811,7 @@ async def update_category(category_id: str, category: CategoryCreate, current_us
     
     await db.categories.update_one(
         {"id": category_id},
-        {"$set": {"name": category.name, "description": category.description or ""}}
+        {"$set": {"name": category.name, "description": category.description or "", "color": category.color or "#E31A1A"}}
     )
     
     # Audit log
@@ -825,6 +828,7 @@ async def update_category(category_id: str, category: CategoryCreate, current_us
         id=category_id,
         name=category.name,
         description=category.description or "",
+        color=category.color or "#E31A1A",
         created_at=existing["created_at"]
     )
 
