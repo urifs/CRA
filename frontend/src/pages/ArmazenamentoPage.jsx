@@ -621,19 +621,26 @@ export default function ArmazenamentoPage() {
       return;
     }
     
-    if (!confirm(`Excluir ${selectedItemsArray.length} item(s) selecionado(s)?`)) return;
+    if (!confirm(`Mover ${selectedItemsArray.length} item(s) para a lixeira?`)) return;
     
     try {
+      let successCount = 0;
       for (const item of selectedItemsArray) {
-        await axios.delete(`${API}/storage/delete`, {
-          params: { path: item.path },
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        try {
+          await axios.delete(`${API}/storage/delete`, {
+            params: { path: item.path },
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Erro ao excluir ${item.name}:`, err);
+        }
       }
-      toast.success(`${selectedItemsArray.length} item(s) movido(s) para lixeira!`);
+      toast.success(`${successCount} item(s) movido(s) para lixeira!`);
       setSelectedItems(new Set());
       setSelectionMode(false);
       fetchItems();
+      fetchTrashItems(); // Atualizar contagem da lixeira
     } catch (error) {
       toast.error("Erro ao excluir itens");
     }
