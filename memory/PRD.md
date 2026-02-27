@@ -1,3 +1,24 @@
+# CRA Construtora - Sistema de Gestão Empresarial (ERP)
+
+## Changelog - 27/02/2026
+
+### Bug Fix: Validação de Cargos no Painel Admin
+- **Problema**: Ao alterar o cargo de um usuário no painel admin para novos roles (como RH, combinações), o sistema retornava erro "Role inválido. Opções: gerenciamento, administrativo, ambos, admin"
+- **Solução**: Atualizada a lista de roles válidos no backend para incluir todas as combinações e o novo cargo "Programador"
+- **Roles Válidos Agora**:
+  - gerenciamento, administrativo, rh
+  - ambos (Gerenciamento + Administrativo)
+  - ambos_rh (Ger + Admin + RH)
+  - gerenciamento_rh, administrativo_rh
+  - admin, **programador** (ambos com acesso total)
+
+### Nova Funcionalidade: Cargo de Programador
+- Adicionado novo cargo "Programador" com as mesmas permissões máximas do "admin"
+- Programador tem acesso a: Painel Admin, todos os sistemas, gerenciamento de usuários, banco de dados, etc.
+- Badge azul para identificação visual do cargo
+
+---
+
 # PRD - Sistema de Gerenciamento ERP
 
 ## Problema Original
