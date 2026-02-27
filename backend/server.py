@@ -6989,6 +6989,15 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
     subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=TA_CENTER, spaceAfter=30)
     section_style = ParagraphStyle('SectionTitle', parent=styles['Heading2'], fontSize=14, textColor=colors.black, spaceBefore=20, spaceAfter=10)
     normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=10, textColor=colors.black, spaceAfter=5)
+    # Estilo para células da tabela com quebra de linha
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, textColor=colors.black, wordWrap='LTR', leading=10)
+    header_cell_style = ParagraphStyle('HeaderCellStyle', parent=styles['Normal'], fontSize=9, textColor=colors.white, fontName='Helvetica-Bold', wordWrap='LTR', leading=11)
+    
+    # Função auxiliar para criar célula com quebra de linha
+    def cell(text, is_header=False):
+        if text is None:
+            text = "-"
+        return Paragraph(str(text), header_cell_style if is_header else cell_style)
     
     elements = []
     
