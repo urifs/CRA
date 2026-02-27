@@ -10340,6 +10340,9 @@ async def rename_storage_item(
 api_router.include_router(rh_router)
 api_router.include_router(admin_router)
 api_router.include_router(machines_router)
+api_router.include_router(chatbot_router)
+api_router.include_router(storage_router)
+api_router.include_router(export_router)
 
 # Include the router in the main app
 app.include_router(api_router)
