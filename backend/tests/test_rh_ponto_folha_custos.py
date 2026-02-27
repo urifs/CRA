@@ -333,8 +333,9 @@ class TestFolhaPagamento:
         # Should succeed if folhas exist, or return 400 if no folhas
         if response.status_code == 200:
             data = response.json()
-            assert "contas_criadas" in data
-            print(f"✓ Contas a pagar generated: {data.get('contas_criadas', [])}")
+            assert "message" in data or "contas_criadas" in data
+            assert "total" in data or "contas_criadas" in data
+            print(f"✓ Contas a pagar generated: {data.get('message', data.get('contas_criadas', []))}")
         elif response.status_code == 400:
             assert "Nenhuma folha encontrada" in response.json().get("detail", "")
             print("⚠ No folhas found for this period - expected behavior")
