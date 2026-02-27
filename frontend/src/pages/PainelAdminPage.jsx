@@ -1017,6 +1017,12 @@ export default function PainelAdminPage() {
                         Administrador (Acesso Total)
                       </span>
                     </SelectItem>
+                    <SelectItem value="programador" className="text-white">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                        Programador (Acesso Total)
+                      </span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
