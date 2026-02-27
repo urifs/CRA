@@ -4708,6 +4708,7 @@ async def update_conta_receber(id: str, data: ContaReceberCreate, current_user: 
 
 class QuitarContaReceberRequest(BaseModel):
     data_recebimento: Optional[str] = None
+    conta_bancaria_id: Optional[str] = None
 
 @api_router.patch("/admin/contas-receber/{id}/quitar")
 async def quitar_conta_receber(id: str, data: Optional[QuitarContaReceberRequest] = None, current_user: dict = Depends(get_current_user)):
@@ -4717,13 +4718,18 @@ async def quitar_conta_receber(id: str, data: Optional[QuitarContaReceberRequest
     
     # Usar a data fornecida ou a data atual
     data_recebimento = data.data_recebimento if data and data.data_recebimento else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    conta_bancaria_id = data.conta_bancaria_id if data else None
     
-    await db.contas_receber.update_one({"id": id}, {
-        "$set": {
-            "status": "quitada",
-            "data_recebimento": data_recebimento
-        }
-    })
+    update_data = {
+        "status": "quitada",
+        "data_recebimento": data_recebimento
+    }
+    
+    # Se informou conta bancária, vincular
+    if conta_bancaria_id:
+        update_data["conta_bancaria_id"] = conta_bancaria_id
+    
+    await db.contas_receber.update_one({"id": id}, {"$set": update_data})
     await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - QUITADA em {data_recebimento}")
     return {"message": "Conta quitada com sucesso", "data_recebimento": data_recebimento}
 
