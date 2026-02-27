@@ -1,5 +1,24 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 27/02/2026 (Sessão 17)
+
+### Máscaras de Formatação Automática
+- ✅ **Utilitário de máscaras** criado em `/app/frontend/src/utils/masks.js`:
+  - `formatCPF`: 000.000.000-00
+  - `formatCNPJ`: 00.000.000/0000-00
+  - `formatCPFouCNPJ`: Detecta automaticamente se é CPF ou CNPJ pelo tamanho
+  - `formatCEP`: 00000-000
+  - `formatTelefone`: (00) 0000-0000 ou (00) 00000-0000
+
+- ✅ **Formulários atualizados** com máscaras automáticas:
+  - `CadastroFormModal.jsx` - CPF/CNPJ, CEP, Telefone, Celular
+  - `CadastrosPage.jsx` - CPF/CNPJ, CEP, Telefone, Celular
+  - `FuncionariosPage.jsx` (RH) - CPF, CEP, Telefone, Celular
+  - `ContasBancariasPage.jsx` - CPF/CNPJ do Titular
+  - `ImoveisPage.jsx` - CEP
+
+---
+
 ## Changelog - 27/02/2026 (Sessão 16)
 
 ### Sistema Financeiro - Quitação de Contas com Conta Bancária
