@@ -11,7 +11,23 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (26/02/2026) - Parte 8
+### Sessão Atual (26/02/2026) - Parte 9
+
+#### ✅ Correção da Integração Gemini para EPIs (P1 - Crítico) - COMPLETO (26/02/2026)
+- **Problema**: A integração com Gemini para consulta de EPIs por CBO estava falhando
+- **Causa Raiz**: Nome do modelo incorreto (`gemini-2.0-flash-exp`) e provider errado (`google`)
+- **Solução**: Atualizado para modelo correto (`gemini-2.5-flash`) e provider correto (`gemini`)
+- **Arquivos Modificados**: `backend/server.py` (linhas ~10592 e ~10680)
+- **Resultado**: Integração funcionando 100%, EPIs são carregados automaticamente por CBO
+- **Testes**: 27/27 passaram (17 backend + 10 frontend)
+
+#### ✅ Busca de EPIs por CBO - FUNCIONANDO
+- Busca por código CBO (ex: 7152-10) ou nome da ocupação (ex: "pedreiro")
+- Base de dados local com ~30 ocupações e EPIs predefinidos
+- Para CBOs não cadastrados, IA Gemini é consultada automaticamente
+- Mapa de risco gerado automaticamente com prioridades (Alta/Média/Baixa)
+
+### Sessão Anterior (26/02/2026) - Parte 8
 
 #### ✅ Sistema de RH Completo - IMPLEMENTADO
 Novo sistema de Recursos Humanos adicionado à plataforma com:
