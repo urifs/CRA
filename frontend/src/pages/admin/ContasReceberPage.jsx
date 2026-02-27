@@ -581,59 +581,13 @@ export default function ContasReceberPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Cadastro Rápido de Cliente */}
-      <Dialog open={showNovoCadastro} onOpenChange={setShowNovoCadastro}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus size={20} />
-              Cadastrar Cliente
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleNovoCadastro} className="space-y-4">
-            <div>
-              <label className="form-label">Nome / Razão Social *</label>
-              <Input 
-                value={novoCadastroData.nome_razao} 
-                onChange={(e) => setNovoCadastroData({...novoCadastroData, nome_razao: e.target.value})}
-                placeholder="Nome do cliente"
-                required
-              />
-            </div>
-            <div>
-              <label className="form-label">CNPJ / CPF</label>
-              <Input 
-                value={novoCadastroData.cnpj_cpf} 
-                onChange={(e) => setNovoCadastroData({...novoCadastroData, cnpj_cpf: e.target.value})}
-                placeholder="00.000.000/0000-00"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">Telefone</label>
-                <Input 
-                  value={novoCadastroData.telefone} 
-                  onChange={(e) => setNovoCadastroData({...novoCadastroData, telefone: e.target.value})}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-              <div>
-                <label className="form-label">Email</label>
-                <Input 
-                  type="email"
-                  value={novoCadastroData.email} 
-                  onChange={(e) => setNovoCadastroData({...novoCadastroData, email: e.target.value})}
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={() => setShowNovoCadastro(false)} className="flex-1">Cancelar</Button>
-              <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#b38900]">Cadastrar</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Modal Cadastro Completo de Cliente */}
+      <CadastroFormModal
+        open={showNovoCadastro}
+        onOpenChange={setShowNovoCadastro}
+        defaultTipo="cliente"
+        onSuccess={handleNovoCadastroSuccess}
+      />
 
       {/* Modal de Quitação */}
       <Dialog open={showQuitarModal} onOpenChange={setShowQuitarModal}>
