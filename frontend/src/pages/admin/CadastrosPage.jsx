@@ -224,7 +224,7 @@ export default function CadastrosPage() {
     try {
       const dataToSend = {
         ...formData,
-        limite_credito: formData.limite_credito ? parseFloat(formData.limite_credito) : null
+        limite_credito: formData.limite_credito ? parseCurrency(formData.limite_credito) : null
       };
       
       if (editingCadastro) {
