@@ -16,8 +16,23 @@ import {
   ChevronRight,
   Loader2,
   Search,
-  Truck
+  Truck,
+  Palette
 } from "lucide-react";
+
+// Cores predefinidas para categorias
+const CATEGORY_COLORS = [
+  { name: "Vermelho", value: "#E31A1A" },
+  { name: "Azul", value: "#3B82F6" },
+  { name: "Verde", value: "#10B981" },
+  { name: "Amarelo", value: "#F59E0B" },
+  { name: "Roxo", value: "#8B5CF6" },
+  { name: "Rosa", value: "#EC4899" },
+  { name: "Laranja", value: "#F97316" },
+  { name: "Ciano", value: "#06B6D4" },
+  { name: "Índigo", value: "#6366F1" },
+  { name: "Cinza", value: "#6B7280" },
+];
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
@@ -33,7 +48,7 @@ export default function CategoriesPage() {
   const [editingSubcategory, setEditingSubcategory] = useState(null);
   
   // Form states
-  const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
+  const [categoryForm, setCategoryForm] = useState({ name: "", description: "", color: "#E31A1A" });
   const [subcategoryForm, setSubcategoryForm] = useState({ name: "", category_id: "", description: "" });
   
   const [formLoading, setFormLoading] = useState(false);
