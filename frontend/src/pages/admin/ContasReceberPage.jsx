@@ -249,6 +249,15 @@ export default function ContasReceberPage() {
 
   const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
+  // Calcula valor final: Valor - Desconto + Juros + Multa
+  const calcularValorFinal = () => {
+    const valor = parseCurrency(formData.valor) || 0;
+    const desconto = parseCurrency(formData.valor_desconto) || 0;
+    const juros = parseCurrency(formData.valor_juros) || 0;
+    const multa = parseCurrency(formData.valor_multa) || 0;
+    return valor - desconto + juros + multa;
+  };
+
   const getStatusInfo = (conta) => {
     if (conta.status === "quitada") return { label: "Quitada", color: "bg-green-100 text-green-700", icon: CheckCircle2 };
     if (conta.status === "cancelada") return { label: "Cancelada", color: "bg-gray-100 text-gray-700", icon: X };
