@@ -94,6 +94,7 @@ export default function ContasBancariasPage() {
     chave_pix: "",
     tipo_chave_pix: "",
     saldo_inicial: "0",
+    saldo_atual: "0",
     ativo: true,
     cor: "#3B82F6",
     observacoes: ""
