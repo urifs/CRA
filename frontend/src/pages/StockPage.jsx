@@ -82,7 +82,8 @@ export default function StockPage() {
     min_quantity: "",
     unit_price: "",
     location: "",
-    notes: ""
+    notes: "",
+    machine_ids: []
   });
 
   const [movementForm, setMovementForm] = useState({
