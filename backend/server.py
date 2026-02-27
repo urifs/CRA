@@ -443,15 +443,48 @@ class HorimetroResponse(BaseModel):
 
 # ============ COMBUSTIVEL MODELS ============
 
+# Modelo para veículo abastecedor (tanque)
+class VeiculoAbastecedorCreate(BaseModel):
+    machine_id: str  # ID da máquina que é abastecedora
+    capacidade_diesel: float = 0  # Capacidade total de diesel em litros
+    capacidade_oleo: float = 0  # Capacidade total de óleo em litros
+    capacidade_graxa: float = 0  # Capacidade total de graxa em litros
+    litros_diesel: float = 0  # Litros de diesel atual
+    litros_oleo: float = 0  # Litros de óleo atual
+    litros_graxa: float = 0  # Litros de graxa atual
+    operador_id: Optional[str] = None
+
+class VeiculoAbastecedorResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    machine_id: str
+    machine_name: Optional[str] = None
+    capacidade_diesel: float = 0
+    capacidade_oleo: float = 0
+    capacidade_graxa: float = 0
+    litros_diesel: float = 0
+    litros_oleo: float = 0
+    litros_graxa: float = 0
+    operador_id: Optional[str] = None
+    operador_nome: Optional[str] = None
+    created_by: str
+    created_at: str
+    updated_at: Optional[str] = None
+
+# Modelo para registro de combustível (abastecimento)
 class CombustivelCreate(BaseModel):
     machine_id: str
     data: str
-    tipo_medicao: str  # 'litros_hora' ou 'litros_km'
+    tipo_registro: str = "abastecido"  # "abastecedor" ou "abastecido"
+    tipo_medicao: str = "litros"  # 'litros_hora' ou 'litros_km' ou 'litros'
     hora_km_inicial: Optional[float] = None
-    litros_inicial: float
-    litros_final: float
-    litros_consumidos: Optional[float] = None
-    operador: Optional[str] = None
+    litros_diesel: float = 0
+    litros_oleo: float = 0
+    litros_graxa: float = 0
+    # Para abastecido
+    fonte_abastecimento: Optional[str] = None  # "interno" ou "externo"
+    veiculo_abastecedor_id: Optional[str] = None  # ID do veículo abastecedor (se interno)
+    operador_id: Optional[str] = None
     observacoes: Optional[str] = None
 
 class CombustivelResponse(BaseModel):
@@ -460,12 +493,17 @@ class CombustivelResponse(BaseModel):
     machine_id: str
     machine_name: Optional[str] = None
     data: str
-    tipo_medicao: str
+    tipo_registro: str = "abastecido"
+    tipo_medicao: str = "litros"
     hora_km_inicial: Optional[float] = None
-    litros_inicial: float
-    litros_final: float
-    litros_consumidos: float
-    operador: Optional[str] = None
+    litros_diesel: float = 0
+    litros_oleo: float = 0
+    litros_graxa: float = 0
+    fonte_abastecimento: Optional[str] = None
+    veiculo_abastecedor_id: Optional[str] = None
+    veiculo_abastecedor_nome: Optional[str] = None
+    operador_id: Optional[str] = None
+    operador_nome: Optional[str] = None
     observacoes: Optional[str] = None
     created_by: str
     created_at: str
