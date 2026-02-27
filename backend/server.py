@@ -5726,7 +5726,9 @@ class UserRoleUpdate(BaseModel):
 @api_router.patch("/admin-panel/users/{user_id}/role")
 async def update_user_role(user_id: str, data: UserRoleUpdate, current_user: dict = Depends(get_current_user)):
     """Atualiza o role/permissões de um usuário"""
-    if current_user.get("role") != "admin":
+    # Roles com acesso total (admin e programador)
+    admin_roles = ["admin", "programador"]
+    if current_user.get("role") not in admin_roles:
         raise HTTPException(status_code=403, detail="Apenas administradores podem alterar permissões")
     
     # All valid roles including combination roles and custom roles
