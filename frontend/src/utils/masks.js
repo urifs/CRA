@@ -84,10 +84,15 @@ export const formatCurrency = (value) => {
   // Limita a 15 dígitos (trilhões)
   numbers = numbers.slice(0, 15);
   
-  if (numbers === "") return "";
+  if (numbers === "" || numbers === "0") return "";
+  
+  // Remove zeros à esquerda
+  numbers = numbers.replace(/^0+/, '') || "0";
   
   // Converte para centavos e depois para reais
   const cents = parseInt(numbers, 10);
+  if (isNaN(cents)) return "";
+  
   const reais = (cents / 100).toFixed(2);
   
   // Formata com separadores brasileiros
