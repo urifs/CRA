@@ -7024,65 +7024,65 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
     if not data:
         elements.append(Paragraph("Nenhum registro encontrado.", normal_style))
     else:
-        # Criar tabela com os dados
+        # Criar tabela com os dados usando Paragraph para quebra de linha
         if category == "machines":
-            headers = ["Nome", "Placa", "Marca", "Modelo", "Status"]
+            headers = [cell("Nome", True), cell("Placa", True), cell("Marca", True), cell("Modelo", True), cell("Status", True)]
             table_data = [headers]
             for item in data:
                 status = "Operacional" if item.get("status") == "operational" else "Em manutenção"
                 table_data.append([
-                    item.get("name", "-")[:30],
-                    item.get("plate", "-"),
-                    item.get("brand", "-")[:15],
-                    item.get("model", "-")[:15],
-                    status
+                    cell(item.get("name", "-")),
+                    cell(item.get("plate", "-")),
+                    cell(item.get("brand", "-")),
+                    cell(item.get("model", "-")),
+                    cell(status)
                 ])
         elif category == "maintenances":
-            headers = ["Peça", "Tipo", "Valor", "Data", "Troca Óleo"]
+            headers = [cell("Peça", True), cell("Tipo", True), cell("Valor", True), cell("Data", True), cell("Troca Óleo", True)]
             table_data = [headers]
             for item in data:
                 tipo = "Preventiva" if item.get("maintenance_type") == "preventiva" else "Corretiva"
                 table_data.append([
-                    item.get("part_name", "-")[:25],
-                    tipo,
-                    f"R$ {item.get('part_value', 0):.2f}",
-                    item.get("replacement_date", "-")[:10] if item.get("replacement_date") else "-",
-                    "Sim" if item.get("is_oil_change") else "Não"
+                    cell(item.get("part_name", "-")),
+                    cell(tipo),
+                    cell(f"R$ {item.get('part_value', 0):.2f}"),
+                    cell(item.get("replacement_date", "-")[:10] if item.get("replacement_date") else "-"),
+                    cell("Sim" if item.get("is_oil_change") else "Não")
                 ])
         elif category == "stock_items":
-            headers = ["Nome", "Código", "Categoria", "Qtd", "Mínimo", "Preço Un."]
+            headers = [cell("Nome", True), cell("Código", True), cell("Categoria", True), cell("Qtd", True), cell("Mínimo", True), cell("Preço Un.", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("name", "-")[:20],
-                    item.get("code", "-"),
-                    item.get("category", "-")[:15],
-                    str(item.get("quantity", 0)),
-                    str(item.get("min_quantity", 0)),
-                    f"R$ {item.get('unit_price', 0):.2f}"
+                    cell(item.get("name", "-")),
+                    cell(item.get("code", "-")),
+                    cell(item.get("category", "-")),
+                    cell(str(item.get("quantity", 0))),
+                    cell(str(item.get("min_quantity", 0))),
+                    cell(f"R$ {item.get('unit_price', 0):.2f}")
                 ])
         elif category == "obras":
-            headers = ["Nome", "Local", "Status", "Início", "Fim"]
+            headers = [cell("Nome", True), cell("Local", True), cell("Status", True), cell("Início", True), cell("Fim", True)]
             table_data = [headers]
             for item in data:
                 status_map = {"em_andamento": "Em andamento", "concluida": "Concluída", "pausada": "Pausada"}
                 table_data.append([
-                    item.get("name", "-")[:25],
-                    item.get("location", "-")[:20],
-                    status_map.get(item.get("status", ""), item.get("status", "-")),
-                    item.get("start_date", "-")[:10] if item.get("start_date") else "-",
-                    item.get("end_date", "-")[:10] if item.get("end_date") else "-"
+                    cell(item.get("name", "-")),
+                    cell(item.get("location", "-")),
+                    cell(status_map.get(item.get("status", ""), item.get("status", "-"))),
+                    cell(item.get("start_date", "-")[:10] if item.get("start_date") else "-"),
+                    cell(item.get("end_date", "-")[:10] if item.get("end_date") else "-")
                 ])
         elif category == "contas_pagar":
-            headers = ["Descrição", "Valor", "Vencimento", "Status", "Fornecedor"]
+            headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Status", True), cell("Fornecedor", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("descricao", "-")[:25],
-                    f"R$ {item.get('valor', 0):.2f}",
-                    item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-",
-                    item.get("status", "-").upper(),
-                    item.get("fornecedor_nome", "-")[:15]
+                    cell(item.get("descricao", "-")),
+                    cell(f"R$ {item.get('valor', 0):.2f}"),
+                    cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
+                    cell(item.get("status", "-").upper()),
+                    cell(item.get("fornecedor_nome", "-"))
                 ])
         elif category == "contas_receber":
             headers = ["Descrição", "Valor", "Vencimento", "Status", "Cliente"]
