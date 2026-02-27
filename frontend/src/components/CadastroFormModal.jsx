@@ -336,7 +336,7 @@ export default function CadastroFormModal({
             </div>
             <div>
               <label className="form-label">Limite de Crédito</label>
-              <Input type="number" step="0.01" value={formData.limite_credito} onChange={(e) => setFormData({...formData, limite_credito: e.target.value})} />
+              <Input value={formData.limite_credito} onChange={(e) => setFormData({...formData, limite_credito: formatCurrency(e.target.value)})} placeholder="R$ 0,00" />
             </div>
           </div>
 
