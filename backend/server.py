@@ -10006,6 +10006,170 @@ async def delete_ponto(ponto_id: str):
     return {"message": "Registro excluído com sucesso"}
 
 
+# ===== RELATÓRIO DE PONTO MENSAL =====
+@api_router.get("/rh/ponto/relatorio-mensal")
+async def get_relatorio_ponto_mensal(mes: int, ano: int, funcionario_id: Optional[str] = None):
+    """Obter relatório mensal de ponto com cálculo de horas extras e banco de horas"""
+    
+    # Jornada padrão (em minutos)
+    JORNADA_SEG_SEX = 8 * 60 + 30  # 8:30h (8:00-11:30 + 13:30-18:00 = 8h30)
+    JORNADA_SABADO = 4 * 60  # 4h (8:00-12:00)
+    
+    # Buscar todos os registros do mês
+    inicio_mes = f"{ano}-{mes:02d}-01"
+    if mes == 12:
+        fim_mes = f"{ano + 1}-01-01"
+    else:
+        fim_mes = f"{ano}-{mes + 1:02d}-01"
+    
+    query = {"data": {"$gte": inicio_mes, "$lt": fim_mes}}
+    if funcionario_id:
+        query["funcionario_id"] = funcionario_id
+    
+    # Agrupar por funcionário
+    funcionarios_ponto = {}
+    async for reg in ponto_collection.find(query):
+        fid = reg["funcionario_id"]
+        if fid not in funcionarios_ponto:
+            funcionarios_ponto[fid] = []
+        funcionarios_ponto[fid].append(reg)
+    
+    # Calcular para cada funcionário
+    relatorio = []
+    for fid, registros in funcionarios_ponto.items():
+        func = await funcionarios_collection.find_one({"id": fid})
+        if not func:
+            continue
+        
+        total_horas_trabalhadas = 0
+        total_horas_previstas = 0
+        total_atrasos = 0
+        dias_trabalhados = 0
+        dias_falta = 0
+        
+        for reg in registros:
+            if not reg.get("entrada") or not reg.get("saida"):
+                dias_falta += 1
+                continue
+            
+            dias_trabalhados += 1
+            
+            # Calcular dia da semana (0=seg, 5=sab, 6=dom)
+            try:
+                data_reg = datetime.strptime(reg["data"], "%Y-%m-%d")
+                dia_semana = data_reg.weekday()
+            except:
+                dia_semana = 0
+            
+            # Definir jornada prevista
+            if dia_semana == 5:  # Sábado
+                jornada_prevista = JORNADA_SABADO
+            elif dia_semana == 6:  # Domingo
+                jornada_prevista = 0
+            else:  # Segunda a sexta
+                jornada_prevista = JORNADA_SEG_SEX
+            
+            total_horas_previstas += jornada_prevista
+            
+            # Calcular horas trabalhadas
+            try:
+                h_ent, m_ent = map(int, reg["entrada"].split(":"))
+                h_sai, m_sai = map(int, reg["saida"].split(":"))
+                
+                minutos_trabalhados = (h_sai * 60 + m_sai) - (h_ent * 60 + m_ent)
+                
+                # Descontar intervalo de almoço se houver
+                if reg.get("saida_almoco") and reg.get("retorno_almoco"):
+                    h_sal, m_sal = map(int, reg["saida_almoco"].split(":"))
+                    h_ret, m_ret = map(int, reg["retorno_almoco"].split(":"))
+                    intervalo = (h_ret * 60 + m_ret) - (h_sal * 60 + m_sal)
+                    minutos_trabalhados -= intervalo
+                
+                total_horas_trabalhadas += minutos_trabalhados
+                
+                # Verificar atraso (entrada após 08:00)
+                if h_ent > 8 or (h_ent == 8 and m_ent > 0):
+                    total_atrasos += (h_ent * 60 + m_ent) - (8 * 60)
+            except:
+                pass
+        
+        # Calcular banco de horas e horas extras
+        banco_horas = total_horas_trabalhadas - total_horas_previstas
+        horas_extras = max(0, banco_horas)
+        horas_devidas = abs(min(0, banco_horas))
+        
+        # Valor hora extra (50%)
+        salario = func.get("salario", 0)
+        valor_hora = salario / 220 if salario > 0 else 0
+        valor_hora_extra = valor_hora * 1.5
+        valor_horas_extras = (horas_extras / 60) * valor_hora_extra
+        
+        relatorio.append({
+            "funcionario_id": fid,
+            "nome": func.get("nome", ""),
+            "cargo": func.get("cargo", ""),
+            "dias_trabalhados": dias_trabalhados,
+            "dias_falta": dias_falta,
+            "horas_previstas": f"{total_horas_previstas // 60}h {total_horas_previstas % 60}min",
+            "horas_trabalhadas": f"{total_horas_trabalhadas // 60}h {total_horas_trabalhadas % 60}min",
+            "horas_extras": f"{horas_extras // 60}h {horas_extras % 60}min",
+            "horas_devidas": f"{horas_devidas // 60}h {horas_devidas % 60}min",
+            "banco_horas_minutos": banco_horas,
+            "total_atrasos_minutos": total_atrasos,
+            "total_atrasos": f"{total_atrasos // 60}h {total_atrasos % 60}min",
+            "valor_hora": valor_hora,
+            "valor_hora_extra": valor_hora_extra,
+            "valor_horas_extras": valor_horas_extras
+        })
+    
+    return {
+        "mes": mes,
+        "ano": ano,
+        "funcionarios": relatorio,
+        "total_funcionarios": len(relatorio)
+    }
+
+
+@api_router.post("/rh/ponto/registrar-rapido")
+async def registrar_ponto_rapido(funcionario_id: str = Body(...), tipo: str = Body(...), current_user: dict = Depends(get_current_user)):
+    """Registrar ponto rápido (entrada, saida_almoco, retorno_almoco, saida)"""
+    hoje = datetime.now().strftime("%Y-%m-%d")
+    hora_atual = datetime.now().strftime("%H:%M")
+    
+    # Buscar registro existente ou criar novo
+    registro = await ponto_collection.find_one({
+        "funcionario_id": funcionario_id,
+        "data": hoje
+    })
+    
+    if not registro:
+        if tipo != "entrada":
+            raise HTTPException(status_code=400, detail="Primeiro registre a entrada")
+        
+        registro = {
+            "id": str(uuid.uuid4()),
+            "funcionario_id": funcionario_id,
+            "data": hoje,
+            "entrada": hora_atual,
+            "saida_almoco": "",
+            "retorno_almoco": "",
+            "saida": "",
+            "observacoes": "",
+            "created_at": datetime.now().isoformat()
+        }
+        await ponto_collection.insert_one(registro)
+    else:
+        if tipo == "entrada":
+            raise HTTPException(status_code=400, detail="Entrada já registrada para hoje")
+        
+        update_data = {tipo: hora_atual, "updated_at": datetime.now().isoformat()}
+        await ponto_collection.update_one({"id": registro["id"]}, {"$set": update_data})
+        registro[tipo] = hora_atual
+    
+    registro["_id"] = str(registro.get("_id", ""))
+    return {"message": f"{tipo.replace('_', ' ').title()} registrada às {hora_atual}", "registro": registro}
+
+
 # ===== FOLHA DE PAGAMENTO =====
 class FolhaCreate(BaseModel):
     funcionario_id: str
