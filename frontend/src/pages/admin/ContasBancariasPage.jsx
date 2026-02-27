@@ -24,7 +24,7 @@ import {
   CheckCircle,
   XCircle
 } from "lucide-react";
-import { formatCPFouCNPJ } from "@/utils/masks";
+import { formatCPFouCNPJ, formatCurrency as formatCurrencyMask, parseCurrency } from "@/utils/masks";
 
 const BANCOS_BRASIL = [
   { codigo: "001", nome: "Banco do Brasil" },
