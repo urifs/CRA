@@ -250,14 +250,14 @@ export default function CadastroFormModal({
               <label className="form-label">Telefone</label>
               <Input 
                 value={formData.telefone} 
-                onChange={(e) => setFormData({...formData, telefone: e.target.value})} 
+                onChange={(e) => setFormData({...formData, telefone: formatTelefone(e.target.value)})} 
                 placeholder="(00) 0000-0000" 
                 data-testid="cadastro-telefone"
               />
             </div>
             <div>
               <label className="form-label">Celular</label>
-              <Input value={formData.celular} onChange={(e) => setFormData({...formData, celular: e.target.value})} placeholder="(00) 00000-0000" />
+              <Input value={formData.celular} onChange={(e) => setFormData({...formData, celular: formatTelefone(e.target.value)})} placeholder="(00) 00000-0000" />
             </div>
             <div>
               <label className="form-label">Email</label>
