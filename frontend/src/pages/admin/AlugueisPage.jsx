@@ -674,7 +674,7 @@ export default function AlugueisPage() {
                 <label className="form-label">Valor Caução</label>
                 <Input 
                   value={formData.valor_caucao} 
-                  onChange={(e) => setFormData({...formData, valor_caucao: formatCurrency(e.target.value)})} 
+                  onChange={(e) => setFormData({...formData, valor_caucao: formatCurrencyInput(e.target.value)})} 
                   placeholder="R$ 0,00" 
                 />
               </div>
