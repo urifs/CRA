@@ -1528,6 +1528,7 @@ async def create_horimetro(data: HorimetroCreate, current_user: dict = Depends(g
         "horas_trabalhadas": horas_trabalhadas,
         "operador": data.operador or "",
         "observacoes": data.observacoes or "",
+        "tipo_medicao": data.tipo_medicao or "hora",
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
