@@ -170,7 +170,8 @@ export default function HorimetroPage() {
       hora_inicial: "",
       hora_final: "",
       operador: "",
-      observacoes: ""
+      observacoes: "",
+      tipo_medicao: "hora" // "hora" ou "km"
     });
   };
 
