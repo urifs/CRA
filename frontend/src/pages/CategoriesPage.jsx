@@ -223,7 +223,7 @@ export default function CategoriesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => { setEditingCategory(null); setCategoryForm({ name: "", description: "" }); setShowCategoryModal(true); }} className="bg-[#E31A1A] hover:bg-red-700">
+          <Button onClick={() => { setEditingCategory(null); setCategoryForm({ name: "", description: "", color: "#E31A1A" }); setShowCategoryModal(true); }} className="bg-[#E31A1A] hover:bg-red-700">
             <Plus size={18} className="mr-2" />
             Nova Categoria
           </Button>
