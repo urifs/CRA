@@ -9409,7 +9409,7 @@ async def list_all_tasks(
     """List all tasks (admin only)"""
     current_user = await get_current_user(credentials)
     
-    if current_user.get("role") != "admin":
+    if current_user.get("role") not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Apenas administradores podem ver todas as tarefas")
     
     tasks = await db.tasks.find().sort("created_at", -1).to_list(1000)
