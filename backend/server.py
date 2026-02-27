@@ -4568,6 +4568,7 @@ async def update_conta_pagar(id: str, data: ContaPagarCreate, current_user: dict
 
 class QuitarContaRequest(BaseModel):
     data_pagamento: Optional[str] = None
+    conta_bancaria_id: Optional[str] = None
 
 @api_router.patch("/admin/contas-pagar/{id}/quitar")
 async def quitar_conta_pagar(id: str, data: Optional[QuitarContaRequest] = None, current_user: dict = Depends(get_current_user)):
@@ -4577,13 +4578,18 @@ async def quitar_conta_pagar(id: str, data: Optional[QuitarContaRequest] = None,
     
     # Usar a data fornecida ou a data atual
     data_pagamento = data.data_pagamento if data and data.data_pagamento else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    conta_bancaria_id = data.conta_bancaria_id if data else None
     
-    await db.contas_pagar.update_one({"id": id}, {
-        "$set": {
-            "status": "quitada",
-            "data_pagamento": data_pagamento
-        }
-    })
+    update_data = {
+        "status": "quitada",
+        "data_pagamento": data_pagamento
+    }
+    
+    # Se informou conta bancária, vincular
+    if conta_bancaria_id:
+        update_data["conta_bancaria_id"] = conta_bancaria_id
+    
+    await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
     await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - QUITADA em {data_pagamento}")
     return {"message": "Conta quitada com sucesso", "data_pagamento": data_pagamento}
 
