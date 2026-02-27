@@ -1325,21 +1325,10 @@ export default function ArmazenamentoPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
               />
             </div>
-            <div>
-              <Label className="flex items-center gap-2">
-                <Lock size={14} className="text-yellow-500" />
-                Senha (opcional)
-              </Label>
-              <Input
-                type="password"
-                value={newFolderPassword}
-                onChange={(e) => setNewFolderPassword(e.target.value)}
-                placeholder="Deixe vazio para não proteger"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Defina uma senha para proteger o acesso à pasta
-              </p>
-            </div>
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <Lock size={12} className="text-yellow-500" />
+              Para proteger a pasta com senha, use a opção "Definir Senha" após criar
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowNewFolderModal(false); setNewFolderPassword(""); }}>Cancelar</Button>
