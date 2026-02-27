@@ -216,21 +216,38 @@ export default function ArmazenamentoPage() {
       toast.error("Digite um nome para a pasta");
       return;
     }
+    
+    // Fechar modal imediatamente para melhor UX
+    const folderName = newFolderName.trim();
+    setShowNewFolderModal(false);
+    setNewFolderName("");
+    setNewFolderPassword("");
+    
+    // Atualização otimista - adiciona pasta temporária na UI
+    const tempFolder = {
+      id: `temp_${Date.now()}`,
+      name: folderName,
+      path: `${currentPath}/${folderName}`.replace("//", "/"),
+      type: "folder",
+      is_temp: true
+    };
+    setItems(prev => [...prev, tempFolder]);
+    
     try {
       await axios.post(`${API}/storage/folder`, 
         { 
-          name: newFolderName, 
+          name: folderName, 
           parent_path: currentPath,
           password: null
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Pasta criada com sucesso!");
-      setShowNewFolderModal(false);
-      setNewFolderName("");
-      setNewFolderPassword("");
-      fetchItems();
+      // Recarregar para obter dados reais do servidor
+      await fetchItems(true);
     } catch (error) {
+      // Reverter atualização otimista em caso de erro
+      setItems(prev => prev.filter(i => i.id !== tempFolder.id));
       toast.error(error.response?.data?.detail || "Erro ao criar pasta");
     }
   };
