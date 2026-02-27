@@ -1696,8 +1696,8 @@ async def list_veiculos_abastecedores(current_user: dict = Depends(get_current_u
                 abast["operador_nome"] = funcionario["nome"]
             else:
                 # Tentar cadastro financeiro
-                cadastro = await db.cadastros.find_one({"id": abast["operador_id"]}, {"_id": 0, "nome": 1})
-                abast["operador_nome"] = cadastro["nome"] if cadastro else None
+                cadastro = await db.cadastros.find_one({"id": abast["operador_id"]}, {"_id": 0, "nome_razao": 1})
+                abast["operador_nome"] = cadastro["nome_razao"] if cadastro else None
         
         result.append(abast)
     
