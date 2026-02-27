@@ -1,3 +1,4 @@
-# Routes Package
-from routes.auth import router as auth_router
-from routes.categories import router as categories_router
+# Routes module initialization
+from .rh import rh_router
+
+__all__ = ["rh_router"]
