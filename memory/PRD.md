@@ -22,6 +22,13 @@
   - Exemplo: digitar `150000` → exibe `R$ 1.500,00`
   - Backend recebe valores numéricos (1500.00), não strings formatadas
 
+### Cálculos Automáticos nos Formulários Financeiros
+- ✅ **Contas a Pagar**: Valor Final = Valor - Desconto + Juros + Multa
+- ✅ **Contas a Receber**: Valor Final = Valor - Desconto + Juros + Multa
+- ✅ **Aluguéis de Máquinas**: Valor Total = Valor + Caução
+- ✅ **Imóveis**: Valor Total Mensal = Aluguel + Condomínio + IPTU (já existia)
+- Cálculo é exibido em tempo real conforme o usuário preenche os campos
+
 ---
 
 ## Changelog - 27/02/2026 (Sessão 19)
