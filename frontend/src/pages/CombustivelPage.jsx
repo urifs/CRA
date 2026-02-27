@@ -560,34 +560,42 @@ export default function CombustivelPage() {
               <Label>
                 {tipoRegistro === "abastecedor" ? "Veículo Tanque *" : "Máquina a Abastecer *"}
               </Label>
-              <Select 
-                value={formData.machine_id} 
-                onValueChange={(value) => setFormData({...formData, machine_id: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {tipoRegistro === "abastecedor" 
-                    ? abastecedores.map(a => (
-                        <SelectItem key={a.machine_id} value={a.machine_id}>
-                          <div className="flex items-center gap-2">
-                            <Truck size={14} className="text-green-500" />
-                            {a.machine_name}
-                          </div>
-                        </SelectItem>
-                      ))
-                    : machines.map(m => (
-                        <SelectItem key={m.id} value={m.id}>
-                          <div className="flex items-center gap-2">
-                            <Truck size={14} />
-                            {m.name}
-                          </div>
-                        </SelectItem>
-                      ))
-                  }
-                </SelectContent>
-              </Select>
+              {tipoRegistro === "abastecedor" && abastecedores.length === 0 ? (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-700">
+                    Nenhum veículo tanque cadastrado. Vá para a aba "Veículos Tanque" e cadastre um primeiro.
+                  </p>
+                </div>
+              ) : (
+                <Select 
+                  value={formData.machine_id} 
+                  onValueChange={(value) => setFormData({...formData, machine_id: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tipoRegistro === "abastecedor" 
+                      ? abastecedores.map(a => (
+                          <SelectItem key={a.machine_id} value={a.machine_id}>
+                            <div className="flex items-center gap-2">
+                              <Truck size={14} className="text-green-500" />
+                              {a.machine_name}
+                            </div>
+                          </SelectItem>
+                        ))
+                      : machines.map(m => (
+                          <SelectItem key={m.id} value={m.id}>
+                            <div className="flex items-center gap-2">
+                              <Truck size={14} />
+                              {m.name}
+                            </div>
+                          </SelectItem>
+                        ))
+                    }
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Data */}
