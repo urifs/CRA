@@ -765,25 +765,34 @@ export default function CombustivelPage() {
             {/* Máquina */}
             <div className="space-y-2">
               <Label>Selecione a Máquina *</Label>
-              <Select 
-                value={abastecedorForm.machine_id} 
-                onValueChange={(value) => setAbastecedorForm({...abastecedorForm, machine_id: value})}
-                disabled={!!editingAbastecedorId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a máquina..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {(editingAbastecedorId ? machines : machinesDisponiveis).map(m => (
-                    <SelectItem key={m.id} value={m.id}>
-                      <div className="flex items-center gap-2">
-                        <Truck size={14} />
-                        {m.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!editingAbastecedorId && machinesDisponiveis.length === 0 ? (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-700">
+                    Todas as máquinas já estão cadastradas como veículos tanque.
+                    Cadastre uma nova máquina primeiro ou remova um veículo tanque existente.
+                  </p>
+                </div>
+              ) : (
+                <Select 
+                  value={abastecedorForm.machine_id} 
+                  onValueChange={(value) => setAbastecedorForm({...abastecedorForm, machine_id: value})}
+                  disabled={!!editingAbastecedorId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a máquina..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(editingAbastecedorId ? machines : machinesDisponiveis).map(m => (
+                      <SelectItem key={m.id} value={m.id}>
+                        <div className="flex items-center gap-2">
+                          <Truck size={14} />
+                          {m.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Capacidades - 3 campos horizontais */}
