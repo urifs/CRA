@@ -695,6 +695,28 @@ export default function ContasReceberPage() {
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Landmark size={16} className="text-green-600" />
+                  Conta Bancária (Entrada) *
+                </label>
+                <Select value={quitarContaBancaria} onValueChange={setQuitarContaBancaria}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta bancária..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contasBancarias.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome} - {c.banco}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  A movimentação será registrada no extrato desta conta
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={() => setShowQuitarModal(false)} className="flex-1">
                   Cancelar
