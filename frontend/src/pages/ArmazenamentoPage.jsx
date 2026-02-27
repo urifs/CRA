@@ -443,17 +443,28 @@ export default function ArmazenamentoPage() {
 
   const handleRename = async () => {
     if (!newName.trim() || !renameItem) return;
+    
+    // Atualização otimista
+    const oldName = renameItem.name;
+    const itemPath = renameItem.path;
+    setItems(prev => prev.map(i => 
+      i.path === itemPath ? { ...i, name: newName.trim() } : i
+    ));
+    
+    setShowRenameModal(false);
+    setRenameItem(null);
+    setNewName("");
+    
     try {
       await axios.patch(`${API}/storage/rename`, 
-        { path: renameItem.path, new_name: newName },
+        { path: itemPath, new_name: newName.trim() },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Renomeado com sucesso!");
-      setShowRenameModal(false);
-      setRenameItem(null);
-      setNewName("");
-      fetchItems();
+      await fetchItems(true);
     } catch (error) {
+      // Reverter atualização otimista
+      await fetchItems(true);
       toast.error(error.response?.data?.detail || "Erro ao renomear");
     }
   };
