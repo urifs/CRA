@@ -1676,9 +1676,138 @@ async def get_horimetro_by_machine(machine_id: str, limit: int = 50, current_use
 
 # ============ COMBUSTIVEL ROUTES ============
 
+# --- Rotas para Veículos Abastecedores ---
+
+@api_router.get("/combustivel/abastecedores")
+async def list_veiculos_abastecedores(current_user: dict = Depends(get_current_user)):
+    """Lista todos os veículos abastecedores cadastrados"""
+    abastecedores = await db.veiculos_abastecedores.find({}, {"_id": 0}).to_list(100)
+    
+    result = []
+    for abast in abastecedores:
+        machine = await db.machines.find_one({"id": abast["machine_id"]}, {"_id": 0, "name": 1})
+        abast["machine_name"] = machine["name"] if machine else "Máquina não encontrada"
+        
+        # Buscar nome do operador
+        if abast.get("operador_id"):
+            # Tentar funcionário do RH
+            funcionario = await db.funcionarios.find_one({"id": abast["operador_id"]}, {"_id": 0, "nome": 1})
+            if funcionario:
+                abast["operador_nome"] = funcionario["nome"]
+            else:
+                # Tentar cadastro financeiro
+                cadastro = await db.cadastros.find_one({"id": abast["operador_id"]}, {"_id": 0, "nome": 1})
+                abast["operador_nome"] = cadastro["nome"] if cadastro else None
+        
+        result.append(abast)
+    
+    return result
+
+@api_router.post("/combustivel/abastecedores")
+async def create_veiculo_abastecedor(data: VeiculoAbastecedorCreate, current_user: dict = Depends(get_current_user)):
+    """Cadastra uma máquina como veículo abastecedor"""
+    machine = await db.machines.find_one({"id": data.machine_id}, {"_id": 0})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    # Verificar se já existe
+    existing = await db.veiculos_abastecedores.find_one({"machine_id": data.machine_id}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Esta máquina já está cadastrada como abastecedor")
+    
+    abastecedor_id = str(uuid.uuid4())
+    abastecedor_doc = {
+        "id": abastecedor_id,
+        "machine_id": data.machine_id,
+        "capacidade_diesel": data.capacidade_diesel,
+        "capacidade_oleo": data.capacidade_oleo,
+        "capacidade_graxa": data.capacidade_graxa,
+        "litros_diesel": data.litros_diesel,
+        "litros_oleo": data.litros_oleo,
+        "litros_graxa": data.litros_graxa,
+        "operador_id": data.operador_id,
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.veiculos_abastecedores.insert_one(abastecedor_doc)
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="veículo abastecedor",
+        entity_id=abastecedor_id,
+        entity_name=machine["name"]
+    )
+    
+    abastecedor_doc["machine_name"] = machine["name"]
+    return abastecedor_doc
+
+@api_router.put("/combustivel/abastecedores/{abastecedor_id}")
+async def update_veiculo_abastecedor(abastecedor_id: str, data: VeiculoAbastecedorCreate, current_user: dict = Depends(get_current_user)):
+    """Atualiza um veículo abastecedor"""
+    existing = await db.veiculos_abastecedores.find_one({"id": abastecedor_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Veículo abastecedor não encontrado")
+    
+    machine = await db.machines.find_one({"id": data.machine_id}, {"_id": 0})
+    if not machine:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    update_doc = {
+        "machine_id": data.machine_id,
+        "capacidade_diesel": data.capacidade_diesel,
+        "capacidade_oleo": data.capacidade_oleo,
+        "capacidade_graxa": data.capacidade_graxa,
+        "litros_diesel": data.litros_diesel,
+        "litros_oleo": data.litros_oleo,
+        "litros_graxa": data.litros_graxa,
+        "operador_id": data.operador_id,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.veiculos_abastecedores.update_one({"id": abastecedor_id}, {"$set": update_doc})
+    
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="veículo abastecedor",
+        entity_id=abastecedor_id,
+        entity_name=machine["name"]
+    )
+    
+    updated = await db.veiculos_abastecedores.find_one({"id": abastecedor_id}, {"_id": 0})
+    updated["machine_name"] = machine["name"]
+    return updated
+
+@api_router.delete("/combustivel/abastecedores/{abastecedor_id}")
+async def delete_veiculo_abastecedor(abastecedor_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove um veículo abastecedor"""
+    existing = await db.veiculos_abastecedores.find_one({"id": abastecedor_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Veículo abastecedor não encontrado")
+    
+    machine = await db.machines.find_one({"id": existing["machine_id"]}, {"_id": 0, "name": 1})
+    
+    await db.veiculos_abastecedores.delete_one({"id": abastecedor_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="veículo abastecedor",
+        entity_id=abastecedor_id,
+        entity_name=machine["name"] if machine else "Máquina"
+    )
+    
+    return {"message": "Veículo abastecedor removido com sucesso"}
+
+# --- Rotas para Registros de Combustível ---
+
 @api_router.get("/combustivel", response_model=List[CombustivelResponse])
 async def list_combustivel(
     machine_id: Optional[str] = None,
+    tipo_registro: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     current_user: dict = Depends(get_current_user)
@@ -1687,12 +1816,30 @@ async def list_combustivel(
     query = {}
     if machine_id:
         query["machine_id"] = machine_id
+    if tipo_registro:
+        query["tipo_registro"] = tipo_registro
     
     registros = await db.combustivel.find(query, {"_id": 0}).sort("data", -1).skip(skip).limit(limit).to_list(limit)
     
     for registro in registros:
         machine = await db.machines.find_one({"id": registro["machine_id"]}, {"_id": 0, "name": 1})
         registro["machine_name"] = machine["name"] if machine else "Máquina não encontrada"
+        
+        # Buscar nome do veículo abastecedor se houver
+        if registro.get("veiculo_abastecedor_id"):
+            abast = await db.veiculos_abastecedores.find_one({"id": registro["veiculo_abastecedor_id"]}, {"_id": 0})
+            if abast:
+                abast_machine = await db.machines.find_one({"id": abast["machine_id"]}, {"_id": 0, "name": 1})
+                registro["veiculo_abastecedor_nome"] = abast_machine["name"] if abast_machine else None
+        
+        # Buscar nome do operador
+        if registro.get("operador_id"):
+            funcionario = await db.funcionarios.find_one({"id": registro["operador_id"]}, {"_id": 0, "nome": 1})
+            if funcionario:
+                registro["operador_nome"] = funcionario["nome"]
+            else:
+                cadastro = await db.cadastros.find_one({"id": registro["operador_id"]}, {"_id": 0, "nome": 1})
+                registro["operador_nome"] = cadastro["nome"] if cadastro else None
     
     return registros
 
@@ -1715,27 +1862,63 @@ async def create_combustivel(data: CombustivelCreate, current_user: dict = Depen
     if not machine:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
     
-    litros_consumidos = data.litros_consumidos
-    if litros_consumidos is None:
-        litros_consumidos = data.litros_final - data.litros_inicial
-    
     registro_id = str(uuid.uuid4())
     registro_doc = {
         "id": registro_id,
         "machine_id": data.machine_id,
         "data": data.data,
+        "tipo_registro": data.tipo_registro,
         "tipo_medicao": data.tipo_medicao,
         "hora_km_inicial": data.hora_km_inicial or 0,
-        "litros_inicial": data.litros_inicial,
-        "litros_final": data.litros_final,
-        "litros_consumidos": litros_consumidos,
-        "operador": data.operador or "",
+        "litros_diesel": data.litros_diesel,
+        "litros_oleo": data.litros_oleo,
+        "litros_graxa": data.litros_graxa,
+        "fonte_abastecimento": data.fonte_abastecimento,
+        "veiculo_abastecedor_id": data.veiculo_abastecedor_id,
+        "operador_id": data.operador_id,
         "observacoes": data.observacoes or "",
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.combustivel.insert_one(registro_doc)
+    
+    # Se foi abastecido por um veículo abastecedor interno, descontar do tanque
+    if data.tipo_registro == "abastecido" and data.fonte_abastecimento == "interno" and data.veiculo_abastecedor_id:
+        abastecedor = await db.veiculos_abastecedores.find_one({"id": data.veiculo_abastecedor_id}, {"_id": 0})
+        if abastecedor:
+            new_diesel = max(0, abastecedor.get("litros_diesel", 0) - data.litros_diesel)
+            new_oleo = max(0, abastecedor.get("litros_oleo", 0) - data.litros_oleo)
+            new_graxa = max(0, abastecedor.get("litros_graxa", 0) - data.litros_graxa)
+            
+            await db.veiculos_abastecedores.update_one(
+                {"id": data.veiculo_abastecedor_id},
+                {"$set": {
+                    "litros_diesel": new_diesel,
+                    "litros_oleo": new_oleo,
+                    "litros_graxa": new_graxa,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+    
+    # Se for registro de abastecedor (entrada de combustível no tanque), adicionar ao tanque
+    if data.tipo_registro == "abastecedor":
+        # Encontrar o abastecedor pela máquina
+        abastecedor = await db.veiculos_abastecedores.find_one({"machine_id": data.machine_id}, {"_id": 0})
+        if abastecedor:
+            new_diesel = abastecedor.get("litros_diesel", 0) + data.litros_diesel
+            new_oleo = abastecedor.get("litros_oleo", 0) + data.litros_oleo
+            new_graxa = abastecedor.get("litros_graxa", 0) + data.litros_graxa
+            
+            await db.veiculos_abastecedores.update_one(
+                {"id": abastecedor["id"]},
+                {"$set": {
+                    "litros_diesel": new_diesel,
+                    "litros_oleo": new_oleo,
+                    "litros_graxa": new_graxa,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
     
     await create_audit_log(
         user=current_user,
@@ -1747,47 +1930,6 @@ async def create_combustivel(data: CombustivelCreate, current_user: dict = Depen
     
     registro_doc["machine_name"] = machine["name"]
     return registro_doc
-
-@api_router.put("/combustivel/{registro_id}", response_model=CombustivelResponse)
-async def update_combustivel(registro_id: str, data: CombustivelCreate, current_user: dict = Depends(get_current_user)):
-    """Atualiza um registro de combustível"""
-    existing = await db.combustivel.find_one({"id": registro_id}, {"_id": 0})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Registro não encontrado")
-    
-    machine = await db.machines.find_one({"id": data.machine_id}, {"_id": 0})
-    if not machine:
-        raise HTTPException(status_code=404, detail="Máquina não encontrada")
-    
-    litros_consumidos = data.litros_consumidos
-    if litros_consumidos is None:
-        litros_consumidos = data.litros_final - data.litros_inicial
-    
-    update_doc = {
-        "machine_id": data.machine_id,
-        "data": data.data,
-        "tipo_medicao": data.tipo_medicao,
-        "hora_km_inicial": data.hora_km_inicial or 0,
-        "litros_inicial": data.litros_inicial,
-        "litros_final": data.litros_final,
-        "litros_consumidos": litros_consumidos,
-        "operador": data.operador or "",
-        "observacoes": data.observacoes or ""
-    }
-    
-    await db.combustivel.update_one({"id": registro_id}, {"$set": update_doc})
-    
-    await create_audit_log(
-        user=current_user,
-        action="editar",
-        entity_type="combustível",
-        entity_id=registro_id,
-        entity_name=f"{machine['name']} - {data.data}"
-    )
-    
-    updated = await db.combustivel.find_one({"id": registro_id}, {"_id": 0})
-    updated["machine_name"] = machine["name"]
-    return updated
 
 @api_router.delete("/combustivel/{registro_id}")
 async def delete_combustivel(registro_id: str, current_user: dict = Depends(get_current_user)):
@@ -1810,7 +1952,7 @@ async def delete_combustivel(registro_id: str, current_user: dict = Depends(get_
     
     return {"message": "Registro excluído com sucesso"}
 
-@api_router.get("/combustivel/machine/{machine_id}", response_model=List[CombustivelResponse])
+@api_router.get("/combustivel/machine/{machine_id}")
 async def get_combustivel_by_machine(machine_id: str, limit: int = 50, current_user: dict = Depends(get_current_user)):
     """Obtém registros de combustível de uma máquina específica"""
     machine = await db.machines.find_one({"id": machine_id}, {"_id": 0, "name": 1})
@@ -1823,6 +1965,34 @@ async def get_combustivel_by_machine(machine_id: str, limit: int = 50, current_u
         registro["machine_name"] = machine["name"]
     
     return registros
+
+# Rota para buscar operadores (RH + Cadastros Financeiro)
+@api_router.get("/operadores")
+async def list_operadores(current_user: dict = Depends(get_current_user)):
+    """Lista todos os operadores disponíveis (funcionários RH + cadastros financeiro)"""
+    operadores = []
+    
+    # Buscar funcionários do RH
+    funcionarios = await db.funcionarios.find({}, {"_id": 0, "id": 1, "nome": 1, "cargo": 1}).to_list(500)
+    for f in funcionarios:
+        operadores.append({
+            "id": f["id"],
+            "nome": f["nome"],
+            "tipo": "rh",
+            "cargo": f.get("cargo", "")
+        })
+    
+    # Buscar cadastros do financeiro
+    cadastros = await db.cadastros.find({}, {"_id": 0, "id": 1, "nome": 1, "tipo": 1}).to_list(500)
+    for c in cadastros:
+        operadores.append({
+            "id": c["id"],
+            "nome": c["nome"],
+            "tipo": "cadastro",
+            "cargo": c.get("tipo", "")
+        })
+    
+    return operadores
 
 # ============ MAINTENANCE ROUTES ============
 
