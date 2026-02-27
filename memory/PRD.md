@@ -11,7 +11,28 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (27/02/2026) - Parte 10
+### Sessão Atual (27/02/2026) - Parte 11
+
+#### ✅ Gestão de Férias com Calendário - COMPLETO
+- **Calendário Anual**: Visualização de 12 meses com férias destacadas em azul
+- **CRUD Completo**: Criar, listar, editar e excluir férias
+- **Abono Pecuniário**: Suporte a venda de até 10 dias (1/3 das férias)
+- **Alertas de Período Aquisitivo**: Funcionários com 11+ meses sem férias são sinalizados
+- **Status de Férias**: Agendado, Em Férias, Concluído
+- **Navegação por Ano**: Seletor de ano para visualizar férias passadas/futuras
+- **Testes**: 13/13 backend + 12/12 frontend passaram
+
+#### ✅ Sistema de Notificações RH - COMPLETO
+- **Aniversariantes do Mês**: Lista com nome, cargo, data e idade
+- **Alertas de Férias**: Período aquisitivo vencendo, funcionários sem férias há 1+ ano
+- **Vencimento de EPIs**: EPIs próximos do vencimento (30 dias)
+- **Inconsistências de Ponto**: Atrasos detectados automaticamente
+- **Botão Agendar Urgente**: Para funcionários com férias atrasadas
+- **Badge de Notificações**: Contador no menu lateral
+- **Endpoint de Contagem**: Para atualização em tempo real do badge
+- **Testes**: 100% passaram
+
+### Sessão Anterior (27/02/2026) - Parte 10
 
 #### ✅ Implementação Completa do Ponto Eletrônico - COMPLETO
 - **Registro de Ponto**: CRUD completo (criar, listar, editar, excluir)
