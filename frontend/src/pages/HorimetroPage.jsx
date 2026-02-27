@@ -143,7 +143,8 @@ export default function HorimetroPage() {
       hora_inicial: registro.hora_inicial.toString(),
       hora_final: registro.hora_final.toString(),
       operador: registro.operador || "",
-      observacoes: registro.observacoes || ""
+      observacoes: registro.observacoes || "",
+      tipo_medicao: registro.tipo_medicao || "hora"
     });
     setIsModalOpen(true);
   };
