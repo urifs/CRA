@@ -4566,20 +4566,26 @@ async def update_conta_pagar(id: str, data: ContaPagarCreate, current_user: dict
     updated = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
     return updated
 
+class QuitarContaRequest(BaseModel):
+    data_pagamento: Optional[str] = None
+
 @api_router.patch("/admin/contas-pagar/{id}/quitar")
-async def quitar_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
+async def quitar_conta_pagar(id: str, data: Optional[QuitarContaRequest] = None, current_user: dict = Depends(get_current_user)):
     conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
     
+    # Usar a data fornecida ou a data atual
+    data_pagamento = data.data_pagamento if data and data.data_pagamento else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
     await db.contas_pagar.update_one({"id": id}, {
         "$set": {
             "status": "quitada",
-            "data_pagamento": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            "data_pagamento": data_pagamento
         }
     })
-    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - QUITADA")
-    return {"message": "Conta quitada com sucesso"}
+    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - QUITADA em {data_pagamento}")
+    return {"message": "Conta quitada com sucesso", "data_pagamento": data_pagamento}
 
 @api_router.patch("/admin/contas-pagar/{id}/cancelar")
 async def cancelar_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
