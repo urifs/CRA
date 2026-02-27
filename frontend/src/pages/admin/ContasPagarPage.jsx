@@ -180,18 +180,25 @@ export default function ContasPagarPage() {
     setQuitarContaId(conta.id);
     setQuitarContaInfo(conta);
     setDataPagamento(new Date().toISOString().split("T")[0]);
+    setQuitarContaBancaria(conta.conta_bancaria_id || "");
     setShowQuitarModal(true);
   };
 
   const handleQuitar = async () => {
+    if (!quitarContaBancaria) {
+      toast.error("Selecione a conta bancária");
+      return;
+    }
     try {
       await axios.patch(`${API}/admin/contas-pagar/${quitarContaId}/quitar`, {
-        data_pagamento: dataPagamento
+        data_pagamento: dataPagamento,
+        conta_bancaria_id: quitarContaBancaria
       });
       toast.success("Conta quitada!"); 
       setShowQuitarModal(false);
       setQuitarContaId(null);
       setQuitarContaInfo(null);
+      setQuitarContaBancaria("");
       fetchContas();
     } catch (error) { toast.error("Erro ao quitar"); }
   };
