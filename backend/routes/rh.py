@@ -1089,41 +1089,6 @@ Responda APENAS em formato JSON válido:
             "fonte": "FALLBACK_LOCAL",
             "erro": str(e)
         }
-        
-        if hasattr(response_text, 'content'):
-            response_text = response_text.content
-        
-        response_text = str(response_text).strip()
-        if response_text.startswith("```"):
-            response_text = response_text.split("```")[1]
-            if response_text.startswith("json"):
-                response_text = response_text[4:]
-        
-        result = json.loads(response_text)
-        result["fonte"] = "IA"
-        return result
-        
-    except Exception as e:
-        epis = []
-        mapa_risco = []
-        for epi in epis_base:
-            epis.append({
-                "nome": epi["nome"],
-                "ca": epi.get("ca", "A definir"),
-                "validade_meses": epi.get("validade_meses", 12),
-                "prioridade": epi.get("prioridade", "Alta")
-            })
-            mapa_risco.append({
-                "risco": f"Risco associado a {epi['nome']}",
-                "prioridade": epi.get("prioridade", "Alta"),
-                "epi_recomendado": epi["nome"]
-            })
-        
-        return {
-            "epis": epis,
-            "mapa_risco": mapa_risco,
-            "fonte": "FALLBACK"
-        }
 
 
 @rh_router.get("/epi/fichas")
