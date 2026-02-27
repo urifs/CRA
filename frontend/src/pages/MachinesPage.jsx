@@ -373,7 +373,8 @@ export default function MachinesPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
           </div>
         ) : (
           /* List View */
