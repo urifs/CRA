@@ -134,25 +134,11 @@ export default function ContasReceberPage() {
     } catch (error) { console.error(error); }
   };
 
-  const handleNovoCadastro = async (e) => {
-    e.preventDefault();
-    if (!novoCadastroData.nome_razao.trim()) {
-      toast.error("Nome é obrigatório");
-      return;
-    }
-    try {
-      const response = await axios.post(`${API}/admin/cadastros`, {
-        ...novoCadastroData,
-        tipo: "cliente"
-      });
-      toast.success("Cliente cadastrado!");
-      setFormData({ ...formData, cliente_nome: novoCadastroData.nome_razao });
-      setShowNovoCadastro(false);
-      setNovoCadastroData({ nome_razao: "", cnpj_cpf: "", telefone: "", email: "" });
-      fetchCadastros();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao cadastrar");
-    }
+  const handleNovoCadastroSuccess = (novoCadastro) => {
+    // Atualizar o formulário com o nome do novo cliente
+    setFormData({ ...formData, cliente_nome: novoCadastro.nome_razao });
+    // Atualizar a lista de cadastros
+    fetchCadastros();
   };
 
   const handleSubmit = async (e) => {
