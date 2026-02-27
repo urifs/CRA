@@ -1061,6 +1061,7 @@ export default function PainelAdminPage() {
                   <SelectItem value="administrativo_rh" className="text-white">Administrativo + RH</SelectItem>
                   <SelectItem value="ambos_rh" className="text-white">Ger + Admin + RH</SelectItem>
                   <SelectItem value="admin" className="text-white">Administrador (Acesso Total)</SelectItem>
+                  <SelectItem value="programador" className="text-white">Programador (Acesso Total)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
