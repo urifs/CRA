@@ -4700,20 +4700,26 @@ async def update_conta_receber(id: str, data: ContaReceberCreate, current_user: 
     updated = await db.contas_receber.find_one({"id": id}, {"_id": 0})
     return updated
 
+class QuitarContaReceberRequest(BaseModel):
+    data_recebimento: Optional[str] = None
+
 @api_router.patch("/admin/contas-receber/{id}/quitar")
-async def quitar_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
+async def quitar_conta_receber(id: str, data: Optional[QuitarContaReceberRequest] = None, current_user: dict = Depends(get_current_user)):
     conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
     
+    # Usar a data fornecida ou a data atual
+    data_recebimento = data.data_recebimento if data and data.data_recebimento else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
     await db.contas_receber.update_one({"id": id}, {
         "$set": {
             "status": "quitada",
-            "data_recebimento": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            "data_recebimento": data_recebimento
         }
     })
-    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - QUITADA")
-    return {"message": "Conta quitada com sucesso"}
+    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - QUITADA em {data_recebimento}")
+    return {"message": "Conta quitada com sucesso", "data_recebimento": data_recebimento}
 
 @api_router.patch("/admin/contas-receber/{id}/cancelar")
 async def cancelar_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
