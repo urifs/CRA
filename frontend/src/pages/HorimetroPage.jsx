@@ -41,7 +41,8 @@ import {
   Calendar,
   Timer,
   TrendingUp,
-  Filter
+  Filter,
+  Gauge
 } from "lucide-react";
 
 export default function HorimetroPage() {
