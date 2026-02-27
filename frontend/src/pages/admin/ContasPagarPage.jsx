@@ -644,6 +644,66 @@ export default function ContasPagarPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Quitação */}
+      <Dialog open={showQuitarModal} onOpenChange={setShowQuitarModal}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 size={20} />
+              Quitar Conta
+            </DialogTitle>
+          </DialogHeader>
+          {quitarContaInfo && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Fornecedor:</span>
+                  <span className="font-medium">{quitarContaInfo.fornecedor_nome || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Descrição:</span>
+                  <span className="font-medium truncate max-w-[200px]">{quitarContaInfo.descricao}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Valor:</span>
+                  <span className="font-bold text-red-600">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Vencimento:</span>
+                  <span className="font-medium">{new Date(quitarContaInfo.data_vencimento).toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Calendar size={16} className="text-green-600" />
+                  Data do Pagamento *
+                </label>
+                <Input
+                  type="date"
+                  value={dataPagamento}
+                  onChange={(e) => setDataPagamento(e.target.value)}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500">
+                  Informe a data em que o pagamento foi realizado
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="outline" onClick={() => setShowQuitarModal(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button onClick={handleQuitar} className="flex-1 bg-green-600 hover:bg-green-700">
+                  <CheckCircle2 size={16} className="mr-2" />
+                  Confirmar Quitação
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
