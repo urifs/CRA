@@ -2790,10 +2790,17 @@ async def create_stock_item(item: StockItemCreate, current_user: dict = Depends(
         "unit_price": item.unit_price or 0,
         "location": item.location or "",
         "notes": item.notes or "",
+        "machine_ids": item.machine_ids or [],
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.stock_items.insert_one(item_doc)
+    
+    # Buscar nomes das máquinas vinculadas
+    machine_names = []
+    if item.machine_ids:
+        machines = await db.machines.find({"id": {"$in": item.machine_ids}}, {"_id": 0, "name": 1}).to_list(100)
+        machine_names = [m.get("name", "") for m in machines]
     
     # Audit log
     await create_audit_log(
@@ -2816,7 +2823,9 @@ async def create_stock_item(item: StockItemCreate, current_user: dict = Depends(
         location=item.location or "",
         notes=item.notes or "",
         is_low_stock=item.quantity <= item.min_quantity,
-        created_at=item_doc["created_at"]
+        created_at=item_doc["created_at"],
+        machine_ids=item.machine_ids or [],
+        machine_names=machine_names
     )
 
 @api_router.get("/stock/items", response_model=List[StockItemResponse])
