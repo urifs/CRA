@@ -665,7 +665,7 @@ export default function AlugueisPage() {
                 <label className="form-label">Valor *</label>
                 <Input 
                   value={formData.valor} 
-                  onChange={(e) => setFormData({...formData, valor: formatCurrency(e.target.value)})} 
+                  onChange={(e) => setFormData({...formData, valor: formatCurrencyInput(e.target.value)})} 
                   placeholder="R$ 0,00" 
                   required 
                 />
