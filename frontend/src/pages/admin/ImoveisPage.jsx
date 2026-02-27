@@ -118,10 +118,10 @@ export default function ImoveisPage() {
     try {
       const payload = {
         ...formData,
-        valor_aluguel: parseFloat(formData.valor_aluguel) || 0,
-        valor_condominio: parseFloat(formData.valor_condominio) || 0,
-        valor_iptu: parseFloat(formData.valor_iptu) || 0,
-        valor_caucao: parseFloat(formData.valor_caucao) || 0,
+        valor_aluguel: parseCurrency(formData.valor_aluguel) || 0,
+        valor_condominio: parseCurrency(formData.valor_condominio) || 0,
+        valor_iptu: parseCurrency(formData.valor_iptu) || 0,
+        valor_caucao: parseCurrency(formData.valor_caucao) || 0,
         area_m2: parseFloat(formData.area_m2) || 0,
         quartos: parseInt(formData.quartos) || 0,
         banheiros: parseInt(formData.banheiros) || 0,
