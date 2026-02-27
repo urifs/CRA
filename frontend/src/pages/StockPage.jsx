@@ -1072,6 +1072,55 @@ export default function StockPage() {
               </div>
             </div>
 
+            {/* Vinculação de Máquinas */}
+            <div className="space-y-2">
+              <Label className="form-label flex items-center gap-2">
+                <Wrench size={14} />
+                Vincular a Máquinas (opcional)
+              </Label>
+              <div className="flex gap-2">
+                <Select
+                  onValueChange={(value) => {
+                    if (value && !itemForm.machine_ids.includes(value)) {
+                      setItemForm({...itemForm, machine_ids: [...itemForm.machine_ids, value]});
+                    }
+                  }}
+                >
+                  <SelectTrigger className="form-input flex-1" data-testid="item-machine-select">
+                    <SelectValue placeholder={machines.length === 0 ? "Nenhuma máquina cadastrada" : "Selecione uma máquina"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {machines.filter(m => !itemForm.machine_ids.includes(m.id)).map((machine) => (
+                      <SelectItem key={machine.id} value={machine.id}>
+                        {machine.name} {machine.plate ? `(${machine.plate})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {itemForm.machine_ids.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {itemForm.machine_ids.map(machineId => {
+                    const machine = machines.find(m => m.id === machineId);
+                    return machine ? (
+                      <span key={machineId} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm">
+                        <Wrench size={12} />
+                        {machine.name}
+                        <button
+                          type="button"
+                          onClick={() => setItemForm({...itemForm, machine_ids: itemForm.machine_ids.filter(id => id !== machineId)})}
+                          className="text-gray-500 hover:text-red-500"
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-gray-500">Selecione as máquinas que utilizam este item de estoque</p>
+            </div>
+
             <div className="space-y-2">
               <Label className="form-label">Observações</Label>
               <Input
