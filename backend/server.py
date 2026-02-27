@@ -2874,6 +2874,13 @@ async def get_stock_item(item_id: str, current_user: dict = Depends(get_current_
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
+    # Buscar nomes das máquinas vinculadas
+    machine_ids = item.get("machine_ids", [])
+    machine_names = []
+    if machine_ids:
+        machines = await db.machines.find({"id": {"$in": machine_ids}}, {"_id": 0, "name": 1}).to_list(100)
+        machine_names = [m.get("name", "") for m in machines]
+    
     return StockItemResponse(
         id=item["id"],
         name=item["name"],
@@ -2886,7 +2893,9 @@ async def get_stock_item(item_id: str, current_user: dict = Depends(get_current_
         location=item.get("location", ""),
         notes=item.get("notes", ""),
         is_low_stock=item["quantity"] <= item.get("min_quantity", 0),
-        created_at=item["created_at"]
+        created_at=item["created_at"],
+        machine_ids=machine_ids,
+        machine_names=machine_names
     )
 
 @api_router.put("/stock/items/{item_id}", response_model=StockItemResponse)
