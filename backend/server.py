@@ -5704,8 +5704,13 @@ async def create_user_admin(data: UserCreateAdmin, current_user: dict = Depends(
     role_labels = {
         "gerenciamento": "Gerenciamento",
         "administrativo": "Administrativo",
+        "rh": "RH",
         "ambos": "Gerenciamento + Administrativo",
-        "admin": "Administrador"
+        "ambos_rh": "Ger + Admin + RH",
+        "gerenciamento_rh": "Gerenciamento + RH",
+        "administrativo_rh": "Administrativo + RH",
+        "admin": "Administrador",
+        "programador": "Programador"
     }
     
     # Registrar na auditoria
