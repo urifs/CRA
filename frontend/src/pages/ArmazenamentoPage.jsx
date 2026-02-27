@@ -632,6 +632,14 @@ export default function ArmazenamentoPage() {
   const handleMove = async () => {
     if (itemsToMove.length === 0) return;
     
+    // Atualização otimista - remove itens da UI
+    const pathsToMove = new Set(itemsToMove.map(i => i.path));
+    setItems(prev => prev.filter(i => !pathsToMove.has(i.path)));
+    setShowMoveModal(false);
+    setItemsToMove([]);
+    setSelectedItems(new Set());
+    setSelectionMode(false);
+    
     try {
       for (const item of itemsToMove) {
         await axios.post(`${API}/storage/move`, {
@@ -642,18 +650,21 @@ export default function ArmazenamentoPage() {
         });
       }
       toast.success(`${itemsToMove.length} item(s) movido(s) com sucesso!`);
-      setShowMoveModal(false);
-      setItemsToMove([]);
-      setSelectedItems(new Set());
-      setSelectionMode(false);
-      fetchItems();
+      await fetchItems(true);
     } catch (error) {
+      await fetchItems(true);
       toast.error(error.response?.data?.detail || "Erro ao mover itens");
     }
   };
 
   const handleCopy = async () => {
     if (itemsToCopy.length === 0) return;
+    
+    setShowCopyModal(false);
+    const copyCount = itemsToCopy.length;
+    setItemsToCopy([]);
+    setSelectedItems(new Set());
+    setSelectionMode(false);
     
     try {
       for (const item of itemsToCopy) {
@@ -664,12 +675,8 @@ export default function ArmazenamentoPage() {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      toast.success(`${itemsToCopy.length} item(s) copiado(s) com sucesso!`);
-      setShowCopyModal(false);
-      setItemsToCopy([]);
-      setSelectedItems(new Set());
-      setSelectionMode(false);
-      fetchItems();
+      toast.success(`${copyCount} item(s) copiado(s) com sucesso!`);
+      await fetchItems(true);
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao copiar itens");
     }
