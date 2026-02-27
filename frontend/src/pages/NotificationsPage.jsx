@@ -81,7 +81,7 @@ export default function NotificationsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title font-heading">Notificações</h1>
-          <p className="text-gray-500 mt-1">Alertas de troca de óleo e manutenções</p>
+          <p className="text-gray-500 mt-1">Alertas de troca de óleo, combustível baixo e estoque</p>
         </div>
       </div>
 
