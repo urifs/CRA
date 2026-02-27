@@ -65,7 +65,7 @@ TABELA_IRPF_2025 = [
     {"ate": 2826.65, "aliquota": 7.5, "deducao": 169.44},
     {"ate": 3751.05, "aliquota": 15.0, "deducao": 381.44},
     {"ate": 4664.68, "aliquota": 22.5, "deducao": 662.77},
-    {"ate": float('inf'), "aliquota": 27.5, "deducao": 896.00}
+    {"ate": 999999999.99, "aliquota": 27.5, "deducao": 896.00}
 ]
 
 FGTS_ALIQUOTA = 8.0
