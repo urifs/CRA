@@ -214,11 +214,11 @@ export default function ArmazenamentoPage() {
         { 
           name: newFolderName, 
           parent_path: currentPath,
-          password: newFolderPassword || null
+          password: null
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("Pasta criada com sucesso!" + (newFolderPassword ? " (protegida com senha)" : ""));
+      toast.success("Pasta criada com sucesso!");
       setShowNewFolderModal(false);
       setNewFolderName("");
       setNewFolderPassword("");
