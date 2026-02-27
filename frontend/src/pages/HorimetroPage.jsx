@@ -482,44 +482,53 @@ export default function HorimetroPage() {
               />
             </div>
 
-            {/* Horas */}
+            {/* Horas/Km */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="hora_inicial">Hora Inicial *</Label>
+                <Label htmlFor="hora_inicial">
+                  {formData.tipo_medicao === "km" ? "Km Inicial" : "Hora Inicial"} *
+                </Label>
                 <Input
                   id="hora_inicial"
                   type="number"
                   step="0.1"
                   min="0"
-                  placeholder="Ex: 1250.5"
+                  placeholder={formData.tipo_medicao === "km" ? "Ex: 45000" : "Ex: 1250.5"}
                   value={formData.hora_inicial}
                   onChange={(e) => setFormData({...formData, hora_inicial: e.target.value})}
                   required
                 />
-                <p className="text-xs text-gray-500">Leitura do horímetro</p>
+                <p className="text-xs text-gray-500">
+                  Leitura do {formData.tipo_medicao === "km" ? "odômetro" : "horímetro"}
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="hora_final">Hora Final *</Label>
+                <Label htmlFor="hora_final">
+                  {formData.tipo_medicao === "km" ? "Km Final" : "Hora Final"} *
+                </Label>
                 <Input
                   id="hora_final"
                   type="number"
                   step="0.1"
                   min="0"
-                  placeholder="Ex: 1258.0"
+                  placeholder={formData.tipo_medicao === "km" ? "Ex: 45150" : "Ex: 1258.0"}
                   value={formData.hora_final}
                   onChange={(e) => setFormData({...formData, hora_final: e.target.value})}
                   required
                 />
-                <p className="text-xs text-gray-500">Leitura do horímetro</p>
+                <p className="text-xs text-gray-500">
+                  Leitura do {formData.tipo_medicao === "km" ? "odômetro" : "horímetro"}
+                </p>
               </div>
             </div>
 
-            {/* Preview de horas trabalhadas */}
+            {/* Preview de horas/km trabalhados */}
             {formData.hora_inicial && formData.hora_final && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-sm text-yellow-700">
-                  <strong>Horas trabalhadas:</strong>{" "}
-                  {(parseFloat(formData.hora_final) - parseFloat(formData.hora_inicial)).toFixed(1)}h
+                  <strong>{formData.tipo_medicao === "km" ? "Km percorridos:" : "Horas trabalhadas:"}</strong>{" "}
+                  {(parseFloat(formData.hora_final) - parseFloat(formData.hora_inicial)).toFixed(1)}
+                  {formData.tipo_medicao === "km" ? " km" : "h"}
                 </p>
               </div>
             )}
