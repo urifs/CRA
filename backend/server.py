@@ -334,6 +334,7 @@ class StockItemCreate(BaseModel):
     unit_price: Optional[float] = 0
     location: Optional[str] = ""
     notes: Optional[str] = ""
+    machine_ids: Optional[List[str]] = []  # IDs das máquinas vinculadas
 
 class StockItemResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -351,6 +352,8 @@ class StockItemResponse(BaseModel):
     notes: str
     is_low_stock: bool
     created_at: str
+    machine_ids: Optional[List[str]] = []
+    machine_names: Optional[List[str]] = []
 
 class StockMovementCreate(BaseModel):
     item_id: str
