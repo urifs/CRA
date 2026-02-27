@@ -228,6 +228,7 @@ function App() {
             <Route path="custos" element={<CustosPage />} />
             <Route path="notificacoes" element={<RHNotificacoesPage />} />
             <Route path="more" element={<RHMorePage />} />
+            <Route path="exportar" element={<ExportPage module="rh" />} />
           </Route>
           
           {/* Catch all - redirect to login if not authenticated */}
