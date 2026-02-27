@@ -9357,7 +9357,7 @@ async def upload_task_attachment(
     """Upload attachment to a task (max 100MB)"""
     current_user = await get_current_user(credentials)
     
-    if current_user.get("role") != "admin":
+    if current_user.get("role") not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Apenas administradores podem adicionar anexos")
     
     task = await db.tasks.find_one({"id": task_id})
