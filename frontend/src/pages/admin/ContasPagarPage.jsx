@@ -54,6 +54,7 @@ export default function ContasPagarPage() {
   const [quitarContaId, setQuitarContaId] = useState(null);
   const [quitarContaInfo, setQuitarContaInfo] = useState(null);
   const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().split("T")[0]);
+  const [quitarContaBancaria, setQuitarContaBancaria] = useState("");
   
   const [formData, setFormData] = useState({
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
