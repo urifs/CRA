@@ -141,7 +141,8 @@ export default function StockPage() {
         quantity: parseFloat(itemForm.quantity) || 0,
         min_quantity: parseFloat(itemForm.min_quantity) || 0,
         unit_price: parseFloat(itemForm.unit_price) || 0,
-        subcategory_id: itemForm.subcategory_id || null
+        subcategory_id: itemForm.subcategory_id || null,
+        machine_ids: itemForm.machine_ids || []
       };
 
       if (editingItem) {
