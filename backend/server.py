@@ -1930,8 +1930,10 @@ async def create_combustivel(data: CombustivelCreate, current_user: dict = Depen
         entity_name=f"{machine['name']} - {data.data}"
     )
     
-    registro_doc["machine_name"] = machine["name"]
-    return registro_doc
+    # Buscar o documento criado sem o _id para evitar erro de serialização
+    created = await db.combustivel.find_one({"id": registro_id}, {"_id": 0})
+    created["machine_name"] = machine["name"]
+    return created
 
 @api_router.delete("/combustivel/{registro_id}")
 async def delete_combustivel(registro_id: str, current_user: dict = Depends(get_current_user)):
