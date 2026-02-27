@@ -5830,9 +5830,12 @@ async def get_user_activities(user_id: str, current_user: dict = Depends(get_cur
 
 # ============ DATABASE MANAGER ROUTES (ADMIN ONLY) ============
 
+# Roles com acesso administrativo total
+ADMIN_ROLES = ["admin", "programador"]
+
 def require_admin(user: dict):
-    """Verifica se o usuário é admin"""
-    if user.get("role") != "admin":
+    """Verifica se o usuário é admin ou programador"""
+    if user.get("role") not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Acesso negado. Somente administradores podem acessar este recurso.")
 
 # Lista de coleções disponíveis para gerenciamento
