@@ -172,6 +172,7 @@ export default function ContasBancariasPage() {
         chave_pix: conta.chave_pix || "",
         tipo_chave_pix: conta.tipo_chave_pix || "",
         saldo_inicial: String(conta.saldo_inicial || 0),
+        saldo_atual: String(conta.saldo_atual || 0),
         ativo: conta.ativo !== false,
         cor: conta.cor || "#3B82F6",
         observacoes: conta.observacoes || ""
@@ -182,7 +183,7 @@ export default function ContasBancariasPage() {
         nome: "", banco: "", codigo_banco: "", agencia: "", agencia_digito: "",
         conta: "", conta_digito: "", tipo_conta: "corrente", titular: "",
         cpf_cnpj_titular: "", chave_pix: "", tipo_chave_pix: "", saldo_inicial: "0",
-        ativo: true, cor: "#3B82F6", observacoes: ""
+        saldo_atual: "0", ativo: true, cor: "#3B82F6", observacoes: ""
       });
     }
     setIsModalOpen(true);
