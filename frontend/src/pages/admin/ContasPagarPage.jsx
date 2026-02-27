@@ -467,10 +467,10 @@ export default function ContasPagarPage() {
               <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} required />
             </div>
             <div className="grid grid-cols-4 gap-4">
-              <div><label className="form-label">Valor *</label><Input type="number" step="0.01" value={formData.valor} onChange={(e) => setFormData({...formData, valor: e.target.value})} required /></div>
-              <div><label className="form-label">Desconto</label><Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: e.target.value})} /></div>
-              <div><label className="form-label">Juros</label><Input type="number" step="0.01" value={formData.valor_juros} onChange={(e) => setFormData({...formData, valor_juros: e.target.value})} /></div>
-              <div><label className="form-label">Multa</label><Input type="number" step="0.01" value={formData.valor_multa} onChange={(e) => setFormData({...formData, valor_multa: e.target.value})} /></div>
+              <div><label className="form-label">Valor *</label><Input value={formData.valor} onChange={(e) => setFormData({...formData, valor: formatCurrency(e.target.value)})} placeholder="R$ 0,00" required /></div>
+              <div><label className="form-label">Desconto</label><Input value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: formatCurrency(e.target.value)})} placeholder="R$ 0,00" /></div>
+              <div><label className="form-label">Juros</label><Input value={formData.valor_juros} onChange={(e) => setFormData({...formData, valor_juros: formatCurrency(e.target.value)})} placeholder="R$ 0,00" /></div>
+              <div><label className="form-label">Multa</label><Input value={formData.valor_multa} onChange={(e) => setFormData({...formData, valor_multa: formatCurrency(e.target.value)})} placeholder="R$ 0,00" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className="form-label">Data Emissão</label><Input type="date" value={formData.data_emissao} onChange={(e) => setFormData({...formData, data_emissao: e.target.value})} /></div>
