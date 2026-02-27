@@ -177,7 +177,7 @@ export default function CategoriesPage() {
 
   const openEditCategory = (category) => {
     setEditingCategory(category);
-    setCategoryForm({ name: category.name, description: category.description || "" });
+    setCategoryForm({ name: category.name, description: category.description || "", color: category.color || "#E31A1A" });
     setShowCategoryModal(true);
   };
 
