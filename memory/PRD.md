@@ -2,6 +2,18 @@
 
 ## Changelog - 27/02/2026
 
+### Sistema de Exportação - Validação e Extensão
+- ✅ **Verificado e funcionando** em todos os sistemas (Administrativo, Gerenciamento, RH)
+- ✅ Exportação individual (PDF, Excel) funcionando corretamente
+- ✅ Exportação combinada (múltiplas categorias) funcionando
+- ✅ **NOVO: Módulo de Exportação no RH** adicionado com as seguintes categorias:
+  - Funcionários (Todos, Ativos, Desligados)
+  - Registro de Ponto (Todos, Hoje, Mês)
+  - Folha de Pagamento (Folhas, Holerites)
+  - Férias (Todas, Próximas, Vencidas)
+  - EPIs (Fichas, Vencidos)
+  - Custos de RH (Por Funcionário, Encargos)
+
 ### Novas Funcionalidades: Sistema de Gerenciamento (3 melhorias)
 
 #### 1. Cores nas Categorias de Máquinas
