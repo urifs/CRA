@@ -26,6 +26,7 @@ import {
   Image as ImageIcon, Loader2, Calendar, DollarSign, Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatCPF, formatCEP, formatTelefone } from "@/utils/masks";
 
 export default function FuncionariosPage() {
   const [funcionarios, setFuncionarios] = useState([]);
