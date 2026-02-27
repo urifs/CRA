@@ -10331,11 +10331,11 @@ async def rename_storage_item(
         raise HTTPException(status_code=500, detail=f"Erro ao renomear: {str(e)}")
 
 
+# Include modular routers first
+api_router.include_router(rh_router)
+
 # Include the router in the main app
 app.include_router(api_router)
-
-# Include modular routers
-api_router.include_router(rh_router)
 
 # Serve uploaded files
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
