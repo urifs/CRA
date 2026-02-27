@@ -1,6 +1,32 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
-## Changelog - 27/02/2026
+## Changelog - 27/02/2026 (Sessão 16)
+
+### Sistema Financeiro - Quitação de Contas com Conta Bancária
+- ✅ **Modal de Quitação Aprimorado** para Contas a Pagar e Receber:
+  - Campo "Data do Pagamento/Recebimento" para registrar data exata da quitação
+  - Dropdown "Conta Bancária (Saída/Entrada)" para vincular a transação a uma conta específica
+  - Ao quitar, o `conta_bancaria_id` é salvo no banco de dados
+  - A movimentação aparece automaticamente no extrato bancário da conta selecionada
+- ✅ **Correção do Botão de Quitação**: Botão agora aparece corretamente para contas com status "pendente" ou "em_aberto"
+
+### Sistema de Cadastros - Formulário Unificado
+- ✅ **Novo Componente `CadastroFormModal.jsx`**: Formulário completo de cadastro reutilizável
+- ✅ **Acesso de Contas a Pagar/Receber**: Ao clicar no ícone de "Novo Fornecedor/Cliente", abre o formulário completo
+- ✅ **Campos do Formulário Completo**:
+  - Tipo de Cadastro (Cliente, Fornecedor, Cliente/Fornecedor, Transportador)
+  - Pessoa (Física/Jurídica) e Status (Ativo/Inativo)
+  - Razão Social/Nome, Nome Fantasia/Apelido
+  - CNPJ/CPF com consulta automática (BrasilAPI)
+  - Inscrição Estadual/RG
+  - Telefone, Celular, Email
+  - Endereço completo com consulta automática por CEP (ViaCEP)
+  - Grupo, Rota, Vendedor, Limite de Crédito, Observações
+- ✅ **Integração Automática**: Após cadastro, o nome é preenchido automaticamente no formulário original
+
+---
+
+## Changelog - 27/02/2026 (Sessão 15)
 
 ### Sistema de Exportação - Validação e Extensão
 - ✅ **Verificado e funcionando** em todos os sistemas (Administrativo, Gerenciamento, RH)
