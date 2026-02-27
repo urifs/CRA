@@ -11,7 +11,18 @@ Sistema de gerenciamento de máquinas e manutenções com módulos administrativ
 
 ## O que foi implementado
 
-### Sessão Atual (27/02/2026) - Parte 12
+### Sessão Atual (27/02/2026) - Parte 13
+
+#### ✅ Refatoração do Backend - Módulos Admin e Machines Extraídos - COMPLETO
+- **server.py**: Reduzido de 12.167 para 10.364 linhas (-15%)
+- **Novos módulos extraídos**:
+  - `/app/backend/routes/rh.py` - 1.315 linhas (RH completo)
+  - `/app/backend/routes/admin.py` - 670 linhas (Cadastros, Contas a Pagar/Receber, OS, Plano de Contas)
+  - `/app/backend/routes/machines.py` - 639 linhas (Categorias, Frotas, Máquinas, Manutenções)
+- **Total em routes/**: 2.845 linhas de código modularizado
+- **Testes**: Todos os endpoints funcionando após refatoração
+
+### Sessão Anterior (27/02/2026) - Parte 12
 
 #### ✅ Refatoração do Backend - Módulo RH Extraído - COMPLETO
 - **server.py**: Reduzido de 12.167 para 10.360 linhas (-15%)
