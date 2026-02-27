@@ -2475,7 +2475,7 @@ async def get_notifications(current_user: dict = Depends(get_current_user)):
     
     # Sort by urgency
     def sort_key(n):
-        if "urgent" in n.notification_type or "empty" in n.notification_type:
+        if "urgent" in n.notification_type or "empty" in n.notification_type or "critical" in n.notification_type:
             return 0
         return 1
     
