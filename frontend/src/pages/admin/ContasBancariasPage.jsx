@@ -551,7 +551,7 @@ export default function ContasBancariasPage() {
             </div>
 
             {/* Saldo e Status */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Saldo Inicial</Label>
                 <Input 
@@ -561,6 +561,18 @@ export default function ContasBancariasPage() {
                   onChange={(e) => setFormData({...formData, saldo_inicial: e.target.value})}
                   placeholder="0.00"
                 />
+              </div>
+              <div>
+                <Label>Saldo Atual</Label>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  value={formData.saldo_atual} 
+                  onChange={(e) => setFormData({...formData, saldo_atual: e.target.value})}
+                  placeholder="0.00"
+                  data-testid="saldo-atual-input"
+                />
+                <p className="text-xs text-gray-500 mt-1">Atualizado automaticamente nas quitações</p>
               </div>
               <div>
                 <Label>Status</Label>
