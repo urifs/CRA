@@ -1982,14 +1982,14 @@ async def list_operadores(current_user: dict = Depends(get_current_user)):
             "cargo": f.get("cargo", "")
         })
     
-    # Buscar cadastros do financeiro
-    cadastros = await db.cadastros.find({}, {"_id": 0, "id": 1, "nome": 1, "tipo": 1}).to_list(500)
+    # Buscar cadastros do financeiro (nome_razao é o campo correto)
+    cadastros = await db.cadastros.find({}, {"_id": 0, "id": 1, "nome_razao": 1, "tipo_cadastro": 1}).to_list(500)
     for c in cadastros:
         operadores.append({
             "id": c["id"],
-            "nome": c["nome"],
+            "nome": c.get("nome_razao", ""),
             "tipo": "cadastro",
-            "cargo": c.get("tipo", "")
+            "cargo": c.get("tipo_cadastro", "")
         })
     
     return operadores
