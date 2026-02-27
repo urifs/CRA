@@ -241,7 +241,8 @@ export default function StockPage() {
       min_quantity: item.min_quantity.toString(),
       unit_price: item.unit_price.toString(),
       location: item.location,
-      notes: item.notes
+      notes: item.notes,
+      machine_ids: item.machine_ids || []
     });
     setShowItemDialog(true);
   };
