@@ -421,6 +421,32 @@ export default function HorimetroPage() {
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Tipo de Medição */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Gauge size={16} className="text-yellow-500" />
+                Tipo de Medição *
+              </Label>
+              <RadioGroup 
+                value={formData.tipo_medicao} 
+                onValueChange={(value) => setFormData({...formData, tipo_medicao: value})}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="hora" id="tipo_hora" />
+                  <Label htmlFor="tipo_hora" className="cursor-pointer font-normal">
+                    Horas (Horímetro)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="km" id="tipo_km" />
+                  <Label htmlFor="tipo_km" className="cursor-pointer font-normal">
+                    Quilômetros (Odômetro)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* Seleção de Máquina */}
             <div className="space-y-2">
               <Label htmlFor="machine">Máquina *</Label>
