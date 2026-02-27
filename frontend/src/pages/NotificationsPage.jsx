@@ -41,24 +41,31 @@ export default function NotificationsPage() {
   };
 
   const getIcon = (type) => {
-    if (type.includes("urgent") || type.includes("empty")) {
+    if (type.includes("urgent") || type.includes("empty") || type.includes("critical")) {
       return <AlertTriangle className="text-red-500" size={24} />;
     }
     if (type.includes("stock")) {
       return <Package className="text-[#E31A1A]" size={24} />;
     }
+    if (type.includes("fuel")) {
+      return <Droplet className="text-orange-500" size={24} />;
+    }
     return <Droplet className="text-[#E31A1A]" size={24} />;
   };
 
   const getCardClass = (type) => {
-    if (type.includes("urgent") || type.includes("empty")) {
+    if (type.includes("urgent") || type.includes("empty") || type.includes("critical")) {
       return "border-red-300 bg-red-50";
+    }
+    if (type.includes("fuel")) {
+      return "border-orange-300 bg-orange-50";
     }
     return "border-orange-200 bg-orange-50";
   };
 
-  const urgentCount = notifications.filter(n => n.notification_type.includes("urgent") || n.notification_type.includes("empty")).length;
-  const warningCount = notifications.filter(n => !n.notification_type.includes("urgent") && !n.notification_type.includes("empty")).length;
+  const urgentCount = notifications.filter(n => n.notification_type.includes("urgent") || n.notification_type.includes("empty") || n.notification_type.includes("critical")).length;
+  const warningCount = notifications.filter(n => !n.notification_type.includes("urgent") && !n.notification_type.includes("empty") && !n.notification_type.includes("critical")).length;
+  const fuelCount = notifications.filter(n => n.notification_type.includes("fuel")).length;
 
   if (loading) {
     return (
