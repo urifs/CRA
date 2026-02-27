@@ -1,119 +1,93 @@
 <analysis>**original_problem_statement**:
 O usuário solicitou uma série de novas funcionalidades e correções de bugs, incluindo:
-1.  **Quitação de Contas (Pagar e Receber)**:
-    *   Adicionar um campo Data de Pagamento no modal de quitação.
-    *   Adicionar um dropdown para selecionar de qual conta bancária o dinheiro está saindo/entrando.
-    *   A quitação deve ser registrada no extrato da conta bancária selecionada.
-2.  **Cadastro Unificado**: Ao criar um fornecedor/cliente de dentro de outro formulário (ex: Contas a Pagar), o formulário de cadastro completo deve ser aberto, em vez de uma versão reduzida.
-3.  **Sistema de Exportação**: Corrigir bugs na exportação em todos os módulos e adicionar a funcionalidade de exportação ao módulo de RH, padronizando o layout.
-4.  **Módulo de Gerenciamento**:
-    *   **Horímetro**: Adicionar a opção de registrar medição por Hora ou Km.
-    *   **Categorias de Máquinas**: Adicionar uma opção de cor para cada categoria e refletir essa cor nos cards das máquinas.
-    *   **Sistema de Combustível**: Reformular completamente o sistema para diferenciar veículos tanque (abastecedores) de veículos abastecidos, com dedução automática de combustível do tanque de origem.
-5.  **Painel de Administração**:
-    *   Corrigir um bug que impedia a alteração de cargos de usuários.
-    *   Criar um novo cargo Programador com as mesmas permissões que o admin.
+1.  **Quitação de Contas**: Adicionar seleção de conta bancária no modal de quitação, com a transação sendo registrada no extrato da conta.
+2.  **Cadastro Unificado**: Ao criar um fornecedor/cliente de dentro de outro formulário, abrir o formulário de cadastro completo.
+3.  **Formatação Automática de Campos**: Aplicar máscaras de formatação para CPF, CNPJ e CEP em todos os formulários da plataforma.
+4.  **Correção de Exportação PDF**: Corrigir problemas de layout onde textos longos invadiam outras células, aplicando quebra de linha automática.
+5.  **Atualização de Saldo Bancário**: Garantir que o saldo de uma conta bancária seja atualizado (aumente/diminua) automaticamente após a quitação de contas a receber/pagar.
+6.  **Estoque e Máquinas**: No módulo de estoque, ao cadastrar um item, adicionar um campo para vincular o item a uma ou mais máquinas cadastradas.
+7.  **Sistema de Armazenamento**: Corrigir um bug onde itens movidos para a lixeira pareciam retornar à lista principal e a impossibilidade de selecionar múltiplos arquivos para exclusão.
+8.  **Notificações de Combustível**: Adicionar alertas na página de notificações para veículos abastecedores com nível de combustível baixo ou crítico.
+9.  **Edição de Saldo Bancário**: Corrigir um bug onde a edição manual do saldo de uma conta bancária não refletia a atualização no saldo total exibido na tela.
 
-**PRODUCT REQUIREMENTS:** estão detalhados no arquivo .
+**PRODUCT REQUIREMENTS:** O arquivo de requisitos do produto está em  e foi atualizado nesta sessão.
 
 **User's preferred language**: Portuguese (Brazil)
 
 **what currently exists?**
-O agente implementou com sucesso a maioria das solicitações do usuário. O bug dos cargos foi corrigido e o cargo Programador foi criado. As funcionalidades de cores nas categorias, tipo de medição no horímetro, e o novo sistema de exportação (incluindo no RH) foram concluídas e testadas. O complexo sistema de combustível foi implementado, e vários bugs relacionados a ele (erros de cadastro,  não serializável, e a não dedução de combustível) foram identificados e corrigidos. A adição do campo Data de Pagamento no modal de quitação também foi concluída. O agente estava no meio da implementação da seleção de conta bancária no mesmo modal de quitação.
+O agente concluiu com sucesso todas as tarefas e correções de bugs solicitadas pelo usuário nesta sessão. A integração da conta bancária na quitação (P0) e o formulário de cadastro unificado (P1) foram finalizados e testados. Posteriormente, o agente implementou a formatação automática (máscaras) para campos de CPF, CNPJ, CEP e telefone em toda a plataforma. Foram corrigidos três bugs críticos: a quebra de linha em exportações PDF, a atualização automática do saldo bancário após quitações e a vinculação de itens de estoque a máquinas. O agente também investigou e melhorou o sistema de armazenamento, confirmando que a seleção múltipla funciona e aprimorando a atualização da UI. Por fim, implementou notificações de combustível baixo e corrigiu o bug na edição manual do saldo da conta bancária.
 
 **Last working item**:
-    - Last item agent was working: Implementando a funcionalidade para selecionar uma conta bancária de um dropdown ao quitar uma conta (a pagar ou a receber). O objetivo é que essa transação seja refletida no extrato da conta bancária correspondente.
-    - Status: IN PROGRESS
-    - Agent Testing Done: N
-    - Which testing method agent to use? both
-    - User Testing Done: N
+    - Last item agent was working: Corrigindo o bug onde a edição manual do saldo de uma conta bancária não atualizava o valor total exibido nos cards da página. O agente adicionou um campo Saldo Atual ao modal de edição e ajustou a lógica do frontend para enviar e exibir o valor correto.
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y
+    - Which testing method agent to use? screenshot tool
+    - User Testing Done: Y
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Formulário de cadastro de fornecedor/cliente incompleto (P1)
-  
-  Issues Detail:
-  - Issue 1: 
-     - **Descrição**: Ao tentar adicionar um novo fornecedor/cliente de dentro de outra tela (como Contas a Pagar), um formulário reduzido é aberto. O usuário quer que o formulário de cadastro completo seja aberto em um modal, e que o novo cadastro apareça na lista principal de Cadastros.
-     - Attempted fixes: Nenhum. O agente ainda não iniciou esta tarefa.
-     - Next debug checklist:
-        1.  Analisar o componente da página de Cadastros para entender como reutilizar o formulário completo.
-        2.  Nos arquivos  e , modificar o botão Novo Fornecedor/Cliente para abrir um modal contendo o formulário de cadastro completo.
-        3.  Garantir que, após o cadastro, a lista de fornecedores/clientes no formulário original (Contas a Pagar/Receber) seja atualizada para incluir o novo item.
-     - Why fix this issue and what will be achieved with the fix? Unificar a experiência do usuário, garantindo que todos os dados necessários de um novo fornecedor/cliente possam ser inseridos de uma só vez, sem sair do fluxo de trabalho atual.
-     - Status:  NOT STARTED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? frontend
-     - Blocked on other issue: Não.
+Nenhum. Todos os problemas relatados pelo usuário nesta sessão foram resolvidos.
 
 **In progress Task List**:
-  - Task 1: Concluir a integração da conta bancária na quitação de contas (P0)
-
- Task Detail:
-  - Task 1: 
-     - Where to resume: O agente já modificou o backend () para aceitar um  na quitação e atualizou o frontend ( e ) adicionando o estado e os componentes UI para o dropdown. O próximo passo é testar o fluxo completo:
-        1.  Verificar se a chamada à API para buscar as contas bancárias está funcionando e populando o dropdown no modal de quitação.
-        2.  Confirmar que, ao quitar, o  selecionado é enviado corretamente para o backend.
-        3.  Testar a API de extrato bancário () para garantir que a despesa/receita quitada aparece corretamente no extrato da conta selecionada.
-     - What will be achieved with this? As quitações de contas serão vinculadas a contas bancárias específicas, automatizando a geração de extratos e melhorando o controle financeiro.
-     - Status:  IN PROGRESS
-     - Should Test frontend/backend/both after fix? both
-     - Blocked on something: Não.
+Nenhuma. Todas as tarefas foram concluídas.
 
 **Upcoming and Future Tasks**
  **Upcoming Tasks:**
- - **P1: Formulário de Cadastro Unificado**: Implementar a abertura do formulário de cadastro completo para fornecedores/clientes a partir de outras telas, conforme descrito em All Pending/In progress Issue list.
+ - **P1: Máscaras de Formatação Adicionais**: Implementar máscaras de formatação automática para **valores monetários** (ex: R$ 1.500,00) e **datas** (ex: dd/mm/aaaa) nos campos de input, seguindo a mesma lógica da implementação de CPF/CNPJ.
 
  **Future Tasks:**
- - **P2: Finalizar Refatoração do Backend**: Concluir a tarefa de refatoração do , movendo a lógica de negócios remanescente para arquivos modulares em .
- - **P2: Refatoração do Frontend**: Desmembrar páginas grandes do RH (como  e ) em componentes menores e reutilizáveis.
- - **P2: Notificações de Combustível**: Adicionar alertas automáticos para quando o nível de combustível em um veículo tanque estiver baixo.
- - **P2: Relatórios Automatizados**: Criar funcionalidades para gerar e enviar relatórios periodicamente (ex: relatório de ponto por e-mail).
+ - **P2: Refatoração do Backend**: Concluir a refatoração do , movendo a lógica de negócios para arquivos modulares em  para reduzir a dívida técnica.
+ - **P2: Refatoração do Frontend**: Desmembrar componentes grandes em arquivos menores e reutilizáveis, como  (1300+ linhas),  (1500+ linhas),  (900+ linhas),  (700+ linhas) e páginas do RH.
+ - **P2: Notificações por Email**: Expandir o sistema de notificações para enviar alertas por email para eventos críticos, como nível de combustível baixo em veículos tanque.
+ - **P2: Relatórios Automatizados**: Criar uma funcionalidade para gerar e enviar relatórios periodicamente por e-mail (ex: relatório de ponto, relatório financeiro).
 
 **Completed work in this session**
 - **Sistema Financeiro**:
-  - Adicionado campo Data de Pagamento aos modais de quitação de Contas a Pagar e Receber.
-- **Sistema de Exportação**:
-  - Erros de exportação corrigidos nos módulos Administrativo e Gerenciamento.
-  - Funcionalidade de exportação padronizada adicionada ao módulo de RH.
+  - **Quitação com Conta Bancária**: Implementada a seleção de conta bancária no modal de quitação. A transação agora afeta o saldo da conta selecionada. (DONE)
+  - **Atualização de Saldo**: Corrigido bug que impedia o saldo de ser atualizado automaticamente após quitações. (DONE)
+  - **Edição Manual de Saldo**: Corrigido bug que impedia a edição manual do saldo de uma conta de refletir na UI. (DONE)
+- **Cadastros**:
+  - **Formulário Unificado**: O formulário de cadastro completo agora é aberto em um modal a partir das páginas de Contas a Pagar/Receber. (DONE)
+- **UI/UX**:
+  - **Máscaras de Formatação**: Implementada formatação automática para CPF, CNPJ, CEP e telefone em múltiplos formulários (, , , etc.). (DONE)
+- **Exportação**:
+  - **Quebra de Linha em PDF**: Corrigido o layout dos PDFs exportados para que textos longos tenham quebra de linha automática. (DONE)
 - **Sistema de Gerenciamento**:
-  - **Sistema de Combustível**: Implementado do zero, com lógica de veículos abastecedores e abastecidos e dedução automática de volume. Corrigidos múltiplos bugs relacionados ao cadastro e atualização de dados.
-  - **Cores nas Categorias**: Implementada a seleção de cores para categorias de máquinas, com os cards refletindo a cor escolhida.
-  - **Horímetro**: Adicionada opção para registrar medições por Hora ou Km.
-- **Painel de Administração**:
-  - Corrigido bug que impedia a mudança de cargo de um usuário devido a uma lista de  hardcoded.
-  - Criado o cargo Programador com permissões de administrador.
+  - **Estoque com Máquinas**: Adicionada a funcionalidade para vincular itens de estoque a uma ou mais máquinas. (DONE)
+  - **Notificações de Combustível**: Implementados alertas na página de notificações para veículos abastecedores com combustível baixo. (DONE)
+- **Sistema de Armazenamento**:
+  - **Seleção Múltipla e Exclusão**: Investigado e confirmado o funcionamento da seleção múltipla e da exclusão para a lixeira, com melhorias na atualização da UI. (DONE)
 
 **Earlier issues found/mentioned but not fixed**
    - Nenhum.
 
 **Known issue recurrence from previous fork**
-  - **Complexidade do **: O problema de um  monolítico foi parcialmente resolvido em forks anteriores, mas o agente continuou a adicionar novas funcionalidades complexas diretamente a este arquivo, aumentando novamente a dívida técnica.
-  - **Recurrence count**: 2+
-  - **Status**: NOT STARTED (A refatoração está no backlog como uma tarefa futura).
+  - **Complexidade do **: O arquivo  continua sendo um monolito. Apesar das refatorações anteriores, novas funcionalidades continuam a ser adicionadas a ele, aumentando a dívida técnica.
+  - **Recurrence count**: 3+
+  - **Status**: NOT STARTED (A refatoração completa está planejada como uma tarefa futura de prioridade P2).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **FastAPI Backend**: O backend é construído com FastAPI.
-- **React Frontend**: O frontend é uma aplicação React.
-- **MongoDB**: Usado como banco de dados principal. A manipulação de  requer atenção para evitar erros de serialização JSON, um problema que foi corrigido várias vezes nesta sessão.
-- **State Management (React)**: Uso de  e  para gerenciar o estado dos componentes e buscar dados da API.
-- **Component-based UI**: Uso de componentes reutilizáveis (Shadcn UI) para construir a interface.
+- **FastAPI Backend**: Backend da aplicação.
+- **React Frontend**: Frontend com  e  para gerenciamento de estado.
+- **MongoDB**: Banco de dados. A manipulação de  e a projeção de campos continuam a ser um ponto de atenção.
+- **Shadcn UI & Reusabilidade**: Uso de componentes UI e criação de componentes reutilizáveis ().
+- **ReportLab**: Biblioteca Python usada para gerar os relatórios em PDF, modificada para suportar quebra de linha ().
 
 **key DB schema**
-  - **contas_pagar / contas_receber**: 
   - **contas_bancarias**: 
-  - **movimentacoes_bancarias**: 
-  - **veiculos_abastecedores**: 
-  - **combustivel_registros**: 
-  - **categorias**: 
+  - **stock_items**: 
+  - **notifications** (gerado dinamicamente): 
 
 **changes in tech stack**
   - Nenhuma.
 
 **All files of reference**
 - **Backend (modificado)**:
+  -  (Múltiplas atualizações: quitação, saldo, estoque, notificações, exportação).
+- **Frontend (criado)**:
+  - 
   - 
 - **Frontend (modificado)**:
   - 
@@ -125,56 +99,54 @@ O agente implementou com sucesso a maioria das solicitações do usuário. O bug
   - 
   - 
   - 
-  - 
 
 **Areas that need refactoring**:
-- ****: O arquivo continua a crescer e a acumular lógica de negócios que deveria ser modularizada nos arquivos de . A refatoração precisa ser priorizada para manter a saúde do projeto.
-- ****: Este arquivo tem mais de 900 linhas e contém a lógica para múltiplas abas e modais. Deve ser dividido em componentes menores (ex: , , ).
-- ** / **: Ambos os arquivos têm mais de 700 linhas e compartilham muita lógica semelhante (modais, tabelas). Seria benéfico criar componentes reutilizáveis para os modais de formulário e quitação.
+- ****: A prioridade mais alta. O arquivo ultrapassou 10.900 linhas e precisa urgentemente ser modularizado.
+- ****: Com mais de 1.500 linhas, precisa ser dividido em componentes menores (ex: , , ).
+- ****: Com mais de 1.300 linhas, deve ser refatorado em componentes para a tabela, o modal de item, etc.
+- ** / **: Ainda compartilham muita lógica e podem ser simplificados com mais componentes reutilizáveis.
 
 **key api endpoints**
--  (PATCH)
--  (PATCH)
--  (GET)
--  (GET)
--  (POST, GET)
--  (POST, GET)
--  (GET)
--  (GET)
+-  (PATCH): Atualizado para modificar saldo bancário.
+-  (PATCH): Atualizado para modificar saldo bancário.
+-  (PUT): Atualizado para permitir edição do .
+-  (GET): Atualizado para gerar PDFs com quebra de linha.
+-  (POST, PUT, GET): Atualizado para suportar .
+-  (GET): Atualizado para incluir alertas de combustível.
+-  (POST): Rota para mover múltiplos itens para a lixeira.
 
 **Critical Info for New Agent**
-- **Dívida Técnica em **: Esteja ciente de que  é um arquivo monolítico. Embora existam rotas modulares, muitas funcionalidades recentes foram adicionadas diretamente a ele. Para novas funcionalidades, priorize o uso da arquitetura modular em .
-- **Atenção ao **: Ao interagir com o MongoDB, lembre-se sempre de remover o campo  dos documentos antes de retorná-los em respostas de API para evitar erros de serialização JSON. Este foi um bug recorrente.
-- **UX com Recarregamento de Dados**: Em vários momentos, a funcionalidade do backend estava correta, mas a UI não refletia as mudanças imediatamente. Certifique-se de que as funções de busca de dados (ex: ) sejam chamadas após mutações (POST, PATCH, DELETE) para manter a UI sincronizada.
+- **Dívida Técnica em **: O arquivo  é extremamente grande e complexo. Para qualquer nova funcionalidade de backend, crie novas rotas em  em vez de adicionar mais lógica ao . A refatoração deste arquivo é uma tarefa futura importante.
+- **Componentes Reutilizáveis**: Foram criados o  e o . Utilize-os e siga este padrão para criar novos componentes/utilitários reutilizáveis em vez de duplicar código.
+- **Estado da UI vs. Backend**: Vários bugs resolvidos nesta sessão eram relacionados à UI não refletindo o estado atual do backend. Sempre garanta que as chamadas de busca de dados (ex: ) sejam executadas após mutações (POST, PATCH, DELETE) para manter a UI sincronizada.
 
 **documents and test reports created in this job**
-- 
+-  (atualizado)
 - 
 - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - **10**: estou alimentando com abastecidos a opção de abastecimento, porem quando vou na aba de veiculos tanque, não está reduzindo os números... - O usuário reportou que o combustível não estava sendo descontado. (Status: RESOLVED - Agente confirmou que estava funcionando e era um mal-entendido).
- - **9**: Já entendi como funciona o sistema, era um mal entendido apenas, mas quando vou cadastrar veiculo abastecedor da erro, verifique e corrija - O usuário reportou um erro ao cadastrar um veículo tanque. (Status: RESOLVED - Era um erro de serialização de  que o agente corrigiu).
- - **8**: (Mensagem do agente com dúvida sobre o dropdown).
- - **7**: No abastecimento, quando vai registrar veículo tanque no abastecedor, o dropdown dos veículos não está funcionando. - Usuário reportou um bug no dropdown. (Status: RESOLVED - Agente investigou e adicionou mensagens de UI para o caso de não haver máquinas disponíveis).
- - **6**: Na função de exportar em todos os sistemas, vários estão dando erro... - Usuário pediu para corrigir os erros de exportação e adicionar a função ao RH. (Status: COMPLETED).
- - **5**: (Mensagem do agente finalizando a implementação de 4 funcionalidades).
- - **4**: (Mensagem do agente com plano para implementar as novas funcionalidades).
- - **3**: 1 - N deve ter registro... 2 - Deve mostrar % e Litros restantes... 3 - Sim - Usuário esclarecendo requisitos para o sistema de combustível.
- - **2**: (Mensagem do agente com plano para as novas funcionalidades).
- - **1**: criar cargo no painel admin de Programador... no horimetro tem que ter a opção de resgistrar por hora ou kmh... opção de adiciionar cor a categoria... na opção de combustivel será alterada... - Usuário solicitando um lote de novas funcionalidades. (Status: MOSTLY COMPLETED, com algumas partes ainda em andamento).
+1.  **continuar P0 e P1**: Usuário aprovou o plano inicial. (Status: COMPLETED)
+2.  **...não está pontuando automaticamente o cnpj nem cpf...**: Usuário solicitou formatação automática em todos os formulários. (Status: COMPLETED)
+3.  **Na opção de exportar... Na opção de conta bancaria... No sistema de gerenciamento...**: Usuário relatou 3 bugs: quebra de linha na exportação, saldo não atualizando e falta de vínculo de máquina no estoque. (Status: COMPLETED)
+4.  **continue TODAS as correções**: Usuário confirmou a continuação dos trabalhos. (Status: COMPLETED)
+5.  **No sistema de armazenamento, estou excluindo itens... e não estou conseguindo selecionar vários...**: Usuário relatou bugs no sistema de armazenamento. (Status: COMPLETED - funcionalidade verificada e UI melhorada)
+6.  **colocar Notificações de combustível baixo...**: Usuário solicitou notificações de combustível. (Status: COMPLETED)
+7.  **o saldo na conta bancaria registrado não está diminuindo o valor no badger...**: Usuário relatou que a edição manual do saldo não atualizava a UI. (Status: COMPLETED)
 
 **Project Health Check:**
 - **Broken**: Nenhum.
 - **Mocked**: Nenhum.
 
 **3rd Party Integrations**
-- **Gemini (gemini-pro)**: Utilizado via  para sugestões de EPI. Está funcionando corretamente e usa a .
+- **Gemini (gemini-pro)**: Utilizado via  para sugestões de EPI. Usa a .
 
 **Testing status**
   - Testing agent used after significant changes: YES
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: []
+  - Test files created:
+    - 
+    - 
   - Known regressions: Nenhum.
 
 **Credentials to test flow:**
@@ -183,4 +155,4 @@ O agente implementou com sucesso a maioria das solicitações do usuário. O bug
 - **Role**: 
 
 **What agent forgot to execute**
-- O agente não esqueceu tarefas, mas ao receber o pedido em  com duas partes distintas (1. conta bancária na quitação; 2. formulário de cadastro completo), ele iniciou a primeira parte, mas ainda não começou a segunda. A segunda parte está listada como o próximo item pendente.</analysis>
+- O agente foi muito completo e abordou todas as solicitações do usuário feitas durante esta sessão. Nenhuma tarefa foi esquecida.</analysis>
