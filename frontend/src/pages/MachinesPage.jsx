@@ -393,16 +393,25 @@ export default function MachinesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMachines.map((machine) => (
+                  {filteredMachines.map((machine) => {
+                    const categoryColor = categories.find(c => c.id === machine.category_id)?.color || "#E31A1A";
+                    return (
                     <tr key={machine.id} data-testid={`machine-row-${machine.id}`}>
                       <td className="font-medium text-black">
                         <div className="flex items-center gap-2">
-                          <Truck size={16} className="text-gray-400" />
+                          <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: categoryColor }}>
+                            <Truck size={14} className="text-white" />
+                          </div>
                           {machine.name}
                         </div>
                       </td>
                       <td className="font-mono text-gray-500">{machine.plate || "-"}</td>
-                      <td>{machine.category_name || "-"}</td>
+                      <td>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColor }}></span>
+                          {machine.category_name || "-"}
+                        </span>
+                      </td>
                       <td>
                         {machine.fleet_name ? (
                           <span className="text-sm">
@@ -427,7 +436,8 @@ export default function MachinesPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </CardContent>
