@@ -137,7 +137,7 @@ export default function CadastroFormModal({
     try {
       const dataToSend = {
         ...formData,
-        limite_credito: formData.limite_credito ? parseFloat(formData.limite_credito) : null,
+        limite_credito: formData.limite_credito ? parseCurrency(formData.limite_credito) : null,
       };
       const response = await axios.post(`${API}/admin/cadastros`, dataToSend);
       toast.success("Cadastro realizado com sucesso!");
