@@ -75,7 +75,8 @@ const USER_ROLES = {
   ambos_rh: { label: "Ger + Admin + RH", icon: Crown, color: "bg-purple-600" },
   gerenciamento_rh: { label: "Gerenciamento + RH", icon: Users, color: "bg-pink-500" },
   administrativo_rh: { label: "Administrativo + RH", icon: Building2, color: "bg-orange-500" },
-  admin: { label: "Administrador", icon: Crown, color: "bg-green-500" }
+  admin: { label: "Administrador", icon: Crown, color: "bg-green-500" },
+  programador: { label: "Programador", icon: Crown, color: "bg-blue-600" }
 };
 
 // Prioridades
