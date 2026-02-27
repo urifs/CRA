@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { formatCPF, formatCNPJ, formatCEP, formatTelefone } from "@/utils/masks";
+import { formatCPF, formatCNPJ, formatCEP, formatTelefone, formatCurrency, parseCurrency } from "@/utils/masks";
 
 export default function CadastrosPage() {
   const [cadastros, setCadastros] = useState([]);
