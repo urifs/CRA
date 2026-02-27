@@ -10389,7 +10389,7 @@ async def gerar_contas_pagar_folha(mes: int = Body(...), ano: int = Body(...), c
         "origem": "rh",
         "created_at": datetime.now().isoformat()
     }
-    await contas_pagar_collection.insert_one(conta_salarios)
+    await db.contas_pagar.insert_one(conta_salarios)
     contas_criadas.append("Salários")
     
     # Conta para INSS
@@ -10405,7 +10405,7 @@ async def gerar_contas_pagar_folha(mes: int = Body(...), ano: int = Body(...), c
             "origem": "rh",
             "created_at": datetime.now().isoformat()
         }
-        await contas_pagar_collection.insert_one(conta_inss)
+        await db.contas_pagar.insert_one(conta_inss)
         contas_criadas.append("INSS")
     
     # Conta para FGTS
@@ -10421,7 +10421,7 @@ async def gerar_contas_pagar_folha(mes: int = Body(...), ano: int = Body(...), c
             "origem": "rh",
             "created_at": datetime.now().isoformat()
         }
-        await contas_pagar_collection.insert_one(conta_fgts)
+        await db.contas_pagar.insert_one(conta_fgts)
         contas_criadas.append("FGTS")
     
     return {"message": f"Contas criadas: {', '.join(contas_criadas)}", "total": len(contas_criadas)}
