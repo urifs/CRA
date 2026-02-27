@@ -518,7 +518,7 @@ export default function ContasBancariasPage() {
                 <Label>CPF/CNPJ do Titular</Label>
                 <Input 
                   value={formData.cpf_cnpj_titular} 
-                  onChange={(e) => setFormData({...formData, cpf_cnpj_titular: e.target.value})}
+                  onChange={(e) => setFormData({...formData, cpf_cnpj_titular: formatCPFouCNPJ(e.target.value)})}
                   placeholder="000.000.000-00"
                 />
               </div>
