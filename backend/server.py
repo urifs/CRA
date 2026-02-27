@@ -6863,6 +6863,65 @@ EXPORT_CATEGORIES_V2 = {
                 {"id": "users", "label": "Lista de Usuários", "description": "Todos os usuários"},
             ]
         },
+    ],
+    "rh": [
+        {
+            "id": "funcionarios_cat",
+            "label": "Funcionários",
+            "icon": "users",
+            "subcategories": [
+                {"id": "funcionarios", "label": "Todos os Funcionários", "description": "Lista completa de funcionários"},
+                {"id": "funcionarios_ativos", "label": "Funcionários Ativos", "description": "Funcionários em atividade"},
+                {"id": "funcionarios_desligados", "label": "Funcionários Desligados", "description": "Ex-funcionários"},
+            ]
+        },
+        {
+            "id": "ponto_cat",
+            "label": "Registro de Ponto",
+            "icon": "clock",
+            "subcategories": [
+                {"id": "ponto_registros", "label": "Todos os Registros", "description": "Histórico completo de ponto"},
+                {"id": "ponto_hoje", "label": "Registros de Hoje", "description": "Ponto do dia atual"},
+                {"id": "ponto_mes", "label": "Registros do Mês", "description": "Ponto do mês atual"},
+            ]
+        },
+        {
+            "id": "folha_cat",
+            "label": "Folha de Pagamento",
+            "icon": "dollar",
+            "subcategories": [
+                {"id": "folha_pagamento", "label": "Folhas de Pagamento", "description": "Todas as folhas geradas"},
+                {"id": "holerites", "label": "Holerites", "description": "Demonstrativos de pagamento"},
+            ]
+        },
+        {
+            "id": "ferias_cat",
+            "label": "Férias",
+            "icon": "calendar",
+            "subcategories": [
+                {"id": "ferias", "label": "Todas as Férias", "description": "Histórico de férias"},
+                {"id": "ferias_proximas", "label": "Férias Próximas", "description": "Férias a vencer em 60 dias"},
+                {"id": "ferias_vencidas", "label": "Férias Vencidas", "description": "Férias não gozadas"},
+            ]
+        },
+        {
+            "id": "epi_cat",
+            "label": "EPIs",
+            "icon": "hard-hat",
+            "subcategories": [
+                {"id": "epi_fichas", "label": "Fichas de EPI", "description": "Todas as fichas cadastradas"},
+                {"id": "epi_vencidos", "label": "EPIs Vencidos", "description": "EPIs a renovar"},
+            ]
+        },
+        {
+            "id": "custos_cat",
+            "label": "Custos de RH",
+            "icon": "calculator",
+            "subcategories": [
+                {"id": "custos_funcionarios", "label": "Custo por Funcionário", "description": "Detalhamento de custos"},
+                {"id": "custos_encargos", "label": "Encargos Sociais", "description": "INSS, FGTS, etc"},
+            ]
+        },
     ]
 }
 
