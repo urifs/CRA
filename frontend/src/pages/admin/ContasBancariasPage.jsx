@@ -171,8 +171,8 @@ export default function ContasBancariasPage() {
         cpf_cnpj_titular: conta.cpf_cnpj_titular || "",
         chave_pix: conta.chave_pix || "",
         tipo_chave_pix: conta.tipo_chave_pix || "",
-        saldo_inicial: String(conta.saldo_inicial || 0),
-        saldo_atual: String(conta.saldo_atual || 0),
+        saldo_inicial: conta.saldo_inicial ? formatCurrencyMask((conta.saldo_inicial * 100).toString()) : "R$ 0,00",
+        saldo_atual: conta.saldo_atual ? formatCurrencyMask((conta.saldo_atual * 100).toString()) : "R$ 0,00",
         ativo: conta.ativo !== false,
         cor: conta.cor || "#3B82F6",
         observacoes: conta.observacoes || ""
@@ -182,8 +182,8 @@ export default function ContasBancariasPage() {
       setFormData({
         nome: "", banco: "", codigo_banco: "", agencia: "", agencia_digito: "",
         conta: "", conta_digito: "", tipo_conta: "corrente", titular: "",
-        cpf_cnpj_titular: "", chave_pix: "", tipo_chave_pix: "", saldo_inicial: "0",
-        saldo_atual: "0", ativo: true, cor: "#3B82F6", observacoes: ""
+        cpf_cnpj_titular: "", chave_pix: "", tipo_chave_pix: "", saldo_inicial: "R$ 0,00",
+        saldo_atual: "R$ 0,00", ativo: true, cor: "#3B82F6", observacoes: ""
       });
     }
     setIsModalOpen(true);
