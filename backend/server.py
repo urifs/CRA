@@ -1575,7 +1575,8 @@ async def update_horimetro(registro_id: str, data: HorimetroCreate, current_user
         "hora_final": data.hora_final,
         "horas_trabalhadas": horas_trabalhadas,
         "operador": data.operador or "",
-        "observacoes": data.observacoes or ""
+        "observacoes": data.observacoes or "",
+        "tipo_medicao": data.tipo_medicao or "hora"
     }
     
     await db.horimetro.update_one({"id": registro_id}, {"$set": update_doc})
