@@ -775,42 +775,34 @@ export default function ImoveisPage() {
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">Aluguel *</label>
                   <Input
-                    type="number"
-                    step="0.01"
                     value={formData.valor_aluguel}
-                    onChange={(e) => setFormData({...formData, valor_aluguel: e.target.value})}
-                    placeholder="0,00"
+                    onChange={(e) => setFormData({...formData, valor_aluguel: formatCurrency(e.target.value)})}
+                    placeholder="R$ 0,00"
                     required
                   />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">Condomínio</label>
                   <Input
-                    type="number"
-                    step="0.01"
                     value={formData.valor_condominio}
-                    onChange={(e) => setFormData({...formData, valor_condominio: e.target.value})}
-                    placeholder="0,00"
+                    onChange={(e) => setFormData({...formData, valor_condominio: formatCurrency(e.target.value)})}
+                    placeholder="R$ 0,00"
                   />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">IPTU</label>
                   <Input
-                    type="number"
-                    step="0.01"
                     value={formData.valor_iptu}
-                    onChange={(e) => setFormData({...formData, valor_iptu: e.target.value})}
-                    placeholder="0,00"
+                    onChange={(e) => setFormData({...formData, valor_iptu: formatCurrency(e.target.value)})}
+                    placeholder="R$ 0,00"
                   />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">Caução</label>
                   <Input
-                    type="number"
-                    step="0.01"
                     value={formData.valor_caucao}
-                    onChange={(e) => setFormData({...formData, valor_caucao: e.target.value})}
-                    placeholder="0,00"
+                    onChange={(e) => setFormData({...formData, valor_caucao: formatCurrency(e.target.value)})}
+                    placeholder="R$ 0,00"
                   />
                 </div>
                 <div>
