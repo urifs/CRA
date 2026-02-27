@@ -2912,9 +2912,17 @@ async def update_stock_item(item_id: str, item: StockItemCreate, current_user: d
         "min_quantity": item.min_quantity,
         "unit_price": item.unit_price or 0,
         "location": item.location or "",
-        "notes": item.notes or ""
+        "notes": item.notes or "",
+        "machine_ids": item.machine_ids or []
     }
     await db.stock_items.update_one({"id": item_id}, {"$set": update_doc})
+    
+    # Buscar nomes das máquinas vinculadas
+    machine_ids = item.machine_ids or []
+    machine_names = []
+    if machine_ids:
+        machines = await db.machines.find({"id": {"$in": machine_ids}}, {"_id": 0, "name": 1}).to_list(100)
+        machine_names = [m.get("name", "") for m in machines]
     
     # Audit log
     await create_audit_log(
@@ -2937,7 +2945,9 @@ async def update_stock_item(item_id: str, item: StockItemCreate, current_user: d
         location=item.location or "",
         notes=item.notes or "",
         is_low_stock=existing["quantity"] <= item.min_quantity,
-        created_at=existing["created_at"]
+        created_at=existing["created_at"],
+        machine_ids=machine_ids,
+        machine_names=machine_names
     )
 
 @api_router.delete("/stock/items/{item_id}")
