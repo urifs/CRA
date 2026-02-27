@@ -49,6 +49,12 @@ export default function ContasReceberPage() {
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
   const [novoCadastroData, setNovoCadastroData] = useState({ nome_razao: "", cnpj_cpf: "", telefone: "", email: "" });
   
+  // Modal de Quitação
+  const [showQuitarModal, setShowQuitarModal] = useState(false);
+  const [quitarContaId, setQuitarContaId] = useState(null);
+  const [quitarContaInfo, setQuitarContaInfo] = useState(null);
+  const [dataRecebimento, setDataRecebimento] = useState(new Date().toISOString().split("T")[0]);
+  
   const [formData, setFormData] = useState({
     cliente_nome: "", documento: "", numero_doc: "", descricao: "",
     valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
