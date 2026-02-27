@@ -2,6 +2,32 @@
 
 ## Changelog - 27/02/2026
 
+### Novas Funcionalidades: Sistema de Gerenciamento (3 melhorias)
+
+#### 1. Cores nas Categorias de Máquinas
+- Adicionado seletor de cores com 10 opções no modal de criar/editar categoria
+- Cores disponíveis: Vermelho, Azul, Verde, Amarelo, Roxo, Rosa, Laranja, Ciano, Índigo, Cinza
+- As cores são aplicadas automaticamente nos cards de máquinas (borda superior e ícone)
+- Indicador visual de cor na lista de categorias
+
+#### 2. Horímetro com Opção Hora/Km
+- Novo campo "Tipo de Medição" no modal de registro de horímetro
+- Opções: Horas (Horímetro) ou Quilômetros (Odômetro)
+- Labels dinâmicos que mudam de "Hora Inicial/Final" para "Km Inicial/Final"
+- Coluna "Tipo" na tabela mostrando badge Hora ou Km
+
+#### 3. Sistema de Combustível Completo
+- **Veículos Tanque (Abastecedores)**: 
+  - Cadastro de máquinas como veículos tanque
+  - Cards horizontais com barras de progresso (Diesel, Óleo, Graxa)
+  - Indicadores de % e litros restantes
+- **Registros de Abastecimento**:
+  - Tipo "Abastecedor" (entrada no tanque) - botão verde
+  - Tipo "Abastecido" (saída do tanque) - botão vermelho
+  - Fonte: Veículo Interno ou Externo
+  - **Desconto automático** do tanque quando abastecimento interno
+- **Dropdown de Operadores**: Combina funcionários do RH + Cadastros financeiro
+
 ### Bug Fix: Validação de Cargos no Painel Admin
 - **Problema**: Ao alterar o cargo de um usuário no painel admin para novos roles (como RH, combinações), o sistema retornava erro "Role inválido. Opções: gerenciamento, administrativo, ambos, admin"
 - **Solução**: Atualizada a lista de roles válidos no backend para incluir todas as combinações e o novo cargo "Programador"
