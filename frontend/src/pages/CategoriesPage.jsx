@@ -99,7 +99,7 @@ export default function CategoriesPage() {
       }
       setShowCategoryModal(false);
       setEditingCategory(null);
-      setCategoryForm({ name: "", description: "" });
+      setCategoryForm({ name: "", description: "", color: "#E31A1A" });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao salvar categoria");
