@@ -31,11 +31,14 @@ export default function SystemSelectPage() {
   // Verificar permissões baseado no role do usuário
   const userRole = user?.role || "gerenciamento";
   
-  const canAccessGerenciamento = ["gerenciamento", "ambos", "admin", "gerenciamento_rh"].includes(userRole);
-  const canAccessAdministrativo = ["administrativo", "ambos", "admin", "administrativo_rh"].includes(userRole);
-  const canAccessRH = ["rh", "admin", "ambos_rh", "gerenciamento_rh", "administrativo_rh"].includes(userRole);
-  const canAccessArmazenamento = ["admin", "ambos", "gerenciamento", "administrativo", "rh", "ambos_rh", "gerenciamento_rh", "administrativo_rh"].includes(userRole);
-  const canAccessAdminPanel = userRole === "admin";
+  // Roles com acesso total (admin e programador)
+  const hasFullAccess = ["admin", "programador"].includes(userRole);
+  
+  const canAccessGerenciamento = hasFullAccess || ["gerenciamento", "ambos", "gerenciamento_rh"].includes(userRole);
+  const canAccessAdministrativo = hasFullAccess || ["administrativo", "ambos", "administrativo_rh"].includes(userRole);
+  const canAccessRH = hasFullAccess || ["rh", "ambos_rh", "gerenciamento_rh", "administrativo_rh"].includes(userRole);
+  const canAccessArmazenamento = hasFullAccess || ["ambos", "gerenciamento", "administrativo", "rh", "ambos_rh", "gerenciamento_rh", "administrativo_rh"].includes(userRole);
+  const canAccessAdminPanel = hasFullAccess;
 
   const handleLogout = () => {
     logout();
