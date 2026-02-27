@@ -4734,9 +4734,18 @@ async def quitar_conta_receber(id: str, data: Optional[QuitarContaReceberRequest
         "data_recebimento": data_recebimento
     }
     
-    # Se informou conta bancária, vincular
+    # Se informou conta bancária, vincular e atualizar saldo
     if conta_bancaria_id:
         update_data["conta_bancaria_id"] = conta_bancaria_id
+        # Buscar conta bancária e aumentar o saldo (entrada de dinheiro)
+        conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
+        if conta_bancaria:
+            valor_conta = conta.get("valor_final") or conta.get("valor", 0)
+            novo_saldo = (conta_bancaria.get("saldo_atual", 0) or 0) + valor_conta
+            await db.contas_bancarias.update_one(
+                {"id": conta_bancaria_id},
+                {"$set": {"saldo_atual": novo_saldo, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
     
     await db.contas_receber.update_one({"id": id}, {"$set": update_data})
     await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - QUITADA em {data_recebimento}")
