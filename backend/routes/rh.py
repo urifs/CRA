@@ -915,17 +915,51 @@ async def delete_ferias(ferias_id: str):
 async def buscar_cbo(q: str):
     """Buscar ocupação por código CBO ou nome"""
     resultados = []
-    q_lower = q.lower()
+    q_lower = q.lower().strip()
+    q_normalized = q_lower.replace("-", "").replace(".", "")
     
+    # Primeiro: busca exata por código CBO
     for codigo, info in CBO_DATABASE.items():
-        if (q_lower in codigo.lower() or 
-            q_lower in info["titulo"].lower() or
+        codigo_normalized = codigo.lower().replace("-", "").replace(".", "")
+        if q_normalized == codigo_normalized or q_lower == codigo.lower():
+            resultados.append({
+                "codigo": codigo,
+                "ocupacao": info["titulo"],
+                "familia": info["familia"],
+                "descricao": f"Família: {info['familia']}",
+                "match_type": "exact"
+            })
+    
+    # Se encontrou correspondência exata, retorna apenas ela
+    if resultados:
+        return resultados
+    
+    # Segundo: busca por código parcial (começa com)
+    for codigo, info in CBO_DATABASE.items():
+        codigo_normalized = codigo.lower().replace("-", "").replace(".", "")
+        if codigo_normalized.startswith(q_normalized) or codigo.lower().startswith(q_lower):
+            resultados.append({
+                "codigo": codigo,
+                "ocupacao": info["titulo"],
+                "familia": info["familia"],
+                "descricao": f"Família: {info['familia']}",
+                "match_type": "partial_code"
+            })
+    
+    # Se encontrou por código parcial, retorna
+    if resultados:
+        return resultados[:10]
+    
+    # Terceiro: busca por nome da ocupação ou sinônimos
+    for codigo, info in CBO_DATABASE.items():
+        if (q_lower in info["titulo"].lower() or
             any(q_lower in s.lower() for s in info.get("sinonimos", []))):
             resultados.append({
                 "codigo": codigo,
                 "ocupacao": info["titulo"],
                 "familia": info["familia"],
-                "descricao": f"Família: {info['familia']}"
+                "descricao": f"Família: {info['familia']}",
+                "match_type": "name"
             })
     
     return resultados[:10]
