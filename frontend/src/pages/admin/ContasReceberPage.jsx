@@ -180,18 +180,25 @@ export default function ContasReceberPage() {
     setQuitarContaId(conta.id);
     setQuitarContaInfo(conta);
     setDataRecebimento(new Date().toISOString().split("T")[0]);
+    setQuitarContaBancaria(conta.conta_bancaria_id || "");
     setShowQuitarModal(true);
   };
 
   const handleQuitar = async () => {
+    if (!quitarContaBancaria) {
+      toast.error("Selecione a conta bancária");
+      return;
+    }
     try {
       await axios.patch(`${API}/admin/contas-receber/${quitarContaId}/quitar`, {
-        data_recebimento: dataRecebimento
+        data_recebimento: dataRecebimento,
+        conta_bancaria_id: quitarContaBancaria
       });
       toast.success("Conta quitada!"); 
       setShowQuitarModal(false);
       setQuitarContaId(null);
       setQuitarContaInfo(null);
+      setQuitarContaBancaria("");
       fetchContas();
     } catch (error) { toast.error("Erro ao quitar"); }
   };
