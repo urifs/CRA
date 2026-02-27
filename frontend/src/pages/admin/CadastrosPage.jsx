@@ -490,7 +490,7 @@ export default function CadastrosPage() {
                 <div className="flex gap-2">
                   <Input 
                     value={formData.cpf_cnpj} 
-                    onChange={(e) => setFormData({...formData, cpf_cnpj: e.target.value})} 
+                    onChange={(e) => setFormData({...formData, cpf_cnpj: formData.tipo_pessoa === "PJ" ? formatCNPJ(e.target.value) : formatCPF(e.target.value)})} 
                     placeholder={formData.tipo_pessoa === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"} 
                     className="flex-1"
                   />
