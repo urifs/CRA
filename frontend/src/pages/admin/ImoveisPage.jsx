@@ -581,9 +581,10 @@ export default function ImoveisPage() {
                   <Input
                     value={formData.cep}
                     onChange={(e) => {
-                      setFormData({...formData, cep: e.target.value});
-                      if (e.target.value.replace(/\D/g, "").length === 8) {
-                        buscarCep(e.target.value);
+                      const formattedCep = formatCEP(e.target.value);
+                      setFormData({...formData, cep: formattedCep});
+                      if (formattedCep.replace(/\D/g, "").length === 8) {
+                        buscarCep(formattedCep);
                       }
                     }}
                     placeholder="00000-000"
