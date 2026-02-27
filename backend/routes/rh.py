@@ -332,6 +332,21 @@ async def get_rh_dashboard():
                         except:
                             pass
         
+        # Calcular ponto de hoje
+        hoje_str = hoje.strftime("%Y-%m-%d")
+        presentes = 0
+        atrasados = 0
+        async for reg in ponto_collection.find({"data": hoje_str}):
+            if reg.get("entrada"):
+                presentes += 1
+                try:
+                    h, m = map(int, reg["entrada"].split(":"))
+                    if h > 8 or (h == 8 and m > 15):
+                        atrasados += 1
+                except:
+                    pass
+        ausentes = funcionarios_ativos - presentes
+        
         return {
             "total_funcionarios": total_funcionarios,
             "funcionarios_ativos": funcionarios_ativos,
@@ -339,11 +354,17 @@ async def get_rh_dashboard():
             "funcionarios_afastados": funcionarios_afastados,
             "total_folha": total_folha,
             "aniversariantes": aniversariantes[:5],
+            "aniversariantes_mes": aniversariantes[:5],
             "alertas_ferias": alertas_ferias,
             "alertas_epi": alertas_epi[:10],
             "jornada": JORNADA_PADRAO,
             "tabela_inss": TABELA_INSS_2025,
-            "tabela_irpf": TABELA_IRPF_2025
+            "tabela_irpf": TABELA_IRPF_2025,
+            "ponto_hoje": {
+                "presentes": presentes,
+                "ausentes": max(0, ausentes),
+                "atrasados": atrasados
+            }
         }
     except Exception as e:
         return {
@@ -353,11 +374,17 @@ async def get_rh_dashboard():
             "funcionarios_afastados": 0,
             "total_folha": 0,
             "aniversariantes": [],
+            "aniversariantes_mes": [],
             "alertas_ferias": [],
             "alertas_epi": [],
             "jornada": JORNADA_PADRAO,
             "tabela_inss": TABELA_INSS_2025,
-            "tabela_irpf": TABELA_IRPF_2025
+            "tabela_irpf": TABELA_IRPF_2025,
+            "ponto_hoje": {
+                "presentes": 0,
+                "ausentes": 0,
+                "atrasados": 0
+            }
         }
 
 
