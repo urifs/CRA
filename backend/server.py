@@ -10335,6 +10335,8 @@ async def rename_storage_item(
 
 # Include modular routers first
 api_router.include_router(rh_router)
+api_router.include_router(admin_router)
+api_router.include_router(machines_router)
 
 # Include the router in the main app
 app.include_router(api_router)
