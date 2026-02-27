@@ -125,7 +125,7 @@ export default function ContasBancariasPage() {
       const payload = {
         ...formData,
         saldo_inicial: parseFloat(formData.saldo_inicial) || 0,
-        saldo_atual: editingConta ? editingConta.saldo_atual : parseFloat(formData.saldo_inicial) || 0
+        saldo_atual: parseFloat(formData.saldo_atual) || 0
       };
 
       if (editingConta) {
