@@ -7085,86 +7085,86 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("fornecedor_nome", "-"))
                 ])
         elif category == "contas_receber":
-            headers = ["Descrição", "Valor", "Vencimento", "Status", "Cliente"]
+            headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Status", True), cell("Cliente", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("descricao", "-")[:25],
-                    f"R$ {item.get('valor', 0):.2f}",
-                    item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-",
-                    item.get("status", "-").upper(),
-                    item.get("cliente_nome", "-")[:15]
+                    cell(item.get("descricao", "-")),
+                    cell(f"R$ {item.get('valor', 0):.2f}"),
+                    cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
+                    cell(item.get("status", "-").upper()),
+                    cell(item.get("cliente_nome", "-"))
                 ])
         elif category == "cadastros":
-            headers = ["Nome/Razão", "Tipo", "CPF/CNPJ", "Telefone", "Cidade"]
+            headers = [cell("Nome/Razão", True), cell("Tipo", True), cell("CPF/CNPJ", True), cell("Telefone", True), cell("Cidade", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("nome_razao", "-")[:25],
-                    item.get("tipo", "-").upper(),
-                    item.get("cpf_cnpj", "-"),
-                    item.get("telefone", "-"),
-                    item.get("cidade", "-")[:15]
+                    cell(item.get("nome_razao", "-")),
+                    cell(item.get("tipo", "-").upper()),
+                    cell(item.get("cpf_cnpj", "-")),
+                    cell(item.get("telefone", "-")),
+                    cell(item.get("cidade", "-"))
                 ])
         elif category == "ordens_servico":
-            headers = ["Nº OS", "Descrição", "Cliente", "Valor", "Status"]
+            headers = [cell("Nº OS", True), cell("Descrição", True), cell("Cliente", True), cell("Valor", True), cell("Status", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    str(item.get("numero", "-")),
-                    item.get("descricao", "-")[:25],
-                    item.get("cliente_nome", "-")[:15],
-                    f"R$ {item.get('valor_total', 0):.2f}",
-                    item.get("status", "-").upper()
+                    cell(str(item.get("numero", "-"))),
+                    cell(item.get("descricao", "-")),
+                    cell(item.get("cliente_nome", "-")),
+                    cell(f"R$ {item.get('valor_total', 0):.2f}"),
+                    cell(item.get("status", "-").upper())
                 ])
         elif category == "alugueis":
-            headers = ["Máquina", "Cliente", "Valor", "Status", "Vencimento"]
+            headers = [cell("Máquina", True), cell("Cliente", True), cell("Valor", True), cell("Status", True), cell("Vencimento", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("maquina_nome", "-")[:20],
-                    item.get("cliente_nome", "-")[:15],
-                    f"R$ {item.get('valor_total', 0):.2f}",
-                    item.get("status", "-").upper(),
-                    item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"
+                    cell(item.get("maquina_nome", "-")),
+                    cell(item.get("cliente_nome", "-")),
+                    cell(f"R$ {item.get('valor_total', 0):.2f}"),
+                    cell(item.get("status", "-").upper()),
+                    cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-")
                 ])
         elif category == "produtos_admin":
-            headers = ["Código", "Descrição", "Unidade", "Preço", "Estoque"]
+            headers = [cell("Código", True), cell("Descrição", True), cell("Unidade", True), cell("Preço", True), cell("Estoque", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("codigo", "-"),
-                    item.get("descricao", "-")[:25],
-                    item.get("unidade", "-"),
-                    f"R$ {item.get('preco', 0):.2f}",
-                    str(item.get("estoque", 0))
+                    cell(item.get("codigo", "-")),
+                    cell(item.get("descricao", "-")),
+                    cell(item.get("unidade", "-")),
+                    cell(f"R$ {item.get('preco', 0):.2f}"),
+                    cell(str(item.get("estoque", 0)))
                 ])
         elif category == "plano_contas":
-            headers = ["Código", "Nome", "Tipo", "Conta Pai"]
+            headers = [cell("Código", True), cell("Nome", True), cell("Tipo", True), cell("Conta Pai", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("codigo", "-"),
-                    item.get("nome", "-")[:30],
-                    "Receita" if item.get("tipo") == "receita" else "Despesa",
-                    item.get("pai_nome", "Raiz")[:20]
+                    cell(item.get("codigo", "-")),
+                    cell(item.get("nome", "-")),
+                    cell("Receita" if item.get("tipo") == "receita" else "Despesa"),
+                    cell(item.get("pai_nome", "Raiz"))
                 ])
         elif category == "centros_custo":
-            headers = ["Código", "Nome", "Descrição"]
+            headers = [cell("Código", True), cell("Nome", True), cell("Descrição", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("codigo", "-"),
-                    item.get("nome", "-")[:30],
-                    item.get("descricao", "-")[:40]
+                    cell(item.get("codigo", "-")),
+                    cell(item.get("nome", "-")),
+                    cell(item.get("descricao", "-"))
                 ])
         elif category == "formas_pagamento":
-            headers = ["Nome", "Descrição"]
+            headers = [cell("Nome", True), cell("Descrição", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    item.get("nome", "-")[:30],
-                    item.get("descricao", "-")[:50]
+                    cell(item.get("nome", "-")),
+                    cell(item.get("descricao", "-"))
                 ])
         elif category == "categories":
             headers = ["Nome", "Descrição"]
