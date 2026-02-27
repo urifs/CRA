@@ -277,7 +277,7 @@ export default function CadastroFormModal({
               <div className="flex gap-1">
                 <Input 
                   value={formData.cep} 
-                  onChange={(e) => setFormData({...formData, cep: e.target.value})} 
+                  onChange={(e) => setFormData({...formData, cep: formatCEP(e.target.value)})} 
                   placeholder="00000-000" 
                   className="flex-1"
                 />
