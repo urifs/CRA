@@ -1741,8 +1741,10 @@ async def create_veiculo_abastecedor(data: VeiculoAbastecedorCreate, current_use
         entity_name=machine["name"]
     )
     
-    abastecedor_doc["machine_name"] = machine["name"]
-    return abastecedor_doc
+    # Buscar o documento criado sem o _id para evitar erro de serialização
+    created = await db.veiculos_abastecedores.find_one({"id": abastecedor_id}, {"_id": 0})
+    created["machine_name"] = machine["name"]
+    return created
 
 @api_router.put("/combustivel/abastecedores/{abastecedor_id}")
 async def update_veiculo_abastecedor(abastecedor_id: str, data: VeiculoAbastecedorCreate, current_user: dict = Depends(get_current_user)):
