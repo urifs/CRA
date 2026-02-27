@@ -1838,8 +1838,8 @@ async def list_combustivel(
             if funcionario:
                 registro["operador_nome"] = funcionario["nome"]
             else:
-                cadastro = await db.cadastros.find_one({"id": registro["operador_id"]}, {"_id": 0, "nome": 1})
-                registro["operador_nome"] = cadastro["nome"] if cadastro else None
+                cadastro = await db.cadastros.find_one({"id": registro["operador_id"]}, {"_id": 0, "nome_razao": 1})
+                registro["operador_nome"] = cadastro["nome_razao"] if cadastro else None
     
     return registros
 
