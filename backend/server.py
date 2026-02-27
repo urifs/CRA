@@ -2836,20 +2836,37 @@ async def get_stock_items(low_stock_only: bool = False, current_user: dict = Dep
     
     items = await db.stock_items.find(query, {"_id": 0}).sort("name", 1).to_list(1000)
     
-    return [StockItemResponse(
-        id=i["id"],
-        name=i["name"],
-        code=i.get("code", ""),
-        category=i.get("category", ""),
-        unit=i.get("unit", "un"),
-        quantity=i["quantity"],
-        min_quantity=i.get("min_quantity", 0),
-        unit_price=i.get("unit_price", 0),
-        location=i.get("location", ""),
-        notes=i.get("notes", ""),
-        is_low_stock=i["quantity"] <= i.get("min_quantity", 0),
-        created_at=i["created_at"]
-    ) for i in items]
+    # Buscar todas as máquinas para mapear IDs para nomes
+    all_machine_ids = set()
+    for item in items:
+        all_machine_ids.update(item.get("machine_ids", []))
+    
+    machine_map = {}
+    if all_machine_ids:
+        machines = await db.machines.find({"id": {"$in": list(all_machine_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
+        machine_map = {m["id"]: m.get("name", "") for m in machines}
+    
+    result = []
+    for i in items:
+        machine_ids = i.get("machine_ids", [])
+        machine_names = [machine_map.get(mid, "") for mid in machine_ids if mid in machine_map]
+        result.append(StockItemResponse(
+            id=i["id"],
+            name=i["name"],
+            code=i.get("code", ""),
+            category=i.get("category", ""),
+            unit=i.get("unit", "un"),
+            quantity=i["quantity"],
+            min_quantity=i.get("min_quantity", 0),
+            unit_price=i.get("unit_price", 0),
+            location=i.get("location", ""),
+            notes=i.get("notes", ""),
+            is_low_stock=i["quantity"] <= i.get("min_quantity", 0),
+            created_at=i["created_at"],
+            machine_ids=machine_ids,
+            machine_names=machine_names
+        ))
+    return result
 
 @api_router.get("/stock/items/{item_id}", response_model=StockItemResponse)
 async def get_stock_item(item_id: str, current_user: dict = Depends(get_current_user)):
