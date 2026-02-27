@@ -53,6 +53,7 @@ export default function StockPage() {
   const [movements, setMovements] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
