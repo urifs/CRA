@@ -7288,6 +7288,33 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
         # Contas Bancárias
         "contas_bancarias": {"collection": "contas_bancarias", "title": "Contas Bancárias", "filter": {}},
         "contas_bancarias_ativas": {"collection": "contas_bancarias", "title": "Contas Bancárias Ativas", "filter": {"ativo": True}},
+        
+        # RH - Funcionários
+        "funcionarios": {"collection": "funcionarios", "title": "Funcionários", "filter": {}},
+        "funcionarios_ativos": {"collection": "funcionarios", "title": "Funcionários Ativos", "filter": {"status": {"$ne": "desligado"}}},
+        "funcionarios_desligados": {"collection": "funcionarios", "title": "Funcionários Desligados", "filter": {"status": "desligado"}},
+        
+        # RH - Ponto
+        "ponto_registros": {"collection": "ponto_registros", "title": "Registros de Ponto", "filter": {}},
+        "ponto_hoje": {"collection": "ponto_registros", "title": "Ponto de Hoje", "filter": {"data": datetime.now().strftime("%Y-%m-%d")}},
+        "ponto_mes": {"collection": "ponto_registros", "title": "Ponto do Mês", "filter": {"data": {"$regex": f"^{datetime.now().strftime('%Y-%m')}"}}},
+        
+        # RH - Folha de Pagamento
+        "folha_pagamento": {"collection": "folha_pagamento", "title": "Folha de Pagamento", "filter": {}},
+        "holerites": {"collection": "folha_pagamento", "title": "Holerites", "filter": {}},
+        
+        # RH - Férias
+        "ferias": {"collection": "ferias", "title": "Férias", "filter": {}},
+        "ferias_proximas": {"collection": "ferias", "title": "Férias Próximas", "filter": {}},
+        "ferias_vencidas": {"collection": "ferias", "title": "Férias Vencidas", "filter": {}},
+        
+        # RH - EPIs
+        "epi_fichas": {"collection": "epi_fichas", "title": "Fichas de EPI", "filter": {}},
+        "epi_vencidos": {"collection": "epi_fichas", "title": "EPIs Vencidos", "filter": {}},
+        
+        # RH - Custos
+        "custos_funcionarios": {"collection": "funcionarios", "title": "Custos por Funcionário", "filter": {}},
+        "custos_encargos": {"collection": "folha_pagamento", "title": "Encargos Sociais", "filter": {}},
     }
     
     if category not in category_configs:
