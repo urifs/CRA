@@ -364,53 +364,79 @@ export default function ArmazenamentoPage() {
 
   const handleDelete = async (item) => {
     if (!confirm(`Mover "${item.name}" para a lixeira?`)) return;
+    
+    // Atualização otimista - remove item da UI imediatamente
+    const itemId = item.id || item.path;
+    setItems(prev => prev.filter(i => (i.id || i.path) !== itemId));
+    
     try {
       await axios.delete(`${API}/storage/delete`, {
         params: { path: item.path },
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Item movido para lixeira!");
-      fetchItems();
-      fetchTrashItems(); // Atualizar contagem da lixeira
+      // Atualizar lixeira para mostrar o novo item
+      await fetchTrashItems(true);
     } catch (error) {
+      // Reverter atualização otimista em caso de erro
+      await fetchItems(true);
       toast.error(error.response?.data?.detail || "Erro ao excluir");
     }
   };
 
   const handleRestore = async (item) => {
+    // Atualização otimista - remove da lixeira imediatamente
+    const itemId = item.id;
+    setTrashItems(prev => prev.filter(i => i.id !== itemId));
+    
     try {
       await axios.post(`${API}/storage/trash/${item.id}/restore`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Item restaurado!");
-      fetchTrashItems();
+      // Recarregar ambas as listas
+      await fetchTrashItems(true);
+      await fetchItems(true);
     } catch (error) {
+      // Reverter atualização otimista em caso de erro
+      await fetchTrashItems(true);
       toast.error(error.response?.data?.detail || "Erro ao restaurar");
     }
   };
 
   const handleDeletePermanently = async (item) => {
     if (!confirm(`Excluir "${item.original_name}" permanentemente? Esta ação não pode ser desfeita.`)) return;
+    
+    // Atualização otimista
+    const itemId = item.id;
+    setTrashItems(prev => prev.filter(i => i.id !== itemId));
+    
     try {
       await axios.delete(`${API}/storage/trash/${item.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Item excluído permanentemente!");
-      fetchTrashItems();
     } catch (error) {
+      // Reverter atualização otimista em caso de erro
+      await fetchTrashItems(true);
       toast.error(error.response?.data?.detail || "Erro ao excluir");
     }
   };
 
   const handleEmptyTrash = async () => {
     if (!confirm("Esvaziar toda a lixeira? Esta ação não pode ser desfeita.")) return;
+    
+    // Atualização otimista
+    setTrashItems([]);
+    
     try {
       await axios.delete(`${API}/storage/trash`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Lixeira esvaziada!");
-      fetchTrashItems();
     } catch (error) {
+      // Reverter atualização otimista em caso de erro
+      await fetchTrashItems(true);
       toast.error(error.response?.data?.detail || "Erro ao esvaziar lixeira");
     }
   };
