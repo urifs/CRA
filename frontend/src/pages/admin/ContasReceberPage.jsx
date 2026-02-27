@@ -175,10 +175,23 @@ export default function ContasReceberPage() {
     } catch (error) { toast.error(error.response?.data?.detail || "Erro ao salvar"); }
   };
 
-  const handleQuitar = async (id) => {
+  const openQuitarModal = (conta) => {
+    setQuitarContaId(conta.id);
+    setQuitarContaInfo(conta);
+    setDataRecebimento(new Date().toISOString().split("T")[0]);
+    setShowQuitarModal(true);
+  };
+
+  const handleQuitar = async () => {
     try {
-      await axios.patch(`${API}/admin/contas-receber/${id}/quitar`);
-      toast.success("Conta quitada!"); fetchContas();
+      await axios.patch(`${API}/admin/contas-receber/${quitarContaId}/quitar`, {
+        data_recebimento: dataRecebimento
+      });
+      toast.success("Conta quitada!"); 
+      setShowQuitarModal(false);
+      setQuitarContaId(null);
+      setQuitarContaInfo(null);
+      fetchContas();
     } catch (error) { toast.error("Erro ao quitar"); }
   };
 
