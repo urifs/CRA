@@ -10247,7 +10247,7 @@ async def generate_holerite_pdf(folha_id: str):
         raise HTTPException(status_code=404, detail="Funcionário não encontrado")
     
     # Criar PDF
-    buffer = BytesIO()
+    buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
     elements = []
     styles = getSampleStyleSheet()
