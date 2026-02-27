@@ -9515,7 +9515,7 @@ async def delete_task(
     """Delete a task (admin only)"""
     current_user = await get_current_user(credentials)
     
-    if current_user.get("role") != "admin":
+    if current_user.get("role") not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Apenas administradores podem excluir tarefas")
     
     task = await db.tasks.find_one({"id": task_id})
