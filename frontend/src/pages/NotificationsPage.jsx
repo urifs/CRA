@@ -113,7 +113,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="stat-card">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -145,6 +145,24 @@ export default function NotificationsPage() {
               </div>
               <div className="w-14 h-14 bg-red-50 rounded-xl flex items-center justify-center">
                 <AlertTriangle className="text-red-600" size={28} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                  Combustível
+                </p>
+                <p className="text-4xl font-black text-orange-500 mt-2 font-heading">
+                  {fuelCount}
+                </p>
+              </div>
+              <div className="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center">
+                <Droplet className="text-orange-500" size={28} />
               </div>
             </div>
           </CardContent>
