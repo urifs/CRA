@@ -49,6 +49,7 @@ export default function HorimetroPage() {
   const { token } = useAuth();
   const [registros, setRegistros] = useState([]);
   const [machines, setMachines] = useState([]);
+  const [operadores, setOperadores] = useState([]); // Lista unificada de operadores
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMachine, setFilterMachine] = useState("all");
@@ -70,16 +71,44 @@ export default function HorimetroPage() {
 
   const fetchData = async () => {
     try {
-      const [registrosRes, machinesRes] = await Promise.all([
+      const [registrosRes, machinesRes, cadastrosRes, funcionariosRes] = await Promise.all([
         axios.get(`${API}/horimetro`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get(`${API}/machines`, {
           headers: { Authorization: `Bearer ${token}` }
-        })
+        }),
+        axios.get(`${API}/admin/cadastros`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] })),
+        axios.get(`${API}/rh/funcionarios`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] }))
       ]);
+      
       setRegistros(registrosRes.data);
       setMachines(machinesRes.data);
+      
+      // Unificar cadastros e funcionários como operadores
+      const cadastrosOperadores = (cadastrosRes.data || []).map(c => ({
+        id: c.id,
+        nome: c.nome || c.razao_social,
+        tipo: 'Cadastro',
+        documento: c.documento
+      }));
+      
+      const funcionariosOperadores = (funcionariosRes.data || []).map(f => ({
+        id: f.id,
+        nome: f.nome,
+        tipo: 'Funcionário',
+        cargo: f.cargo
+      }));
+      
+      // Combinar e ordenar por nome
+      const todosOperadores = [...funcionariosOperadores, ...cadastrosOperadores]
+        .sort((a, b) => a.nome?.localeCompare(b.nome || '') || 0);
+      
+      setOperadores(todosOperadores);
     } catch (error) {
       toast.error("Erro ao carregar dados");
     } finally {
