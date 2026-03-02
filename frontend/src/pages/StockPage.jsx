@@ -42,6 +42,7 @@ import {
   Tags,
   Settings,
   ChevronRight,
+  ChevronDown,
   LayoutGrid,
   List,
   Wrench,
