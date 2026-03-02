@@ -5598,6 +5598,13 @@ async def update_aluguel_status(id: str, status_data: dict, current_user: dict =
     
     await db.alugueis.update_one({"id": id}, {"$set": update_data})
     
+    # Se finalizado ou cancelado, voltar status da máquina para "patio"
+    if new_status in ["finalizado", "cancelado"] and aluguel.get("maquina_id"):
+        await db.machines.update_one(
+            {"id": aluguel["maquina_id"]},
+            {"$set": {"status": "patio"}}
+        )
+    
     # Se finalizado, marcar conta a receber como quitada
     if new_status == "finalizado" and aluguel.get("conta_receber_id"):
         await db.contas_receber.update_one(
