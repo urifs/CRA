@@ -28,7 +28,11 @@ import {
   Shield,
   AlertTriangle,
   Truck,
-  Droplet
+  Droplet,
+  Package,
+  Plus,
+  X,
+  Minus
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,6 +43,8 @@ export default function NewMaintenancePage() {
   const preselectedMachine = searchParams.get("machine");
   
   const [machines, setMachines] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
+  const [selectedParts, setSelectedParts] = useState([]); // {item_id, item_name, quantity, max_quantity}
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [date, setDate] = useState(new Date());
