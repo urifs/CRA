@@ -475,7 +475,33 @@ export default function MachinesPage() {
                         ) : "-"}
                       </td>
                       <td className="truncate max-w-[150px]">{machine.operator_name || "-"}</td>
-                      <td>{getStatusBadge(machine.status)}</td>
+                      <td>
+                        <Select value={machine.status || "patio"} onValueChange={(value) => handleStatusChange(machine.id, value)}>
+                          <SelectTrigger className="h-8 w-[130px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="patio">
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                                Pátio
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="operacional">
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                Operacional
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="manutencao">
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                Manutenção
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
                       <td className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="sm" onClick={() => navigate(`/gerenciamento/machines/${machine.id}`)}>
