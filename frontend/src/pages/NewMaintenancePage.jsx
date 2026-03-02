@@ -135,10 +135,30 @@ export default function NewMaintenancePage() {
       const payload = {
         ...formData,
         part_value: parseFloat(formData.part_value),
-        replacement_date: format(date, "yyyy-MM-dd")
+        replacement_date: format(date, "yyyy-MM-dd"),
+        stock_parts: selectedParts.map(p => ({
+          item_id: p.item_id,
+          item_name: p.item_name,
+          quantity: p.quantity
+        }))
       };
 
       const response = await axios.post(`${API}/maintenances`, payload);
+      
+      // Dar baixa no estoque para cada peça selecionada
+      for (const part of selectedParts) {
+        try {
+          await axios.post(`${API}/stock/items/${part.item_id}/movement`, {
+            type: "saida",
+            quantity: part.quantity,
+            reason: `Manutenção: ${formData.part_name}`,
+            notes: `Usado na manutenção da máquina ${selectedMachine?.name || ''}`
+          });
+        } catch (err) {
+          console.error(`Erro ao dar baixa no item ${part.item_name}:`, err);
+        }
+      }
+      
       toast.success("Manutenção registrada com sucesso!");
       navigate(`/gerenciamento/maintenances/${response.data.id}`);
     } catch (error) {
