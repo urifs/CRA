@@ -156,6 +156,7 @@ class MachineCreate(BaseModel):
     operator_id: Optional[str] = None  # ID do funcionário/operador
     identificador_tipo: Optional[str] = None  # 'chassi' ou 'serie'
     identificador_numero: Optional[str] = None
+    status: Optional[str] = "patio"  # patio, operacional, manutencao
 
 class MachineResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
