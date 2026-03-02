@@ -148,6 +148,31 @@ export default function MachinesPage() {
     }
   };
 
+  const handleStatusChange = async (machineId, newStatus) => {
+    try {
+      await axios.patch(`${API}/machines/${machineId}/status`, { status: newStatus });
+      const statusLabels = { patio: "Pátio", operacional: "Operacional", manutencao: "Manutenção" };
+      toast.success(`Status alterado para ${statusLabels[newStatus]}`);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao alterar status");
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      patio: { label: "Pátio", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+      operacional: { label: "Operacional", color: "bg-green-100 text-green-800 border-green-300" },
+      manutencao: { label: "Manutenção", color: "bg-red-100 text-red-800 border-red-300" }
+    };
+    const config = statusConfig[status] || statusConfig.patio;
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
   const openEditDialog = (machine) => {
     setEditingMachine(machine);
     setFormData({
