@@ -642,6 +642,25 @@ export default function StockPage() {
                           <span className="font-medium text-gray-700">{item.location}</span>
                         </div>
                       )}
+                      {/* Máquinas associadas */}
+                      {item.machine_ids && item.machine_ids.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <div className="flex items-center gap-1 text-blue-600 mb-1">
+                            <Wrench size={12} />
+                            <span className="text-xs font-medium">Máquinas ({item.machine_ids.length}):</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {item.machine_ids.map(machineId => {
+                              const machine = machines.find(m => m.id === machineId);
+                              return machine ? (
+                                <span key={machineId} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                                  {machine.name}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}
