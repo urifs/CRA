@@ -1512,6 +1512,37 @@ async def delete_machine(machine_id: str, current_user: dict = Depends(get_curre
     
     return {"message": "Máquina removida com sucesso"}
 
+# Endpoint para alterar status da máquina manualmente
+class MachineStatusUpdate(BaseModel):
+    status: str  # patio, operacional, manutencao
+
+@api_router.patch("/machines/{machine_id}/status")
+async def update_machine_status(machine_id: str, status_update: MachineStatusUpdate, current_user: dict = Depends(get_current_user)):
+    existing = await db.machines.find_one({"id": machine_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Máquina não encontrada")
+    
+    valid_statuses = ["patio", "operacional", "manutencao"]
+    if status_update.status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Status inválido. Use: {', '.join(valid_statuses)}")
+    
+    await db.machines.update_one(
+        {"id": machine_id},
+        {"$set": {"status": status_update.status}}
+    )
+    
+    # Audit log
+    status_labels = {"patio": "Pátio", "operacional": "Operacional", "manutencao": "Manutenção"}
+    await create_audit_log(
+        user=current_user,
+        action="alterar_status",
+        entity_type="máquina",
+        entity_id=machine_id,
+        entity_name=f"{existing['name']} ({existing.get('plate', '')}) - Status: {status_labels.get(status_update.status, status_update.status)}"
+    )
+    
+    return {"message": f"Status alterado para {status_labels.get(status_update.status, status_update.status)}"}
+
 # ============ HORIMETRO ROUTES ============
 
 @api_router.get("/horimetro", response_model=List[HorimetroResponse])
