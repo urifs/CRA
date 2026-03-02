@@ -72,7 +72,7 @@ export default function StockPage() {
   const [viewMode, setViewMode] = useState("list"); // list como padrão
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubcategoryForm, setNewSubcategoryForm] = useState({ name: "", category_id: "" });
-  const [expandedItemId, setExpandedItemId] = useState(null); // Para expandir e mostrar máquinas
+  const [expandedItems, setExpandedItems] = useState(new Set()); // Para expandir múltiplos itens
 
   const [itemForm, setItemForm] = useState({
     name: "",
