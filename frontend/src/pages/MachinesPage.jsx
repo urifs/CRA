@@ -229,20 +229,6 @@ export default function MachinesPage() {
       m.category_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      operational: { class: "badge-operational", label: "Operacional" },
-      maintenance: { class: "badge-maintenance", label: "Em Manutenção" },
-      broken: { class: "badge-broken", label: "Quebrado" }
-    };
-    const badge = badges[status] || badges.operational;
-    return (
-      <span className={`status-badge ${badge.class}`}>
-        {badge.label}
-      </span>
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
