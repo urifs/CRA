@@ -479,7 +479,10 @@ export default function MachinesPage() {
                           <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: categoryColor }}>
                             <Truck size={14} className="text-white" />
                           </div>
-                          {machine.name}
+                          <div>
+                            <span>{machine.name}</span>
+                            {machine.model && <span className="text-gray-500 text-sm ml-1">• {machine.model}</span>}
+                          </div>
                         </div>
                       </td>
                       <td className="font-mono text-gray-500">{machine.plate || "-"}</td>
