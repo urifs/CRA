@@ -385,16 +385,45 @@ export default function MachinesPage() {
                   </div>
 
                   {/* Card Actions */}
-                  <div className="p-4 pt-0 flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/gerenciamento/machines/${machine.id}`)} data-testid={`view-machine-${machine.id}`}>
-                      <Eye size={16} className="mr-1" /> Ver
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditDialog(machine)} data-testid={`edit-machine-${machine.id}`}>
-                      <Edit size={16} className="mr-1" /> Editar
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteId(machine.id)} data-testid={`delete-machine-${machine.id}`}>
-                      <Trash2 size={16} />
-                    </Button>
+                  <div className="p-4 pt-0 space-y-2">
+                    {/* Status Change */}
+                    <Select value={machine.status || "patio"} onValueChange={(value) => handleStatusChange(machine.id, value)}>
+                      <SelectTrigger className="w-full h-8 text-xs">
+                        <SelectValue placeholder="Alterar status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="patio">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                            Pátio
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="operacional">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            Operacional
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="manutencao">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                            Manutenção
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/gerenciamento/machines/${machine.id}`)} data-testid={`view-machine-${machine.id}`}>
+                        <Eye size={16} className="mr-1" /> Ver
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditDialog(machine)} data-testid={`edit-machine-${machine.id}`}>
+                        <Edit size={16} className="mr-1" /> Editar
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteId(machine.id)} data-testid={`delete-machine-${machine.id}`}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
