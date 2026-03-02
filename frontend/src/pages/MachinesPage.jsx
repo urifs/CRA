@@ -351,7 +351,8 @@ export default function MachinesPage() {
                         </div>
                         <div>
                           <h3 className="font-bold text-black">{machine.name}</h3>
-                          {machine.plate && <p className="font-mono text-sm text-gray-500">{machine.plate}</p>}
+                          {machine.model && <p className="text-sm text-gray-600 font-medium">{machine.model}</p>}
+                          {machine.plate && <p className="font-mono text-xs text-gray-500">{machine.plate}</p>}
                         </div>
                       </div>
                       {getStatusBadge(machine.status)}
