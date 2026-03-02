@@ -512,14 +512,22 @@ export default function StockPage() {
                       <>
                       <tr 
                         key={item.id} 
-                        className={`hover:bg-gray-50 cursor-pointer ${item.is_low_stock ? "bg-orange-50" : ""} ${expandedItemId === item.id ? "bg-blue-50" : ""}`} 
+                        className={`hover:bg-gray-50 cursor-pointer ${item.is_low_stock ? "bg-orange-50" : ""} ${expandedItems.has(item.id) ? "bg-blue-50" : ""}`} 
                         data-testid={`stock-item-row-${item.id}`}
-                        onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+                        onClick={() => {
+                          const newExpanded = new Set(expandedItems);
+                          if (newExpanded.has(item.id)) {
+                            newExpanded.delete(item.id);
+                          } else {
+                            newExpanded.add(item.id);
+                          }
+                          setExpandedItems(newExpanded);
+                        }}
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {item.machine_ids && item.machine_ids.length > 0 ? (
-                              expandedItemId === item.id ? 
+                              expandedItems.has(item.id) ? 
                                 <ChevronDown className="text-blue-500" size={18} /> : 
                                 <ChevronRight className="text-blue-500" size={18} />
                             ) : (
