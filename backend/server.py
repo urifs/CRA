@@ -1237,7 +1237,7 @@ async def create_machine(machine: MachineCreate, current_user: dict = Depends(ge
         "fleet_id": machine.fleet_id,
         "subfleet_id": machine.subfleet_id,
         "operator_id": machine.operator_id,
-        "status": "operational",
+        "status": machine.status or "patio",  # patio, operacional, manutencao
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
