@@ -499,13 +499,31 @@ export default function StockPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {filteredItems.map((item) => (
-                      <tr key={item.id} className={`hover:bg-gray-50 ${item.is_low_stock ? "bg-orange-50" : ""}`} data-testid={`stock-item-row-${item.id}`}>
+                      <>
+                      <tr 
+                        key={item.id} 
+                        className={`hover:bg-gray-50 cursor-pointer ${item.is_low_stock ? "bg-orange-50" : ""} ${expandedItemId === item.id ? "bg-blue-50" : ""}`} 
+                        data-testid={`stock-item-row-${item.id}`}
+                        onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+                      >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Package className={`${item.is_low_stock ? "text-orange-500" : "text-gray-400"}`} size={18} />
+                            {item.machine_ids && item.machine_ids.length > 0 ? (
+                              expandedItemId === item.id ? 
+                                <ChevronDown className="text-blue-500" size={18} /> : 
+                                <ChevronRight className="text-blue-500" size={18} />
+                            ) : (
+                              <Package className={`${item.is_low_stock ? "text-orange-500" : "text-gray-400"}`} size={18} />
+                            )}
                             <span className="font-medium">{item.name}</span>
                             {item.is_low_stock && (
                               <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Baixo</span>
+                            )}
+                            {item.machine_ids && item.machine_ids.length > 0 && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                <Wrench size={10} />
+                                {item.machine_ids.length}
+                              </span>
                             )}
                           </div>
                         </td>
@@ -517,7 +535,7 @@ export default function StockPage() {
                         <td className="px-4 py-3 text-right text-gray-600">{item.min_quantity} {item.unit}</td>
                         <td className="px-4 py-3 text-right text-gray-600">{item.unit_price > 0 ? formatCurrency(item.unit_price) : "-"}</td>
                         <td className="px-4 py-3 text-gray-600">{item.location || "-"}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-center gap-1">
                             <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-600 hover:bg-green-50" onClick={() => openMovementDialog(item, "entrada")} title="Entrada">
                               <ArrowUpCircle size={16} />
@@ -534,6 +552,32 @@ export default function StockPage() {
                           </div>
                         </td>
                       </tr>
+                      {/* Linha expandida com máquinas */}
+                      {expandedItemId === item.id && item.machine_ids && item.machine_ids.length > 0 && (
+                        <tr key={`${item.id}-machines`} className="bg-blue-50/50">
+                          <td colSpan={8} className="px-4 py-3">
+                            <div className="pl-8">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Wrench size={14} className="text-blue-600" />
+                                <span className="text-sm font-medium text-blue-700">Máquinas Associadas:</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {item.machine_ids.map(machineId => {
+                                  const machine = machines.find(m => m.id === machineId);
+                                  return machine ? (
+                                    <span key={machineId} className="inline-flex items-center gap-1 px-3 py-1 bg-white border border-blue-200 rounded-full text-sm text-blue-700">
+                                      <Wrench size={12} />
+                                      {machine.name}
+                                      {machine.plate && <span className="text-blue-500 text-xs">({machine.plate})</span>}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     ))}
                   </tbody>
                 </table>
