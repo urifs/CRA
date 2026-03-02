@@ -409,7 +409,7 @@ export default function MachinesPage() {
                   {/* Card Actions */}
                   <div className="p-4 pt-0 space-y-2">
                     {/* Status Change */}
-                    <Select value={machine.status || "patio"} onValueChange={(value) => handleStatusChange(machine.id, value)}>
+                    <Select value={machine.status || "patio"} onValueChange={(value) => handleStatusChange(machine.id, value, machine.name)}>
                       <SelectTrigger className="w-full h-8 text-xs">
                         <SelectValue placeholder="Alterar status" />
                       </SelectTrigger>
@@ -498,7 +498,7 @@ export default function MachinesPage() {
                       </td>
                       <td className="truncate max-w-[150px]">{machine.operator_name || "-"}</td>
                       <td>
-                        <Select value={machine.status || "patio"} onValueChange={(value) => handleStatusChange(machine.id, value)}>
+                        <Select value={machine.status || "patio"} onValueChange={(value) => handleStatusChange(machine.id, value, machine.name)}>
                           <SelectTrigger className="h-8 w-[130px] text-xs">
                             <SelectValue />
                           </SelectTrigger>
