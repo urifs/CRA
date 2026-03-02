@@ -109,6 +109,16 @@ export default function StockPage() {
     fetchData();
   }, [showLowStockOnly]);
 
+  // Expandir automaticamente todos os itens com máquinas vinculadas
+  useEffect(() => {
+    if (items.length > 0) {
+      const itemsWithMachines = items
+        .filter(item => item.machine_ids && item.machine_ids.length > 0)
+        .map(item => item.id);
+      setExpandedItems(new Set(itemsWithMachines));
+    }
+  }, [items]);
+
   const fetchData = async () => {
     const token = localStorage.getItem("token");
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
