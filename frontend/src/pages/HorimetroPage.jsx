@@ -579,12 +579,59 @@ export default function HorimetroPage() {
             {/* Operador */}
             <div className="space-y-2">
               <Label htmlFor="operador">Operador</Label>
-              <Input
-                id="operador"
-                placeholder="Nome do operador"
-                value={formData.operador}
-                onChange={(e) => setFormData({...formData, operador: e.target.value})}
-              />
+              <Select 
+                value={formData.operador} 
+                onValueChange={(value) => setFormData({...formData, operador: value})}
+              >
+                <SelectTrigger id="operador">
+                  <SelectValue placeholder="Selecione o operador..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {operadores.length > 0 ? (
+                    <>
+                      {/* Funcionários primeiro */}
+                      {operadores.filter(o => o.tipo === 'Funcionário').length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-100">
+                            👤 Funcionários (RH)
+                          </div>
+                          {operadores.filter(o => o.tipo === 'Funcionário').map((op) => (
+                            <SelectItem key={`func-${op.id}`} value={op.nome}>
+                              <div className="flex items-center gap-2">
+                                <span>{op.nome}</span>
+                                {op.cargo && <span className="text-xs text-gray-500">({op.cargo})</span>}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
+                      {/* Cadastros */}
+                      {operadores.filter(o => o.tipo === 'Cadastro').length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-100 mt-1">
+                            📋 Cadastros (Financeiro)
+                          </div>
+                          {operadores.filter(o => o.tipo === 'Cadastro').map((op) => (
+                            <SelectItem key={`cad-${op.id}`} value={op.nome}>
+                              <div className="flex items-center gap-2">
+                                <span>{op.nome}</span>
+                                {op.documento && <span className="text-xs text-gray-500">({op.documento})</span>}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-2 py-3 text-sm text-gray-500 text-center">
+                      Nenhum operador cadastrado
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Lista de funcionários (RH) e cadastros (Financeiro)
+              </p>
             </div>
 
             {/* Observações */}
