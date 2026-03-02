@@ -561,14 +561,13 @@ export default function StockPage() {
                                 <Wrench size={14} className="text-blue-600" />
                                 <span className="text-sm font-medium text-blue-700">Máquinas Associadas:</span>
                               </div>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="grid grid-cols-4 gap-1">
                                 {item.machine_ids.map(machineId => {
                                   const machine = machines.find(m => m.id === machineId);
                                   return machine ? (
-                                    <span key={machineId} className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded-full text-xs text-blue-700" title={`${machine.name} - ${machine.model || ''} (${machine.plate || ''})`}>
-                                      <Wrench size={10} />
-                                      {machine.name}
-                                      {machine.model && <span className="text-blue-500">• {machine.model}</span>}
+                                    <span key={machineId} className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded text-xs text-blue-700 truncate" title={`${machine.name} - ${machine.model || ''} (${machine.plate || ''})`}>
+                                      <Wrench size={10} className="flex-shrink-0" />
+                                      <span className="truncate">{machine.name}{machine.model && ` • ${machine.model}`}</span>
                                     </span>
                                   ) : null;
                                 })}
