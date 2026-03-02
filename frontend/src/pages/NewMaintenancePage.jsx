@@ -44,7 +44,8 @@ export default function NewMaintenancePage() {
   
   const [machines, setMachines] = useState([]);
   const [stockItems, setStockItems] = useState([]);
-  const [selectedParts, setSelectedParts] = useState([]); // {item_id, item_name, quantity, max_quantity}
+  const [selectedParts, setSelectedParts] = useState([]); // {item_id, item_name, quantity, max_quantity, unit_price}
+  const [laborCost, setLaborCost] = useState(""); // Valor de mão de obra
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [date, setDate] = useState(new Date());
