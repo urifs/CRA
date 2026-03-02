@@ -51,6 +51,9 @@ export default function MachinesPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [viewMode, setViewMode] = useState("grid"); // grid ou list
+  const [showOperatorModal, setShowOperatorModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null); // {machineId, machineName}
+  const [selectedOperatorId, setSelectedOperatorId] = useState("");
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
