@@ -61,6 +61,7 @@ export default function NewMaintenancePage() {
 
   useEffect(() => {
     fetchMachines();
+    fetchStockItems();
   }, []);
 
   const fetchMachines = async () => {
@@ -72,6 +73,47 @@ export default function NewMaintenancePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchStockItems = async () => {
+    try {
+      const response = await axios.get(`${API}/stock/items`);
+      setStockItems(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar itens do estoque:", error);
+    }
+  };
+
+  const addPart = (itemId) => {
+    const item = stockItems.find(i => i.id === itemId);
+    if (!item) return;
+    
+    // Verifica se já está selecionado
+    if (selectedParts.find(p => p.item_id === itemId)) {
+      toast.error("Esta peça já foi adicionada");
+      return;
+    }
+    
+    setSelectedParts([...selectedParts, {
+      item_id: item.id,
+      item_name: item.name,
+      item_code: item.code,
+      quantity: 1,
+      max_quantity: item.quantity,
+      unit: item.unit
+    }]);
+  };
+
+  const removePart = (itemId) => {
+    setSelectedParts(selectedParts.filter(p => p.item_id !== itemId));
+  };
+
+  const updatePartQuantity = (itemId, quantity) => {
+    setSelectedParts(selectedParts.map(p => 
+      p.item_id === itemId 
+        ? { ...p, quantity: Math.min(Math.max(1, quantity), p.max_quantity) }
+        : p
+    ));
   };
 
   const handleSubmit = async (e) => {
