@@ -293,7 +293,7 @@ export default function MachinesPage() {
       {/* Machines Grid/List */}
       {filteredMachines.length > 0 ? (
         viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {filteredMachines.map((machine) => {
               // Obter a cor da categoria
               const categoryColor = categories.find(c => c.id === machine.category_id)?.color || "#E31A1A";
