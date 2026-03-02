@@ -151,34 +151,51 @@ export default function NewMaintenancePage() {
     setSubmitting(true);
 
     try {
+      // Calcular valor total (peças + mão de obra)
+      const totalValue = calculateGrandTotal();
+      
       const payload = {
         ...formData,
-        part_value: parseFloat(formData.part_value),
+        part_value: totalValue > 0 ? totalValue : parseFloat(formData.part_value) || 0,
+        labor_cost: parseFloat(laborCost) || 0,
+        parts_cost: calculatePartsTotal(),
         replacement_date: format(date, "yyyy-MM-dd"),
         stock_parts: selectedParts.map(p => ({
           item_id: p.item_id,
           item_name: p.item_name,
-          quantity: p.quantity
+          quantity: p.quantity,
+          unit_price: p.unit_price,
+          subtotal: p.unit_price * p.quantity
         }))
       };
 
       const response = await axios.post(`${API}/maintenances`, payload);
       
       // Dar baixa no estoque para cada peça selecionada
+      let stockUpdateSuccess = true;
       for (const part of selectedParts) {
         try {
-          await axios.post(`${API}/stock/items/${part.item_id}/movement`, {
-            type: "saida",
+          await axios.post(`${API}/stock/movements`, {
+            item_id: part.item_id,
+            movement_type: "saida",
             quantity: part.quantity,
             reason: `Manutenção: ${formData.part_name}`,
             notes: `Usado na manutenção da máquina ${selectedMachine?.name || ''}`
           });
         } catch (err) {
           console.error(`Erro ao dar baixa no item ${part.item_name}:`, err);
+          stockUpdateSuccess = false;
         }
       }
       
-      toast.success("Manutenção registrada com sucesso!");
+      if (selectedParts.length > 0 && stockUpdateSuccess) {
+        toast.success("Manutenção registrada e estoque atualizado!");
+      } else if (selectedParts.length > 0 && !stockUpdateSuccess) {
+        toast.warning("Manutenção registrada, mas houve erro ao atualizar estoque");
+      } else {
+        toast.success("Manutenção registrada com sucesso!");
+      }
+      
       navigate(`/gerenciamento/maintenances/${response.data.id}`);
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao registrar manutenção");
