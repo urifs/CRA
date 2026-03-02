@@ -571,7 +571,7 @@ export default function StockPage() {
                         </td>
                       </tr>
                       {/* Linha expandida com máquinas */}
-                      {expandedItemId === item.id && item.machine_ids && item.machine_ids.length > 0 && (
+                      {expandedItems.has(item.id) && item.machine_ids && item.machine_ids.length > 0 && (
                         <tr key={`${item.id}-machines`} className="bg-blue-50/50">
                           <td colSpan={8} className="px-4 py-3">
                             <div className="pl-8">
