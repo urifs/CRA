@@ -101,7 +101,8 @@ export default function NewMaintenancePage() {
       item_code: item.code,
       quantity: 1,
       max_quantity: item.quantity,
-      unit: item.unit
+      unit: item.unit,
+      unit_price: item.unit_price || 0
     }]);
   };
 
@@ -115,6 +116,23 @@ export default function NewMaintenancePage() {
         ? { ...p, quantity: Math.min(Math.max(1, quantity), p.max_quantity) }
         : p
     ));
+  };
+
+  // Calcula o total das peças
+  const calculatePartsTotal = () => {
+    return selectedParts.reduce((total, part) => total + (part.unit_price * part.quantity), 0);
+  };
+
+  // Calcula o total geral (peças + mão de obra)
+  const calculateGrandTotal = () => {
+    const partsTotal = calculatePartsTotal();
+    const labor = parseFloat(laborCost) || 0;
+    return partsTotal + labor;
+  };
+
+  // Formata valor em BRL
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
 
   const handleSubmit = async (e) => {
