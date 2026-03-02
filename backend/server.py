@@ -5511,9 +5511,17 @@ async def create_aluguel(data: AluguelCreate, current_user: dict = Depends(get_c
         "numero": numero,
         **data.model_dump(exclude={"gerar_conta_receber"}),
         "conta_receber_id": None,
+        "status": "ativo",  # ativo, finalizado, cancelado
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    
+    # Alterar status da máquina para "operacional"
+    if data.maquina_id:
+        await db.machines.update_one(
+            {"id": data.maquina_id},
+            {"$set": {"status": "operacional"}}
+        )
     
     # Gerar conta a receber automaticamente se solicitado
     if data.gerar_conta_receber:
