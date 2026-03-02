@@ -565,10 +565,10 @@ export default function StockPage() {
                                 {item.machine_ids.map(machineId => {
                                   const machine = machines.find(m => m.id === machineId);
                                   return machine ? (
-                                    <span key={machineId} className="inline-flex items-center gap-1 px-3 py-1 bg-white border border-blue-200 rounded-full text-sm text-blue-700">
-                                      <Wrench size={12} />
+                                    <span key={machineId} className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded-full text-xs text-blue-700" title={`${machine.name} - ${machine.model || ''} (${machine.plate || ''})`}>
+                                      <Wrench size={10} />
                                       {machine.name}
-                                      {machine.plate && <span className="text-blue-500 text-xs">({machine.plate})</span>}
+                                      {machine.model && <span className="text-blue-500">• {machine.model}</span>}
                                     </span>
                                   ) : null;
                                 })}
