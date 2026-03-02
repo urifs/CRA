@@ -151,11 +151,44 @@ export default function MachinesPage() {
     }
   };
 
-  const handleStatusChange = async (machineId, newStatus) => {
+  const handleStatusChange = async (machineId, newStatus, machineName = "") => {
+    // Se for mudar para operacional, abrir modal para vincular operador
+    if (newStatus === "operacional") {
+      setPendingStatusChange({ machineId, machineName, newStatus });
+      setSelectedOperatorId("");
+      setShowOperatorModal(true);
+      return;
+    }
+    
+    // Para outros status, alterar diretamente
     try {
       await axios.patch(`${API}/machines/${machineId}/status`, { status: newStatus });
       const statusLabels = { patio: "Pátio", operacional: "Operacional", manutencao: "Manutenção" };
       toast.success(`Status alterado para ${statusLabels[newStatus]}`);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao alterar status");
+    }
+  };
+
+  const handleConfirmOperational = async () => {
+    if (!pendingStatusChange) return;
+    
+    try {
+      // Alterar status para operacional
+      await axios.patch(`${API}/machines/${pendingStatusChange.machineId}/status`, { status: "operacional" });
+      
+      // Se operador selecionado, vincular à máquina
+      if (selectedOperatorId) {
+        await axios.put(`${API}/machines/${pendingStatusChange.machineId}`, {
+          operator_id: selectedOperatorId
+        });
+      }
+      
+      toast.success("Status alterado para Operacional" + (selectedOperatorId ? " e operador vinculado!" : "!"));
+      setShowOperatorModal(false);
+      setPendingStatusChange(null);
+      setSelectedOperatorId("");
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao alterar status");
