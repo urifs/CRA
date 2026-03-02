@@ -252,6 +252,111 @@ export default function NewMaintenancePage() {
                 />
               </div>
 
+              {/* Stock Parts Selection */}
+              <div className="space-y-3">
+                <Label className="form-label flex items-center gap-2">
+                  <Package size={16} className="text-blue-600" />
+                  Peças do Estoque Utilizadas
+                </Label>
+                
+                {/* Dropdown para selecionar peças */}
+                <div className="flex gap-2">
+                  <Select onValueChange={addPart}>
+                    <SelectTrigger className="form-input" data-testid="stock-part-select">
+                      <SelectValue placeholder="Selecionar peça do estoque..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stockItems
+                        .filter(item => item.quantity > 0)
+                        .filter(item => !selectedParts.find(p => p.item_id === item.id))
+                        .map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{item.name}</span>
+                              {item.code && <span className="text-xs text-gray-500">({item.code})</span>}
+                              <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                                {item.quantity} {item.unit} disponível
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Lista de peças selecionadas */}
+                {selectedParts.length > 0 && (
+                  <div className="space-y-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-blue-700 mb-2">Peças selecionadas (serão baixadas do estoque):</p>
+                    {selectedParts.map((part) => (
+                      <div key={part.item_id} className="flex items-center justify-between bg-white rounded-lg p-2 border border-blue-100">
+                        <div className="flex items-center gap-2">
+                          <Package size={14} className="text-blue-600" />
+                          <span className="font-medium text-sm">{part.item_name}</span>
+                          {part.item_code && <span className="text-xs text-gray-500">({part.item_code})</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 bg-gray-100 rounded-lg">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => updatePartQuantity(part.item_id, part.quantity - 1)}
+                              disabled={part.quantity <= 1}
+                            >
+                              <Minus size={12} />
+                            </Button>
+                            <Input
+                              type="number"
+                              value={part.quantity}
+                              onChange={(e) => updatePartQuantity(part.item_id, parseInt(e.target.value) || 1)}
+                              className="w-14 h-7 text-center text-sm p-0 border-0 bg-transparent"
+                              min={1}
+                              max={part.max_quantity}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => updatePartQuantity(part.item_id, part.quantity + 1)}
+                              disabled={part.quantity >= part.max_quantity}
+                            >
+                              <Plus size={12} />
+                            </Button>
+                          </div>
+                          <span className="text-xs text-gray-500">{part.unit}</span>
+                          <span className="text-xs text-gray-400">(máx: {part.max_quantity})</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => removePart(part.item_id)}
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {stockItems.length === 0 && (
+                  <p className="text-xs text-gray-500">
+                    Nenhum item no estoque.{" "}
+                    <button
+                      type="button"
+                      className="text-blue-600 underline"
+                      onClick={() => navigate("/gerenciamento/stock")}
+                    >
+                      Ir para Estoque
+                    </button>
+                  </p>
+                )}
+              </div>
+
               {/* Date and Value */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
