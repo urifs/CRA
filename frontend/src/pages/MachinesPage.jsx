@@ -880,6 +880,74 @@ export default function MachinesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal para vincular operador ao mudar para Operacional */}
+      <Dialog open={showOperatorModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowOperatorModal(false);
+          setPendingStatusChange(null);
+          setSelectedOperatorId("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="text-green-600" size={20} />
+              Vincular Operador
+            </DialogTitle>
+            <DialogDescription>
+              A máquina <strong>{pendingStatusChange?.machineName}</strong> será alterada para <span className="text-green-600 font-medium">Operacional</span>.
+              <br />
+              Deseja vincular um operador responsável?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label className="form-label mb-2 block">Selecione o Operador (opcional)</Label>
+            <Select value={selectedOperatorId} onValueChange={setSelectedOperatorId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione um funcionário..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__skip__">
+                  <span className="text-gray-500">Não vincular operador</span>
+                </SelectItem>
+                {funcionarios.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-100">
+                      👤 Funcionários (RH)
+                    </div>
+                    {funcionarios.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{f.nome}</span>
+                          {f.cargo && <span className="text-xs text-gray-500">({f.cargo})</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowOperatorModal(false);
+              setPendingStatusChange(null);
+              setSelectedOperatorId("");
+            }}>
+              Cancelar
+            </Button>
+            <Button 
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleConfirmOperational}
+            >
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
