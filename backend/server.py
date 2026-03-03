@@ -226,6 +226,59 @@ class DashboardStats(BaseModel):
     oil_change_alerts: int = 0
     machines_by_category: List[CategoryMachineCount] = []
 
+# ============ NFE IMPORT MODELS ============
+
+class NFeCertificadoCreate(BaseModel):
+    cnpj: str
+    razao_social: str
+    uf: str = "SP"
+    ambiente: str = "producao"  # producao ou homologacao
+    certificado_base64: str  # Certificado .pfx em base64
+    senha_certificado: str
+    ativo: bool = True
+
+class NFeCertificadoResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    cnpj: str
+    razao_social: str
+    uf: str
+    ambiente: str
+    ativo: bool
+    ultimo_nsu: str = "000000000000000"
+    created_at: str
+    updated_at: Optional[str] = None
+
+class NFeItemResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    codigo: str
+    descricao: str
+    ncm: str
+    cfop: str
+    unidade: str
+    quantidade: float
+    valor_unitario: float
+    valor_total: float
+
+class NFeImportadaResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    certificado_id: str
+    cnpj_destinatario: str
+    chave_acesso: str
+    numero_nf: str
+    serie: str
+    data_emissao: str
+    cnpj_emitente: str
+    razao_social_emitente: str
+    valor_total: float
+    itens: List[NFeItemResponse] = []
+    xml_base64: Optional[str] = None
+    nsu: str
+    conta_pagar_id: Optional[str] = None  # Vinculada a conta a pagar
+    status: str = "nova"  # nova, processada, ignorada
+    created_at: str
+
 # ============ OIL CHANGE / USAGE MODELS ============
 
 class UsageLogCreate(BaseModel):
