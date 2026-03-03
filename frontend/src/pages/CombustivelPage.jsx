@@ -21,12 +21,22 @@ import {
   Loader2,
   Search,
   Truck,
-  Calendar,
   Droplet,
   CircleDot,
   TrendingDown,
-  User
+  User,
+  MapPin,
+  X,
+  Package
 } from "lucide-react";
+
+const UNIDADES_MEDIDA = [
+  { value: "L", label: "Litros (L)" },
+  { value: "ML", label: "Mililitros (ML)" },
+  { value: "KG", label: "Quilogramas (KG)" },
+  { value: "G", label: "Gramas (G)" },
+  { value: "UN", label: "Unidade (UN)" }
+];
 
 export default function CombustivelPage() {
   const [loading, setLoading] = useState(true);
@@ -34,6 +44,8 @@ export default function CombustivelPage() {
   const [abastecedores, setAbastecedores] = useState([]);
   const [machines, setMachines] = useState([]);
   const [operadores, setOperadores] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
+  const [postos, setPostos] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("registros");
   
@@ -43,8 +55,7 @@ export default function CombustivelPage() {
   const [editingId, setEditingId] = useState(null);
   const [editingAbastecedorId, setEditingAbastecedorId] = useState(null);
   
-  // Form states
-  const [tipoRegistro, setTipoRegistro] = useState(null); // null, "abastecedor", "abastecido"
+  // Form states - Formulário unificado de combustível
   const [formData, setFormData] = useState({
     machine_id: "",
     data: new Date().toISOString().split("T")[0],
@@ -54,21 +65,22 @@ export default function CombustivelPage() {
     litros_diesel: "",
     litros_oleo: "",
     litros_graxa: "",
-    fonte_abastecimento: "externo",
+    fonte_abastecimento: "externo", // "interno", "externo", "posto"
     veiculo_abastecedor_id: "",
+    posto_id: "",
     operador_id: "",
     observacoes: ""
   });
   
+  // Formulário de veículo abastecedor com compartimentos dinâmicos
   const [abastecedorForm, setAbastecedorForm] = useState({
     machine_id: "",
     capacidade_diesel: "",
-    capacidade_oleo: "",
     capacidade_graxa: "",
     litros_diesel: "",
-    litros_oleo: "",
     litros_graxa: "",
-    operador_id: ""
+    operador_id: "",
+    compartimentos_oleo: [] // Lista de compartimentos de óleo
   });
   
   const token = localStorage.getItem("token");
@@ -79,17 +91,22 @@ export default function CombustivelPage() {
 
   const fetchData = async () => {
     try {
-      const [registrosRes, abastecedoresRes, machinesRes, operadoresRes] = await Promise.all([
+      const [registrosRes, abastecedoresRes, machinesRes, operadoresRes, stockRes, cadastrosRes] = await Promise.all([
         axios.get(`${API}/combustivel`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/combustivel/abastecedores`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/machines`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/operadores`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API}/operadores`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/stock/items`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/admin/cadastros`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       
       setRegistros(registrosRes.data);
       setAbastecedores(abastecedoresRes.data);
       setMachines(machinesRes.data);
       setOperadores(operadoresRes.data);
+      setStockItems(stockRes.data);
+      // Filtrar apenas fornecedores (postos parceiros)
+      setPostos(cadastrosRes.data.filter(c => c.tipo_cadastro === "fornecedor" || c.tipo_cadastro === "cli_forn"));
     } catch (error) {
       toast.error("Erro ao carregar dados");
     } finally {
@@ -144,7 +161,6 @@ export default function CombustivelPage() {
 
   const resetForm = () => {
     setEditingId(null);
-    setTipoRegistro(null);
     setFormData({
       machine_id: "",
       data: new Date().toISOString().split("T")[0],
@@ -156,6 +172,7 @@ export default function CombustivelPage() {
       litros_graxa: "",
       fonte_abastecimento: "externo",
       veiculo_abastecedor_id: "",
+      posto_id: "",
       operador_id: "",
       observacoes: ""
     });
@@ -172,32 +189,40 @@ export default function CombustivelPage() {
     
     try {
       const payload = {
-        ...abastecedorForm,
+        machine_id: abastecedorForm.machine_id,
         capacidade_diesel: parseFloat(abastecedorForm.capacidade_diesel) || 0,
-        capacidade_oleo: parseFloat(abastecedorForm.capacidade_oleo) || 0,
+        capacidade_oleo: 0, // Legado - agora usa compartimentos
         capacidade_graxa: parseFloat(abastecedorForm.capacidade_graxa) || 0,
         litros_diesel: parseFloat(abastecedorForm.litros_diesel) || 0,
-        litros_oleo: parseFloat(abastecedorForm.litros_oleo) || 0,
-        litros_graxa: parseFloat(abastecedorForm.litros_graxa) || 0
+        litros_oleo: 0, // Legado
+        litros_graxa: parseFloat(abastecedorForm.litros_graxa) || 0,
+        operador_id: abastecedorForm.operador_id,
+        compartimentos_oleo: abastecedorForm.compartimentos_oleo.map(c => ({
+          id: c.id,
+          item_estoque_id: c.item_estoque_id,
+          unidade_medida: c.unidade_medida,
+          capacidade: parseFloat(c.capacidade) || 0,
+          quantidade_atual: parseFloat(c.quantidade_atual) || 0
+        }))
       };
 
       if (editingAbastecedorId) {
         await axios.put(`${API}/combustivel/abastecedores/${editingAbastecedorId}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        toast.success("Veículo abastecedor atualizado!");
+        toast.success("Veículo tanque atualizado!");
       } else {
         await axios.post(`${API}/combustivel/abastecedores`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        toast.success("Veículo abastecedor cadastrado!");
+        toast.success("Veículo tanque cadastrado!");
       }
       
       setIsAbastecedorModalOpen(false);
       resetAbastecedorForm();
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao salvar veículo abastecedor");
+      toast.error(error.response?.data?.detail || "Erro ao salvar veículo tanque");
     }
   };
 
@@ -206,27 +231,26 @@ export default function CombustivelPage() {
     setAbastecedorForm({
       machine_id: abast.machine_id,
       capacidade_diesel: abast.capacidade_diesel?.toString() || "",
-      capacidade_oleo: abast.capacidade_oleo?.toString() || "",
       capacidade_graxa: abast.capacidade_graxa?.toString() || "",
       litros_diesel: abast.litros_diesel?.toString() || "",
-      litros_oleo: abast.litros_oleo?.toString() || "",
       litros_graxa: abast.litros_graxa?.toString() || "",
-      operador_id: abast.operador_id || ""
+      operador_id: abast.operador_id || "",
+      compartimentos_oleo: abast.compartimentos_oleo || []
     });
     setIsAbastecedorModalOpen(true);
   };
 
   const handleDeleteAbastecedor = async (id) => {
-    if (!confirm("Tem certeza que deseja remover este veículo abastecedor?")) return;
+    if (!confirm("Tem certeza que deseja remover este veículo tanque?")) return;
     
     try {
       await axios.delete(`${API}/combustivel/abastecedores/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success("Veículo abastecedor removido!");
+      toast.success("Veículo tanque removido!");
       fetchData();
     } catch (error) {
-      toast.error("Erro ao remover veículo abastecedor");
+      toast.error("Erro ao remover veículo tanque");
     }
   };
 
@@ -235,25 +259,62 @@ export default function CombustivelPage() {
     setAbastecedorForm({
       machine_id: "",
       capacidade_diesel: "",
-      capacidade_oleo: "",
       capacidade_graxa: "",
       litros_diesel: "",
-      litros_oleo: "",
       litros_graxa: "",
-      operador_id: ""
+      operador_id: "",
+      compartimentos_oleo: []
     });
   };
 
-  const openNewModal = (tipo) => {
-    resetForm();
-    setTipoRegistro(tipo);
-    setFormData(prev => ({ ...prev, tipo_registro: tipo }));
-    setIsModalOpen(true);
+  // Adicionar compartimento de óleo
+  const addCompartimentoOleo = () => {
+    setAbastecedorForm(prev => ({
+      ...prev,
+      compartimentos_oleo: [
+        ...prev.compartimentos_oleo,
+        {
+          id: `temp-${Date.now()}`,
+          item_estoque_id: "",
+          item_nome: "",
+          unidade_medida: "L",
+          capacidade: "",
+          quantidade_atual: ""
+        }
+      ]
+    }));
+  };
+
+  // Remover compartimento de óleo
+  const removeCompartimentoOleo = (index) => {
+    setAbastecedorForm(prev => ({
+      ...prev,
+      compartimentos_oleo: prev.compartimentos_oleo.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Atualizar compartimento de óleo
+  const updateCompartimentoOleo = (index, field, value) => {
+    setAbastecedorForm(prev => ({
+      ...prev,
+      compartimentos_oleo: prev.compartimentos_oleo.map((comp, i) => {
+        if (i !== index) return comp;
+        
+        // Se estiver atualizando o item do estoque, buscar o nome
+        if (field === "item_estoque_id") {
+          const item = stockItems.find(s => s.id === value);
+          return { ...comp, [field]: value, item_nome: item?.name || "" };
+        }
+        
+        return { ...comp, [field]: value };
+      })
+    }));
   };
 
   // Helpers
   const getMachineName = (id) => machines.find(m => m.id === id)?.name || "Máquina não encontrada";
   const getOperadorName = (id) => operadores.find(o => o.id === id)?.nome || "-";
+  const getPostoName = (id) => postos.find(p => p.id === id)?.nome_razao || "-";
   
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -274,6 +335,15 @@ export default function CombustivelPage() {
   // Máquinas disponíveis para serem abastecedores (que ainda não são)
   const machinesDisponiveis = machines.filter(m => 
     !abastecedores.some(a => a.machine_id === m.id)
+  );
+
+  // Filtrar itens do estoque que são óleos/lubrificantes
+  const itensOleo = stockItems.filter(item => 
+    item.name?.toLowerCase().includes("óleo") ||
+    item.name?.toLowerCase().includes("oleo") ||
+    item.name?.toLowerCase().includes("lubrificante") ||
+    item.category_name?.toLowerCase().includes("óleo") ||
+    item.category_name?.toLowerCase().includes("lubrificante")
   );
 
   if (loading) {
@@ -317,22 +387,15 @@ export default function CombustivelPage() {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => openNewModal("abastecedor")} 
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Plus size={18} className="mr-2" />
-                Registro Abastecedor
-              </Button>
-              <Button 
-                onClick={() => openNewModal("abastecido")} 
-                className="bg-[#E31A1A] hover:bg-red-700"
-              >
-                <Plus size={18} className="mr-2" />
-                Registro Abastecido
-              </Button>
-            </div>
+            {/* Botão único de Novo Registro */}
+            <Button 
+              onClick={() => { resetForm(); setIsModalOpen(true); }} 
+              className="bg-[#E31A1A] hover:bg-red-700"
+              data-testid="btn-novo-registro"
+            >
+              <Plus size={18} className="mr-2" />
+              Novo Registro de Combustível
+            </Button>
           </div>
 
           {/* Lista de Registros */}
@@ -342,7 +405,7 @@ export default function CombustivelPage() {
                 <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                   <Fuel size={48} className="mb-4 text-gray-300" />
                   <p>Nenhum registro encontrado</p>
-                  <p className="text-sm">Clique em um dos botões acima para criar um registro</p>
+                  <p className="text-sm">Clique no botão acima para criar um registro</p>
                 </div>
               ) : (
                 <Table>
@@ -392,10 +455,14 @@ export default function CombustivelPage() {
                             <span className={`text-xs ${
                               registro.fonte_abastecimento === "interno" 
                                 ? 'text-purple-600' 
+                                : registro.fonte_abastecimento === "posto"
+                                ? 'text-blue-600'
                                 : 'text-gray-500'
                             }`}>
                               {registro.fonte_abastecimento === "interno" 
-                                ? registro.veiculo_abastecedor_nome || "Interno"
+                                ? registro.veiculo_abastecedor_nome || "Tanque Interno"
+                                : registro.fonte_abastecimento === "posto"
+                                ? registro.posto_nome || "Posto Parceiro"
                                 : "Externo"}
                             </span>
                           ) : "-"}
@@ -426,13 +493,14 @@ export default function CombustivelPage() {
             <Button 
               onClick={() => { resetAbastecedorForm(); setIsAbastecedorModalOpen(true); }}
               className="bg-[#E31A1A] hover:bg-red-700"
+              data-testid="btn-cadastrar-tanque"
             >
               <Plus size={18} className="mr-2" />
               Cadastrar Veículo Tanque
             </Button>
           </div>
 
-          {/* Cards dos Abastecedores - 3 colunas horizontal */}
+          {/* Cards dos Abastecedores */}
           {abastecedores.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -445,7 +513,6 @@ export default function CombustivelPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {abastecedores.map((abast) => {
                 const dieselPercent = calcPercentage(abast.litros_diesel, abast.capacidade_diesel);
-                const oleoPercent = calcPercentage(abast.litros_oleo, abast.capacidade_oleo);
                 const graxaPercent = calcPercentage(abast.litros_graxa, abast.capacidade_graxa);
                 
                 return (
@@ -495,19 +562,29 @@ export default function CombustivelPage() {
                         <p className="text-xs text-right text-gray-500 mt-0.5">{dieselPercent}%</p>
                       </div>
                       
-                      {/* Óleo */}
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="flex items-center gap-1 font-medium">
-                            <CircleDot size={14} className="text-blue-600" /> Óleo
-                          </span>
-                          <span className="text-gray-600">
-                            {abast.litros_oleo?.toFixed(0) || 0}L / {abast.capacidade_oleo?.toFixed(0) || 0}L
-                          </span>
+                      {/* Compartimentos de Óleo Dinâmicos */}
+                      {abast.compartimentos_oleo?.length > 0 && (
+                        <div className="space-y-3 border-t pt-3">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Compartimentos de Óleo</p>
+                          {abast.compartimentos_oleo.map((comp, idx) => {
+                            const oleoPercent = calcPercentage(comp.quantidade_atual, comp.capacidade);
+                            return (
+                              <div key={comp.id || idx}>
+                                <div className="flex justify-between text-sm mb-1">
+                                  <span className="flex items-center gap-1 font-medium">
+                                    <CircleDot size={14} className="text-blue-600" />
+                                    {comp.item_nome || "Óleo"}
+                                  </span>
+                                  <span className="text-gray-600">
+                                    {comp.quantidade_atual?.toFixed(1) || 0}{comp.unidade_medida} / {comp.capacidade?.toFixed(0) || 0}{comp.unidade_medida}
+                                  </span>
+                                </div>
+                                <Progress value={oleoPercent} className="h-2" />
+                              </div>
+                            );
+                          })}
                         </div>
-                        <Progress value={oleoPercent} className="h-3" />
-                        <p className="text-xs text-right text-gray-500 mt-0.5">{oleoPercent}%</p>
-                      </div>
+                      )}
                       
                       {/* Graxa */}
                       <div>
@@ -531,25 +608,46 @@ export default function CombustivelPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Modal de Registro de Combustível */}
+      {/* Modal Unificado de Registro de Combustível */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Fuel className={tipoRegistro === "abastecedor" ? "text-green-500" : "text-blue-500"} />
-              {tipoRegistro === "abastecedor" 
-                ? "Registro de Entrada (Abastecedor)" 
-                : "Registro de Abastecimento"}
+              <Fuel className="text-[#E31A1A]" />
+              Novo Registro de Combustível
             </DialogTitle>
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Tipo de Registro */}
+            <div className="space-y-2">
+              <Label>Tipo de Registro *</Label>
+              <RadioGroup 
+                value={formData.tipo_registro} 
+                onValueChange={(value) => setFormData({...formData, tipo_registro: value})}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="abastecido" id="tipo_abastecido" />
+                  <Label htmlFor="tipo_abastecido" className="cursor-pointer font-normal">
+                    Abastecimento (Saída)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="abastecedor" id="tipo_abastecedor" />
+                  <Label htmlFor="tipo_abastecedor" className="cursor-pointer font-normal">
+                    Entrada no Tanque
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* Info do tipo */}
             <div className={`p-3 rounded-lg ${
-              tipoRegistro === "abastecedor" ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'
+              formData.tipo_registro === "abastecedor" ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'
             }`}>
-              <p className={`text-sm ${tipoRegistro === "abastecedor" ? 'text-green-700' : 'text-blue-700'}`}>
-                {tipoRegistro === "abastecedor" 
+              <p className={`text-sm ${formData.tipo_registro === "abastecedor" ? 'text-green-700' : 'text-blue-700'}`}>
+                {formData.tipo_registro === "abastecedor" 
                   ? "Registre a entrada de combustível no veículo tanque"
                   : "Registre o abastecimento de uma máquina"}
               </p>
@@ -558,9 +656,9 @@ export default function CombustivelPage() {
             {/* Máquina */}
             <div className="space-y-2">
               <Label>
-                {tipoRegistro === "abastecedor" ? "Veículo Tanque *" : "Máquina a Abastecer *"}
+                {formData.tipo_registro === "abastecedor" ? "Veículo Tanque *" : "Máquina a Abastecer *"}
               </Label>
-              {tipoRegistro === "abastecedor" && abastecedores.length === 0 ? (
+              {formData.tipo_registro === "abastecedor" && abastecedores.length === 0 ? (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-700">
                     Nenhum veículo tanque cadastrado. Vá para a aba "Veículos Tanque" e cadastre um primeiro.
@@ -575,7 +673,7 @@ export default function CombustivelPage() {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {tipoRegistro === "abastecedor" 
+                    {formData.tipo_registro === "abastecedor" 
                       ? abastecedores.map(a => (
                           <SelectItem key={a.machine_id} value={a.machine_id}>
                             <div className="flex items-center gap-2">
@@ -609,25 +707,34 @@ export default function CombustivelPage() {
               />
             </div>
 
-            {/* Se for abastecido, mostrar fonte */}
-            {tipoRegistro === "abastecido" && (
+            {/* Fonte do Abastecimento - apenas para tipo "abastecido" */}
+            {formData.tipo_registro === "abastecido" && (
               <div className="space-y-2">
                 <Label>Fonte do Abastecimento *</Label>
                 <RadioGroup 
                   value={formData.fonte_abastecimento} 
-                  onValueChange={(value) => setFormData({...formData, fonte_abastecimento: value, veiculo_abastecedor_id: ""})}
-                  className="flex gap-4"
+                  onValueChange={(value) => setFormData({...formData, fonte_abastecimento: value, veiculo_abastecedor_id: "", posto_id: ""})}
+                  className="flex flex-col gap-2"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="interno" id="fonte_interno" />
-                    <Label htmlFor="fonte_interno" className="cursor-pointer font-normal">
-                      Veículo Abastecedor (Interno)
+                    <Label htmlFor="fonte_interno" className="cursor-pointer font-normal flex items-center gap-2">
+                      <Truck size={16} className="text-green-600" />
+                      Veículo Tanque (Interno)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="posto" id="fonte_posto" />
+                    <Label htmlFor="fonte_posto" className="cursor-pointer font-normal flex items-center gap-2">
+                      <MapPin size={16} className="text-blue-600" />
+                      Posto Parceiro
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="externo" id="fonte_externo" />
-                    <Label htmlFor="fonte_externo" className="cursor-pointer font-normal">
-                      Abastecimento Externo
+                    <Label htmlFor="fonte_externo" className="cursor-pointer font-normal flex items-center gap-2">
+                      <Fuel size={16} className="text-gray-600" />
+                      Outro (Externo)
                     </Label>
                   </div>
                 </RadioGroup>
@@ -635,9 +742,9 @@ export default function CombustivelPage() {
             )}
 
             {/* Seleção do veículo abastecedor se fonte for interna */}
-            {tipoRegistro === "abastecido" && formData.fonte_abastecimento === "interno" && (
+            {formData.tipo_registro === "abastecido" && formData.fonte_abastecimento === "interno" && (
               <div className="space-y-2">
-                <Label>Veículo Abastecedor *</Label>
+                <Label>Veículo Tanque *</Label>
                 <Select 
                   value={formData.veiculo_abastecedor_id} 
                   onValueChange={(value) => setFormData({...formData, veiculo_abastecedor_id: value})}
@@ -659,6 +766,41 @@ export default function CombustivelPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Seleção do posto parceiro */}
+            {formData.tipo_registro === "abastecido" && formData.fonte_abastecimento === "posto" && (
+              <div className="space-y-2">
+                <Label>Posto Parceiro</Label>
+                <Select 
+                  value={formData.posto_id} 
+                  onValueChange={(value) => setFormData({...formData, posto_id: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o posto parceiro..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {postos.length === 0 ? (
+                      <div className="p-2 text-sm text-gray-500 text-center">
+                        Nenhum posto/fornecedor cadastrado
+                      </div>
+                    ) : (
+                      postos.map(p => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <div className="flex items-center gap-2">
+                            <MapPin size={14} className="text-blue-500" />
+                            {p.nome_razao}
+                            {p.cidade && <span className="text-xs text-gray-400">({p.cidade})</span>}
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  Cadastre postos parceiros em Administrativo → Cadastros como "Fornecedor"
+                </p>
               </div>
             )}
 
@@ -751,7 +893,7 @@ export default function CombustivelPage() {
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" className={tipoRegistro === "abastecedor" ? "bg-green-600 hover:bg-green-700" : "bg-[#E31A1A] hover:bg-red-700"}>
+              <Button type="submit" className="bg-[#E31A1A] hover:bg-red-700">
                 Salvar Registro
               </Button>
             </DialogFooter>
@@ -761,7 +903,7 @@ export default function CombustivelPage() {
 
       {/* Modal de Cadastro de Veículo Abastecedor */}
       <Dialog open={isAbastecedorModalOpen} onOpenChange={setIsAbastecedorModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Truck className="text-green-500" />
@@ -803,101 +945,183 @@ export default function CombustivelPage() {
               )}
             </div>
 
-            {/* Capacidades - 3 campos horizontais */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Capacidades Máximas</Label>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-1">
-                    <Droplet size={12} className="text-yellow-600" />
-                    Diesel (L)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    placeholder="Ex: 5000"
-                    value={abastecedorForm.capacidade_diesel}
-                    onChange={(e) => setAbastecedorForm({...abastecedorForm, capacidade_diesel: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-1">
-                    <CircleDot size={12} className="text-blue-600" />
-                    Óleo (L)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    placeholder="Ex: 500"
-                    value={abastecedorForm.capacidade_oleo}
-                    onChange={(e) => setAbastecedorForm({...abastecedorForm, capacidade_oleo: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-1">
-                    <TrendingDown size={12} className="text-gray-600" />
-                    Graxa (L)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="1"
-                    min="0"
-                    placeholder="Ex: 200"
-                    value={abastecedorForm.capacidade_graxa}
-                    onChange={(e) => setAbastecedorForm({...abastecedorForm, capacidade_graxa: e.target.value})}
-                  />
-                </div>
+            {/* Combustível Principal (Diesel) */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="col-span-2">
+                <Label className="text-sm font-medium text-yellow-800 flex items-center gap-2">
+                  <Droplet size={16} className="text-yellow-600" />
+                  Compartimento de Diesel
+                </Label>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Capacidade (L)</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="Ex: 5000"
+                  value={abastecedorForm.capacidade_diesel}
+                  onChange={(e) => setAbastecedorForm({...abastecedorForm, capacidade_diesel: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Quantidade Atual (L)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="Litros atuais"
+                  value={abastecedorForm.litros_diesel}
+                  onChange={(e) => setAbastecedorForm({...abastecedorForm, litros_diesel: e.target.value})}
+                />
               </div>
             </div>
 
-            {/* Níveis Atuais - 3 campos horizontais */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Níveis Atuais no Reservatório</Label>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-1">
-                    <Droplet size={12} className="text-yellow-600" />
-                    Diesel (L)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="Litros atuais"
-                    value={abastecedorForm.litros_diesel}
-                    onChange={(e) => setAbastecedorForm({...abastecedorForm, litros_diesel: e.target.value})}
-                  />
+            {/* Compartimentos de Óleo Dinâmicos */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <CircleDot size={16} className="text-blue-600" />
+                  Compartimentos de Óleo
+                </Label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={addCompartimentoOleo}
+                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                >
+                  <Plus size={14} className="mr-1" />
+                  Adicionar Óleo
+                </Button>
+              </div>
+              
+              {abastecedorForm.compartimentos_oleo.length === 0 ? (
+                <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg text-center text-gray-500">
+                  <Package size={24} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Nenhum compartimento de óleo adicionado</p>
+                  <p className="text-xs">Clique em "Adicionar Óleo" para criar compartimentos</p>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-1">
-                    <CircleDot size={12} className="text-blue-600" />
-                    Óleo (L)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="Litros atuais"
-                    value={abastecedorForm.litros_oleo}
-                    onChange={(e) => setAbastecedorForm({...abastecedorForm, litros_oleo: e.target.value})}
-                  />
+              ) : (
+                <div className="space-y-3">
+                  {abastecedorForm.compartimentos_oleo.map((comp, index) => (
+                    <div key={comp.id || index} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-blue-800">Compartimento {index + 1}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeCompartimentoOleo(index)}
+                          className="text-red-600 hover:bg-red-50 h-6 w-6 p-0"
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-3">
+                        <div className="col-span-2 space-y-1">
+                          <Label className="text-xs">Tipo de Óleo (Estoque) *</Label>
+                          <Select 
+                            value={comp.item_estoque_id}
+                            onValueChange={(value) => updateCompartimentoOleo(index, "item_estoque_id", value)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {stockItems.length === 0 ? (
+                                <div className="p-2 text-sm text-gray-500">
+                                  Nenhum item no estoque
+                                </div>
+                              ) : (
+                                stockItems.map(item => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {item.name}
+                                    {item.category_name && (
+                                      <span className="text-xs text-gray-400 ml-1">({item.category_name})</span>
+                                    )}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Unidade</Label>
+                          <Select 
+                            value={comp.unidade_medida}
+                            onValueChange={(value) => updateCompartimentoOleo(index, "unidade_medida", value)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {UNIDADES_MEDIDA.map(u => (
+                                <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Capacidade</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            placeholder="0"
+                            className="h-9"
+                            value={comp.capacidade}
+                            onChange={(e) => updateCompartimentoOleo(index, "capacidade", e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <Label className="text-xs">Quantidade Atual ({comp.unidade_medida})</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            placeholder="Quantidade atual no compartimento"
+                            className="h-9 mt-1"
+                            value={comp.quantidade_atual}
+                            onChange={(e) => updateCompartimentoOleo(index, "quantidade_atual", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-1">
-                    <TrendingDown size={12} className="text-gray-600" />
-                    Graxa (L)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="Litros atuais"
-                    value={abastecedorForm.litros_graxa}
-                    onChange={(e) => setAbastecedorForm({...abastecedorForm, litros_graxa: e.target.value})}
-                  />
-                </div>
+              )}
+            </div>
+
+            {/* Graxa */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="col-span-2">
+                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <TrendingDown size={16} className="text-gray-600" />
+                  Compartimento de Graxa
+                </Label>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Capacidade (L)</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="Ex: 200"
+                  value={abastecedorForm.capacidade_graxa}
+                  onChange={(e) => setAbastecedorForm({...abastecedorForm, capacidade_graxa: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Quantidade Atual (L)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="Litros atuais"
+                  value={abastecedorForm.litros_graxa}
+                  onChange={(e) => setAbastecedorForm({...abastecedorForm, litros_graxa: e.target.value})}
+                />
               </div>
             </div>
 
