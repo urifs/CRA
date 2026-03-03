@@ -209,6 +209,12 @@ class MaintenanceResponse(BaseModel):
     is_oil_change: bool = False
     created_at: str
 
+class CategoryMachineCount(BaseModel):
+    category_id: str
+    category_name: str
+    category_color: str
+    count: int
+
 class DashboardStats(BaseModel):
     total_machines: int
     total_maintenances: int
@@ -218,6 +224,7 @@ class DashboardStats(BaseModel):
     recent_maintenances: List[MaintenanceResponse]
     low_stock_count: int = 0
     oil_change_alerts: int = 0
+    machines_by_category: List[CategoryMachineCount] = []
 
 # ============ OIL CHANGE / USAGE MODELS ============
 
