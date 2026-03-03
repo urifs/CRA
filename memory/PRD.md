@@ -3,6 +3,34 @@
 
 ## Changelog - 03/03/2026 (Sessão 22)
 
+### Correções e Melhorias Solicitadas
+
+#### 1. Exportar - Novas Categorias
+- ✅ Adicionadas categorias faltantes no sistema de exportação:
+  - **Horímetro**: Todos os Registros, Resumo por Máquina, Resumo por Operador
+  - **Combustível**: Todos os Registros, Consumo por Máquina, Veículos Tanque
+  - **Frotas**: Todas as Frotas, Documentos de Frota
+  - **Operadores**: Todos os Operadores, Operadores RH, Operadores Cadastro
+  - **Medições de Obras**: Todas as medições registradas
+
+#### 2. Controle de Combustível - Edição de Registros
+- ✅ Linhas da tabela agora são clicáveis para editar
+- ✅ Botão de editar (ícone de lápis) adicionado na coluna Ações
+- ✅ Endpoint PUT `/api/combustivel/{registro_id}` criado no backend
+- ✅ Modal de edição com todos os campos pré-preenchidos
+
+#### 3. Ver Máquina - Cálculo de Litros Corrigido
+- ✅ Corrigido cálculo de `totalLitrosConsumidos` para somar `litros_diesel + litros_oleo + litros_graxa`
+- ✅ Exibição correta de registros de combustível com tipo (Entrada/Saída)
+- ✅ Detalhamento de litros por tipo (Diesel, Óleo)
+
+#### 4. Plano de Obras - Badges e Medições
+- ✅ Adicionados badges na página de detalhes da obra:
+  - **Horas Trabalhadas** (amarelo) - soma das horas de horímetro das máquinas da obra
+  - **Combustível** (verde) - soma dos litros consumidos pelas máquinas da obra
+- ✅ Corrigido botão "Medições de Máquinas" - erro do Select com valor vazio resolvido
+- ✅ Grid de 6 colunas responsivo para os badges
+
 ### Download de NF-e (XML e PDF)
 - ✅ **Novos endpoints de download**:
   - `GET /api/nfe/importadas/{nfe_id}/download-xml` - Download do XML original da NF-e
