@@ -11272,12 +11272,27 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             for i in range(max_iteracoes):
                 try:
                     # Usar o método correto do PyNFe
-                    xml_resposta = con.consulta_distribuicao(
+                    resposta = con.consulta_distribuicao(
                         cnpj=certificado["cnpj"],
                         nsu=int(ultimo_nsu) if ultimo_nsu.isdigit() else 0
                     )
                     
-                    if xml_resposta:
+                    # A resposta pode ser um objeto Response ou bytes
+                    if resposta:
+                        # Extrair o conteúdo XML
+                        if hasattr(resposta, 'text'):
+                            xml_resposta = resposta.text
+                        elif hasattr(resposta, 'content'):
+                            xml_resposta = resposta.content.decode('utf-8')
+                        elif isinstance(resposta, bytes):
+                            xml_resposta = resposta.decode('utf-8')
+                        elif isinstance(resposta, str):
+                            xml_resposta = resposta
+                        else:
+                            xml_resposta = str(resposta)
+                        
+                        logger.info(f"Resposta SEFAZ recebida, tamanho: {len(xml_resposta)} bytes")
+                        
                         root = ET.fromstring(xml_resposta)
                         
                         # Verificar status da resposta
