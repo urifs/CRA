@@ -20,6 +20,28 @@
 - ✅ **Visualização Lista**: Modelo aparece ao lado do nome (Nome • Modelo)
 - ✅ **Página de Estoque**: Modelo já aparecia nos badges de máquinas associadas
 
+### Campo de Valor Automático na Manutenção
+- ✅ O campo "Valor Total (R$)" é preenchido automaticamente com a soma de peças + mão de obra
+- ✅ Campo fica com fundo verde e label "(calculado automaticamente)"
+- ✅ Usuário pode editar manualmente se necessário
+
+### Sistema de Importação de NF-e (NOVO)
+- ✅ **Nova página**: `/administrativo/importacao-nf`
+- ✅ **Funcionalidades**:
+  - Cadastrar múltiplos CNPJs com certificados A1 (.pfx)
+  - Configurar UF e Ambiente (Produção/Homologação)
+  - Consultar NF-e destinadas ao CNPJ via SEFAZ
+  - Listar NF-e importadas com filtros por CNPJ e status
+  - Visualizar detalhes completos da NF-e (emitente, itens, valores)
+  - Criar Conta a Pagar automaticamente a partir da NF-e
+  - Status: Nova, Processada, Ignorada
+- ✅ **Backend**:
+  - Validação de certificado digital
+  - Integração com SEFAZ (NFeDistribuicaoDFe)
+  - Armazenamento seguro de certificados
+  - Criação automática de cadastro de fornecedor
+- ✅ **Bibliotecas**: PyNFe, pyOpenSSL, cryptography
+
 ---
 
 ## Changelog - 27/02/2026 (Sessão 20)
