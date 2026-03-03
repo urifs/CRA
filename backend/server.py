@@ -11055,7 +11055,10 @@ async def create_nfe_certificado(certificado: NFeCertificadoCreate, current_user
         "ativo": certificado.ativo,
         "ultimo_nsu": "000000000000000",
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": None
+        "updated_at": None,
+        "consultas_hoje": 0,
+        "data_consultas": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "bloqueado_ate": None
     }
     
     await db.nfe_certificados.insert_one(doc)
