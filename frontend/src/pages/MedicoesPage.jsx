@@ -367,23 +367,23 @@ export default function MedicoesPage() {
                     className="pl-9"
                   />
                 </div>
-                <Select value={filterMaquina} onValueChange={setFilterMaquina}>
+                <Select value={filterMaquina} onValueChange={(v) => setFilterMaquina(v === "all" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as máquinas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as máquinas</SelectItem>
+                    <SelectItem value="all">Todas as máquinas</SelectItem>
                     {maquinas.map(m => (
                       <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={filterTipo} onValueChange={setFilterTipo}>
+                <Select value={filterTipo} onValueChange={(v) => setFilterTipo(v === "all" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os tipos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os tipos</SelectItem>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
                     {TIPOS_MEDICAO.map(t => (
                       <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                     ))}
