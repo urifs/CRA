@@ -257,7 +257,7 @@ export default function ObraDetailPage() {
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="stat-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -290,11 +290,39 @@ export default function ObraDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Gasto</p>
-                <p className="text-2xl font-bold font-mono text-black">{formatCurrency(obra.total_maintenance_cost)}</p>
+                <p className="text-sm text-gray-500">Horas Trabalhadas</p>
+                <p className="text-2xl font-bold text-yellow-600">{totalHoras.toFixed(1)}h</p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <Clock className="text-yellow-600" size={24} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Combustível</p>
+                <p className="text-2xl font-bold text-green-600">{totalLitros.toFixed(0)}L</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-green-600" size={24} />
+                <Fuel className="text-green-600" size={24} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Gasto</p>
+                <p className="text-xl font-bold font-mono text-black">{formatCurrency(obra.total_maintenance_cost)}</p>
+              </div>
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-red-600" size={24} />
               </div>
             </div>
           </CardContent>
