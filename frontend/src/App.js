@@ -209,7 +209,6 @@ function App() {
             <Route path="imoveis" element={<ImoveisPage />} />
             <Route path="notificacoes" element={<AdminNotificacoesPage />} />
             <Route path="nfe" element={<NFEPage />} />
-            <Route path="importacao-nf" element={<ImportacaoNFPage />} />
             <Route path="cadastros" element={<CadastrosPage />} />
             <Route path="produtos" element={<ProdutosPage />} />
             <Route path="ordens-servico" element={<OrdensServicoPage />} />
