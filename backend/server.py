@@ -11397,6 +11397,12 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             
             consulta_realizada = True
             
+            # Incrementar contador de consultas do dia
+            await db.nfe_certificados.update_one(
+                {"id": certificado_id},
+                {"$inc": {"consultas_hoje": 1}}
+            )
+            
         except ImportError:
             logger.warning("PyNFe não disponível")
         except Exception as pynfe_error:
