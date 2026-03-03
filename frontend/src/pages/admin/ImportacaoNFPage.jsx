@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { toast } from "sonner";
@@ -44,9 +44,64 @@ import {
   Loader2,
   FileDown,
   CreditCard,
-  Clock
+  Clock,
+  Timer,
+  Ban
 } from "lucide-react";
 import { formatCPFouCNPJ } from "@/utils/masks";
+
+// Componente de Cronômetro
+function Cronometro({ bloqueadoAte, onExpire }) {
+  const [tempoRestante, setTempoRestante] = useState(null);
+
+  useEffect(() => {
+    if (!bloqueadoAte) {
+      setTempoRestante(null);
+      return;
+    }
+
+    const calcularTempo = () => {
+      const agora = new Date();
+      const fim = new Date(bloqueadoAte);
+      const diff = fim - agora;
+      
+      if (diff <= 0) {
+        setTempoRestante(null);
+        if (onExpire) onExpire();
+        return null;
+      }
+      
+      const minutos = Math.floor(diff / 60000);
+      const segundos = Math.floor((diff % 60000) / 1000);
+      return { minutos, segundos, total: diff };
+    };
+
+    setTempoRestante(calcularTempo());
+    
+    const interval = setInterval(() => {
+      const tempo = calcularTempo();
+      if (!tempo) {
+        clearInterval(interval);
+      } else {
+        setTempoRestante(tempo);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [bloqueadoAte, onExpire]);
+
+  if (!tempoRestante) return null;
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-red-100 border border-red-300 rounded-lg text-red-800">
+      <Timer size={16} className="animate-pulse" />
+      <span className="font-mono font-bold">
+        {String(tempoRestante.minutos).padStart(2, '0')}:{String(tempoRestante.segundos).padStart(2, '0')}
+      </span>
+      <span className="text-xs">para desbloquear</span>
+    </div>
+  );
+}
 
 export default function ImportacaoNFPage() {
   const [activeTab, setActiveTab] = useState("notas");
@@ -54,6 +109,7 @@ export default function ImportacaoNFPage() {
   const [nfesImportadas, setNfesImportadas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [importando, setImportando] = useState(false);
+  const [importandoCertId, setImportandoCertId] = useState(null);
   const [showAddCertificado, setShowAddCertificado] = useState(false);
   const [showNFeDetail, setShowNFeDetail] = useState(null);
   const [deleteCertificadoId, setDeleteCertificadoId] = useState(null);
