@@ -11114,7 +11114,6 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
         import zipfile
         import io
         from xml.etree import ElementTree as ET
-        from OpenSSL import crypto
         
         # Decodificar certificado
         cert_data = base64.b64decode(certificado["certificado_base64"])
@@ -11146,6 +11145,8 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             logger.warning("PyNFe não disponível, usando simulação")
             # Em ambiente de desenvolvimento, simular resposta
             pass
+        except Exception as pynfe_error:
+            logger.warning(f"Erro ao consultar SEFAZ via PyNFe: {pynfe_error}")
         
         # Limpar arquivo temporário
         import os as os_module
