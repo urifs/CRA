@@ -476,6 +476,24 @@ export default function ImportacaoNFPage() {
                             >
                               <Eye size={16} />
                             </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => window.open(`${API}/nfe/importadas/${nfe.id}/download-xml`, '_blank')}
+                              title="Download XML"
+                              className="text-blue-600 hover:bg-blue-50"
+                            >
+                              <FileDown size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => window.open(`${API}/nfe/importadas/${nfe.id}/download-pdf`, '_blank')}
+                              title="Download DANFE (PDF)"
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              <FileText size={16} />
+                            </Button>
                             {!nfe.conta_pagar_id && nfe.status !== "ignorada" && (
                               <Button 
                                 variant="ghost" 
