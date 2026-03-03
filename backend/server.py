@@ -508,15 +508,26 @@ class HorimetroResponse(BaseModel):
 # ============ COMBUSTIVEL MODELS ============
 
 # Modelo para veículo abastecedor (tanque)
+class CompartimentoOleo(BaseModel):
+    """Modelo para compartimento de óleo dinâmico"""
+    id: Optional[str] = None
+    item_estoque_id: str  # ID do item do estoque (óleo)
+    item_nome: Optional[str] = None
+    unidade_medida: str = "L"  # L, KG, ML, etc.
+    capacidade: float = 0
+    quantidade_atual: float = 0
+
 class VeiculoAbastecedorCreate(BaseModel):
     machine_id: str  # ID da máquina que é abastecedora
     capacidade_diesel: float = 0  # Capacidade total de diesel em litros
-    capacidade_oleo: float = 0  # Capacidade total de óleo em litros
+    capacidade_oleo: float = 0  # Capacidade total de óleo em litros (legado)
     capacidade_graxa: float = 0  # Capacidade total de graxa em litros
     litros_diesel: float = 0  # Litros de diesel atual
-    litros_oleo: float = 0  # Litros de óleo atual
+    litros_oleo: float = 0  # Litros de óleo atual (legado)
     litros_graxa: float = 0  # Litros de graxa atual
     operador_id: Optional[str] = None
+    # Novos campos para compartimentos dinâmicos de óleo
+    compartimentos_oleo: Optional[List[dict]] = None  # Lista de compartimentos de óleo
 
 class VeiculoAbastecedorResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -531,6 +542,7 @@ class VeiculoAbastecedorResponse(BaseModel):
     litros_graxa: float = 0
     operador_id: Optional[str] = None
     operador_nome: Optional[str] = None
+    compartimentos_oleo: Optional[List[dict]] = None  # Lista de compartimentos de óleo
     created_by: str
     created_at: str
     updated_at: Optional[str] = None
