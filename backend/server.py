@@ -11337,8 +11337,15 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
                         elif cStat == '656':  # Consumo Indevido
                             xMotivo = root.findtext('.//xMotivo') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}xMotivo')
                             logger.warning(f"SEFAZ: Consumo Indevido - {xMotivo}")
-                            # Este é um erro temporário, tentar novamente mais tarde
-                            break
+                            # Retornar aviso especial para o usuário
+                            return {
+                                "message": "SEFAZ: Limite de consultas excedido",
+                                "novas_nfes": 0,
+                                "total_novas": await db.nfe_importadas.count_documents({"certificado_id": certificado_id, "status": "nova"}),
+                                "certificado_id": certificado_id,
+                                "ultimo_nsu": ultimo_nsu_processado,
+                                "aviso": "O certificado atingiu o limite de consultas da SEFAZ. Aguarde 1 hora e tente novamente."
+                            }
                         elif cStat == '593':  # CNPJ não autorizado
                             xMotivo = root.findtext('.//xMotivo') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}xMotivo')
                             logger.warning(f"SEFAZ: CNPJ não autorizado - {xMotivo}")
