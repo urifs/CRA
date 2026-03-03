@@ -859,6 +859,28 @@ export default function ImportacaoNFPage() {
                 <p className="font-mono text-xs break-all">{showNFeDetail.chave_acesso}</p>
               </div>
 
+              {/* Botões de Download */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(`${API}/nfe/importadas/${showNFeDetail.id}/download-xml`, '_blank')}
+                  className="flex-1"
+                >
+                  <FileDown size={16} className="mr-2" />
+                  Download XML
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(`${API}/nfe/importadas/${showNFeDetail.id}/download-pdf`, '_blank')}
+                  className="flex-1"
+                >
+                  <FileText size={16} className="mr-2" />
+                  Download DANFE (PDF)
+                </Button>
+              </div>
+
               {/* Itens */}
               {showNFeDetail.itens?.length > 0 && (
                 <div>
