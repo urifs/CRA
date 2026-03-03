@@ -11334,8 +11334,18 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
                         elif cStat == '137':  # Nenhum documento localizado
                             logger.info("Nenhum novo documento encontrado na SEFAZ")
                             break
+                        elif cStat == '656':  # Consumo Indevido
+                            xMotivo = root.findtext('.//xMotivo') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}xMotivo')
+                            logger.warning(f"SEFAZ: Consumo Indevido - {xMotivo}")
+                            # Este é um erro temporário, tentar novamente mais tarde
+                            break
+                        elif cStat == '593':  # CNPJ não autorizado
+                            xMotivo = root.findtext('.//xMotivo') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}xMotivo')
+                            logger.warning(f"SEFAZ: CNPJ não autorizado - {xMotivo}")
+                            break
                         else:
-                            logger.warning(f"Resposta da SEFAZ com status: {cStat}")
+                            xMotivo = root.findtext('.//xMotivo') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}xMotivo') or "Sem descrição"
+                            logger.warning(f"Resposta da SEFAZ com status: {cStat} - {xMotivo}")
                             break
                     else:
                         break
