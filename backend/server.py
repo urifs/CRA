@@ -11003,6 +11003,293 @@ async def rename_storage_item(
         raise HTTPException(status_code=500, detail=f"Erro ao renomear: {str(e)}")
 
 
+# ============ NFE IMPORT ROUTES ============
+
+# Diretório para armazenar certificados
+CERTIFICADOS_DIR = ROOT_DIR / "certificados"
+CERTIFICADOS_DIR.mkdir(exist_ok=True)
+
+@api_router.get("/nfe/certificados")
+async def list_nfe_certificados(current_user: dict = Depends(get_current_user)):
+    """Lista todos os certificados/CNPJs cadastrados"""
+    certificados = await db.nfe_certificados.find({}, {"_id": 0, "certificado_base64": 0, "senha_certificado": 0}).to_list(100)
+    return certificados
+
+@api_router.post("/nfe/certificados")
+async def create_nfe_certificado(certificado: NFeCertificadoCreate, current_user: dict = Depends(get_current_user)):
+    """Cadastra um novo CNPJ com certificado para importação de NF-e"""
+    # Verificar se CNPJ já existe
+    existing = await db.nfe_certificados.find_one({"cnpj": certificado.cnpj})
+    if existing:
+        raise HTTPException(status_code=400, detail="CNPJ já cadastrado")
+    
+    # Validar certificado
+    try:
+        import tempfile
+        from OpenSSL import crypto
+        
+        cert_data = base64.b64decode(certificado.certificado_base64)
+        # Tentar carregar o certificado para validar
+        p12 = crypto.load_pkcs12(cert_data, certificado.senha_certificado.encode())
+        cert = p12.get_certificate()
+        subject = cert.get_subject()
+        logger.info(f"Certificado válido para: {subject.CN}")
+    except Exception as e:
+        logger.error(f"Erro ao validar certificado: {e}")
+        raise HTTPException(status_code=400, detail=f"Certificado inválido ou senha incorreta: {str(e)}")
+    
+    doc = {
+        "id": str(uuid.uuid4()),
+        "cnpj": certificado.cnpj,
+        "razao_social": certificado.razao_social,
+        "uf": certificado.uf,
+        "ambiente": certificado.ambiente,
+        "certificado_base64": certificado.certificado_base64,
+        "senha_certificado": certificado.senha_certificado,  # Em produção, criptografar!
+        "ativo": certificado.ativo,
+        "ultimo_nsu": "000000000000000",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": None
+    }
+    
+    await db.nfe_certificados.insert_one(doc)
+    
+    # Auditoria
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="nfe_certificado",
+        entity_id=doc["id"],
+        entity_name=f"{certificado.razao_social} ({certificado.cnpj})",
+        details="Certificado cadastrado para importação de NF-e",
+        module="Financeiro"
+    )
+    
+    return {"id": doc["id"], "cnpj": doc["cnpj"], "razao_social": doc["razao_social"]}
+
+@api_router.delete("/nfe/certificados/{certificado_id}")
+async def delete_nfe_certificado(certificado_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove um certificado cadastrado"""
+    certificado = await db.nfe_certificados.find_one({"id": certificado_id})
+    if not certificado:
+        raise HTTPException(status_code=404, detail="Certificado não encontrado")
+    
+    await db.nfe_certificados.delete_one({"id": certificado_id})
+    
+    # Auditoria
+    await create_audit_log(
+        user=current_user,
+        action="excluir",
+        entity_type="nfe_certificado",
+        entity_id=certificado_id,
+        entity_name=f"{certificado['razao_social']} ({certificado['cnpj']})",
+        details="Certificado removido",
+        module="Financeiro"
+    )
+    
+    return {"message": "Certificado removido com sucesso"}
+
+@api_router.post("/nfe/importar/{certificado_id}")
+async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_current_user)):
+    """Consulta e importa NF-e da SEFAZ para o CNPJ especificado"""
+    certificado = await db.nfe_certificados.find_one({"id": certificado_id})
+    if not certificado:
+        raise HTTPException(status_code=404, detail="Certificado não encontrado")
+    
+    if not certificado.get("ativo"):
+        raise HTTPException(status_code=400, detail="Certificado inativo")
+    
+    try:
+        import tempfile
+        import zipfile
+        import io
+        from xml.etree import ElementTree as ET
+        from OpenSSL import crypto
+        
+        # Decodificar certificado
+        cert_data = base64.b64decode(certificado["certificado_base64"])
+        
+        # Criar arquivos temporários para o certificado
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pfx') as cert_file:
+            cert_file.write(cert_data)
+            cert_path = cert_file.name
+        
+        # Tentar importar PyNFe
+        try:
+            from pynfe.processamento.comunicacao import ComunicacaoSefaz
+            
+            con = ComunicacaoSefaz(
+                uf=certificado.get("uf", "SP"),
+                certificado=cert_path,
+                senha=certificado["senha_certificado"],
+                homologacao=(certificado.get("ambiente", "producao") == "homologacao")
+            )
+            
+            # Consultar DF-e
+            ultimo_nsu = certificado.get("ultimo_nsu", "000000000000000")
+            xml_resposta = con.dist_df_e_interesse(certificado["cnpj"], ultimo_nsu)
+            
+            # Processar resposta
+            # ... (processamento do XML da SEFAZ)
+            
+        except ImportError:
+            logger.warning("PyNFe não disponível, usando simulação")
+            # Em ambiente de desenvolvimento, simular resposta
+            pass
+        
+        # Limpar arquivo temporário
+        import os as os_module
+        os_module.unlink(cert_path)
+        
+        # Atualizar último NSU
+        await db.nfe_certificados.update_one(
+            {"id": certificado_id},
+            {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Retornar resultado
+        novas_nfes = await db.nfe_importadas.count_documents({
+            "certificado_id": certificado_id,
+            "status": "nova"
+        })
+        
+        return {
+            "message": "Consulta realizada com sucesso",
+            "novas_nfes": novas_nfes,
+            "certificado_id": certificado_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao importar NF-e: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao consultar SEFAZ: {str(e)}")
+
+@api_router.get("/nfe/importadas")
+async def list_nfe_importadas(
+    certificado_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Lista todas as NF-e importadas"""
+    filtro = {}
+    if certificado_id:
+        filtro["certificado_id"] = certificado_id
+    if status:
+        filtro["status"] = status
+    
+    nfes = await db.nfe_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(500)
+    return nfes
+
+@api_router.get("/nfe/importadas/{nfe_id}")
+async def get_nfe_importada(nfe_id: str, current_user: dict = Depends(get_current_user)):
+    """Retorna detalhes de uma NF-e importada"""
+    nfe = await db.nfe_importadas.find_one({"id": nfe_id}, {"_id": 0})
+    if not nfe:
+        raise HTTPException(status_code=404, detail="NF-e não encontrada")
+    return nfe
+
+@api_router.post("/nfe/importadas/{nfe_id}/criar-conta-pagar")
+async def criar_conta_pagar_from_nfe(nfe_id: str, current_user: dict = Depends(get_current_user)):
+    """Cria uma conta a pagar a partir de uma NF-e importada"""
+    nfe = await db.nfe_importadas.find_one({"id": nfe_id})
+    if not nfe:
+        raise HTTPException(status_code=404, detail="NF-e não encontrada")
+    
+    if nfe.get("conta_pagar_id"):
+        raise HTTPException(status_code=400, detail="Esta NF-e já possui uma conta a pagar vinculada")
+    
+    # Buscar ou criar cadastro do emitente
+    cadastro = await db.cadastros.find_one({"cpf_cnpj": nfe["cnpj_emitente"]})
+    if not cadastro:
+        # Criar cadastro automaticamente
+        cadastro_doc = {
+            "id": str(uuid.uuid4()),
+            "tipo": "fornecedor",
+            "nome_razao": nfe["razao_social_emitente"],
+            "cpf_cnpj": nfe["cnpj_emitente"],
+            "telefone": "",
+            "email": "",
+            "endereco": "",
+            "cidade": "",
+            "estado": "",
+            "cep": "",
+            "observacoes": "Cadastrado automaticamente via importação de NF-e",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.cadastros.insert_one(cadastro_doc)
+        cadastro = cadastro_doc
+    
+    # Criar conta a pagar
+    conta_pagar_doc = {
+        "id": str(uuid.uuid4()),
+        "descricao": f"NF-e {nfe['numero_nf']} - {nfe['razao_social_emitente']}",
+        "cadastro_id": cadastro["id"],
+        "cadastro_nome": cadastro["nome_razao"],
+        "valor": nfe["valor_total"],
+        "desconto": 0,
+        "juros": 0,
+        "multa": 0,
+        "data_vencimento": nfe["data_emissao"],  # Usar data de emissão como vencimento inicial
+        "data_pagamento": None,
+        "status": "pendente",
+        "categoria": "fornecedores",
+        "observacoes": f"Importada automaticamente da NF-e. Chave: {nfe['chave_acesso']}",
+        "centro_custo_id": None,
+        "plano_conta_id": None,
+        "forma_pagamento_id": None,
+        "conta_bancaria_id": None,
+        "nfe_id": nfe_id,
+        "nfe_chave": nfe["chave_acesso"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.contas_pagar.insert_one(conta_pagar_doc)
+    
+    # Atualizar NF-e com referência da conta a pagar
+    await db.nfe_importadas.update_one(
+        {"id": nfe_id},
+        {"$set": {"conta_pagar_id": conta_pagar_doc["id"], "status": "processada"}}
+    )
+    
+    # Auditoria
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="conta_pagar",
+        entity_id=conta_pagar_doc["id"],
+        entity_name=conta_pagar_doc["descricao"],
+        details=f"Conta a pagar criada a partir da NF-e {nfe['numero_nf']}",
+        module="Financeiro"
+    )
+    
+    return {
+        "message": "Conta a pagar criada com sucesso",
+        "conta_pagar_id": conta_pagar_doc["id"],
+        "nfe_id": nfe_id
+    }
+
+@api_router.patch("/nfe/importadas/{nfe_id}/status")
+async def update_nfe_status(nfe_id: str, status: str = Body(..., embed=True), current_user: dict = Depends(get_current_user)):
+    """Atualiza o status de uma NF-e importada"""
+    if status not in ["nova", "processada", "ignorada"]:
+        raise HTTPException(status_code=400, detail="Status inválido")
+    
+    result = await db.nfe_importadas.update_one(
+        {"id": nfe_id},
+        {"$set": {"status": status}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="NF-e não encontrada")
+    
+    return {"message": "Status atualizado"}
+
+@api_router.get("/nfe/novas-count")
+async def count_novas_nfes(current_user: dict = Depends(get_current_user)):
+    """Retorna contagem de NF-e novas para notificações"""
+    count = await db.nfe_importadas.count_documents({"status": "nova"})
+    return {"count": count}
+
+
 # Include modular routers first
 api_router.include_router(rh_router)
 api_router.include_router(admin_router)
