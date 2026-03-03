@@ -558,10 +558,13 @@ class CombustivelCreate(BaseModel):
     litros_oleo: float = 0
     litros_graxa: float = 0
     # Para abastecido
-    fonte_abastecimento: Optional[str] = None  # "interno" ou "externo"
+    fonte_abastecimento: Optional[str] = None  # "interno", "externo" ou "posto"
     veiculo_abastecedor_id: Optional[str] = None  # ID do veículo abastecedor (se interno)
+    posto_id: Optional[str] = None  # ID do posto/fornecedor parceiro (cadastro)
     operador_id: Optional[str] = None
     observacoes: Optional[str] = None
+    # Para óleos específicos
+    oleos_utilizados: Optional[List[dict]] = None  # Lista de óleos com item_id, quantidade, unidade
 
 class CombustivelResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
