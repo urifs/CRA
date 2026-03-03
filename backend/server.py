@@ -11109,10 +11109,12 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
     if not certificado.get("ativo"):
         raise HTTPException(status_code=400, detail="Certificado inativo")
     
+    novas_importadas = 0
+    ultimo_nsu_processado = certificado.get("ultimo_nsu", "000000000000000")
+    
     try:
         import tempfile
-        import zipfile
-        import io
+        import gzip
         from xml.etree import ElementTree as ET
         
         # Decodificar certificado
@@ -11123,7 +11125,135 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             cert_file.write(cert_data)
             cert_path = cert_file.name
         
-        # Tentar importar PyNFe
+        # Namespaces usados nos XMLs da NF-e
+        ns = {
+            'nfe': 'http://www.portalfiscal.inf.br/nfe',
+            'res': 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe'
+        }
+        
+        # Função para processar um documento NF-e
+        async def processar_nfe_xml(xml_content, nsu):
+            try:
+                root = ET.fromstring(xml_content)
+                
+                # Tentar encontrar a NFe no XML (pode estar em diferentes níveis)
+                nfe = root.find('.//nfe:NFe', ns) or root.find('.//NFe') or root
+                inf_nfe = nfe.find('.//nfe:infNFe', ns) or nfe.find('.//infNFe') or root.find('.//infNFe')
+                
+                if inf_nfe is None:
+                    # Pode ser um resumo (resNFe) ao invés da NF completa
+                    res_nfe = root.find('.//nfe:resNFe', ns) or root.find('.//resNFe')
+                    if res_nfe is not None:
+                        chave = res_nfe.findtext('.//nfe:chNFe', '', ns) or res_nfe.findtext('.//chNFe', '')
+                        cnpj_emit = res_nfe.findtext('.//nfe:CNPJ', '', ns) or res_nfe.findtext('.//CNPJ', '')
+                        razao_emit = res_nfe.findtext('.//nfe:xNome', '', ns) or res_nfe.findtext('.//xNome', '')
+                        valor = res_nfe.findtext('.//nfe:vNF', '0', ns) or res_nfe.findtext('.//vNF', '0')
+                        data_emissao = res_nfe.findtext('.//nfe:dhEmi', '', ns) or res_nfe.findtext('.//dhEmi', '')
+                        
+                        # Verificar se já existe
+                        existing = await db.nfe_importadas.find_one({"chave_acesso": chave})
+                        if existing:
+                            return False
+                        
+                        # Extrair número da NF da chave (posições 25-33)
+                        numero_nf = chave[25:34].lstrip('0') if len(chave) >= 34 else ""
+                        serie = chave[22:25].lstrip('0') if len(chave) >= 25 else "1"
+                        
+                        doc = {
+                            "id": str(uuid.uuid4()),
+                            "certificado_id": certificado_id,
+                            "cnpj_destinatario": certificado["cnpj"],
+                            "chave_acesso": chave,
+                            "numero_nf": numero_nf or "N/A",
+                            "serie": serie or "1",
+                            "data_emissao": data_emissao[:10] if data_emissao else datetime.now(timezone.utc).isoformat()[:10],
+                            "cnpj_emitente": cnpj_emit,
+                            "razao_social_emitente": razao_emit or "Emitente não identificado",
+                            "valor_total": float(valor) if valor else 0.0,
+                            "itens": [],
+                            "xml_base64": base64.b64encode(xml_content.encode()).decode() if isinstance(xml_content, str) else base64.b64encode(xml_content).decode(),
+                            "nsu": nsu,
+                            "conta_pagar_id": None,
+                            "status": "nova",
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        }
+                        await db.nfe_importadas.insert_one(doc)
+                        return True
+                    return False
+                
+                # NF-e completa
+                ide = inf_nfe.find('.//nfe:ide', ns) or inf_nfe.find('.//ide')
+                emit = inf_nfe.find('.//nfe:emit', ns) or inf_nfe.find('.//emit')
+                total = inf_nfe.find('.//nfe:total', ns) or inf_nfe.find('.//total')
+                
+                # Extrair chave de acesso
+                chave = inf_nfe.get('Id', '').replace('NFe', '') if inf_nfe.get('Id') else ''
+                
+                # Verificar se já existe
+                if chave:
+                    existing = await db.nfe_importadas.find_one({"chave_acesso": chave})
+                    if existing:
+                        return False
+                
+                # Dados da IDE
+                numero_nf = ide.findtext('.//nfe:nNF', '', ns) if ide else '' or ide.findtext('.//nNF', '') if ide else ''
+                serie = ide.findtext('.//nfe:serie', '1', ns) if ide else '1' or ide.findtext('.//serie', '1') if ide else '1'
+                data_emissao = ide.findtext('.//nfe:dhEmi', '', ns) if ide else '' or ide.findtext('.//dhEmi', '') if ide else ''
+                
+                # Dados do emitente
+                cnpj_emit = emit.findtext('.//nfe:CNPJ', '', ns) if emit else '' or emit.findtext('.//CNPJ', '') if emit else ''
+                razao_emit = emit.findtext('.//nfe:xNome', '', ns) if emit else '' or emit.findtext('.//xNome', '') if emit else ''
+                
+                # Valor total
+                icms_tot = total.find('.//nfe:ICMSTot', ns) if total else None or total.find('.//ICMSTot') if total else None
+                valor_nf = icms_tot.findtext('.//nfe:vNF', '0', ns) if icms_tot else '0' or icms_tot.findtext('.//vNF', '0') if icms_tot else '0'
+                
+                # Processar itens
+                itens = []
+                det_list = inf_nfe.findall('.//nfe:det', ns) or inf_nfe.findall('.//det')
+                for det in det_list:
+                    prod = det.find('.//nfe:prod', ns) or det.find('.//prod')
+                    if prod:
+                        item = {
+                            "codigo": prod.findtext('.//nfe:cProd', '', ns) or prod.findtext('.//cProd', ''),
+                            "descricao": prod.findtext('.//nfe:xProd', '', ns) or prod.findtext('.//xProd', ''),
+                            "ncm": prod.findtext('.//nfe:NCM', '', ns) or prod.findtext('.//NCM', ''),
+                            "cfop": prod.findtext('.//nfe:CFOP', '', ns) or prod.findtext('.//CFOP', ''),
+                            "unidade": prod.findtext('.//nfe:uCom', '', ns) or prod.findtext('.//uCom', ''),
+                            "quantidade": float(prod.findtext('.//nfe:qCom', '0', ns) or prod.findtext('.//qCom', '0')),
+                            "valor_unitario": float(prod.findtext('.//nfe:vUnCom', '0', ns) or prod.findtext('.//vUnCom', '0')),
+                            "valor_total": float(prod.findtext('.//nfe:vProd', '0', ns) or prod.findtext('.//vProd', '0'))
+                        }
+                        itens.append(item)
+                
+                doc = {
+                    "id": str(uuid.uuid4()),
+                    "certificado_id": certificado_id,
+                    "cnpj_destinatario": certificado["cnpj"],
+                    "chave_acesso": chave,
+                    "numero_nf": numero_nf or "N/A",
+                    "serie": serie or "1",
+                    "data_emissao": data_emissao[:10] if data_emissao else datetime.now(timezone.utc).isoformat()[:10],
+                    "cnpj_emitente": cnpj_emit,
+                    "razao_social_emitente": razao_emit or "Emitente não identificado",
+                    "valor_total": float(valor_nf) if valor_nf else 0.0,
+                    "itens": itens,
+                    "xml_base64": base64.b64encode(xml_content.encode()).decode() if isinstance(xml_content, str) else base64.b64encode(xml_content).decode(),
+                    "nsu": nsu,
+                    "conta_pagar_id": None,
+                    "status": "nova",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.nfe_importadas.insert_one(doc)
+                return True
+                
+            except Exception as e:
+                logger.error(f"Erro ao processar XML da NF-e: {e}")
+                return False
+        
+        # Tentar importar PyNFe para consulta real
+        consulta_realizada = False
         try:
             from pynfe.processamento.comunicacao import ComunicacaoSefaz
             
@@ -11136,38 +11266,121 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             
             # Consultar DF-e
             ultimo_nsu = certificado.get("ultimo_nsu", "000000000000000")
-            xml_resposta = con.dist_df_e_interesse(certificado["cnpj"], ultimo_nsu)
             
-            # Processar resposta
-            # ... (processamento do XML da SEFAZ)
+            # Loop para buscar todos os documentos disponíveis
+            max_iteracoes = 10  # Limitar iterações para não travar
+            for i in range(max_iteracoes):
+                try:
+                    xml_resposta = con.consulta_distribuicao_nfe(
+                        cnpj=certificado["cnpj"],
+                        ult_nsu=ultimo_nsu
+                    )
+                    
+                    if xml_resposta:
+                        root = ET.fromstring(xml_resposta)
+                        
+                        # Verificar status da resposta
+                        cStat = root.findtext('.//cStat') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}cStat')
+                        
+                        if cStat == '138':  # Documento(s) localizado(s)
+                            # Processar cada documento
+                            docs = root.findall('.//docZip') or root.findall('.//{http://www.portalfiscal.inf.br/nfe}docZip')
+                            
+                            for doc in docs:
+                                nsu = doc.get('NSU', '')
+                                schema = doc.get('schema', '')
+                                
+                                # O conteúdo está em base64 e compactado com gzip
+                                try:
+                                    content_b64 = doc.text
+                                    if content_b64:
+                                        content_gzip = base64.b64decode(content_b64)
+                                        xml_content = gzip.decompress(content_gzip).decode('utf-8')
+                                        
+                                        if await processar_nfe_xml(xml_content, nsu):
+                                            novas_importadas += 1
+                                        
+                                        # Atualizar último NSU
+                                        if nsu > ultimo_nsu_processado:
+                                            ultimo_nsu_processado = nsu
+                                except Exception as doc_error:
+                                    logger.warning(f"Erro ao processar documento NSU {nsu}: {doc_error}")
+                            
+                            # Verificar se há mais documentos
+                            ultNSU = root.findtext('.//ultNSU') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}ultNSU')
+                            maxNSU = root.findtext('.//maxNSU') or root.findtext('.//{http://www.portalfiscal.inf.br/nfe}maxNSU')
+                            
+                            if ultNSU and maxNSU and ultNSU >= maxNSU:
+                                break  # Não há mais documentos
+                            
+                            ultimo_nsu = ultNSU or ultimo_nsu
+                            
+                        elif cStat == '137':  # Nenhum documento localizado
+                            logger.info("Nenhum novo documento encontrado na SEFAZ")
+                            break
+                        else:
+                            logger.warning(f"Resposta da SEFAZ com status: {cStat}")
+                            break
+                    else:
+                        break
+                        
+                except Exception as iter_error:
+                    logger.warning(f"Erro na iteração {i}: {iter_error}")
+                    break
+            
+            consulta_realizada = True
             
         except ImportError:
-            logger.warning("PyNFe não disponível, usando simulação")
-            # Em ambiente de desenvolvimento, simular resposta
-            pass
+            logger.warning("PyNFe não disponível")
         except Exception as pynfe_error:
             logger.warning(f"Erro ao consultar SEFAZ via PyNFe: {pynfe_error}")
         
         # Limpar arquivo temporário
         import os as os_module
-        os_module.unlink(cert_path)
+        try:
+            os_module.unlink(cert_path)
+        except:
+            pass
         
-        # Atualizar último NSU
-        await db.nfe_certificados.update_one(
-            {"id": certificado_id},
-            {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
+        # Atualizar último NSU se houve processamento
+        if ultimo_nsu_processado != certificado.get("ultimo_nsu", "000000000000000"):
+            await db.nfe_certificados.update_one(
+                {"id": certificado_id},
+                {"$set": {
+                    "ultimo_nsu": ultimo_nsu_processado,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        else:
+            await db.nfe_certificados.update_one(
+                {"id": certificado_id},
+                {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
         
-        # Retornar resultado
-        novas_nfes = await db.nfe_importadas.count_documents({
+        # Contar total de NF-e novas
+        total_novas = await db.nfe_importadas.count_documents({
             "certificado_id": certificado_id,
             "status": "nova"
         })
         
+        # Criar notificação se houver novas NF-e
+        if novas_importadas > 0:
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": current_user.get("id"),
+                "title": f"{novas_importadas} nova(s) NF-e importada(s)",
+                "message": f"Foram importadas {novas_importadas} notas fiscais para {certificado['razao_social']}",
+                "type": "info",
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        
         return {
-            "message": "Consulta realizada com sucesso",
-            "novas_nfes": novas_nfes,
-            "certificado_id": certificado_id
+            "message": "Consulta realizada com sucesso" if consulta_realizada else "Consulta realizada (modo offline)",
+            "novas_nfes": novas_importadas,
+            "total_novas": total_novas,
+            "certificado_id": certificado_id,
+            "ultimo_nsu": ultimo_nsu_processado
         }
         
     except Exception as e:
