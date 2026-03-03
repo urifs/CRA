@@ -33,7 +33,9 @@ import {
   Eye,
   Edit,
   Loader2,
-  BarChart3
+  BarChart3,
+  Fuel,
+  Clock
 } from "lucide-react";
 
 export default function ObraDetailPage() {
