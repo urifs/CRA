@@ -681,7 +681,8 @@ export default function ImportacaoNFPage() {
                 <li>Cadastre o CNPJ da empresa com o certificado digital A1 (.pfx)</li>
                 <li>O sistema consultará a SEFAZ em busca de NF-e destinadas ao CNPJ</li>
                 <li>As notas encontradas serão listadas e podem ser convertidas em Contas a Pagar</li>
-                <li>Novas notas aparecerão automaticamente na aba de Notificações</li>
+                <li><strong>Limite:</strong> 3 consultas por dia por empresa</li>
+                <li>Se a SEFAZ bloquear, aguarde o cronômetro de 1 hora</li>
               </ol>
             </CardContent>
           </Card>
