@@ -46,6 +46,10 @@ export default function ObraDetailPage() {
   const [selectedMachineId, setSelectedMachineId] = useState("");
   const [addingMachine, setAddingMachine] = useState(false);
   const [removingMachineId, setRemovingMachineId] = useState(null);
+  // Novos estados para estatísticas
+  const [totalHoras, setTotalHoras] = useState(0);
+  const [totalLitros, setTotalLitros] = useState(0);
+  const [medicoes, setMedicoes] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -53,12 +57,38 @@ export default function ObraDetailPage() {
 
   const fetchData = async () => {
     try {
-      const [obraRes, machinesRes] = await Promise.all([
+      const [obraRes, machinesRes, medicoesRes] = await Promise.all([
         axios.get(`${API}/obras/${id}`),
-        axios.get(`${API}/machines`)
+        axios.get(`${API}/machines`),
+        axios.get(`${API}/medicoes?obra_id=${id}`).catch(() => ({ data: [] }))
       ]);
       setObra(obraRes.data);
       setAllMachines(machinesRes.data);
+      setMedicoes(medicoesRes.data || []);
+      
+      // Buscar dados de horímetro e combustível das máquinas da obra
+      const obraMachines = machinesRes.data.filter(m => m.obra_id === id);
+      let horas = 0;
+      let litros = 0;
+      
+      for (const machine of obraMachines) {
+        try {
+          const [horimetroRes, combustivelRes] = await Promise.all([
+            axios.get(`${API}/horimetro/machine/${machine.id}`).catch(() => ({ data: [] })),
+            axios.get(`${API}/combustivel/machine/${machine.id}`).catch(() => ({ data: [] }))
+          ]);
+          
+          horas += (horimetroRes.data || []).reduce((sum, h) => sum + (h.horas_trabalhadas || 0), 0);
+          litros += (combustivelRes.data || [])
+            .filter(c => c.tipo_registro === "abastecido" || !c.tipo_registro)
+            .reduce((sum, c) => sum + (c.litros_diesel || 0) + (c.litros_oleo || 0) + (c.litros_graxa || 0), 0);
+        } catch (err) {
+          console.error(`Erro ao buscar dados da máquina ${machine.id}:`, err);
+        }
+      }
+      
+      setTotalHoras(horas);
+      setTotalLitros(litros);
     } catch (error) {
       toast.error("Erro ao carregar dados da obra");
       navigate("/gerenciamento/obras");
