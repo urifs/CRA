@@ -78,8 +78,12 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Machines */}
-        <Card className="stat-card group" data-testid="stat-total-machines">
+        {/* Total Machines - Expandable */}
+        <Card 
+          className={`stat-card group cursor-pointer transition-all duration-300 ${showMachinesByCategory ? 'md:col-span-2 lg:col-span-4' : ''}`} 
+          data-testid="stat-total-machines"
+          onClick={() => setShowMachinesByCategory(!showMachinesByCategory)}
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -90,10 +94,56 @@ export default function DashboardPage() {
                   {stats?.total_machines || 0}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-gray-200 transition-colors">
-                <Truck className="text-gray-600" size={28} />
+              <div className="flex items-center gap-2">
+                <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                  <Truck className="text-gray-600" size={28} />
+                </div>
+                {stats?.machines_by_category?.length > 0 && (
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                    {showMachinesByCategory ? (
+                      <ChevronUp className="text-gray-600" size={18} />
+                    ) : (
+                      <ChevronDown className="text-gray-600" size={18} />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
+            
+            {/* Expanded Categories */}
+            {showMachinesByCategory && stats?.machines_by_category?.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-200 animate-fade-in">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                  Máquinas por Categoria
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                  {stats.machines_by_category.map((cat) => (
+                    <div 
+                      key={cat.category_id}
+                      className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors bg-white"
+                      style={{ borderLeftWidth: '4px', borderLeftColor: cat.category_color }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/gerenciamento/machines?category=${cat.category_id}`);
+                      }}
+                    >
+                      <div 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${cat.category_color}20` }}
+                      >
+                        <Truck size={16} style={{ color: cat.category_color }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-lg text-black">{cat.count}</p>
+                        <p className="text-xs text-gray-500 truncate" title={cat.category_name}>
+                          {cat.category_name}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
