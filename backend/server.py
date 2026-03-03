@@ -11401,12 +11401,16 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
         
+        # Verificar se houve erro de consumo indevido
+        status_message = "Consulta realizada com sucesso" if consulta_realizada else "Consulta realizada (modo offline)"
+        
         return {
-            "message": "Consulta realizada com sucesso" if consulta_realizada else "Consulta realizada (modo offline)",
+            "message": status_message,
             "novas_nfes": novas_importadas,
             "total_novas": total_novas,
             "certificado_id": certificado_id,
-            "ultimo_nsu": ultimo_nsu_processado
+            "ultimo_nsu": ultimo_nsu_processado,
+            "aviso": None
         }
         
     except Exception as e:
