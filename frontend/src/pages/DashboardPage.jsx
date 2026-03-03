@@ -13,12 +13,15 @@ import {
   Plus,
   ArrowRight,
   Calendar,
-  Package
+  Package,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showMachinesByCategory, setShowMachinesByCategory] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
