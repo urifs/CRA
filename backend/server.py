@@ -1825,6 +1825,20 @@ async def create_veiculo_abastecedor(data: VeiculoAbastecedorCreate, current_use
     if existing:
         raise HTTPException(status_code=400, detail="Esta máquina já está cadastrada como abastecedor")
     
+    # Processar compartimentos de óleo
+    compartimentos_processados = []
+    if data.compartimentos_oleo:
+        for comp in data.compartimentos_oleo:
+            item = await db.stock_items.find_one({"id": comp.get("item_estoque_id")}, {"_id": 0, "name": 1})
+            compartimentos_processados.append({
+                "id": str(uuid.uuid4()),
+                "item_estoque_id": comp.get("item_estoque_id"),
+                "item_nome": item["name"] if item else "Item não encontrado",
+                "unidade_medida": comp.get("unidade_medida", "L"),
+                "capacidade": float(comp.get("capacidade", 0)),
+                "quantidade_atual": float(comp.get("quantidade_atual", 0))
+            })
+    
     abastecedor_id = str(uuid.uuid4())
     abastecedor_doc = {
         "id": abastecedor_id,
@@ -1836,6 +1850,7 @@ async def create_veiculo_abastecedor(data: VeiculoAbastecedorCreate, current_use
         "litros_oleo": data.litros_oleo,
         "litros_graxa": data.litros_graxa,
         "operador_id": data.operador_id,
+        "compartimentos_oleo": compartimentos_processados,
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
