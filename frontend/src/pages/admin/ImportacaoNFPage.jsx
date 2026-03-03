@@ -177,9 +177,17 @@ export default function ImportacaoNFPage() {
     setImportando(true);
     try {
       const response = await axios.post(`${API}/nfe/importar/${certificadoId}`);
-      toast.success(response.data.message);
-      if (response.data.novas_nfes > 0) {
-        toast.info(`${response.data.novas_nfes} nova(s) NF-e encontrada(s)!`);
+      
+      // Verificar se há aviso especial
+      if (response.data.aviso) {
+        toast.warning(response.data.aviso, { duration: 8000 });
+      } else {
+        toast.success(response.data.message);
+        if (response.data.novas_nfes > 0) {
+          toast.info(`${response.data.novas_nfes} nova(s) NF-e encontrada(s)!`);
+        } else if (response.data.total_novas === 0) {
+          toast.info("Nenhuma nova NF-e encontrada na SEFAZ");
+        }
       }
       fetchData();
     } catch (error) {
