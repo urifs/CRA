@@ -229,12 +229,44 @@ export default function ImportacaoNFPage() {
     }
   };
 
+  // Verificar se certificado está bloqueado ou atingiu limite
+  const isCertificadoBloqueado = (cert) => {
+    if (cert.bloqueado_ate) {
+      const bloqueio = new Date(cert.bloqueado_ate);
+      if (bloqueio > new Date()) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const getConsultasRestantes = (cert) => {
+    const LIMITE_DIARIO = 3;
+    const consultasHoje = cert.consultas_hoje || 0;
+    return Math.max(0, LIMITE_DIARIO - consultasHoje);
+  };
+
   const handleImportarNotas = async (certificadoId) => {
+    const cert = certificados.find(c => c.id === certificadoId);
+    
+    // Verificar bloqueio
+    if (cert && isCertificadoBloqueado(cert)) {
+      toast.error("Este certificado está bloqueado. Aguarde o cronômetro zerar.");
+      return;
+    }
+    
+    // Verificar limite diário
+    if (cert && getConsultasRestantes(cert) <= 0) {
+      toast.error("Limite diário de 3 consultas atingido. Tente novamente amanhã.");
+      return;
+    }
+    
     setImportando(true);
+    setImportandoCertId(certificadoId);
     try {
       const response = await axios.post(`${API}/nfe/importar/${certificadoId}`);
       
-      // Verificar se há aviso especial
+      // Verificar se há aviso especial (bloqueio da SEFAZ)
       if (response.data.aviso) {
         toast.warning(response.data.aviso, { duration: 8000 });
       } else {
@@ -247,9 +279,13 @@ export default function ImportacaoNFPage() {
       }
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao importar notas");
+      const detail = error.response?.data?.detail || "Erro ao importar notas";
+      toast.error(detail);
+      // Recarregar dados para atualizar estado de bloqueio
+      fetchData();
     } finally {
       setImportando(false);
+      setImportandoCertId(null);
     }
   };
 
