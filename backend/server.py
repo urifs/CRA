@@ -2715,6 +2715,31 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
         if hours_remaining <= 50 or days_remaining <= 60:
             oil_change_alerts += 1
     
+    # Get categories and count machines by category
+    categories = await db.categories.find({}, {"_id": 0}).to_list(100)
+    category_map = {c["id"]: {"name": c["name"], "color": c.get("color", "#E31A1A")} for c in categories}
+    
+    machines_by_category = []
+    category_counts = {}
+    for machine in machines:
+        cat_id = machine.get("category_id")
+        if cat_id:
+            if cat_id not in category_counts:
+                category_counts[cat_id] = 0
+            category_counts[cat_id] += 1
+    
+    for cat_id, count in category_counts.items():
+        cat_info = category_map.get(cat_id, {"name": "Sem categoria", "color": "#gray"})
+        machines_by_category.append(CategoryMachineCount(
+            category_id=cat_id,
+            category_name=cat_info["name"],
+            category_color=cat_info["color"],
+            count=count
+        ))
+    
+    # Sort by count descending
+    machines_by_category.sort(key=lambda x: x.count, reverse=True)
+    
     return DashboardStats(
         total_machines=total_machines,
         total_maintenances=total_maintenances,
@@ -2725,7 +2750,8 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
         low_stock_count=await db.stock_items.count_documents({
             "$expr": {"$lte": ["$quantity", "$min_quantity"]}
         }),
-        oil_change_alerts=oil_change_alerts
+        oil_change_alerts=oil_change_alerts,
+        machines_by_category=machines_by_category
     )
 
 # ============ STOCK ROUTES ============
