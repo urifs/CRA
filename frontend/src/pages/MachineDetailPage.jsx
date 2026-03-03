@@ -84,7 +84,10 @@ export default function MachineDetailPage() {
   const preventiveCount = maintenances.filter(m => m.maintenance_type === "preventiva").length;
   const correctiveCount = maintenances.filter(m => m.maintenance_type === "corretiva").length;
   const totalHorasTrabalhadas = horimetros.reduce((sum, h) => sum + (h.horas_trabalhadas || 0), 0);
-  const totalLitrosConsumidos = combustiveis.reduce((sum, c) => sum + (c.litros_consumidos || 0), 0);
+  // Calcular total de litros consumidos (diesel + óleo + graxa) apenas para registros tipo "abastecido"
+  const totalLitrosConsumidos = combustiveis
+    .filter(c => c.tipo_registro === "abastecido" || !c.tipo_registro)
+    .reduce((sum, c) => sum + (c.litros_diesel || 0) + (c.litros_oleo || 0) + (c.litros_graxa || 0), 0);
 
   if (loading) {
     return (
