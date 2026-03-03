@@ -11013,6 +11013,25 @@ CERTIFICADOS_DIR.mkdir(exist_ok=True)
 async def list_nfe_certificados(current_user: dict = Depends(get_current_user)):
     """Lista todos os certificados/CNPJs cadastrados"""
     certificados = await db.nfe_certificados.find({}, {"_id": 0, "certificado_base64": 0, "senha_certificado": 0}).to_list(100)
+    
+    # Atualizar contadores se mudou o dia
+    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    for cert in certificados:
+        if cert.get("data_consultas") != hoje:
+            # Resetar contador do dia
+            await db.nfe_certificados.update_one(
+                {"id": cert["id"]},
+                {"$set": {"consultas_hoje": 0, "data_consultas": hoje}}
+            )
+            cert["consultas_hoje"] = 0
+            cert["data_consultas"] = hoje
+        
+        # Garantir que campos existam
+        if "consultas_hoje" not in cert:
+            cert["consultas_hoje"] = 0
+        if "bloqueado_ate" not in cert:
+            cert["bloqueado_ate"] = None
+    
     return certificados
 
 @api_router.post("/nfe/certificados")
