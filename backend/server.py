@@ -1882,6 +1882,20 @@ async def update_veiculo_abastecedor(abastecedor_id: str, data: VeiculoAbasteced
     if not machine:
         raise HTTPException(status_code=404, detail="Máquina não encontrada")
     
+    # Processar compartimentos de óleo
+    compartimentos_processados = []
+    if data.compartimentos_oleo:
+        for comp in data.compartimentos_oleo:
+            item = await db.stock_items.find_one({"id": comp.get("item_estoque_id")}, {"_id": 0, "name": 1})
+            compartimentos_processados.append({
+                "id": comp.get("id") or str(uuid.uuid4()),
+                "item_estoque_id": comp.get("item_estoque_id"),
+                "item_nome": item["name"] if item else "Item não encontrado",
+                "unidade_medida": comp.get("unidade_medida", "L"),
+                "capacidade": float(comp.get("capacidade", 0)),
+                "quantidade_atual": float(comp.get("quantidade_atual", 0))
+            })
+    
     update_doc = {
         "machine_id": data.machine_id,
         "capacidade_diesel": data.capacidade_diesel,
@@ -1891,6 +1905,7 @@ async def update_veiculo_abastecedor(abastecedor_id: str, data: VeiculoAbasteced
         "litros_oleo": data.litros_oleo,
         "litros_graxa": data.litros_graxa,
         "operador_id": data.operador_id,
+        "compartimentos_oleo": compartimentos_processados,
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
