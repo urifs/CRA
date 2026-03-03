@@ -11260,7 +11260,7 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             con = ComunicacaoSefaz(
                 uf=certificado.get("uf", "SP"),
                 certificado=cert_path,
-                senha=certificado["senha_certificado"],
+                certificado_senha=certificado["senha_certificado"],
                 homologacao=(certificado.get("ambiente", "producao") == "homologacao")
             )
             
@@ -11271,9 +11271,10 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             max_iteracoes = 10  # Limitar iterações para não travar
             for i in range(max_iteracoes):
                 try:
-                    xml_resposta = con.consulta_distribuicao_nfe(
+                    # Usar o método correto do PyNFe
+                    xml_resposta = con.consulta_distribuicao(
                         cnpj=certificado["cnpj"],
-                        ult_nsu=ultimo_nsu
+                        nsu=int(ultimo_nsu) if ultimo_nsu.isdigit() else 0
                     )
                     
                     if xml_resposta:
