@@ -480,7 +480,12 @@ export default function NewMaintenancePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="form-label">Valor (R$) *</Label>
+                  <Label className="form-label">
+                    Valor Total (R$) *
+                    {(selectedParts.length > 0 || (laborCost && parseFloat(laborCost) > 0)) && (
+                      <span className="text-xs text-green-600 ml-2 font-normal">(calculado automaticamente)</span>
+                    )}
+                  </Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -489,7 +494,7 @@ export default function NewMaintenancePage() {
                     onChange={(e) => setFormData({...formData, part_value: e.target.value})}
                     placeholder="0,00"
                     required
-                    className="form-input font-mono"
+                    className={`form-input font-mono ${(selectedParts.length > 0 || (laborCost && parseFloat(laborCost) > 0)) ? 'bg-green-50 border-green-300' : ''}`}
                     data-testid="maintenance-value-input"
                   />
                 </div>
