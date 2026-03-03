@@ -372,36 +372,46 @@ export default function MachineDetailPage() {
         <CardContent className="p-0">
           {combustiveis.length > 0 ? (
             <div className="divide-y divide-slate-100">
-              {combustiveis.slice(0, 10).map((combustivel) => (
+              {combustiveis.slice(0, 10).map((combustivel) => {
+                const totalLitros = (combustivel.litros_diesel || 0) + (combustivel.litros_oleo || 0) + (combustivel.litros_graxa || 0);
+                return (
                 <div
                   key={combustivel.id}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
                   data-testid={`combustivel-item-${combustivel.id}`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-50">
-                      <Droplets className="text-green-600" size={20} />
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      combustivel.tipo_registro === "abastecedor" ? "bg-yellow-50" : "bg-green-50"
+                    }`}>
+                      <Droplets className={combustivel.tipo_registro === "abastecedor" ? "text-yellow-600" : "text-green-600"} size={20} />
                     </div>
                     <div>
                       <p className="font-semibold text-black">
-                        {combustivel.litros_consumidos?.toFixed(1)}L abastecidos
+                        {totalLitros.toFixed(1)}L {combustivel.tipo_registro === "abastecedor" ? "entrada" : "abastecidos"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {combustivel.operador ? `Operador: ${combustivel.operador}` : "Sem operador"} • {combustivel.tipo_medicao === "litros_hora" ? "L/hora" : "L/km"}
+                        {combustivel.operador_nome || "Sem operador"} 
+                        {combustivel.litros_diesel > 0 && ` • Diesel: ${combustivel.litros_diesel}L`}
+                        {combustivel.litros_oleo > 0 && ` • Óleo: ${combustivel.litros_oleo}L`}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono text-sm text-gray-700">
-                      {combustivel.litros_inicial}L → {combustivel.litros_final}L
-                    </p>
-                    <p className="text-sm text-gray-500 flex items-center justify-end gap-1">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      combustivel.tipo_registro === "abastecedor" 
+                        ? "bg-yellow-100 text-yellow-700" 
+                        : "bg-green-100 text-green-700"
+                    }`}>
+                      {combustivel.tipo_registro === "abastecedor" ? "Entrada" : "Saída"}
+                    </span>
+                    <p className="text-sm text-gray-500 flex items-center justify-end gap-1 mt-1">
                       <Calendar size={14} />
                       {new Date(combustivel.data + "T00:00:00").toLocaleDateString("pt-BR")}
                     </p>
                   </div>
                 </div>
-              ))}
+              )})}
               {combustiveis.length > 10 && (
                 <div className="p-4 text-center">
                   <Button
