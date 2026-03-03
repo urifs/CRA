@@ -11125,6 +11125,44 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
     if not certificado.get("ativo"):
         raise HTTPException(status_code=400, detail="Certificado inativo")
     
+    # Verificar se está bloqueado
+    bloqueado_ate = certificado.get("bloqueado_ate")
+    if bloqueado_ate:
+        bloqueio_dt = datetime.fromisoformat(bloqueado_ate.replace('Z', '+00:00')) if isinstance(bloqueado_ate, str) else bloqueado_ate
+        if datetime.now(timezone.utc) < bloqueio_dt:
+            tempo_restante = (bloqueio_dt - datetime.now(timezone.utc)).total_seconds()
+            minutos = int(tempo_restante // 60)
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Certificado bloqueado. Aguarde {minutos} minutos para tentar novamente."
+            )
+        else:
+            # Desbloquear se o tempo passou
+            await db.nfe_certificados.update_one(
+                {"id": certificado_id},
+                {"$set": {"bloqueado_ate": None}}
+            )
+    
+    # Verificar limite diário (3 consultas por dia)
+    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    consultas_hoje = certificado.get("consultas_hoje", 0)
+    data_consultas = certificado.get("data_consultas")
+    
+    # Resetar contador se mudou o dia
+    if data_consultas != hoje:
+        consultas_hoje = 0
+        await db.nfe_certificados.update_one(
+            {"id": certificado_id},
+            {"$set": {"consultas_hoje": 0, "data_consultas": hoje}}
+        )
+    
+    LIMITE_DIARIO = 3
+    if consultas_hoje >= LIMITE_DIARIO:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Limite diário de {LIMITE_DIARIO} consultas atingido. Tente novamente amanhã."
+        )
+    
     novas_importadas = 0
     ultimo_nsu_processado = certificado.get("ultimo_nsu", "000000000000000")
     
