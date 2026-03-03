@@ -118,6 +118,14 @@ export default function NewMaintenancePage() {
     ));
   };
 
+  // Atualiza o valor total automaticamente quando peças ou mão de obra mudam
+  useEffect(() => {
+    const total = calculateGrandTotal();
+    if (total > 0) {
+      setFormData(prev => ({ ...prev, part_value: total.toFixed(2) }));
+    }
+  }, [selectedParts, laborCost]);
+
   // Calcula o total das peças
   const calculatePartsTotal = () => {
     return selectedParts.reduce((total, part) => total + (part.unit_price * part.quantity), 0);
@@ -125,7 +133,7 @@ export default function NewMaintenancePage() {
 
   // Calcula o total geral (peças + mão de obra)
   const calculateGrandTotal = () => {
-    const partsTotal = calculatePartsTotal();
+    const partsTotal = selectedParts.reduce((total, part) => total + (part.unit_price * part.quantity), 0);
     const labor = parseFloat(laborCost) || 0;
     return partsTotal + labor;
   };
