@@ -11023,17 +11023,27 @@ async def create_nfe_certificado(certificado: NFeCertificadoCreate, current_user
     if existing:
         raise HTTPException(status_code=400, detail="CNPJ já cadastrado")
     
-    # Validar certificado
+    # Validar certificado usando cryptography (mais moderno)
     try:
-        import tempfile
-        from OpenSSL import crypto
+        from cryptography.hazmat.primitives.serialization import pkcs12
+        from cryptography import x509
         
         cert_data = base64.b64decode(certificado.certificado_base64)
-        # Tentar carregar o certificado para validar
-        p12 = crypto.load_pkcs12(cert_data, certificado.senha_certificado.encode())
-        cert = p12.get_certificate()
-        subject = cert.get_subject()
-        logger.info(f"Certificado válido para: {subject.CN}")
+        # Tentar carregar o certificado PKCS12 para validar
+        private_key, certificate, additional_certs = pkcs12.load_key_and_certificates(
+            cert_data, 
+            certificado.senha_certificado.encode()
+        )
+        
+        if certificate:
+            # Extrair informações do certificado
+            subject = certificate.subject
+            cn = subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)
+            cert_cn = cn[0].value if cn else "N/A"
+            logger.info(f"Certificado válido para: {cert_cn}")
+        else:
+            raise ValueError("Certificado não encontrado no arquivo")
+            
     except Exception as e:
         logger.error(f"Erro ao validar certificado: {e}")
         raise HTTPException(status_code=400, detail=f"Certificado inválido ou senha incorreta: {str(e)}")
