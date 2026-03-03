@@ -655,7 +655,7 @@ export default function CombustivelPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Fuel className="text-[#E31A1A]" />
-              Novo Registro de Combustível
+              {editingId ? "Editar Registro de Combustível" : "Novo Registro de Combustível"}
             </DialogTitle>
           </DialogHeader>
           
