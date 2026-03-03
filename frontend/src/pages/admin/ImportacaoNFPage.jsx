@@ -651,7 +651,8 @@ export default function ImportacaoNFPage() {
                     </p>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <Card>
