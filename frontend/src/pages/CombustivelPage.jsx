@@ -424,7 +424,11 @@ export default function CombustivelPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredRegistros.map((registro) => (
-                      <TableRow key={registro.id}>
+                      <TableRow 
+                        key={registro.id} 
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleEditRegistro(registro)}
+                      >
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             registro.tipo_registro === "abastecedor" 
@@ -469,14 +473,24 @@ export default function CombustivelPage() {
                         </TableCell>
                         <TableCell className="text-sm">{registro.operador_nome || "-"}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(registro.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); handleEditRegistro(registro); }}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <Edit2 size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); handleDelete(registro.id); }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
