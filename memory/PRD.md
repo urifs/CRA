@@ -1,5 +1,27 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+
+## Changelog - 03/03/2026 (Sessão 21)
+
+### Dashboard com Máquinas por Categoria (Expandível)
+- ✅ **Badge de Total de Máquinas** agora é clicável e expansível
+- ✅ Ao clicar, expande para mostrar **sub-badges por categoria**
+- ✅ Cada sub-badge exibe:
+  - Cor da categoria (borda lateral colorida)
+  - Ícone de máquina na cor da categoria
+  - Quantidade de máquinas
+  - Nome da categoria
+- ✅ Sub-badges são clicáveis e redirecionam para página de máquinas filtrada
+- ✅ Botão de chevron indica que o card é expansível
+- ✅ Animação suave ao expandir/recolher
+
+### Modelo da Máquina nos Cards
+- ✅ **Visualização Grid**: Modelo aparece logo abaixo do nome da máquina
+- ✅ **Visualização Lista**: Modelo aparece ao lado do nome (Nome • Modelo)
+- ✅ **Página de Estoque**: Modelo já aparecia nos badges de máquinas associadas
+
+---
+
 ## Changelog - 27/02/2026 (Sessão 20)
 
 ### Máscaras de Formatação para Valores Monetários
