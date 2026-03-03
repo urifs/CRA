@@ -552,17 +552,28 @@ export default function ImportacaoNFPage() {
 
           {certificados.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {certificados.map((cert) => (
-                <Card key={cert.id} className="relative">
+              {certificados.map((cert) => {
+                const bloqueado = isCertificadoBloqueado(cert);
+                const consultasRestantes = getConsultasRestantes(cert);
+                const semConsultas = consultasRestantes <= 0;
+                
+                return (
+                <Card key={cert.id} className={`relative ${bloqueado ? 'border-red-300 bg-red-50/30' : ''}`}>
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <ShieldCheck className="text-green-600" size={24} />
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        bloqueado ? 'bg-red-100' : 'bg-green-100'
+                      }`}>
+                        {bloqueado ? (
+                          <Ban className="text-red-600" size={24} />
+                        ) : (
+                          <ShieldCheck className="text-green-600" size={24} />
+                        )}
                       </div>
                       <div className="flex-1">
                         <h3 className="font-bold text-black">{cert.razao_social}</h3>
                         <p className="text-sm text-gray-500 font-mono">{formatCPFouCNPJ(cert.cnpj)}</p>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                             cert.ambiente === "producao" 
                               ? "bg-green-100 text-green-800" 
@@ -575,16 +586,49 @@ export default function ImportacaoNFPage() {
                       </div>
                     </div>
                     
+                    {/* Cronômetro de bloqueio */}
+                    {bloqueado && (
+                      <div className="mt-3">
+                        <Cronometro 
+                          bloqueadoAte={cert.bloqueado_ate} 
+                          onExpire={() => fetchData()}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Consultas restantes */}
+                    <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-lg ${
+                      semConsultas ? 'bg-orange-100 border border-orange-300' : 'bg-blue-50 border border-blue-200'
+                    }`}>
+                      <Clock size={14} className={semConsultas ? 'text-orange-600' : 'text-blue-600'} />
+                      <span className={`text-xs font-medium ${semConsultas ? 'text-orange-700' : 'text-blue-700'}`}>
+                        {semConsultas 
+                          ? 'Limite diário atingido' 
+                          : `${consultasRestantes} consulta(s) restante(s) hoje`
+                        }
+                      </span>
+                    </div>
+                    
                     <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
                         className="flex-1"
                         onClick={() => handleImportarNotas(cert.id)}
-                        disabled={importando}
+                        disabled={importando || bloqueado || semConsultas}
                       >
-                        {importando ? (
+                        {importandoCertId === cert.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : bloqueado ? (
+                          <>
+                            <Ban size={14} className="mr-1" />
+                            Bloqueado
+                          </>
+                        ) : semConsultas ? (
+                          <>
+                            <AlertTriangle size={14} className="mr-1" />
+                            Sem consultas
+                          </>
                         ) : (
                           <>
                             <Download size={14} className="mr-1" />
