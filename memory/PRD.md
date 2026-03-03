@@ -1,6 +1,27 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 03/03/2026 (Sessão 22)
+
+### Download de NF-e (XML e PDF)
+- ✅ **Novos endpoints de download**:
+  - `GET /api/nfe/importadas/{nfe_id}/download-xml` - Download do XML original da NF-e
+  - `GET /api/nfe/importadas/{nfe_id}/download-pdf` - Download do DANFE (PDF) gerado
+- ✅ **Interface**:
+  - Botões de download na tabela de NF-e (ícones na coluna Ações)
+  - Botões de download no modal de detalhes da NF-e
+  - Download XML (ícone azul) / Download DANFE PDF (ícone vermelho)
+- ✅ **DANFE PDF**:
+  - Gerado via ReportLab
+  - Contém: Número, Série, Data, Valor, Emitente, CNPJ, Chave de Acesso, Lista de Itens
+  - Formatação profissional em A4
+
+### Verificação de Máscaras de Data
+- ✅ Verificado que todos os campos de data já utilizam `type="date"` (seletor nativo do navegador)
+- ✅ Função `formatDate` já disponível em `/app/frontend/src/utils/masks.js` para uso futuro
+
+---
+
 ## Changelog - 03/03/2026 (Sessão 21)
 
 ### Dashboard com Máquinas por Categoria (Expandível)
