@@ -16,6 +16,26 @@
   - Contém: Número, Série, Data, Valor, Emitente, CNPJ, Chave de Acesso, Lista de Itens
   - Formatação profissional em A4
 
+### Melhorias no Sistema de Combustível
+- ✅ **Botão Único de Registro**: Unificados os botões "Registro Abastecedor" e "Registro Abastecido" em um único botão "Novo Registro de Combustível"
+- ✅ **Formulário Unificado**: 
+  - Opção de tipo: "Abastecimento (Saída)" ou "Entrada no Tanque"
+  - Fonte do Abastecimento com 3 opções:
+    - Veículo Tanque (Interno) - com dropdown de tanques cadastrados
+    - Posto Parceiro - com dropdown de fornecedores cadastrados
+    - Outro (Externo)
+- ✅ **Compartimentos de Óleo Dinâmicos** no Veículo Tanque:
+  - Botão "Adicionar Óleo" para criar compartimentos
+  - Seleção de item do estoque (dropdown com peças/óleos)
+  - Seleção de unidade de medida (L, ML, KG, G, UN)
+  - Campos de Capacidade e Quantidade Atual
+  - Múltiplos compartimentos podem ser adicionados/removidos
+- ✅ **Backend atualizado**:
+  - Modelo `CompartimentoOleo` para compartimentos dinâmicos
+  - Campo `compartimentos_oleo` no `VeiculoAbastecedorCreate`
+  - Campo `posto_id` no `CombustivelCreate`
+  - Endpoints de criação/atualização processam compartimentos
+
 ### Verificação de Máscaras de Data
 - ✅ Verificado que todos os campos de data já utilizam `type="date"` (seletor nativo do navegador)
 - ✅ Função `formatDate` já disponível em `/app/frontend/src/utils/masks.js` para uso futuro
