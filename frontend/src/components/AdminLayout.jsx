@@ -20,8 +20,7 @@ import {
   Bell,
   Truck,
   CreditCard,
-  FileDown,
-  FileInput
+  FileDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatbotWidget from "@/components/ChatbotWidget";
