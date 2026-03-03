@@ -132,17 +132,44 @@ export default function CombustivelPage() {
         hora_km_inicial: parseFloat(formData.hora_km_inicial) || 0
       };
 
-      await axios.post(`${API}/combustivel`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (editingId) {
+        await axios.put(`${API}/combustivel/${editingId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success("Registro atualizado com sucesso!");
+      } else {
+        await axios.post(`${API}/combustivel`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success("Registro criado com sucesso!");
+      }
       
-      toast.success("Registro criado com sucesso!");
       setIsModalOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao salvar registro");
     }
+  };
+
+  const handleEditRegistro = (registro) => {
+    setEditingId(registro.id);
+    setFormData({
+      machine_id: registro.machine_id || "",
+      data: registro.data || new Date().toISOString().split("T")[0],
+      tipo_registro: registro.tipo_registro || "abastecido",
+      tipo_medicao: registro.tipo_medicao || "litros",
+      hora_km_inicial: registro.hora_km_inicial?.toString() || "",
+      litros_diesel: registro.litros_diesel?.toString() || "",
+      litros_oleo: registro.litros_oleo?.toString() || "",
+      litros_graxa: registro.litros_graxa?.toString() || "",
+      fonte_abastecimento: registro.fonte_abastecimento || "externo",
+      veiculo_abastecedor_id: registro.veiculo_abastecedor_id || "",
+      posto_id: registro.posto_id || "",
+      operador_id: registro.operador_id || "",
+      observacoes: registro.observacoes || ""
+    });
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id) => {
