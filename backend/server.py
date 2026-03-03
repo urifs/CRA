@@ -7034,6 +7034,45 @@ EXPORT_CATEGORIES_V2 = {
             ]
         },
         {
+            "id": "horimetro",
+            "label": "Horímetro",
+            "icon": "clock",
+            "subcategories": [
+                {"id": "horimetro", "label": "Todos os Registros", "description": "Histórico completo de horímetro"},
+                {"id": "horimetro_por_maquina", "label": "Resumo por Máquina", "description": "Horas trabalhadas por máquina"},
+                {"id": "horimetro_por_operador", "label": "Resumo por Operador", "description": "Horas trabalhadas por operador"},
+            ]
+        },
+        {
+            "id": "combustivel",
+            "label": "Combustível",
+            "icon": "fuel",
+            "subcategories": [
+                {"id": "combustivel", "label": "Todos os Registros", "description": "Histórico completo de combustível"},
+                {"id": "combustivel_por_maquina", "label": "Consumo por Máquina", "description": "Litros consumidos por máquina"},
+                {"id": "veiculos_abastecedores", "label": "Veículos Tanque", "description": "Lista de veículos abastecedores"},
+            ]
+        },
+        {
+            "id": "frotas",
+            "label": "Frotas",
+            "icon": "truck",
+            "subcategories": [
+                {"id": "frotas", "label": "Todas as Frotas", "description": "Lista completa de frotas"},
+                {"id": "frotas_documentos", "label": "Documentos de Frota", "description": "IPVA, licenciamento, seguros"},
+            ]
+        },
+        {
+            "id": "operadores",
+            "label": "Operadores",
+            "icon": "users",
+            "subcategories": [
+                {"id": "operadores", "label": "Todos os Operadores", "description": "Lista completa de operadores"},
+                {"id": "operadores_rh", "label": "Operadores RH", "description": "Funcionários do RH"},
+                {"id": "operadores_cadastro", "label": "Operadores Cadastro", "description": "Operadores cadastrados"},
+            ]
+        },
+        {
             "id": "estoque",
             "label": "Estoque",
             "icon": "package",
@@ -7055,6 +7094,7 @@ EXPORT_CATEGORIES_V2 = {
                 {"id": "obras_andamento", "label": "Obras em Andamento", "description": "Projetos ativos"},
                 {"id": "obras_concluidas", "label": "Obras Concluídas", "description": "Projetos finalizados"},
                 {"id": "obras_pausadas", "label": "Obras Pausadas", "description": "Projetos pausados"},
+                {"id": "medicoes", "label": "Medições de Obras", "description": "Todas as medições registradas"},
             ]
         },
         {
