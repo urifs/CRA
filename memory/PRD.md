@@ -1,6 +1,30 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 04/03/2026 (Sessão 23)
+
+### Nova Ferramenta: Conciliação Bancária
+- ✅ **Nova página de Conciliação** (`/administrativo/conciliacao`)
+- ✅ **Importação de Extrato PDF**: Upload de arquivo PDF para extrair movimentações bancárias
+  - Usa biblioteca `pdfplumber` para extrair texto e tabelas
+  - Detecta automaticamente data, valor e descrição
+  - Identifica entradas e saídas
+- ✅ **Layout lado a lado**:
+  - **Esquerda (amarelo)**: Extrato bancário importado com filtros (tipo, data início/fim)
+  - **Direita (azul)**: Contas do sistema com filtros (Todas, Quitadas, A Pagar, A Receber) e busca
+- ✅ **Cards de resumo**: Entradas, Saídas, Saldo Extrato, Conciliados
+- ✅ **Funcionalidade de conciliar**: Selecionar item do extrato + conta do sistema e vincular
+- ✅ **Desfazer conciliação**: Botão para desvincular itens conciliados
+- ✅ **Endpoints criados**:
+  - `GET /api/conciliacao` - Lista conciliações
+  - `GET /api/conciliacao/extratos/{conta_id}` - Lista extratos
+  - `POST /api/conciliacao/importar-extrato` - Importa PDF
+  - `POST /api/conciliacao/conciliar` - Concilia itens
+  - `DELETE /api/conciliacao/{id}` - Desfaz conciliação
+- ✅ **Menu atualizado**: Link "Conciliação" adicionado ao menu Administrativo
+
+---
+
 ## Changelog - 03/03/2026 (Sessão 22)
 
 ### Correções e Melhorias Solicitadas
