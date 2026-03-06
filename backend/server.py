@@ -11738,6 +11738,284 @@ async def count_novas_nfes(current_user: dict = Depends(get_current_user)):
     return {"count": count}
 
 
+# ==================== CONCILIAÇÃO BANCÁRIA ====================
+
+@api_router.get("/conciliacao")
+async def list_conciliacoes(current_user: dict = Depends(get_current_user)):
+    """Lista todas as conciliações realizadas"""
+    conciliacoes = await db.conciliacoes.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return conciliacoes
+
+
+@api_router.get("/conciliacao/extratos/{conta_bancaria_id}")
+async def list_extratos_importados(conta_bancaria_id: str, current_user: dict = Depends(get_current_user)):
+    """Lista todos os itens de extrato importados para uma conta bancária"""
+    extratos = await db.extratos_bancarios.find(
+        {"conta_bancaria_id": conta_bancaria_id, "conciliado": {"$ne": True}}, 
+        {"_id": 0}
+    ).sort("data", -1).to_list(1000)
+    return extratos
+
+
+@api_router.post("/conciliacao/importar-extrato")
+async def importar_extrato_pdf(
+    file: UploadFile = File(...),
+    conta_bancaria_id: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Importa um extrato bancário em PDF e extrai as movimentações"""
+    import re
+    
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Apenas arquivos PDF são aceitos")
+    
+    # Verificar se a conta bancária existe
+    conta = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
+    
+    try:
+        # Ler o arquivo PDF
+        content = await file.read()
+        
+        # Usar pdfplumber para extrair texto
+        import pdfplumber
+        
+        extracted_items = []
+        
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
+            full_text = ""
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    full_text += text + "\n"
+                
+                # Tentar extrair tabelas
+                tables = page.extract_tables()
+                for table in tables:
+                    for row in table:
+                        if row and len(row) >= 3:
+                            # Tentar identificar data e valor
+                            row_text = " ".join([str(cell) for cell in row if cell])
+                            
+                            # Padrão para data: dd/mm/yyyy ou dd/mm/yy
+                            date_pattern = r'(\d{2}/\d{2}/\d{2,4})'
+                            date_match = re.search(date_pattern, row_text)
+                            
+                            # Padrão para valor: números com vírgula decimal
+                            value_pattern = r'(-?\d{1,3}(?:\.\d{3})*,\d{2})'
+                            value_matches = re.findall(value_pattern, row_text)
+                            
+                            if date_match and value_matches:
+                                date_str = date_match.group(1)
+                                # Converter data para formato ISO
+                                try:
+                                    if len(date_str.split('/')[-1]) == 2:
+                                        date_obj = datetime.strptime(date_str, "%d/%m/%y")
+                                    else:
+                                        date_obj = datetime.strptime(date_str, "%d/%m/%Y")
+                                    iso_date = date_obj.strftime("%Y-%m-%d")
+                                except:
+                                    continue
+                                
+                                # Pegar o último valor encontrado (geralmente é o saldo ou valor da transação)
+                                value_str = value_matches[-1]
+                                value = float(value_str.replace('.', '').replace(',', '.'))
+                                
+                                # Determinar tipo (entrada ou saída)
+                                tipo = "saida" if value < 0 or "-" in row_text.split(value_str)[0][-5:] else "entrada"
+                                
+                                # Extrair descrição (texto entre data e valor)
+                                desc_start = row_text.find(date_str) + len(date_str)
+                                desc_end = row_text.find(value_str)
+                                descricao = row_text[desc_start:desc_end].strip()
+                                if not descricao:
+                                    descricao = row_text.replace(date_str, '').replace(value_str, '').strip()
+                                
+                                if descricao and len(descricao) > 3:
+                                    extracted_items.append({
+                                        "id": str(uuid.uuid4()),
+                                        "conta_bancaria_id": conta_bancaria_id,
+                                        "data": iso_date,
+                                        "descricao": descricao[:200],
+                                        "valor": abs(value),
+                                        "tipo": tipo,
+                                        "conciliado": False,
+                                        "created_at": datetime.now(timezone.utc).isoformat()
+                                    })
+        
+        # Se não encontrou nada nas tabelas, tentar extrair do texto
+        if not extracted_items:
+            lines = full_text.split('\n')
+            for line in lines:
+                date_pattern = r'(\d{2}/\d{2}/\d{2,4})'
+                date_match = re.search(date_pattern, line)
+                value_pattern = r'(-?\d{1,3}(?:\.\d{3})*,\d{2})'
+                value_matches = re.findall(value_pattern, line)
+                
+                if date_match and value_matches:
+                    date_str = date_match.group(1)
+                    try:
+                        if len(date_str.split('/')[-1]) == 2:
+                            date_obj = datetime.strptime(date_str, "%d/%m/%y")
+                        else:
+                            date_obj = datetime.strptime(date_str, "%d/%m/%Y")
+                        iso_date = date_obj.strftime("%Y-%m-%d")
+                    except:
+                        continue
+                    
+                    value_str = value_matches[-1]
+                    value = float(value_str.replace('.', '').replace(',', '.'))
+                    tipo = "saida" if value < 0 else "entrada"
+                    
+                    desc_start = line.find(date_str) + len(date_str)
+                    desc_end = line.find(value_str)
+                    descricao = line[desc_start:desc_end].strip()
+                    
+                    if descricao and len(descricao) > 3:
+                        extracted_items.append({
+                            "id": str(uuid.uuid4()),
+                            "conta_bancaria_id": conta_bancaria_id,
+                            "data": iso_date,
+                            "descricao": descricao[:200],
+                            "valor": abs(value),
+                            "tipo": tipo,
+                            "conciliado": False,
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+        
+        # Remover duplicatas baseado em data+valor+descrição
+        unique_items = []
+        seen = set()
+        for item in extracted_items:
+            key = f"{item['data']}_{item['valor']}_{item['descricao'][:50]}"
+            if key not in seen:
+                seen.add(key)
+                unique_items.append(item)
+        
+        # Inserir no banco
+        if unique_items:
+            await db.extratos_bancarios.insert_many(unique_items)
+        
+        await create_audit_log(
+            user=current_user,
+            action="importar",
+            entity_type="extrato_bancario",
+            entity_id=conta_bancaria_id,
+            entity_name=f"{conta.get('banco', '')} - {file.filename}",
+            details=f"{len(unique_items)} movimentações importadas",
+            module="Financeiro"
+        )
+        
+        return {"message": "Extrato importado com sucesso", "count": len(unique_items)}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar PDF: {str(e)}")
+
+
+@api_router.post("/conciliacao/conciliar")
+async def conciliar_itens(
+    extrato_id: str = Body(...),
+    conta_id: str = Body(...),
+    conta_tipo: str = Body(...),  # "pagar" ou "receber"
+    current_user: dict = Depends(get_current_user)
+):
+    """Concilia um item do extrato com uma conta do sistema"""
+    
+    # Buscar o item do extrato
+    extrato = await db.extratos_bancarios.find_one({"id": extrato_id}, {"_id": 0})
+    if not extrato:
+        raise HTTPException(status_code=404, detail="Item do extrato não encontrado")
+    
+    if extrato.get("conciliado"):
+        raise HTTPException(status_code=400, detail="Item do extrato já foi conciliado")
+    
+    # Buscar a conta
+    collection = db.contas_pagar if conta_tipo == "pagar" else db.contas_receber
+    conta = await collection.find_one({"id": conta_id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    
+    if conta.get("conciliado"):
+        raise HTTPException(status_code=400, detail="Esta conta já foi conciliada")
+    
+    # Criar registro de conciliação
+    conciliacao_id = str(uuid.uuid4())
+    conciliacao_doc = {
+        "id": conciliacao_id,
+        "extrato_id": extrato_id,
+        "extrato_descricao": extrato.get("descricao", ""),
+        "conta_id": conta_id,
+        "conta_tipo": conta_tipo,
+        "conta_descricao": conta.get("descricao", conta.get("favorecido", "")),
+        "valor": extrato.get("valor", 0),
+        "data_extrato": extrato.get("data"),
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.conciliacoes.insert_one(conciliacao_doc)
+    
+    # Marcar extrato como conciliado
+    await db.extratos_bancarios.update_one(
+        {"id": extrato_id},
+        {"$set": {"conciliado": True, "conciliacao_id": conciliacao_id}}
+    )
+    
+    # Marcar conta como conciliada
+    await collection.update_one(
+        {"id": conta_id},
+        {"$set": {"conciliado": True, "conciliacao_id": conciliacao_id}}
+    )
+    
+    await create_audit_log(
+        user=current_user,
+        action="conciliar",
+        entity_type="conciliacao",
+        entity_id=conciliacao_id,
+        entity_name=f"Extrato: {extrato.get('descricao', '')[:30]} <-> Conta: {conta.get('descricao', '')[:30]}",
+        module="Financeiro"
+    )
+    
+    return {"message": "Conciliação realizada com sucesso", "id": conciliacao_id}
+
+
+@api_router.delete("/conciliacao/{conciliacao_id}")
+async def desfazer_conciliacao(conciliacao_id: str, current_user: dict = Depends(get_current_user)):
+    """Desfaz uma conciliação"""
+    
+    conciliacao = await db.conciliacoes.find_one({"id": conciliacao_id}, {"_id": 0})
+    if not conciliacao:
+        raise HTTPException(status_code=404, detail="Conciliação não encontrada")
+    
+    # Desmarcar extrato
+    await db.extratos_bancarios.update_one(
+        {"id": conciliacao["extrato_id"]},
+        {"$set": {"conciliado": False}, "$unset": {"conciliacao_id": ""}}
+    )
+    
+    # Desmarcar conta
+    collection = db.contas_pagar if conciliacao["conta_tipo"] == "pagar" else db.contas_receber
+    await collection.update_one(
+        {"id": conciliacao["conta_id"]},
+        {"$set": {"conciliado": False}, "$unset": {"conciliacao_id": ""}}
+    )
+    
+    # Remover conciliação
+    await db.conciliacoes.delete_one({"id": conciliacao_id})
+    
+    await create_audit_log(
+        user=current_user,
+        action="desfazer",
+        entity_type="conciliacao",
+        entity_id=conciliacao_id,
+        entity_name=f"Conciliação desfeita",
+        module="Financeiro"
+    )
+    
+    return {"message": "Conciliação desfeita com sucesso"}
+
+
 @api_router.get("/nfe/importadas/{nfe_id}/download-xml")
 async def download_nfe_xml(nfe_id: str, current_user: dict = Depends(get_current_user)):
     """Download do XML da NF-e"""
