@@ -769,8 +769,8 @@ export default function ConciliacaoPage() {
         </Card>
       </div>
 
-      {/* Botão de Conciliar */}
-      <div className="flex justify-center">
+      {/* Botão de Conciliar e Sugestões */}
+      <div className="flex flex-col sm:flex-row justify-center gap-4">
         <Button
           onClick={handleConciliar}
           disabled={!selectedExtratoItem || !selectedConta || conciliando}
@@ -784,7 +784,168 @@ export default function ConciliacaoPage() {
           )}
           Conciliar Selecionados
         </Button>
+        
+        {/* Botão de Sugestões Automáticas */}
+        <div className="flex items-center gap-2">
+          <Select value={tolerancia.toString()} onValueChange={(v) => setTolerancia(parseInt(v))}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Valor Exato</SelectItem>
+              <SelectItem value="1">Tolerância 1%</SelectItem>
+              <SelectItem value="2">Tolerância 2%</SelectItem>
+              <SelectItem value="5">Tolerância 5%</SelectItem>
+              <SelectItem value="10">Tolerância 10%</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button
+            onClick={gerarSugestoes}
+            disabled={extratosFiltrados.length === 0 || contasFiltradas.length === 0 || processandoSugestoes}
+            size="lg"
+            className="bg-purple-600 hover:bg-purple-700 px-6"
+          >
+            {processandoSugestoes ? (
+              <Loader2 className="animate-spin mr-2" size={20} />
+            ) : (
+              <Sparkles className="mr-2" size={20} />
+            )}
+            Sugerir Automático
+          </Button>
+        </div>
       </div>
+
+      {/* Painel de Sugestões Automáticas */}
+      {showSugestoes && sugestoes.length > 0 && (
+        <Card className="border-2 border-purple-300 bg-purple-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="text-purple-600" size={20} />
+                Sugestões de Conciliação
+                <Badge className="bg-purple-100 text-purple-700 ml-2">
+                  {sugestoes.length} sugestão(ões)
+                </Badge>
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  onClick={aceitarTodasSugestoes}
+                  disabled={conciliando}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Zap size={16} className="mr-1" />
+                  Aceitar Todas
+                </Button>
+                <Button
+                  onClick={() => { setSugestoes([]); setShowSugestoes(false); }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <X size={16} className="mr-1" />
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 max-h-[400px] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-purple-100/50">
+                  <TableHead>Match</TableHead>
+                  <TableHead>Extrato</TableHead>
+                  <TableHead className="text-right">Valor Extrato</TableHead>
+                  <TableHead>Conta</TableHead>
+                  <TableHead className="text-right">Valor Conta</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sugestoes.map((sugestao) => (
+                  <TableRow key={sugestao.id} className="hover:bg-purple-50">
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <div className={`w-3 h-3 rounded-full ${
+                          parseFloat(sugestao.percentMatch) === 100 
+                            ? 'bg-green-500' 
+                            : parseFloat(sugestao.percentMatch) >= 98 
+                            ? 'bg-yellow-500' 
+                            : 'bg-orange-500'
+                        }`}></div>
+                        <span className={`text-sm font-medium ${
+                          parseFloat(sugestao.percentMatch) === 100 
+                            ? 'text-green-600' 
+                            : parseFloat(sugestao.percentMatch) >= 98 
+                            ? 'text-yellow-600' 
+                            : 'text-orange-600'
+                        }`}>
+                          {sugestao.percentMatch}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-sm font-medium truncate max-w-[150px]" title={sugestao.extrato.descricao}>
+                          {sugestao.extrato.descricao}
+                        </p>
+                        <p className="text-xs text-gray-500">{formatDate(sugestao.extrato.data)}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className={`text-right font-mono ${
+                      sugestao.extrato.tipo === "entrada" ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {sugestao.extrato.tipo === "entrada" ? "+" : "-"}{formatCurrency(sugestao.extrato.valor)}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-sm font-medium truncate max-w-[150px]" title={sugestao.conta.descricao || sugestao.conta.favorecido}>
+                          {sugestao.conta.descricao || sugestao.conta.favorecido}
+                        </p>
+                        <Badge className={`text-xs ${
+                          sugestao.conta.tipo === "pagar" 
+                            ? "bg-red-100 text-red-700" 
+                            : "bg-green-100 text-green-700"
+                        }`}>
+                          {sugestao.conta.tipo === "pagar" ? "A Pagar" : "A Receber"}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className={`text-right font-mono ${
+                      sugestao.conta.tipo === "receber" ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {formatCurrency(sugestao.conta.valor)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => aceitarSugestao(sugestao)}
+                          disabled={conciliando}
+                          className="text-green-600 hover:bg-green-50"
+                          title="Aceitar sugestão"
+                        >
+                          <Check size={18} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => rejeitarSugestao(sugestao.id)}
+                          className="text-red-600 hover:bg-red-50"
+                          title="Rejeitar sugestão"
+                        >
+                          <X size={18} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Detalhes da Seleção */}
       {(selectedExtratoItem || selectedConta) && (
