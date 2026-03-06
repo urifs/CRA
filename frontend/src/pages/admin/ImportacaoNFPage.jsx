@@ -591,7 +591,7 @@ export default function ImportacaoNFPage() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => window.open(`${API}/nfe/importadas/${nfe.id}/download-xml`, '_blank')}
+                              onClick={() => handleDownloadNFeXML(nfe.id, nfe.numero_nf)}
                               title="Download XML"
                               className="text-blue-600 hover:bg-blue-50"
                             >
@@ -600,7 +600,7 @@ export default function ImportacaoNFPage() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => window.open(`${API}/nfe/importadas/${nfe.id}/download-pdf`, '_blank')}
+                              onClick={() => handleDownloadNFePDF(nfe.id, nfe.numero_nf)}
                               title="Download DANFE (PDF)"
                               className="text-red-600 hover:bg-red-50"
                             >
