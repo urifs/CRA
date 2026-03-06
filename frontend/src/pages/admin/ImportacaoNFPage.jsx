@@ -309,6 +309,17 @@ export default function ImportacaoNFPage() {
     }
   };
 
+  const handleCriarContaPagarNFSe = async (nfseId) => {
+    try {
+      const response = await axios.post(`${API}/nfse/importadas/${nfseId}/criar-conta-pagar`);
+      toast.success("Conta a pagar criada com sucesso!");
+      fetchData();
+      setShowNFeDetail(null);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao criar conta a pagar");
+    }
+  };
+
   const handleUpdateStatus = async (nfeId, status) => {
     try {
       await axios.patch(`${API}/nfe/importadas/${nfeId}/status`, { status });
