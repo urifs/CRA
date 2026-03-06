@@ -1,6 +1,22 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 06/03/2026 (Sessão 24)
+
+### Bug Fix: Download de PDF (NF-e e NFS-e) - P0
+- ✅ **Corrigido bug de erro 403 (Proibido)** no download de arquivos PDF e XML
+  - **Causa**: O método `window.open()` não envia o token de autenticação no cabeçalho HTTP
+  - **Solução**: Implementada função `handleDownload` usando `axios` com `responseType: 'blob'` e header `Authorization`
+  - **Padrão implementado**: O código cria uma URL de objeto (`createObjectURL`) a partir do blob recebido e dispara o download via elemento `<a>` temporário
+- ✅ **Endpoints testados e funcionais**:
+  - `GET /api/nfe/importadas/{id}/download-xml` ✓
+  - `GET /api/nfe/importadas/{id}/download-pdf` ✓
+  - `GET /api/nfse/importadas/{id}/download-xml` ✓
+  - `GET /api/nfse/importadas/{id}/download-pdf` ✓
+- ✅ **Testes e2e passaram**: Download de `DANFE_NFe_5610.pdf` e `NFe_5610.xml` confirmados via interface
+
+---
+
 ## Changelog - 04/03/2026 (Sessão 23)
 
 ### Importação de NFS-e (Notas de Serviço)
