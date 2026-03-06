@@ -592,7 +592,7 @@ export default function ImportacaoNFPage() {
                 <p className="text-gray-500 mb-4">
                   {certificados.length === 0 
                     ? "Configure um CNPJ com certificado para começar a importar"
-                    : "Clique em 'Importar Notas' para buscar NF-e da SEFAZ"
+                    : "Clique em 'Importar NF-e' para buscar notas de compra da SEFAZ"
                   }
                 </p>
                 {certificados.length === 0 && (
@@ -609,6 +609,139 @@ export default function ImportacaoNFPage() {
                 )}
               </CardContent>
             </Card>
+          )
+          ) : (
+            // Lista de NFS-e (Serviços)
+            nfsesImportadas.length > 0 ? (
+              <Card>
+                <CardContent className="p-0">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">NFS-e</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prestador</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Serviço</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Data</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Valor</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {nfsesImportadas.map((nfse) => (
+                        <tr key={nfse.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-gray-900">Nº {nfse.numero_nfse || "-"}</div>
+                            <div className="text-xs text-gray-500">Série {nfse.serie || "U"}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{nfse.prestador_nome || nfse.razao_social_prestador || "-"}</div>
+                            <div className="text-xs text-gray-500">
+                              CNPJ: {formatCPFouCNPJ(nfse.prestador_cnpj || nfse.cnpj_prestador || "")}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm max-w-[200px] truncate" title={nfse.descricao_servico}>
+                              {nfse.descricao_servico || nfse.discriminacao || "-"}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {nfse.data_emissao 
+                              ? new Date(nfse.data_emissao).toLocaleDateString("pt-BR")
+                              : "-"
+                            }
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono font-medium text-green-700">
+                            {new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            }).format(nfse.valor_servico || nfse.valor_total || 0)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                              nfse.status === "nova" ? "bg-blue-100 text-blue-700" :
+                              nfse.status === "processada" ? "bg-green-100 text-green-700" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                              {nfse.status === "nova" && <AlertTriangle size={12} />}
+                              {nfse.status === "processada" && <CheckCircle size={12} />}
+                              {nfse.status === "ignorada" && <XCircle size={12} />}
+                              {nfse.status === "nova" ? "Nova" : nfse.status === "processada" ? "Processada" : "Ignorada"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-center gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setShowNFeDetail({ ...nfse, tipo: "nfse" })}
+                                title="Ver detalhes"
+                              >
+                                <Eye size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => window.open(`${API}/nfse/importadas/${nfse.id}/download-xml`, '_blank')}
+                                title="Download XML"
+                                className="text-blue-600 hover:bg-blue-50"
+                              >
+                                <FileDown size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => window.open(`${API}/nfse/importadas/${nfse.id}/download-pdf`, '_blank')}
+                                title="Download PDF"
+                                className="text-red-600 hover:bg-red-50"
+                              >
+                                <FileText size={16} />
+                              </Button>
+                              {!nfse.conta_pagar_id && nfse.status !== "ignorada" && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="text-green-600 hover:bg-green-50"
+                                  onClick={() => handleCriarContaPagarNFSe(nfse.id)}
+                                  title="Criar conta a pagar"
+                                >
+                                  <CreditCard size={16} />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="py-16 text-center">
+                  <Building2 className="mx-auto text-gray-300 mb-4" size={64} />
+                  <h3 className="text-lg font-bold text-gray-600 mb-2">Nenhuma NFS-e importada</h3>
+                  <p className="text-gray-500 mb-4">
+                    {certificados.length === 0 
+                      ? "Configure um CNPJ com certificado para começar a importar"
+                      : "Clique em 'Importar NFS-e' para buscar notas de serviço"
+                    }
+                  </p>
+                  {certificados.length === 0 && (
+                    <Button 
+                      className="bg-[#D4A000] hover:bg-[#b88f00] text-black"
+                      onClick={() => {
+                        setActiveTab("config");
+                        setShowAddCertificado(true);
+                      }}
+                    >
+                      <Plus size={18} className="mr-2" />
+                      Adicionar CNPJ
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )
           )}
         </TabsContent>
 
