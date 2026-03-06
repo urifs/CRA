@@ -85,6 +85,12 @@ export default function ConciliacaoPage() {
   const [resumoExtrato, setResumoExtrato] = useState({ entradas: 0, saidas: 0, total: 0 });
   const [resumoContas, setResumoContas] = useState({ quitadas: 0, pendentes: 0, total: 0 });
   
+  // Sugestões automáticas
+  const [sugestoes, setSugestoes] = useState([]);
+  const [showSugestoes, setShowSugestoes] = useState(false);
+  const [processandoSugestoes, setProcessandoSugestoes] = useState(false);
+  const [tolerancia, setTolerancia] = useState(0); // 0 = exato, 1 = 1%, 2 = 2%, etc.
+  
   const fileInputRef = useRef(null);
   const token = localStorage.getItem("token");
 
