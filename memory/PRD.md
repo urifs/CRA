@@ -3,6 +3,27 @@
 
 ## Changelog - 04/03/2026 (Sessão 23)
 
+### Importação de NFS-e (Notas de Serviço)
+- ✅ **Dois mostradores na página de Importação NF**:
+  - **NF-e (Compras)** - Notas Fiscais de Produtos (borda azul quando selecionado)
+  - **NFS-e (Serviços)** - Notas Fiscais de Serviços (borda verde quando selecionado)
+- ✅ **Tabela específica para NFS-e** com colunas:
+  - NFS-e (Número e Série)
+  - Prestador (Nome e CNPJ)
+  - Serviço (Descrição)
+  - Data de Emissão
+  - Valor do Serviço
+  - Status (Nova, Processada, Ignorada)
+  - Ações (Ver detalhes, Download XML, Download PDF, Criar conta a pagar)
+- ✅ **Endpoints criados para NFS-e**:
+  - `GET /api/nfse/importadas` - Lista NFS-e importadas
+  - `GET /api/nfse/importadas/{id}` - Detalhes de uma NFS-e
+  - `GET /api/nfse/importadas/{id}/download-xml` - Download do XML
+  - `GET /api/nfse/importadas/{id}/download-pdf` - Download do PDF
+  - `POST /api/nfse/importadas/{id}/criar-conta-pagar` - Criar conta a pagar
+  - `PATCH /api/nfse/importadas/{id}/status` - Atualizar status
+- ✅ **Botão de importação dinâmico**: Muda entre "Importar NF-e" e "Importar NFS-e" conforme seleção
+
 ### Nova Ferramenta: Conciliação Bancária
 - ✅ **Nova página de Conciliação** (`/administrativo/conciliacao`)
 - ✅ **Importação de Extrato PDF**: Upload de arquivo PDF para extrair movimentações bancárias
@@ -30,13 +51,6 @@
   - **Botão "Aceitar Todas"** para conciliar automaticamente todas as sugestões
 - ✅ **Funcionalidade de conciliar**: Selecionar item do extrato + conta do sistema e vincular
 - ✅ **Desfazer conciliação**: Botão para desvincular itens conciliados
-
-### Endpoints criados:
-- `GET /api/conciliacao` - Lista conciliações
-- `GET /api/conciliacao/extratos/{conta_id}` - Lista extratos
-- `POST /api/conciliacao/importar-extrato` - Importa PDF
-- `POST /api/conciliacao/conciliar` - Concilia itens
-- `DELETE /api/conciliacao/{id}` - Desfaz conciliação
 
 ---
 
