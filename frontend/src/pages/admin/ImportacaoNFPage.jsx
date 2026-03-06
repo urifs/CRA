@@ -359,8 +359,8 @@ export default function ImportacaoNFPage() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title font-heading">Importação de NF-e</h1>
-          <p className="text-gray-500 mt-1">Importe notas fiscais eletrônicas da SEFAZ</p>
+          <h1 className="page-title font-heading">Importação de Notas Fiscais</h1>
+          <p className="text-gray-500 mt-1">Importe NF-e (Compras) e NFS-e (Serviços) da SEFAZ</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -384,7 +384,7 @@ export default function ImportacaoNFPage() {
               ) : (
                 <>
                   <Download size={18} className="mr-2" />
-                  Importar Notas
+                  Importar {tipoNota === "nfe" ? "NF-e" : "NFS-e"}
                 </>
               )}
             </Button>
@@ -396,7 +396,7 @@ export default function ImportacaoNFPage() {
         <TabsList>
           <TabsTrigger value="notas" data-testid="tab-notas">
             <FileText size={16} className="mr-2" />
-            Notas Importadas ({nfesImportadas.length})
+            Notas Importadas ({nfesImportadas.length + nfsesImportadas.length})
           </TabsTrigger>
           <TabsTrigger value="config" data-testid="tab-config">
             <Settings size={16} className="mr-2" />
@@ -406,6 +406,55 @@ export default function ImportacaoNFPage() {
 
         {/* Notas Importadas Tab */}
         <TabsContent value="notas" className="space-y-4">
+          {/* Cards de Resumo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card 
+              className={`cursor-pointer transition-all ${tipoNota === "nfe" ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-gray-50"}`}
+              onClick={() => setTipoNota("nfe")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FileText className="text-blue-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">NF-e (Compras)</h3>
+                      <p className="text-sm text-gray-500">Notas Fiscais de Produtos</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-blue-600">{nfesImportadas.length}</p>
+                    <p className="text-xs text-gray-500">notas importadas</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card 
+              className={`cursor-pointer transition-all ${tipoNota === "nfse" ? "ring-2 ring-green-500 bg-green-50" : "hover:bg-gray-50"}`}
+              onClick={() => setTipoNota("nfse")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Building2 className="text-green-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">NFS-e (Serviços)</h3>
+                      <p className="text-sm text-gray-500">Notas Fiscais de Serviços</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-green-600">{nfsesImportadas.length}</p>
+                    <p className="text-xs text-gray-500">notas importadas</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Filtros */}
           <div className="flex gap-4 items-center">
             <div className="flex-1 max-w-xs">
@@ -442,8 +491,10 @@ export default function ImportacaoNFPage() {
             </Button>
           </div>
 
-          {/* Lista de NF-e */}
-          {nfesImportadas.length > 0 ? (
+          {/* Lista de NF-e ou NFS-e baseado no tipo selecionado */}
+          {tipoNota === "nfe" ? (
+            // Lista de NF-e (Compras)
+            nfesImportadas.length > 0 ? (
             <Card>
               <CardContent className="p-0">
                 <table className="w-full">
