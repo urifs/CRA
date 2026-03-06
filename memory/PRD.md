@@ -13,15 +13,30 @@
   - **Esquerda (amarelo)**: Extrato bancário importado com filtros (tipo, data início/fim)
   - **Direita (azul)**: Contas do sistema com filtros (Todas, Quitadas, A Pagar, A Receber) e busca
 - ✅ **Cards de resumo**: Entradas, Saídas, Saldo Extrato, Conciliados
+
+### Conciliação Automática (Sugestões)
+- ✅ **Botão "Sugerir Automático"** analisa extratos e contas e encontra correspondências
+- ✅ **Tolerância configurável**:
+  - Valor Exato (0%)
+  - Tolerância 1%, 2%, 5%, 10%
+- ✅ **Algoritmo inteligente**:
+  - Combina saídas do extrato com contas A Pagar
+  - Combina entradas do extrato com contas A Receber
+  - Calcula percentual de match (100% = valor exato)
+- ✅ **Painel de Sugestões**:
+  - Lista todas as correspondências encontradas
+  - Indicador visual de match (bolinha verde/amarela/laranja)
+  - Botões individuais para Aceitar (✓) ou Rejeitar (✗) cada sugestão
+  - **Botão "Aceitar Todas"** para conciliar automaticamente todas as sugestões
 - ✅ **Funcionalidade de conciliar**: Selecionar item do extrato + conta do sistema e vincular
 - ✅ **Desfazer conciliação**: Botão para desvincular itens conciliados
-- ✅ **Endpoints criados**:
-  - `GET /api/conciliacao` - Lista conciliações
-  - `GET /api/conciliacao/extratos/{conta_id}` - Lista extratos
-  - `POST /api/conciliacao/importar-extrato` - Importa PDF
-  - `POST /api/conciliacao/conciliar` - Concilia itens
-  - `DELETE /api/conciliacao/{id}` - Desfaz conciliação
-- ✅ **Menu atualizado**: Link "Conciliação" adicionado ao menu Administrativo
+
+### Endpoints criados:
+- `GET /api/conciliacao` - Lista conciliações
+- `GET /api/conciliacao/extratos/{conta_id}` - Lista extratos
+- `POST /api/conciliacao/importar-extrato` - Importa PDF
+- `POST /api/conciliacao/conciliar` - Concilia itens
+- `DELETE /api/conciliacao/{id}` - Desfaz conciliação
 
 ---
 
