@@ -105,8 +105,10 @@ function Cronometro({ bloqueadoAte, onExpire }) {
 
 export default function ImportacaoNFPage() {
   const [activeTab, setActiveTab] = useState("notas");
+  const [tipoNota, setTipoNota] = useState("nfe"); // "nfe" ou "nfse"
   const [certificados, setCertificados] = useState([]);
   const [nfesImportadas, setNfesImportadas] = useState([]);
+  const [nfsesImportadas, setNfsesImportadas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [importando, setImportando] = useState(false);
   const [importandoCertId, setImportandoCertId] = useState(null);
