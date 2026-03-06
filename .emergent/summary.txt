@@ -1,102 +1,174 @@
 <analysis>**original_problem_statement**:
-O usuário iniciou a sessão com uma série de novas solicitações e correções de bugs, além das tarefas pendentes do fork anterior. As solicitações foram:
-1.  **Modelo da Máquina**: Exibir o modelo da máquina nos cartões da página .
-2.  **Dashboard Expansível**: No painel principal, fazer com que o cartão Total de Máquinas seja expansível, mostrando sub-cartões com a contagem de máquinas por categoria.
-3.  **Cálculo Automático na Manutenção**: No formulário de Nova Manutenção, o campo Valor Total deve ser preenchido automaticamente com a soma do custo das peças e da mão de obra.
-4.  **Importação de NF-e (SEFAZ)**:
-    - Criar uma nova seção Importação NF no menu financeiro.
-    - Permitir a configuração de múltiplos CNPJs com seus respectivos certificados digitais A1.
-    - Implementar uma função para consultar e importar as notas fiscais (NF-e) emitidas contra os CNPJs configurados, diretamente do webservice da SEFAZ.
-    - Extrair e salvar dados como número da NF, data, valor, emitente, chave de acesso e o XML.
-    - Notificar sobre novas notas fiscais.
-5.  **Controle de Consumo Indevido da SEFAZ**:
-    - Após encontrar o erro  da SEFAZ, implementar um limite de 3 consultas por dia por CNPJ.
-    - Quando o erro 656 ocorrer, exibir um cronômetro de 1 hora no cartão do CNPJ, bloqueando novas consultas até que o tempo termine.
-6.  **Criação de README**: Gerar um arquivo  completo e detalhado para documentar toda a plataforma.
-7.  **Cancelamento e Restauração**: O usuário solicitou o cancelamento de uma subtarefa (integração com Arquivei), o que foi mal interpretado pelo agente, que removeu toda a funcionalidade de NF-e. O usuário então solicitou a restauração completa e imediata da funcionalidade.
+O usuário continuou o desenvolvimento com uma série de novas funcionalidades e correções de bugs. As solicitações foram:
+1.  **Download de NF-e**: Adicionar botões para baixar o XML e o PDF (DANFE) de cada nota fiscal (NF-e) importada.
+2.  **Reformulação do Controle de Combustível**:
+    - Unificar os botões de abastecedor e abastecido em um único formulário de Novo Registro.
+    - O novo formulário deve permitir selecionar a origem do combustível: um veículo tanque interno ou um posto parceiro cadastrado.
+    - O cadastro de veículos tanque deve permitir adicionar múltiplos compartimentos de óleo, onde cada compartimento é um item de óleo selecionado do estoque, com tipo de unidade e quantidade.
+3.  **Correções Gerais do Sistema de Gestão**:
+    - **Exportação**: Adicionar as seções de Horímetro, Combustível, Frotas e Operadores à ferramenta de exportação.
+    - **Edição de Combustível**: Permitir clicar em um registro de combustível existente para abri-lo e editá-lo.
+    - **Contador de Litros**: Corrigir o contador de litros de combustível na página de detalhes da máquina, que não estava somando corretamente.
+    - **Plano de Obras**:
+        - Adicionar badges (indicadores) com o total de horas trabalhadas e litros de combustível gastos dentro da página de detalhes de uma obra.
+        - Corrigir o botão Medições de Máquinas que não estava funcionando.
+4.  **Ferramenta de Conciliação Bancária**:
+    - Criar uma nova página Conciliação no menu financeiro.
+    - Permitir a importação de extratos bancários em formato PDF.
+    - Exibir uma tela com duas colunas: na esquerda, as transações do extrato; na direita, as contas a pagar/receber do sistema.
+    - Incluir filtros para as contas do sistema (quitadas, a pagar, a receber, todas).
+    - **Melhoria**: Adicionar uma função de Conciliação Automática que sugere correspondências entre as transações do extrato e as contas do sistema com valores iguais ou similares.
+5.  **Suporte a Notas Fiscais de Serviço (NFS-e)**:
+    - Na página de importação de notas, separar a visualização em duas abas/seções: uma para NF-e (compras/produtos) e outra para NFS-e (serviços).
+    - O sistema deve ser capaz de importar e listar também as notas de serviço.
+6.  **Bug no Download de PDF**: O usuário reportou que o download do PDF para NF-e e NFS-e está falhando com um erro de Proibido, indicando um problema de autenticação.
 
 **User's preferred language**: Portuguese (Brazil)
 
 **what currently exists?**
-O agente implementou com sucesso todas as funcionalidades solicitadas pelo usuário. O modelo da máquina foi adicionado aos cards. O dashboard agora possui um widget expansível para máquinas por categoria. O formulário de manutenção calcula o valor total automaticamente. A funcionalidade mais complexa, um sistema completo de importação de NF-e via SEFAZ, foi construída do zero, incluindo upload e validação de certificados A1, consulta ao webservice da SEFAZ, e um sistema robusto de controle de rate limit com limite diário e cronômetro de bloqueio de 1 hora para lidar com o erro Consumo Indevido. Além disso, um  detalhado foi gerado e o agente conseguiu reverter um erro crítico ao deletar e restaurar a funcionalidade de NF-e a pedido do usuário.
+O agente implementou com sucesso quase todas as solicitações do usuário. Foi adicionada a funcionalidade de download de XML e PDF para NF-e e NFS-e. O módulo de controle de combustível foi completamente reformulado, unificando formulários e adicionando a gestão de compartimentos de óleo nos veículos tanque. Foram realizadas diversas correções, incluindo a expansão da ferramenta de exportação, a implementação da edição de registros de combustível, a correção do cálculo de consumo na página de máquinas e a adição de badges de estatísticas e correção de botões na página de detalhes da obra. Uma nova e complexa ferramenta de Conciliação Bancária foi criada do zero, com importação de extrato PDF e um sistema de sugestão automática de correspondências. O sistema de importação de notas agora suporta e exibe separadamente NF-e (compras) e NFS-e (serviços). O agente estava no meio da correção do último bug reportado pelo usuário.
 
 **Last working item**:
-    - Last item agent was working: O usuário solicitou novamente que o modelo da máquina fosse exibido nos cards da página de máquinas. O agente investigou e confirmou que a funcionalidade já havia sido implementada em uma etapa anterior desta mesma sessão e estava funcionando corretamente.
-    - Status: NONE (A tarefa já estava concluída e verificada)
-    - Agent Testing Done: Y
-    - Which testing method agent to use? NA
+    - Last item agent was working: Corrigindo o bug no download de arquivos PDF (DANFE) das notas fiscais (NF-e e NFS-e).
+    - Status: IN PROGRESS
+    - Agent Testing Done: N
+    - Which testing method agent to use? backend testing agent
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  Issue 1:  Consulta de NF-e bloqueada pela SEFAZ (P0)
+  Issue 1:  Falha no download de PDFs de NF-e/NFS-e (P0)
   
   Issues Detail:
   - Issue 1: 
-     - **Descrição**: A funcionalidade de importação de NF-e está temporariamente bloqueada pela SEFAZ, que retorna o erro . Isso ocorre devido a múltiplas consultas em um curto período durante o desenvolvimento e teste. Não é um bug no código, mas uma limitação externa da API da SEFAZ.
-     - **Tentativas de correção**: O agente implementou um sistema para gerenciar essa limitação, que inclui: 1) Um limite de 3 consultas por dia por CNPJ. 2) Um bloqueio automático com um cronômetro regressivo de 1 hora que é exibido na interface do usuário quando o erro 656 é detectado.
-     - **Próximo passo**: O usuário deve aguardar o término do cronômetro de 1 hora antes de tentar fazer uma nova consulta. O código para lidar com o bloqueio e a contagem regressiva já está implementado e funcional.
-     - **Status**:  BLOCKED (pela SEFAZ)
-     - **É um problema recorrente?** Y (durante a sessão de desenvolvimento)
-     - **Testar após correção?** Apenas o usuário pode testar após o tempo de bloqueio expirar.
+     - **Descrição**: O download de PDFs está falhando com um erro 403 (Proibido) porque a requisição era feita via , que não envia o token de autenticação  no cabeçalho.
+     - **Tentativas de correção**: O agente implementou uma função  em . Esta função utiliza  para fazer uma requisição autenticada, recebe a resposta como um , cria uma URL de objeto e a utiliza para iniciar o download no navegador. O agente substituiu todas as chamadas  por esta nova função.
+     - **Próximo passo de depuração**: O código da correção já foi escrito. O próximo passo é testar se a correção funciona. O agente estava prestes a testar o endpoint via  com autenticação para validar o backend, e depois deveria confirmar a funcionalidade e2e clicando no botão de download na interface.
+     - **Status**:  IN PROGRESS
+     - **É um problema recorrente?** N
+     - **Testar após correção?** both
      - **Bloqueado por outro problema**: Não
 
 **In progress Task List**:
-Nenhuma.
+Nenhum.
 
 **Upcoming and Future Tasks**
  **Upcoming Tasks:**
- - **P1: Máscaras de Formatação de Data**: Implementar máscara de formatação automática para **datas** (ex: dd/mm/aaaa) nos campos de input de texto que não utilizam o seletor de data nativo do navegador (). Esta tarefa está pendente desde o fork anterior.
+ - **P1: Máscaras de Formatação de Data**: Implementar máscara de formatação automática para datas (ex: dd/mm/aaaa) em campos de input de texto que não utilizam o seletor de data nativo. Esta tarefa continua pendente.
 
  **Future Tasks:**
- - **P2: Refatoração do Backend**: Concluir a refatoração do  (atualmente com mais de 11.600 linhas), movendo a lógica da NF-e e outras para arquivos modulares em .
- - **P2: Refatoração do Frontend**: Desmembrar componentes grandes como  (~940 linhas) e outros em arquivos menores.
- - **P2: Notificações**: Implementar o sistema de notificação para novas NF-e importadas.
+ - **P2: Refatoração do Backend**: Concluir a refatoração do  (agora com mais de 12.000 linhas) é cada vez mais crítico.
+ - **P2: Refatoração do Frontend**: Desmembrar componentes grandes como  (~1200 linhas),  (~1200 linhas) e o novo  (~860 linhas).
+ - **P2: Notificações**: Implementar o sistema de notificação para novas NF-e/NFS-e importadas.
  - **P2: Relatórios e Dashboards**: Continuar com as tarefas de relatórios automatizados e o dashboard financeiro.
  - **P3: Links de Compartilhamento**: Adicionar a funcionalidade de gerar links públicos para compartilhamento de arquivos.
 
 **Completed work in this session**
-- **Modelo da Máquina**: Exibido o modelo da máquina nos cards da . (DONE)
-- **Dashboard Expansível**: O widget de Total de Máquinas agora é expansível e mostra a contagem por categoria. (DONE)
-- **Cálculo Automático na Manutenção**: O campo de valor total no formulário de nova manutenção é agora preenchido automaticamente (peças + mão de obra). (DONE)
-- **Sistema de Importação de NF-e (SEFAZ)**:
-    - Criada a página  com abas para configuração e visualização. (DONE)
-    - Implementado backend para upload, validação () e armazenamento de certificados A1. (DONE)
-    - Implementada a lógica de consulta à SEFAZ usando a biblioteca . (DONE)
-    - Implementado o processamento do XML da SEFAZ para salvar as notas no banco de dados. (DONE)
-    - Adicionado sistema de limite de 3 consultas/dia e um cronômetro de bloqueio de 1 hora para o erro . (DONE)
-- **Recuperação de Código**: Toda a funcionalidade de NF-e foi acidentalmente removida e, em seguida, completamente restaurada com sucesso a pedido do usuário. (DONE)
-- **Documentação**: Criado um arquivo  completo para o projeto. (DONE)
+- **Download de NF-e/NFS-e**: Adicionados endpoints de backend e botões de UI para download de XML e PDF. (DONE, PENDING BUG FIX)
+- **Reformulação do Sistema de Combustível**:
+  - Unificado os botões e formulários de registro de combustível. (DONE)
+  - Adicionada a opção de selecionar veículo tanque ou posto parceiro como fonte. (DONE)
+  - Implementado cadastro de veículos tanque com compartimentos de óleo dinâmicos. (DONE)
+- **Correções do Sistema de Gestão**:
+  - **Exportação**: Adicionadas as categorias Horímetro, Combustível, Frotas e Operadores. (DONE)
+  - **Edição de Combustível**: Implementada a edição de registros de combustível. (DONE)
+  - **Cálculo de Consumo**: Corrigido o cálculo de litros na página de detalhes da máquina. (DONE)
+  - **Página da Obra**: Adicionados badges de estatísticas (horas, combustível) e corrigido o botão Medições de Máquinas. (DONE)
+- **Ferramenta de Conciliação Bancária**:
+  - Criada a página de conciliação com importação de extrato PDF e layout de duas colunas. (DONE)
+  - Implementado sistema de sugestão automática de correspondências por valor. (DONE)
+- **Suporte a NFS-e**:
+  - A página de importação agora tem abas separadas para NF-e (compras) e NFS-e (serviços). (DONE)
+  - Adicionados backend e UI para suportar a importação e listagem de notas de serviço. (DONE)
 
 **Earlier issues found/mentioned but not fixed**
    - Nenhum.
 
 **Known issue recurrence from previous fork**
-  - **Complexidade do **: O arquivo monolítico continua a crescer, agora com mais de 11.600 linhas após a adição de toda a lógica de importação de NF-e. A dívida técnica é crítica.
-  - **Recurrence count**: 5+
-  - **Status**: NOT STARTED (A refatoração completa está planejada como uma tarefa futura de prioridade P2).
+  - **Complexidade do **: A dívida técnica é **crítica**. O arquivo cresceu de ~11.6k para mais de 12.2k linhas nesta sessão, tornando a manutenção extremamente difícil.
+  - **Recurrence count**: 6+
+  - **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Integração com API Externa (SEFAZ)**: Uso da biblioteca  para se comunicar com o webservice .
-- **Manipulação de Certificados Digitais**: Uso da biblioteca  para carregar e validar arquivos de certificado digital PFX (A1).
-- **Rate Limiting e Cooldown**: Implementação de lógica no backend e frontend para limitar o número de chamadas de API e exibir um cronômetro de cooldown para o usuário.
-- **State Management (React)**: Uso de  e  para gerenciar estados complexos, como o cronômetro regressivo e o status de bloqueio na interface.
-- **Recuperação de Código**: O agente demonstrou capacidade de restaurar código previamente deletado a partir de seu contexto de memória.
+- **Download Autenticado de Arquivos**: Implementado um padrão no frontend para baixar arquivos de endpoints protegidos, usando  com cabeçalho de autorização para obter um  e criar uma URL de objeto para download.
+- **Extração de Texto de PDF**: Uso da biblioteca Python usage: pdfplumber [-h] [--structure | --structure-text]
+                  [--format {csv,json,text}] [--types TYPES [TYPES ...]]
+                  [--include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]]
+                  [--exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]]
+                  [--laparams LAPARAMS] [--precision PRECISION]
+                  [--pages PAGES [PAGES ...]] [--indent INDENT]
+                  [infile]
+
+positional arguments:
+  infile
+
+options:
+  -h, --help            show this help message and exit
+  --structure           Write the structure tree as JSON. All other arguments
+                        except --pages, --laparams, and --indent will be
+                        ignored
+  --structure-text      Write the structure tree as JSON including text
+                        contents. All other arguments except --pages,
+                        --laparams, and --indent will be ignored
+  --format {csv,json,text}
+  --types TYPES [TYPES ...]
+  --include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]
+                        Include *only* these object attributes in output.
+  --exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]
+                        Exclude these object attributes from output.
+  --laparams LAPARAMS
+  --precision PRECISION
+  --pages PAGES [PAGES ...]
+  --indent INDENT       Indent level for JSON pretty-printing. para ler o conteúdo de extratos bancários em PDF.
+- **Lógica de Sugestão (Frontend)**: Implementado um algoritmo no frontend para comparar e sugerir correspondências entre duas listas de dados com base em valores numéricos.
+- **Refatoração de Componentes (Reescrita)**: O componente  foi completamente reescrito para atender aos novos requisitos.
 
 **key DB schema**
-  - **nfe_certificates**: 
-  - **imported_nfe**: 
+  - **veiculo_abastecedor**: Adicionado campo .
+  - **combustivel**: Adicionado campo .
+  - **imported_nfse**: 
+  - **nfe_importadas**: (Schema inalterado)
 
 **changes in tech stack**
-  - Novas dependências Python: , .
+  - Nova dependência Python: usage: pdfplumber [-h] [--structure | --structure-text]
+                  [--format {csv,json,text}] [--types TYPES [TYPES ...]]
+                  [--include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]]
+                  [--exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]]
+                  [--laparams LAPARAMS] [--precision PRECISION]
+                  [--pages PAGES [PAGES ...]] [--indent INDENT]
+                  [infile]
+
+positional arguments:
+  infile
+
+options:
+  -h, --help            show this help message and exit
+  --structure           Write the structure tree as JSON. All other arguments
+                        except --pages, --laparams, and --indent will be
+                        ignored
+  --structure-text      Write the structure tree as JSON including text
+                        contents. All other arguments except --pages,
+                        --laparams, and --indent will be ignored
+  --format {csv,json,text}
+  --types TYPES [TYPES ...]
+  --include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]
+                        Include *only* these object attributes in output.
+  --exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]
+                        Exclude these object attributes from output.
+  --laparams LAPARAMS
+  --precision PRECISION
+  --pages PAGES [PAGES ...]
+  --indent INDENT       Indent level for JSON pretty-printing..
 
 **All files of reference**
 - **Criados**:
   - 
+- **Modificados/Reescritos**:
+  -  (extensivamente modificado)
   - 
-- **Modificados**:
+  -  (reescrito)
   - 
   - 
   - 
@@ -106,43 +178,48 @@ Nenhuma.
   - 
 
 **Areas that need refactoring**:
-- ****: **Prioridade Crítica**. A adição de ~600 linhas para a lógica de NF-e tornou o arquivo ainda mais insustentável. A refatoração é urgente.
-- ****: Com ~942 linhas, este novo componente já nasceu grande e complexo. A lógica do modal, a lista de certificados, o cronômetro e a lista de notas importadas poderiam ser divididas em componentes filhos.
+- ****: **Prioridade Crítica**. O arquivo é insustentável e propenso a erros.
+- ****: Agora com mais de 1200 linhas, precisa urgentemente ser dividido em subcomponentes.
+- ****: Apesar de ter sido reescrito, já tem mais de 1200 linhas e sua complexidade justifica a refatoração.
+- ****: Novo componente com mais de 860 linhas, já nasceu grande e pode ser dividido.
 
 **key api endpoints**
-- : Adiciona um novo CNPJ e certificado A1.
-- : Lista os certificados configurados.
-- : Remove um certificado.
-- : Dispara a consulta de NF-e na SEFAZ para um certificado específico.
-- : Lista as notas fiscais já importadas.
+- : Atualiza um registro de combustível.
+- : Faz upload e processa um extrato bancário PDF.
+- : Obtém as contas a pagar/receber para a conciliação.
+- : Dispara a consulta de NFS-e.
+- : Lista as notas de serviço importadas.
+- : Baixa o PDF da NFS-e.
+- : Baixa o XML da NFS-e.
 
 **Critical Info for New Agent**
-- **Erro 656 (Consumo Indevido)**: Este é o principal ponto de atenção no momento. É uma restrição externa da SEFAZ, não um bug interno. O sistema já está preparado para lidar com isso, mostrando um cronômetro de 1 hora. O usuário precisa ser instruído a aguardar.
-- **Mal-entendido e Recuperação de Código**: Houve um grave mal-entendido onde o agente deletou toda a funcionalidade de NF-e por engano. Isso causou frustração no usuário. O agente conseguiu restaurar tudo, mas é um ponto crítico de contexto sobre a interação recente.
-- **Requisição Repetida**: O usuário pediu para adicionar o modelo da máquina aos cards duas vezes na mesma sessão. A funcionalidade já havia sido implementada na primeira vez. Sempre verifique o estado atual da aplicação antes de iniciar uma nova implementação para evitar retrabalho.
+- **Prioridade Imediata**: A tarefa mais urgente é finalizar e testar a correção para o download de PDFs (Issue 1). O código já está escrito, basta validar.
+- **Problema do **: O monolito no backend está se tornando um risco significativo. Qualquer nova funcionalidade aumenta a complexidade e a chance de quebrar algo. A refatoração deve ser fortemente recomendada ao usuário.
+- **Padrão de Download**: O padrão de download autenticado implementado em  () deve ser reutilizado para qualquer download futuro de arquivos protegidos em todo o sistema.
 
 **documents and test reports created in this job**
-- 
+Nenhum.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Colocar para aparecer o modelo das maquinas...**: O usuário pediu novamente para mostrar o modelo da máquina. (Status: JÁ CONCLUÍDO)
-2.  **Escreva completamente o readme...**: O usuário solicitou a criação de um README detalhado. (Status: COMPLETED)
-3.  **coloque um limite de exportação de 3 exportações por dia...**: O usuário pediu para implementar o limite de consultas e o cronômetro de bloqueio. (Status: COMPLETED)
-4.  **A importação de notas está dando esse erro, é normal?...**: O usuário perguntou sobre o erro 656 Consumo Indevido. (Status: EXPLAINED)
-5.  **O sistema de Importação NF-e foi completamente restaurado!...**: O agente confirmou a restauração da funcionalidade. (Status: COMPLETED)
-6.  **ESTÁ ERRADO, NÃO LHE PEDIR ISSO...VOLTE TODO O SISTEMA DE NFe...**: O usuário, frustrado, esclareceu que o agente entendeu errado e pediu para restaurar a funcionalidade de NF-e que havia sido deletada. (Status: ACTIONED)
-7.  **nn, quero que exclua ar alterações aqui msm...**: O usuário pediu para o agente desfazer as modificações. (Status: MISUNDERSTOOD & ACTIONED)
-8.  **cancelar todas as alterações feitas depois do deploy d6jjom4**: O usuário pediu para reverter o código. (Status: ACTIONED)
-9.  **Adicione uma opção dentro da importação...usando o o sistema arquivei...**: O usuário pediu uma nova funcionalidade de consulta via Arquivei. (Status: CANCELLED)
-10. **o certificado é valido e a senha também e está dando esse erro**: O usuário relatou um erro de  ao validar o certificado. (Status: COMPLETED)
+1.  **Bug Report**: Download do PDF das notas não estão funcionando.... O usuário reportou o bug no download de PDFs. (Status: IN PROGRESS)
+2.  **Request**: No sistema de importação de NF, só está aparecendo notas de compra... crie 2 mostradores.... O usuário pediu suporte para NFS-e. (Status: COMPLETED)
+3.  **Request**: Adicionar conciliação automática que sugere correspondências...?. O usuário pediu a melhoria na conciliação. (Status: COMPLETED)
+4.  **Request**: Tem que haver uma ferramenta chamada conciliação.... O usuário pediu a criação da ferramenta de conciliação bancária. (Status: COMPLETED)
+5.  **Bug/Request**: Tem várias funções no sistema de gerenciamento que não estão aparecendo no exportar.... O usuário reportou uma série de bugs e pequenas features. (Status: COMPLETED)
+6.  **Request**: No cadastro de veiculo tanque.... O usuário pediu a reformulação completa do sistema de combustível. (Status: COMPLETED)
+7.  **Finish confirmation**: Agente finalizou a implementação anterior. (Status: NONE)
+8.  **Request**: ...deve ter opção de download da nota em PDF ou XML.... O usuário pediu a funcionalidade de download. (Status: COMPLETED, PENDING BUG FIX)
+9.  **User approval**: continuar e em seguida.... O usuário aprovou o plano do agente. (Status: ACTIONED)
+10. **Agent Plan**: Agente apresentou seu plano inicial. (Status: ACTIONED)
 
 **Project Health Check:**
-- **Broken**: Nenhum.
+- **Broken**: A funcionalidade de download de PDF está quebrada, mas uma correção está em andamento.
 - **Mocked**: Nenhum.
-- **Blocked**: A funcionalidade de importação de NF-e está temporariamente bloqueada pela API externa da SEFAZ.
+- **Blocked**: A funcionalidade de importação de NF-e da SEFAZ ainda pode estar bloqueada externamente devido ao rate limiting (), conforme descrito no handoff anterior.
 
 **3rd Party Integrations**
 - **PyNFe**: Para comunicação com o webservice da SEFAZ (NF-e).
+- **pdfplumber**: Nova dependência para extração de texto de arquivos PDF.
 - **Gemini (gemini-pro)**: Utilizado via  para sugestões de EPI. Usa a .
 
 **Testing status**
@@ -157,4 +234,4 @@ Nenhuma.
 - **Role**: 
 
 **What agent forgot to execute**
-- A tarefa original do fork anterior, de adicionar **máscaras de formatação para datas**, ainda não foi abordada e permanece como uma tarefa pendente.</analysis>
+- A tarefa original de adicionar **máscaras de formatação para datas** em inputs de texto ainda não foi abordada e continua pendente desde o início do fork.</analysis>
