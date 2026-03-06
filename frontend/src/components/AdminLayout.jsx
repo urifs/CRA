@@ -73,6 +73,7 @@ export const AdminLayout = () => {
     { path: "/administrativo/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/administrativo/a-pagar", icon: TrendingDown, label: "A Pagar" },
     { path: "/administrativo/a-receber", icon: TrendingUp, label: "A Receber" },
+    { path: "/administrativo/conciliacao", icon: ArrowLeftRight, label: "Conciliação" },
     { path: "/administrativo/alugueis", icon: Truck, label: "Aluguéis Máquinas" },
     { path: "/administrativo/imoveis", icon: Building2, label: "Imóveis" },
     { path: "/administrativo/importacao-nf", icon: FileInput, label: "Importação NF" },
