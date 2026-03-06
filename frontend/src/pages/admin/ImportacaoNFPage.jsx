@@ -1127,7 +1127,13 @@ export default function ImportacaoNFPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(`${API}/nfe/importadas/${showNFeDetail.id}/download-xml`, '_blank')}
+                  onClick={() => {
+                    if (showNFeDetail.tipo === "nfse") {
+                      handleDownloadNFSeXML(showNFeDetail.id, showNFeDetail.numero_nfse);
+                    } else {
+                      handleDownloadNFeXML(showNFeDetail.id, showNFeDetail.numero_nf);
+                    }
+                  }}
                   className="flex-1"
                 >
                   <FileDown size={16} className="mr-2" />
@@ -1136,11 +1142,17 @@ export default function ImportacaoNFPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(`${API}/nfe/importadas/${showNFeDetail.id}/download-pdf`, '_blank')}
+                  onClick={() => {
+                    if (showNFeDetail.tipo === "nfse") {
+                      handleDownloadNFSePDF(showNFeDetail.id, showNFeDetail.numero_nfse);
+                    } else {
+                      handleDownloadNFePDF(showNFeDetail.id, showNFeDetail.numero_nf);
+                    }
+                  }}
                   className="flex-1"
                 >
                   <FileText size={16} className="mr-2" />
-                  Download DANFE (PDF)
+                  Download {showNFeDetail.tipo === "nfse" ? "NFS-e" : "DANFE"} (PDF)
                 </Button>
               </div>
 
