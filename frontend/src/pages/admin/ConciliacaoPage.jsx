@@ -235,6 +235,138 @@ export default function ConciliacaoPage() {
     }
   };
 
+  // Função para gerar sugestões automáticas
+  const gerarSugestoes = () => {
+    setProcessandoSugestoes(true);
+    
+    const novasSugestoes = [];
+    const toleranciaPercent = tolerancia / 100;
+    
+    // Para cada item do extrato não conciliado
+    extratosFiltrados.forEach(extrato => {
+      const valorExtrato = extrato.valor || 0;
+      
+      // Buscar contas com valor igual ou similar
+      const contasMatch = contasFiltradas.filter(conta => {
+        if (conta.conciliado) return false;
+        
+        const valorConta = conta.valor || 0;
+        
+        // Verificar se tipos são compatíveis
+        // Saída no extrato = Conta a Pagar
+        // Entrada no extrato = Conta a Receber
+        const tipoCompativel = 
+          (extrato.tipo === "saida" && conta.tipo === "pagar") ||
+          (extrato.tipo === "entrada" && conta.tipo === "receber");
+        
+        if (!tipoCompativel) return false;
+        
+        // Verificar tolerância de valor
+        if (tolerancia === 0) {
+          // Valor exato
+          return Math.abs(valorExtrato - valorConta) < 0.01;
+        } else {
+          // Com tolerância
+          const diferenca = Math.abs(valorExtrato - valorConta);
+          const percentDiferenca = diferenca / Math.max(valorExtrato, valorConta);
+          return percentDiferenca <= toleranciaPercent;
+        }
+      });
+      
+      // Adicionar sugestões encontradas
+      contasMatch.forEach(conta => {
+        const valorExtrato = extrato.valor || 0;
+        const valorConta = conta.valor || 0;
+        const diferenca = Math.abs(valorExtrato - valorConta);
+        const percentMatch = 100 - (diferenca / Math.max(valorExtrato, valorConta) * 100);
+        
+        novasSugestoes.push({
+          id: `${extrato.id}-${conta.id}`,
+          extrato,
+          conta,
+          percentMatch: percentMatch.toFixed(1),
+          diferenca,
+          aceita: null // null = pendente, true = aceita, false = rejeitada
+        });
+      });
+    });
+    
+    // Ordenar por melhor match
+    novasSugestoes.sort((a, b) => parseFloat(b.percentMatch) - parseFloat(a.percentMatch));
+    
+    setSugestoes(novasSugestoes);
+    setShowSugestoes(true);
+    setProcessandoSugestoes(false);
+    
+    if (novasSugestoes.length === 0) {
+      toast.info("Nenhuma correspondência encontrada com os critérios atuais");
+    } else {
+      toast.success(`${novasSugestoes.length} sugestão(ões) encontrada(s)!`);
+    }
+  };
+
+  // Aceitar uma sugestão
+  const aceitarSugestao = async (sugestao) => {
+    setConciliando(true);
+    try {
+      await axios.post(`${API}/conciliacao/conciliar`, {
+        extrato_id: sugestao.extrato.id,
+        conta_id: sugestao.conta.id,
+        conta_tipo: sugestao.conta.tipo
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      
+      // Remover a sugestão da lista
+      setSugestoes(prev => prev.filter(s => s.id !== sugestao.id));
+      toast.success("Conciliação realizada!");
+      await fetchExtratosEContas(selectedContaBancaria);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao conciliar");
+    } finally {
+      setConciliando(false);
+    }
+  };
+
+  // Rejeitar uma sugestão
+  const rejeitarSugestao = (sugestaoId) => {
+    setSugestoes(prev => prev.filter(s => s.id !== sugestaoId));
+  };
+
+  // Aceitar todas as sugestões
+  const aceitarTodasSugestoes = async () => {
+    if (sugestoes.length === 0) return;
+    
+    if (!confirm(`Deseja conciliar automaticamente ${sugestoes.length} itens?`)) return;
+    
+    setConciliando(true);
+    let sucesso = 0;
+    let erros = 0;
+    
+    for (const sugestao of sugestoes) {
+      try {
+        await axios.post(`${API}/conciliacao/conciliar`, {
+          extrato_id: sugestao.extrato.id,
+          conta_id: sugestao.conta.id,
+          conta_tipo: sugestao.conta.tipo
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        sucesso++;
+      } catch {
+        erros++;
+      }
+    }
+    
+    setSugestoes([]);
+    setShowSugestoes(false);
+    await fetchExtratosEContas(selectedContaBancaria);
+    
+    if (erros > 0) {
+      toast.warning(`${sucesso} conciliações realizadas, ${erros} erros`);
+    } else {
+      toast.success(`${sucesso} conciliações realizadas com sucesso!`);
+    }
+    
+    setConciliando(false);
+  };
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
