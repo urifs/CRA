@@ -207,6 +207,7 @@ function App() {
             <Route path="centro-custo" element={<CentroCustoPage />} />
             <Route path="formas-pagamento" element={<FormasPagamentoPage />} />
             <Route path="contas-bancarias" element={<ContasBancariasPage />} />
+            <Route path="conciliacao" element={<ConciliacaoPage />} />
             <Route path="alugueis" element={<AlugueisPage />} />
             <Route path="imoveis" element={<ImoveisPage />} />
             <Route path="notificacoes" element={<AdminNotificacoesPage />} />
