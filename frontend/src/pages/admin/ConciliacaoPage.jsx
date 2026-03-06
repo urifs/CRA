@@ -45,7 +45,11 @@ import {
   Unlink,
   AlertCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sparkles,
+  Check,
+  X,
+  Zap
 } from "lucide-react";
 
 export default function ConciliacaoPage() {
