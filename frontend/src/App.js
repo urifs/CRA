@@ -51,6 +51,7 @@ import ImoveisPage from "@/pages/admin/ImoveisPage";
 import AdminNotificacoesPage from "@/pages/admin/NotificacoesPage";
 import ArmazenamentoPage from "@/pages/ArmazenamentoPage";
 import ContasBancariasPage from "@/pages/admin/ContasBancariasPage";
+import ConciliacaoPage from "@/pages/admin/ConciliacaoPage";
 
 // RH Pages
 import RHLayout from "@/components/RHLayout";
