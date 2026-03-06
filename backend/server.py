@@ -11738,6 +11738,227 @@ async def count_novas_nfes(current_user: dict = Depends(get_current_user)):
     return {"count": count}
 
 
+# ==================== NFS-e (NOTAS FISCAIS DE SERVIÇO) ====================
+
+@api_router.get("/nfse/importadas")
+async def list_nfses_importadas(
+    certificado_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Lista todas as NFS-e (Notas de Serviço) importadas"""
+    filtro = {}
+    if certificado_id:
+        filtro["certificado_id"] = certificado_id
+    if status:
+        filtro["status"] = status
+    
+    nfses = await db.nfse_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(500)
+    return nfses
+
+
+@api_router.get("/nfse/importadas/{nfse_id}")
+async def get_nfse_detail(nfse_id: str, current_user: dict = Depends(get_current_user)):
+    """Retorna detalhes de uma NFS-e específica"""
+    nfse = await db.nfse_importadas.find_one({"id": nfse_id}, {"_id": 0})
+    if not nfse:
+        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
+    return nfse
+
+
+@api_router.get("/nfse/importadas/{nfse_id}/download-xml")
+async def download_nfse_xml(nfse_id: str, current_user: dict = Depends(get_current_user)):
+    """Download do XML da NFS-e"""
+    nfse = await db.nfse_importadas.find_one({"id": nfse_id})
+    if not nfse:
+        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
+    
+    xml_base64 = nfse.get("xml_base64")
+    if not xml_base64:
+        raise HTTPException(status_code=404, detail="XML não disponível para esta NFS-e")
+    
+    try:
+        xml_content = base64.b64decode(xml_base64)
+        filename = f"NFSe_{nfse.get('numero_nfse', 'sem_numero')}.xml"
+        
+        return Response(
+            content=xml_content,
+            media_type="application/xml",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar XML: {str(e)}")
+
+
+@api_router.get("/nfse/importadas/{nfse_id}/download-pdf")
+async def download_nfse_pdf(nfse_id: str, current_user: dict = Depends(get_current_user)):
+    """Download do PDF da NFS-e"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+    from reportlab.lib.units import mm, cm
+    
+    nfse = await db.nfse_importadas.find_one({"id": nfse_id})
+    if not nfse:
+        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
+    
+    try:
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=1*cm, rightMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=14, spaceAfter=6, alignment=1)
+        subtitle_style = ParagraphStyle('Subtitle', parent=styles['Heading2'], fontSize=10, spaceAfter=4)
+        normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=8)
+        
+        elements = []
+        
+        # Cabeçalho
+        elements.append(Paragraph("NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e", title_style))
+        elements.append(Spacer(1, 10))
+        
+        # Info da NFS-e
+        nfse_info = [
+            ["NFS-e Nº:", str(nfse.get("numero_nfse", "-")), "Data Emissão:", nfse.get("data_emissao", "-")[:10] if nfse.get("data_emissao") else "-"],
+            ["Valor Total:", f"R$ {nfse.get('valor_servico', nfse.get('valor_total', 0)):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), "Status:", nfse.get("status", "-").upper()]
+        ]
+        
+        table = Table(nfse_info, colWidths=[3*cm, 5*cm, 3*cm, 5*cm])
+        table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 10))
+        
+        # Prestador
+        elements.append(Paragraph("<b>PRESTADOR DO SERVIÇO</b>", subtitle_style))
+        prestador_info = [
+            ["Razão Social:", nfse.get("prestador_nome", nfse.get("razao_social_prestador", "-"))],
+            ["CNPJ:", nfse.get("prestador_cnpj", nfse.get("cnpj_prestador", "-"))],
+        ]
+        table = Table(prestador_info, colWidths=[3*cm, 13*cm])
+        table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 10))
+        
+        # Tomador
+        elements.append(Paragraph("<b>TOMADOR DO SERVIÇO</b>", subtitle_style))
+        tomador_info = [
+            ["Razão Social:", nfse.get("tomador_nome", nfse.get("razao_social_tomador", "-"))],
+            ["CNPJ/CPF:", nfse.get("tomador_cnpj", nfse.get("cnpj_tomador", "-"))],
+        ]
+        table = Table(tomador_info, colWidths=[3*cm, 13*cm])
+        table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 10))
+        
+        # Discriminação do Serviço
+        elements.append(Paragraph("<b>DISCRIMINAÇÃO DO SERVIÇO</b>", subtitle_style))
+        discriminacao = nfse.get("descricao_servico", nfse.get("discriminacao", "Não informado"))
+        elements.append(Paragraph(discriminacao, normal_style))
+        
+        elements.append(Spacer(1, 15))
+        elements.append(Paragraph(f"<i>Documento gerado pelo Sistema CRA em {datetime.now().strftime('%d/%m/%Y %H:%M')}</i>", normal_style))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        filename = f"NFSe_{nfse.get('numero_nfse', 'sem_numero')}.pdf"
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar PDF: {str(e)}")
+
+
+@api_router.post("/nfse/importadas/{nfse_id}/criar-conta-pagar")
+async def criar_conta_pagar_from_nfse(nfse_id: str, current_user: dict = Depends(get_current_user)):
+    """Cria uma conta a pagar a partir de uma NFS-e"""
+    nfse = await db.nfse_importadas.find_one({"id": nfse_id}, {"_id": 0})
+    if not nfse:
+        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
+    
+    if nfse.get("conta_pagar_id"):
+        raise HTTPException(status_code=400, detail="Esta NFS-e já possui uma conta a pagar vinculada")
+    
+    # Criar conta a pagar
+    conta_pagar_id = str(uuid.uuid4())
+    data_emissao = nfse.get("data_emissao", datetime.now(timezone.utc).isoformat())
+    
+    conta_pagar_doc = {
+        "id": conta_pagar_id,
+        "descricao": f"NFS-e {nfse.get('numero_nfse', '')} - {nfse.get('prestador_nome', nfse.get('razao_social_prestador', 'Serviço'))}",
+        "valor": nfse.get("valor_servico", nfse.get("valor_total", 0)),
+        "data_vencimento": data_emissao[:10] if isinstance(data_emissao, str) else datetime.now().strftime("%Y-%m-%d"),
+        "data_emissao": data_emissao[:10] if isinstance(data_emissao, str) else datetime.now().strftime("%Y-%m-%d"),
+        "status": "pendente",
+        "favorecido": nfse.get("prestador_nome", nfse.get("razao_social_prestador", "")),
+        "cnpj_favorecido": nfse.get("prestador_cnpj", nfse.get("cnpj_prestador", "")),
+        "nfse_id": nfse_id,
+        "numero_nfse": nfse.get("numero_nfse", ""),
+        "origem": "nfse",
+        "created_by": current_user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.contas_pagar.insert_one(conta_pagar_doc)
+    
+    # Atualizar NFS-e com referência à conta a pagar
+    await db.nfse_importadas.update_one(
+        {"id": nfse_id},
+        {"$set": {"conta_pagar_id": conta_pagar_id, "status": "processada"}}
+    )
+    
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="conta_pagar",
+        entity_id=conta_pagar_doc["id"],
+        entity_name=conta_pagar_doc["descricao"],
+        details=f"Conta a pagar criada a partir da NFS-e {nfse.get('numero_nfse', '')}",
+        module="Financeiro"
+    )
+    
+    return {
+        "message": "Conta a pagar criada com sucesso",
+        "conta_pagar_id": conta_pagar_doc["id"],
+        "nfse_id": nfse_id
+    }
+
+
+@api_router.patch("/nfse/importadas/{nfse_id}/status")
+async def update_nfse_status(nfse_id: str, status: str = Body(..., embed=True), current_user: dict = Depends(get_current_user)):
+    """Atualiza o status de uma NFS-e importada"""
+    if status not in ["nova", "processada", "ignorada"]:
+        raise HTTPException(status_code=400, detail="Status inválido")
+    
+    result = await db.nfse_importadas.update_one(
+        {"id": nfse_id},
+        {"$set": {"status": status}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
+    
+    return {"message": "Status atualizado"}
+
+
 # ==================== CONCILIAÇÃO BANCÁRIA ====================
 
 @api_router.get("/conciliacao")
