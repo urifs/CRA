@@ -137,21 +137,28 @@ export default function ImportacaoNFPage() {
 
   useEffect(() => {
     fetchData();
-  }, [selectedCertificado, selectedStatus]);
+  }, [selectedCertificado, selectedStatus, tipoNota]);
 
   const fetchData = async () => {
     try {
-      const [certsRes, nfesRes] = await Promise.all([
+      const [certsRes, nfesRes, nfsesRes] = await Promise.all([
         axios.get(`${API}/nfe/certificados`),
         axios.get(`${API}/nfe/importadas`, {
           params: {
             certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
             status: selectedStatus !== "todos" ? selectedStatus : undefined
           }
-        })
+        }),
+        axios.get(`${API}/nfse/importadas`, {
+          params: {
+            certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
+            status: selectedStatus !== "todos" ? selectedStatus : undefined
+          }
+        }).catch(() => ({ data: [] }))
       ]);
       setCertificados(certsRes.data);
       setNfesImportadas(nfesRes.data);
+      setNfsesImportadas(nfsesRes.data || []);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
