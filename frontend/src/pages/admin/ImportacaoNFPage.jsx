@@ -320,6 +320,47 @@ export default function ImportacaoNFPage() {
     }
   };
 
+  // Função para download autenticado de arquivos
+  const handleDownload = async (url, filename, tipo = "application/pdf") => {
+    try {
+      const response = await axios.get(url, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+      
+      const blob = new Blob([response.data], { type: tipo });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Erro no download:", error);
+      toast.error("Erro ao fazer download do arquivo");
+    }
+  };
+
+  const handleDownloadNFeXML = (nfeId, numeroNfe) => {
+    handleDownload(`${API}/nfe/importadas/${nfeId}/download-xml`, `NFe_${numeroNfe}.xml`, "application/xml");
+  };
+
+  const handleDownloadNFePDF = (nfeId, numeroNfe) => {
+    handleDownload(`${API}/nfe/importadas/${nfeId}/download-pdf`, `DANFE_NFe_${numeroNfe}.pdf`, "application/pdf");
+  };
+
+  const handleDownloadNFSeXML = (nfseId, numeroNfse) => {
+    handleDownload(`${API}/nfse/importadas/${nfseId}/download-xml`, `NFSe_${numeroNfse}.xml`, "application/xml");
+  };
+
+  const handleDownloadNFSePDF = (nfseId, numeroNfse) => {
+    handleDownload(`${API}/nfse/importadas/${nfseId}/download-pdf`, `NFSe_${numeroNfse}.pdf`, "application/pdf");
+  };
+
   const handleUpdateStatus = async (nfeId, status) => {
     try {
       await axios.patch(`${API}/nfe/importadas/${nfeId}/status`, { status });
