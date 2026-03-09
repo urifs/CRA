@@ -478,28 +478,34 @@ export default function ConciliacaoPage() {
         </div>
       </div>
 
-      {/* Seleção de Conta Bancária */}
+      {/* Seleção de Centro de Custo */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1">
-              <Label>Conta Bancária</Label>
+              <Label className="flex items-center gap-2">
+                <Briefcase size={16} className="text-[#D4A000]" />
+                Centro de Custo
+              </Label>
               <Select 
-                value={selectedContaBancaria} 
-                onValueChange={(value) => {
-                  setSelectedContaBancaria(value);
-                  fetchExtratosEContas(value);
-                }}
+                value={selectedCentroCusto} 
+                onValueChange={setSelectedCentroCusto}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione uma conta..." />
+                  <SelectValue placeholder="Selecione um centro de custo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {contasBancarias.map(conta => (
-                    <SelectItem key={conta.id} value={conta.id}>
+                  <SelectItem value="todos">
+                    <div className="flex items-center gap-2">
+                      <Briefcase size={14} />
+                      Todos os Centros de Custo
+                    </div>
+                  </SelectItem>
+                  {centrosCusto.map(centro => (
+                    <SelectItem key={centro.id} value={centro.id}>
                       <div className="flex items-center gap-2">
-                        <Building2 size={14} />
-                        {conta.banco} - Ag: {conta.agencia} / CC: {conta.conta}
+                        <Briefcase size={14} />
+                        {centro.nome}
                       </div>
                     </SelectItem>
                   ))}
@@ -509,8 +515,7 @@ export default function ConciliacaoPage() {
             
             <Button 
               variant="outline" 
-              onClick={() => fetchExtratosEContas(selectedContaBancaria)}
-              disabled={!selectedContaBancaria}
+              onClick={() => fetchExtratosEContas()}
             >
               <RefreshCw size={18} className="mr-2" />
               Atualizar
