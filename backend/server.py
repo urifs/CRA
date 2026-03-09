@@ -7393,6 +7393,15 @@ EXPORT_CATEGORIES_V2 = {
             ]
         },
         {
+            "id": "relatorio_conta_bancaria",
+            "label": "Relatório por Conta Bancária",
+            "icon": "dollar",
+            "subcategories": [
+                {"id": "rel_conta_bancaria_pagar", "label": "Contas a Pagar por Banco", "description": "Filtre por conta bancária e status"},
+                {"id": "rel_conta_bancaria_receber", "label": "Contas a Receber por Banco", "description": "Filtre por conta bancária e status"},
+            ]
+        },
+        {
             "id": "usuarios_admin",
             "label": "Usuários",
             "icon": "users",
