@@ -4138,6 +4138,11 @@ class ContaReceberCreate(BaseModel):
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
     
+    # Parcelamento
+    total_parcelas: Optional[int] = 1
+    numero_parcela: Optional[int] = 1
+    parcela_origem_id: Optional[str] = None  # ID da primeira parcela (para agrupar)
+    
     # Datas
     data_emissao: Optional[str] = None
     data_vencimento: str
@@ -4147,6 +4152,8 @@ class ContaReceberCreate(BaseModel):
     # Classificação
     plano_conta_id: Optional[str] = None
     plano_conta_nome: Optional[str] = None
+    subconta_id: Optional[str] = None
+    subconta_nome: Optional[str] = None
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None  # Frota associada
     frota_nome: Optional[str] = None
@@ -4154,9 +4161,11 @@ class ContaReceberCreate(BaseModel):
     # Pagamento
     forma_pagamento: str = "dinheiro"
     conta_movimento: Optional[str] = None
+    conta_bancaria_id: Optional[str] = None
+    conta_bancaria_nome: Optional[str] = None
     
     # Status
-    status: str = "em_aberto"  # em_aberto, quitada, cancelada, perdida
+    status: str = "em_aberto"  # em_aberto, quitada, cancelada, perdida, parcial
     
     # Faturamento
     faturamento: Optional[str] = None
@@ -4177,17 +4186,26 @@ class ContaReceberResponse(BaseModel):
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
     valor_final: Optional[float] = None
+    # Parcelamento
+    total_parcelas: Optional[int] = 1
+    numero_parcela: Optional[int] = 1
+    parcela_origem_id: Optional[str] = None
+    # Datas
     data_emissao: Optional[str] = None
     data_vencimento: str
     data_recebimento: Optional[str] = None
     data_cancelamento: Optional[str] = None
     plano_conta_id: Optional[str] = None
     plano_conta_nome: Optional[str] = None
+    subconta_id: Optional[str] = None
+    subconta_nome: Optional[str] = None
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
     forma_pagamento: str
     conta_movimento: Optional[str] = None
+    conta_bancaria_id: Optional[str] = None
+    conta_bancaria_nome: Optional[str] = None
     status: str
     faturamento: Optional[str] = None
     observacoes: Optional[str] = None
