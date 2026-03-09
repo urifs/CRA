@@ -76,7 +76,16 @@ export const removeFormat = (value) => {
 
 // Máscara para valores monetários (R$ 1.500,00)
 export const formatCurrency = (value) => {
-  if (!value) return "";
+  if (value === null || value === undefined || value === "") return "";
+  
+  // Se já é um número, formata diretamente
+  if (typeof value === 'number') {
+    const reais = value.toFixed(2);
+    const parts = reais.split(".");
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const decPart = parts[1];
+    return `R$ ${intPart},${decPart}`;
+  }
   
   // Remove tudo que não é número
   let numbers = value.toString().replace(/\D/g, "");
