@@ -203,6 +203,69 @@ export default function ImportacaoNFPage() {
     }
   };
 
+  // Função para extrair dados do XML automaticamente
+  const handleXmlExtract = async (file) => {
+    if (!file) return;
+    
+    setExtractingXml(true);
+    setXmlFileName(file.name);
+    
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target.result.split(",")[1];
+      
+      try {
+        // Chamar API para extrair dados
+        const response = await axios.post(`${API}/nf/extrair-xml`, {
+          xml_base64: base64
+        });
+        
+        const dados = response.data;
+        
+        if (dados.sucesso) {
+          // Preencher o formulário com os dados extraídos
+          setManualForm(prev => ({
+            ...prev,
+            tipo_nota: dados.tipo_nota || "nfe",
+            numero_nota: dados.numero_nota || "",
+            serie: dados.serie || "1",
+            chave_acesso: dados.chave_acesso || "",
+            data_emissao: dados.data_emissao || new Date().toISOString().split("T")[0],
+            cnpj_emitente: dados.cnpj_emitente || "",
+            razao_social_emitente: dados.razao_social_emitente || "",
+            uf_emitente: dados.uf_emitente || "",
+            cnpj_destinatario: dados.cnpj_destinatario || "",
+            razao_social_destinatario: dados.razao_social_destinatario || "",
+            valor_total: dados.valor_total ? dados.valor_total.toFixed(2) : "",
+            valor_produtos: dados.valor_produtos ? dados.valor_produtos.toFixed(2) : "",
+            valor_frete: dados.valor_frete ? dados.valor_frete.toFixed(2) : "0",
+            valor_desconto: dados.valor_desconto ? dados.valor_desconto.toFixed(2) : "0",
+            xml_base64: base64
+          }));
+          
+          // Salvar itens extraídos
+          if (dados.itens && dados.itens.length > 0) {
+            setXmlItens(dados.itens);
+          }
+          
+          toast.success(`Dados extraídos com sucesso! ${dados.itens?.length || 0} itens encontrados.`);
+        } else {
+          // Se falhou na extração, só salva o XML
+          setManualForm(prev => ({...prev, xml_base64: base64}));
+          toast.error(dados.erro || "Não foi possível extrair os dados do XML. Preencha manualmente.");
+        }
+      } catch (error) {
+        console.error("Erro ao extrair XML:", error);
+        // Mesmo com erro, salva o XML
+        setManualForm(prev => ({...prev, xml_base64: base64}));
+        toast.error("Erro ao processar XML. Preencha os campos manualmente.");
+      } finally {
+        setExtractingXml(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
