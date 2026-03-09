@@ -914,6 +914,101 @@ export default function ImportacaoNFPage() {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
+              
+              {/* SEÇÃO PRIORITÁRIA: Upload de XML com extração automática */}
+              <div className="border-2 border-dashed border-blue-400 rounded-lg p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="text-center mb-4">
+                  <FileText className="mx-auto h-12 w-12 text-blue-500 mb-2" />
+                  <h3 className="text-lg font-semibold text-blue-700">📥 Importar via XML</h3>
+                  <p className="text-sm text-gray-600">
+                    Faça upload do arquivo XML da nota fiscal e os campos serão preenchidos automaticamente
+                  </p>
+                </div>
+                
+                <div className="flex justify-center">
+                  <label className="cursor-pointer">
+                    <div className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                      extractingXml 
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}>
+                      {extractingXml ? (
+                        <>
+                          <Loader2 className="animate-spin" size={18} />
+                          Processando XML...
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={18} />
+                          Selecionar Arquivo XML
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept=".xml"
+                      className="hidden"
+                      disabled={extractingXml}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) handleXmlExtract(file);
+                      }}
+                    />
+                  </label>
+                </div>
+                
+                {xmlFileName && (
+                  <div className="mt-3 text-center">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                      <CheckCircle size={14} />
+                      {xmlFileName}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Mostrar itens extraídos */}
+                {xmlItens.length > 0 && (
+                  <div className="mt-4 p-3 bg-white rounded-lg border border-blue-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      📦 {xmlItens.length} Itens extraídos do XML:
+                    </h4>
+                    <div className="max-h-32 overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="p-1 text-left">Descrição</th>
+                            <th className="p-1 text-right">Qtd</th>
+                            <th className="p-1 text-right">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {xmlItens.slice(0, 5).map((item, idx) => (
+                            <tr key={idx} className="border-t">
+                              <td className="p-1 truncate max-w-[200px]" title={item.descricao}>{item.descricao}</td>
+                              <td className="p-1 text-right">{item.quantidade}</td>
+                              <td className="p-1 text-right">R$ {item.valor_total?.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                          {xmlItens.length > 5 && (
+                            <tr className="border-t bg-gray-50">
+                              <td colSpan={3} className="p-1 text-center text-gray-500">
+                                ... e mais {xmlItens.length - 5} itens
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-gray-200"></div>
+                <span className="text-sm text-gray-500 font-medium">ou preencha manualmente</span>
+                <div className="flex-1 h-px bg-gray-200"></div>
+              </div>
+              
               {/* Tipo de Nota */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
