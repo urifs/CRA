@@ -75,7 +75,7 @@ export default function AdminDashboardPage() {
   const fetchFilterData = async () => {
     try {
       const [ccRes, pcRes, cpRes, crRes] = await Promise.all([
-        axios.get(`${API}/admin/centro-custo`),
+        axios.get(`${API}/admin/centros-custo`),
         axios.get(`${API}/admin/plano-contas`),
         axios.get(`${API}/admin/contas-pagar`),
         axios.get(`${API}/admin/contas-receber`)
