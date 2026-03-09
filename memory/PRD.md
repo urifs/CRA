@@ -1,6 +1,35 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 09/03/2026 (Sessão 25)
+
+### Nova Funcionalidade: Quitação Parcial de Contas
+- ✅ **Contas a Pagar**: Implementada quitação parcial
+  - Modal de pagamento reformulado com opções "Quitar Total" e "Pagamento Parcial"
+  - Quando "Pagamento Parcial" é selecionado, campo de valor é exibido
+  - Histórico completo de todos os pagamentos realizados com data, valor e observação
+  - Novo status "parcial" (amarelo) para contas parcialmente pagas
+  - Filtro de status atualizado com opção "Parcialmente Pagas"
+  - Botão de histórico (ícone de relógio) exibido para contas com pagamentos
+  
+- ✅ **Contas a Receber**: Implementada quitação parcial (mesma funcionalidade)
+  - Modal de recebimento com opções "Quitar Total" e "Recebimento Parcial"
+  - Histórico de recebimentos
+  - Novo status "parcial" (amarelo)
+  - Filtro "Parcialmente Recebidas"
+  - Botão de histórico para visualizar recebimentos
+
+- ✅ **Backend atualizado**:
+  - `PATCH /api/admin/contas-pagar/{id}/quitar` - Aceita `valor_pago` para pagamento parcial
+  - `PATCH /api/admin/contas-receber/{id}/quitar` - Aceita `valor_recebido` para recebimento parcial
+  - Novos campos: `valor_pago`, `valor_recebido`, `saldo_restante`, `pagamentos[]`, `recebimentos[]`
+  - Atualização automática de saldo da conta bancária proporcional ao valor pago/recebido
+  - Status automático: "parcial" quando há saldo restante, "quitada" quando totalmente pago
+
+- ✅ **Totais atualizados**: Cards de "Total em Aberto" agora consideram o saldo restante das contas parciais
+
+---
+
 ## Changelog - 06/03/2026 (Sessão 24)
 
 ### Bug Fix: Download de PDF (NF-e e NFS-e) - P0
