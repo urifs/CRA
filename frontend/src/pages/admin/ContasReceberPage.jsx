@@ -651,17 +651,18 @@ export default function ContasReceberPage() {
         onSuccess={handleNovoCadastroSuccess}
       />
 
-      {/* Modal de Quitação */}
+      {/* Modal de Quitação com Opção Parcial */}
       <Dialog open={showQuitarModal} onOpenChange={setShowQuitarModal}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle2 size={20} />
-              Quitar Recebimento
+              Registrar Recebimento
             </DialogTitle>
           </DialogHeader>
           {quitarContaInfo && (
             <div className="space-y-4">
+              {/* Info da Conta */}
               <div className="bg-gray-50 p-3 rounded-lg space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Cliente:</span>
@@ -672,14 +673,75 @@ export default function ContasReceberPage() {
                   <span className="font-medium truncate max-w-[200px]">{quitarContaInfo.descricao}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Valor:</span>
-                  <span className="font-bold text-green-600">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
+                  <span className="text-gray-500">Valor Total:</span>
+                  <span className="font-bold text-gray-700">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
                 </div>
+                {(quitarContaInfo.valor_recebido > 0) && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Já Recebido:</span>
+                      <span className="font-medium text-green-600">{formatCurrency(quitarContaInfo.valor_recebido)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-gray-500 font-medium">Saldo Restante:</span>
+                      <span className="font-bold text-blue-600">{formatCurrency((quitarContaInfo.valor_final || quitarContaInfo.valor) - quitarContaInfo.valor_recebido)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Vencimento:</span>
                   <span className="font-medium">{new Date(quitarContaInfo.data_vencimento).toLocaleDateString('pt-BR')}</span>
                 </div>
               </div>
+              
+              {/* Tipo de Recebimento */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign size={16} className="text-green-600" />
+                  Tipo de Recebimento
+                </label>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button"
+                    variant={tipoRecebimento === "total" ? "default" : "outline"}
+                    className={tipoRecebimento === "total" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
+                    onClick={() => {
+                      setTipoRecebimento("total");
+                      const saldo = (quitarContaInfo.valor_final || quitarContaInfo.valor) - (quitarContaInfo.valor_recebido || 0);
+                      setValorRecebimento(formatCurrencyInput(saldo.toFixed(2)));
+                    }}
+                  >
+                    Quitar Total
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant={tipoRecebimento === "parcial" ? "default" : "outline"}
+                    className={tipoRecebimento === "parcial" ? "flex-1 bg-yellow-600 hover:bg-yellow-700" : "flex-1"}
+                    onClick={() => setTipoRecebimento("parcial")}
+                  >
+                    Recebimento Parcial
+                  </Button>
+                </div>
+              </div>
+
+              {/* Valor do Recebimento (só mostra se for parcial) */}
+              {tipoRecebimento === "parcial" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <DollarSign size={16} className="text-yellow-600" />
+                    Valor do Recebimento *
+                  </label>
+                  <Input
+                    value={valorRecebimento}
+                    onChange={(e) => setValorRecebimento(formatCurrencyInput(e.target.value))}
+                    placeholder="R$ 0,00"
+                    className="text-lg font-semibold"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Saldo restante: {formatCurrency((quitarContaInfo.valor_final || quitarContaInfo.valor) - (quitarContaInfo.valor_recebido || 0))}
+                  </p>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
@@ -692,9 +754,6 @@ export default function ContasReceberPage() {
                   onChange={(e) => setDataRecebimento(e.target.value)}
                   className="w-full"
                 />
-                <p className="text-xs text-gray-500">
-                  Informe a data em que o recebimento foi realizado
-                </p>
               </div>
 
               <div className="space-y-2">
@@ -714,20 +773,104 @@ export default function ContasReceberPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500">
-                  A movimentação será registrada no extrato desta conta
-                </p>
+              </div>
+
+              {/* Observação */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Observação (opcional)</label>
+                <Textarea
+                  value={observacaoRecebimento}
+                  onChange={(e) => setObservacaoRecebimento(e.target.value)}
+                  placeholder="Ex: Recebimento referente a parcela 1/3"
+                  rows={2}
+                />
               </div>
 
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={() => setShowQuitarModal(false)} className="flex-1">
                   Cancelar
                 </Button>
-                <Button onClick={handleQuitar} className="flex-1 bg-green-600 hover:bg-green-700">
+                <Button 
+                  onClick={handleQuitar} 
+                  className={tipoRecebimento === "total" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1 bg-yellow-600 hover:bg-yellow-700"}
+                >
                   <CheckCircle2 size={16} className="mr-2" />
-                  Confirmar Recebimento
+                  {tipoRecebimento === "total" ? "Quitar Total" : "Registrar Recebimento"}
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Histórico de Recebimentos */}
+      <Dialog open={showHistoricoRecebimentos} onOpenChange={setShowHistoricoRecebimentos}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <History size={20} />
+              Histórico de Recebimentos
+            </DialogTitle>
+          </DialogHeader>
+          {quitarContaInfo && (
+            <div className="space-y-4">
+              {/* Resumo */}
+              <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Descrição:</span>
+                  <span className="font-medium truncate max-w-[250px]">{quitarContaInfo.descricao}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Valor Total:</span>
+                  <span className="font-bold">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total Recebido:</span>
+                  <span className="font-bold text-green-600">{formatCurrency(quitarContaInfo.valor_recebido || 0)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="text-gray-500 font-medium">Saldo Restante:</span>
+                  <span className="font-bold text-blue-600">
+                    {formatCurrency((quitarContaInfo.valor_final || quitarContaInfo.valor) - (quitarContaInfo.valor_recebido || 0))}
+                  </span>
+                </div>
+              </div>
+
+              {/* Lista de Recebimentos */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Recebimentos Realizados</h4>
+                {quitarContaInfo.recebimentos && quitarContaInfo.recebimentos.length > 0 ? (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {quitarContaInfo.recebimentos.map((r, idx) => (
+                      <div key={r.id || idx} className="bg-white border rounded-lg p-3 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">
+                            {new Date(r.data).toLocaleDateString('pt-BR')}
+                          </span>
+                          <span className="font-bold text-green-600">{formatCurrency(r.valor)}</span>
+                        </div>
+                        {r.observacao && (
+                          <p className="text-xs text-gray-500">{r.observacao}</p>
+                        )}
+                        <p className="text-xs text-gray-400">
+                          Por: {r.created_by} em {new Date(r.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4">Nenhum recebimento registrado</p>
+                )}
+              </div>
+
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowHistoricoRecebimentos(false)} 
+                className="w-full"
+              >
+                Fechar
+              </Button>
             </div>
           )}
         </DialogContent>
