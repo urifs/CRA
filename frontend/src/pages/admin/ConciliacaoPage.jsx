@@ -464,8 +464,8 @@ export default function ConciliacaoPage() {
             className="hidden"
           />
           <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importando || !selectedContaBancaria}
+            onClick={() => setShowImportModal(true)}
+            disabled={importando}
             className="bg-[#D4A000] hover:bg-yellow-600"
           >
             {importando ? (
