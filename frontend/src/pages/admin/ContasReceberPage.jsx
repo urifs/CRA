@@ -62,6 +62,11 @@ export default function ContasReceberPage() {
   const [observacaoRecebimento, setObservacaoRecebimento] = useState("");
   const [showHistoricoRecebimentos, setShowHistoricoRecebimentos] = useState(false);
   
+  // Estados para parcelamento
+  const [isParcelado, setIsParcelado] = useState(false);
+  const [totalParcelas, setTotalParcelas] = useState("1");
+  const [intervaloDias, setIntervaloDias] = useState("30");
+  
   const [formData, setFormData] = useState({
     cliente_nome: "", documento: "", numero_doc: "", descricao: "",
     valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
