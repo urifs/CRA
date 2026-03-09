@@ -655,17 +655,18 @@ export default function ContasPagarPage() {
         onSuccess={handleNovoCadastroSuccess}
       />
 
-      {/* Modal de Quitação */}
+      {/* Modal de Quitação com Opção Parcial */}
       <Dialog open={showQuitarModal} onOpenChange={setShowQuitarModal}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle2 size={20} />
-              Quitar Conta
+              Registrar Pagamento
             </DialogTitle>
           </DialogHeader>
           {quitarContaInfo && (
             <div className="space-y-4">
+              {/* Info da Conta */}
               <div className="bg-gray-50 p-3 rounded-lg space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Fornecedor:</span>
@@ -676,14 +677,75 @@ export default function ContasPagarPage() {
                   <span className="font-medium truncate max-w-[200px]">{quitarContaInfo.descricao}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Valor:</span>
-                  <span className="font-bold text-red-600">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
+                  <span className="text-gray-500">Valor Total:</span>
+                  <span className="font-bold text-gray-700">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
                 </div>
+                {(quitarContaInfo.valor_pago > 0) && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Já Pago:</span>
+                      <span className="font-medium text-green-600">{formatCurrency(quitarContaInfo.valor_pago)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-gray-500 font-medium">Saldo Restante:</span>
+                      <span className="font-bold text-red-600">{formatCurrency((quitarContaInfo.valor_final || quitarContaInfo.valor) - quitarContaInfo.valor_pago)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Vencimento:</span>
                   <span className="font-medium">{new Date(quitarContaInfo.data_vencimento).toLocaleDateString('pt-BR')}</span>
                 </div>
               </div>
+              
+              {/* Tipo de Pagamento */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign size={16} className="text-green-600" />
+                  Tipo de Pagamento
+                </label>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button"
+                    variant={tipoPagamento === "total" ? "default" : "outline"}
+                    className={tipoPagamento === "total" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1"}
+                    onClick={() => {
+                      setTipoPagamento("total");
+                      const saldo = (quitarContaInfo.valor_final || quitarContaInfo.valor) - (quitarContaInfo.valor_pago || 0);
+                      setValorPagamento(formatCurrencyInput(saldo.toFixed(2)));
+                    }}
+                  >
+                    Quitar Total
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant={tipoPagamento === "parcial" ? "default" : "outline"}
+                    className={tipoPagamento === "parcial" ? "flex-1 bg-yellow-600 hover:bg-yellow-700" : "flex-1"}
+                    onClick={() => setTipoPagamento("parcial")}
+                  >
+                    Pagamento Parcial
+                  </Button>
+                </div>
+              </div>
+
+              {/* Valor do Pagamento (só mostra se for parcial) */}
+              {tipoPagamento === "parcial" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <DollarSign size={16} className="text-yellow-600" />
+                    Valor do Pagamento *
+                  </label>
+                  <Input
+                    value={valorPagamento}
+                    onChange={(e) => setValorPagamento(formatCurrencyInput(e.target.value))}
+                    placeholder="R$ 0,00"
+                    className="text-lg font-semibold"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Saldo restante: {formatCurrency((quitarContaInfo.valor_final || quitarContaInfo.valor) - (quitarContaInfo.valor_pago || 0))}
+                  </p>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
@@ -696,9 +758,6 @@ export default function ContasPagarPage() {
                   onChange={(e) => setDataPagamento(e.target.value)}
                   className="w-full"
                 />
-                <p className="text-xs text-gray-500">
-                  Informe a data em que o pagamento foi realizado
-                </p>
               </div>
 
               <div className="space-y-2">
@@ -718,20 +777,104 @@ export default function ContasPagarPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500">
-                  A movimentação será registrada no extrato desta conta
-                </p>
+              </div>
+
+              {/* Observação */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Observação (opcional)</label>
+                <Textarea
+                  value={observacaoPagamento}
+                  onChange={(e) => setObservacaoPagamento(e.target.value)}
+                  placeholder="Ex: Pagamento referente a parcela 1/3"
+                  rows={2}
+                />
               </div>
 
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={() => setShowQuitarModal(false)} className="flex-1">
                   Cancelar
                 </Button>
-                <Button onClick={handleQuitar} className="flex-1 bg-green-600 hover:bg-green-700">
+                <Button 
+                  onClick={handleQuitar} 
+                  className={tipoPagamento === "total" ? "flex-1 bg-green-600 hover:bg-green-700" : "flex-1 bg-yellow-600 hover:bg-yellow-700"}
+                >
                   <CheckCircle2 size={16} className="mr-2" />
-                  Confirmar Quitação
+                  {tipoPagamento === "total" ? "Quitar Total" : "Registrar Pagamento"}
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Histórico de Pagamentos */}
+      <Dialog open={showHistoricoPagamentos} onOpenChange={setShowHistoricoPagamentos}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <History size={20} />
+              Histórico de Pagamentos
+            </DialogTitle>
+          </DialogHeader>
+          {quitarContaInfo && (
+            <div className="space-y-4">
+              {/* Resumo */}
+              <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Descrição:</span>
+                  <span className="font-medium truncate max-w-[250px]">{quitarContaInfo.descricao}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Valor Total:</span>
+                  <span className="font-bold">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total Pago:</span>
+                  <span className="font-bold text-green-600">{formatCurrency(quitarContaInfo.valor_pago || 0)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="text-gray-500 font-medium">Saldo Restante:</span>
+                  <span className="font-bold text-red-600">
+                    {formatCurrency((quitarContaInfo.valor_final || quitarContaInfo.valor) - (quitarContaInfo.valor_pago || 0))}
+                  </span>
+                </div>
+              </div>
+
+              {/* Lista de Pagamentos */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Pagamentos Realizados</h4>
+                {quitarContaInfo.pagamentos && quitarContaInfo.pagamentos.length > 0 ? (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {quitarContaInfo.pagamentos.map((p, idx) => (
+                      <div key={p.id || idx} className="bg-white border rounded-lg p-3 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">
+                            {new Date(p.data).toLocaleDateString('pt-BR')}
+                          </span>
+                          <span className="font-bold text-green-600">{formatCurrency(p.valor)}</span>
+                        </div>
+                        {p.observacao && (
+                          <p className="text-xs text-gray-500">{p.observacao}</p>
+                        )}
+                        <p className="text-xs text-gray-400">
+                          Por: {p.created_by} em {new Date(p.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4">Nenhum pagamento registrado</p>
+                )}
+              </div>
+
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowHistoricoPagamentos(false)} 
+                className="w-full"
+              >
+                Fechar
+              </Button>
             </div>
           )}
         </DialogContent>
