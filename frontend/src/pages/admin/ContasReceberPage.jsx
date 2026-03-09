@@ -373,6 +373,7 @@ export default function ContasReceberPage() {
           <SelectContent className="z-[9999]">
             <SelectItem value="all">Todos Status</SelectItem>
             <SelectItem value="em_aberto">Em Aberto</SelectItem>
+            <SelectItem value="parcial">Parcialmente Recebidas</SelectItem>
             <SelectItem value="quitada">Quitadas</SelectItem>
             <SelectItem value="cancelada">Canceladas</SelectItem>
           </SelectContent>
