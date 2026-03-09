@@ -169,7 +169,7 @@ export default function ConciliacaoPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (!selectedContaBancaria) {
+    if (!selectedContaBancariaImport) {
       toast.error("Selecione uma conta bancária primeiro");
       return;
     }
@@ -182,7 +182,7 @@ export default function ConciliacaoPage() {
     setImportando(true);
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("conta_bancaria_id", selectedContaBancaria);
+    formData.append("conta_bancaria_id", selectedContaBancariaImport);
     
     try {
       const response = await axios.post(`${API}/conciliacao/importar-extrato`, formData, {
@@ -193,7 +193,8 @@ export default function ConciliacaoPage() {
       });
       
       toast.success(`${response.data.count || 0} movimentações importadas!`);
-      await fetchExtratosEContas(selectedContaBancaria);
+      setShowImportModal(false);
+      await fetchExtratosEContas();
     } catch (error) {
       console.error("Erro ao importar extrato:", error);
       toast.error(error.response?.data?.detail || "Erro ao importar extrato PDF");
