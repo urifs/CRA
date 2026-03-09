@@ -4,6 +4,7 @@ import { API, useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, Search, CreditCard, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Filter, Paperclip, UserPlus, Landmark
+  Plus, Search, CreditCard, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Filter, Paperclip, UserPlus, Landmark, History, DollarSign, CircleDot
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
