@@ -1,6 +1,30 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 09/03/2026 (Sessão 26 - Continuação)
+
+### Nova Funcionalidade: Parcelamento de Contas a Pagar/Receber
+- ✅ **Opção de Parcelamento**: Checkbox "Parcelar esta conta" no modal de criação
+- ✅ **Seletor de Parcelas**: Dropdown com opções de 2x até 60x
+- ✅ **Intervalo entre Parcelas**: 7, 14, 15, 21, 28, 30, 45, 60 ou 90 dias
+- ✅ **Resumo Automático**: Mostra valor de cada parcela antes de salvar
+- ✅ **Identificação Visual**: Badge "Parcela X/Y" na lista de contas
+- ✅ **Agrupamento**: ID de origem (`parcela_origem_id`) para vincular parcelas
+
+#### Novos Endpoints
+- `POST /api/admin/contas-pagar/parcelado` - Cria múltiplas parcelas de conta a pagar
+- `POST /api/admin/contas-receber/parcelado` - Cria múltiplas parcelas de conta a receber
+
+#### Como Funciona
+1. Ao criar uma nova conta, marque "Parcelar esta conta"
+2. Selecione o número de parcelas (ex: 2x, 3x, 4x...)
+3. Defina o intervalo entre vencimentos (default: 30 dias)
+4. A data de vencimento no formulário será a do primeiro vencimento
+5. O sistema divide o valor total automaticamente
+6. Cada parcela é criada com descrição "Descrição - Parcela X/Y"
+
+---
+
 ## Changelog - 09/03/2026 (Sessão 26)
 
 ### Nova Funcionalidade: Emissão de Notas Fiscais (NF-e e NFS-e)
