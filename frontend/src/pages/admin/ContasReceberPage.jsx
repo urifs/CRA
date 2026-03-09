@@ -155,19 +155,58 @@ export default function ContasReceberPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const dataToSend = {
-        ...formData,
-        valor: parseCurrency(formData.valor) || 0,
-        valor_desconto: parseCurrency(formData.valor_desconto) || 0,
-        valor_juros: parseCurrency(formData.valor_juros) || 0,
-        valor_multa: parseCurrency(formData.valor_multa) || 0,
-      };
-      if (editingConta) {
-        await axios.put(`${API}/admin/contas-receber/${editingConta.id}`, dataToSend);
-        toast.success("Conta atualizada!");
+      const valorTotal = parseCurrency(formData.valor) || 0;
+      
+      // Se for parcelado e não for edição
+      if (isParcelado && !editingConta && parseInt(totalParcelas) > 1) {
+        const dataParcelado = {
+          cliente_id: formData.cliente_id,
+          cliente_nome: formData.cliente_nome,
+          documento: formData.documento,
+          numero_doc: formData.numero_doc,
+          descricao: formData.descricao,
+          valor_total: valorTotal,
+          valor_desconto: parseCurrency(formData.valor_desconto) || 0,
+          valor_juros: parseCurrency(formData.valor_juros) || 0,
+          valor_multa: parseCurrency(formData.valor_multa) || 0,
+          data_emissao: formData.data_emissao,
+          data_primeiro_vencimento: formData.data_vencimento,
+          total_parcelas: parseInt(totalParcelas),
+          intervalo_dias: parseInt(intervaloDias),
+          plano_conta_id: formData.plano_conta_id,
+          plano_conta_nome: formData.plano_conta_nome,
+          subconta_id: formData.subconta_id,
+          subconta_nome: formData.subconta_nome,
+          centro_custo: formData.centro_custo,
+          frota_id: formData.frota_id,
+          frota_nome: formData.frota_nome,
+          forma_pagamento: formData.forma_pagamento,
+          conta_movimento: formData.conta_movimento,
+          conta_bancaria_id: formData.conta_bancaria_id,
+          conta_bancaria_nome: formData.conta_bancaria_nome,
+          faturamento: formData.faturamento,
+          observacoes: formData.observacoes
+        };
+        
+        const response = await axios.post(`${API}/admin/contas-receber/parcelado`, dataParcelado);
+        toast.success(`${response.data.parcelas.length} parcelas criadas com sucesso!`);
       } else {
-        await axios.post(`${API}/admin/contas-receber`, dataToSend);
-        toast.success("Conta cadastrada!");
+        // Conta única ou edição
+        const dataToSend = {
+          ...formData,
+          valor: valorTotal,
+          valor_desconto: parseCurrency(formData.valor_desconto) || 0,
+          valor_juros: parseCurrency(formData.valor_juros) || 0,
+          valor_multa: parseCurrency(formData.valor_multa) || 0,
+        };
+        
+        if (editingConta) {
+          await axios.put(`${API}/admin/contas-receber/${editingConta.id}`, dataToSend);
+          toast.success("Conta atualizada!");
+        } else {
+          await axios.post(`${API}/admin/contas-receber`, dataToSend);
+          toast.success("Conta cadastrada!");
+        }
       }
       fetchContas(); closeModal();
     } catch (error) { toast.error(error.response?.data?.detail || "Erro ao salvar"); }
