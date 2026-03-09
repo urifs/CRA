@@ -4056,6 +4056,11 @@ class ContaPagarCreate(BaseModel):
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
     
+    # Parcelamento
+    total_parcelas: Optional[int] = 1
+    numero_parcela: Optional[int] = 1
+    parcela_origem_id: Optional[str] = None  # ID da primeira parcela (para agrupar)
+    
     # Datas
     data_emissao: Optional[str] = None
     data_vencimento: str
@@ -4065,6 +4070,8 @@ class ContaPagarCreate(BaseModel):
     # Classificação
     plano_conta_id: Optional[str] = None
     plano_conta_nome: Optional[str] = None
+    subconta_id: Optional[str] = None
+    subconta_nome: Optional[str] = None
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None  # Frota associada
     frota_nome: Optional[str] = None
@@ -4072,9 +4079,11 @@ class ContaPagarCreate(BaseModel):
     # Pagamento
     forma_pagamento: str = "dinheiro"  # dinheiro, pix, cartao_debito, cartao_credito, boleto, cheque, transferencia
     conta_movimento: Optional[str] = None
+    conta_bancaria_id: Optional[str] = None
+    conta_bancaria_nome: Optional[str] = None
     
     # Status
-    status: str = "em_aberto"  # em_aberto, quitada, cancelada, perdida
+    status: str = "em_aberto"  # em_aberto, quitada, cancelada, perdida, parcial
     
     observacoes: Optional[str] = None
 
