@@ -4658,33 +4658,33 @@ async def get_admin_dashboard(current_user: dict = Depends(get_current_user)):
     # Em aberto
     contas_pagar_abertas = await db.contas_pagar.find({"status": "em_aberto"}, {"_id": 0}).to_list(5000)
     total_pagar_aberto = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas)
-    total_pagar_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas if c.get("data_vencimento", "") >= inicio_mes)
-    total_pagar_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas if c.get("data_vencimento", "") >= inicio_ano)
-    lista_pagar_vencidas = [c for c in contas_pagar_abertas if c.get("data_vencimento", "") < hoje_str]
+    total_pagar_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas if (c.get("data_vencimento") or "") >= inicio_mes)
+    total_pagar_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_abertas if (c.get("data_vencimento") or "") >= inicio_ano)
+    lista_pagar_vencidas = [c for c in contas_pagar_abertas if (c.get("data_vencimento") or "") < hoje_str and c.get("data_vencimento")]
     contas_pagar_vencidas = len(lista_pagar_vencidas)
     total_pagar_vencidas_valor = sum(c.get("valor_final") or c.get("valor", 0) for c in lista_pagar_vencidas)
     
     # Quitadas
     contas_pagar_quitadas = await db.contas_pagar.find({"status": "quitada"}, {"_id": 0}).to_list(5000)
     total_pagar_quitado = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas)
-    total_pagar_quitado_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas if c.get("data_pagamento", c.get("data_vencimento", "")) >= inicio_mes)
-    total_pagar_quitado_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas if c.get("data_pagamento", c.get("data_vencimento", "")) >= inicio_ano)
+    total_pagar_quitado_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas if (c.get("data_pagamento") or c.get("data_vencimento") or "") >= inicio_mes)
+    total_pagar_quitado_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_pagar_quitadas if (c.get("data_pagamento") or c.get("data_vencimento") or "") >= inicio_ano)
     
     # ===== CONTAS A RECEBER =====
     # Em aberto
     contas_receber_abertas = await db.contas_receber.find({"status": "em_aberto"}, {"_id": 0}).to_list(5000)
     total_receber_aberto = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas)
-    total_receber_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas if c.get("data_vencimento", "") >= inicio_mes)
-    total_receber_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas if c.get("data_vencimento", "") >= inicio_ano)
-    lista_receber_vencidas = [c for c in contas_receber_abertas if c.get("data_vencimento", "") < hoje_str]
+    total_receber_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas if (c.get("data_vencimento") or "") >= inicio_mes)
+    total_receber_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_abertas if (c.get("data_vencimento") or "") >= inicio_ano)
+    lista_receber_vencidas = [c for c in contas_receber_abertas if (c.get("data_vencimento") or "") < hoje_str and c.get("data_vencimento")]
     contas_receber_vencidas = len(lista_receber_vencidas)
     total_receber_vencidas_valor = sum(c.get("valor_final") or c.get("valor", 0) for c in lista_receber_vencidas)
     
     # Quitadas/Recebidas
     contas_receber_quitadas = await db.contas_receber.find({"status": "quitada"}, {"_id": 0}).to_list(5000)
     total_receber_quitado = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas)
-    total_receber_quitado_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas if c.get("data_recebimento", c.get("data_vencimento", "")) >= inicio_mes)
-    total_receber_quitado_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas if c.get("data_recebimento", c.get("data_vencimento", "")) >= inicio_ano)
+    total_receber_quitado_mes = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas if (c.get("data_recebimento") or c.get("data_vencimento") or "") >= inicio_mes)
+    total_receber_quitado_ano = sum(c.get("valor_final") or c.get("valor", 0) for c in contas_receber_quitadas if (c.get("data_recebimento") or c.get("data_vencimento") or "") >= inicio_ano)
     
     # ===== ORDENS DE SERVIÇO COM TIPO FINANCEIRO =====
     os_a_pagar = await db.ordens_servico.find({"tipo_financeiro": "a_pagar", "status": {"$ne": "cancelada"}}, {"_id": 0}).to_list(1000)
