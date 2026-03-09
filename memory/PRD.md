@@ -3,6 +3,21 @@
 
 ## Changelog - 09/03/2026 (Sessão 25)
 
+### Reformulação da Página de Conciliação Bancária
+- ✅ **Seletor de Centro de Custo**: Substituído o seletor de conta bancária por um seletor de centro de custo
+  - As contas do sistema são filtradas pelo centro de custo selecionado
+  - Opção "Todos os Centros de Custo" para ver todas as contas
+- ✅ **Extrato Bancário (Quadro Esquerdo)**: Exibe as movimentações importadas de todos os PDFs
+  - Filtros de tipo (Todos/Entradas/Saídas) e de data (início/fim)
+- ✅ **Contas do Sistema (Quadro Direito)**: Mostra contas a pagar e receber
+  - **Filtro de tipo de conta**: Todas, Quitadas, A Pagar, A Receber
+  - Campo de busca por descrição
+  - Filtro por centro de custo funcional
+- ✅ **Modal de Importação de Extrato**: Ao clicar em "Importar Extrato PDF"
+  - Abre modal para selecionar primeiro a conta bancária
+  - Depois permite selecionar o arquivo PDF para upload
+- ✅ **Novo Endpoint**: `GET /api/conciliacao/extratos` - Lista todos os extratos importados (sem filtro por conta)
+
 ### Nova Funcionalidade: Quitação Parcial de Contas
 - ✅ **Contas a Pagar**: Implementada quitação parcial
   - Modal de pagamento reformulado com opções "Quitar Total" e "Pagamento Parcial"
