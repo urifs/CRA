@@ -4893,6 +4893,8 @@ async def update_conta_pagar(id: str, data: ContaPagarCreate, current_user: dict
 class QuitarContaRequest(BaseModel):
     data_pagamento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None
+    valor_pago: Optional[float] = None  # Se None, quita o valor total
+    observacao: Optional[str] = None
 
 @api_router.patch("/admin/contas-pagar/{id}/quitar")
 async def quitar_conta_pagar(id: str, data: Optional[QuitarContaRequest] = None, current_user: dict = Depends(get_current_user)):
@@ -4904,10 +4906,55 @@ async def quitar_conta_pagar(id: str, data: Optional[QuitarContaRequest] = None,
     data_pagamento = data.data_pagamento if data and data.data_pagamento else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     conta_bancaria_id = data.conta_bancaria_id if data else None
     
-    update_data = {
-        "status": "quitada",
-        "data_pagamento": data_pagamento
+    # Calcular valores
+    valor_total = conta.get("valor_final") or conta.get("valor", 0)
+    valor_ja_pago = conta.get("valor_pago", 0) or 0
+    saldo_restante_atual = valor_total - valor_ja_pago
+    
+    # Valor a pagar nesta quitação
+    valor_pago_agora = data.valor_pago if data and data.valor_pago is not None else saldo_restante_atual
+    
+    # Validar se o valor não excede o saldo restante
+    if valor_pago_agora > saldo_restante_atual + 0.01:  # Margem para arredondamento
+        raise HTTPException(status_code=400, detail=f"Valor pago ({valor_pago_agora:.2f}) excede o saldo restante ({saldo_restante_atual:.2f})")
+    
+    # Calcular novo saldo
+    novo_valor_pago = valor_ja_pago + valor_pago_agora
+    novo_saldo_restante = valor_total - novo_valor_pago
+    
+    # Determinar status
+    if novo_saldo_restante <= 0.01:  # Considera quitada com margem de arredondamento
+        novo_status = "quitada"
+        novo_saldo_restante = 0
+    else:
+        novo_status = "parcial"
+    
+    # Criar registro de pagamento no histórico
+    pagamento_registro = {
+        "id": str(uuid.uuid4()),
+        "data": data_pagamento,
+        "valor": valor_pago_agora,
+        "conta_bancaria_id": conta_bancaria_id,
+        "observacao": data.observacao if data else None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.get("name", current_user.get("email", ""))
     }
+    
+    # Buscar histórico existente ou criar novo
+    pagamentos_historico = conta.get("pagamentos", []) or []
+    pagamentos_historico.append(pagamento_registro)
+    
+    update_data = {
+        "status": novo_status,
+        "valor_pago": novo_valor_pago,
+        "saldo_restante": novo_saldo_restante,
+        "pagamentos": pagamentos_historico,
+        "data_ultimo_pagamento": data_pagamento
+    }
+    
+    # Se quitou totalmente, registrar data de pagamento final
+    if novo_status == "quitada":
+        update_data["data_pagamento"] = data_pagamento
     
     # Se informou conta bancária, vincular e atualizar saldo
     if conta_bancaria_id:
@@ -4915,16 +4962,25 @@ async def quitar_conta_pagar(id: str, data: Optional[QuitarContaRequest] = None,
         # Buscar conta bancária e diminuir o saldo (saída de dinheiro)
         conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
         if conta_bancaria:
-            valor_conta = conta.get("valor_final") or conta.get("valor", 0)
-            novo_saldo = (conta_bancaria.get("saldo_atual", 0) or 0) - valor_conta
+            novo_saldo_banco = (conta_bancaria.get("saldo_atual", 0) or 0) - valor_pago_agora
             await db.contas_bancarias.update_one(
                 {"id": conta_bancaria_id},
-                {"$set": {"saldo_atual": novo_saldo, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                {"$set": {"saldo_atual": novo_saldo_banco, "updated_at": datetime.now(timezone.utc).isoformat()}}
             )
     
     await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - QUITADA em {data_pagamento}")
-    return {"message": "Conta quitada com sucesso", "data_pagamento": data_pagamento}
+    
+    tipo_quitacao = "QUITADA" if novo_status == "quitada" else f"PAGAMENTO PARCIAL R$ {valor_pago_agora:.2f}"
+    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - {tipo_quitacao} em {data_pagamento}")
+    
+    return {
+        "message": "Pagamento registrado com sucesso",
+        "data_pagamento": data_pagamento,
+        "valor_pago": valor_pago_agora,
+        "valor_total_pago": novo_valor_pago,
+        "saldo_restante": novo_saldo_restante,
+        "status": novo_status
+    }
 
 @api_router.patch("/admin/contas-pagar/{id}/cancelar")
 async def cancelar_conta_pagar(id: str, current_user: dict = Depends(get_current_user)):
