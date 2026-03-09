@@ -49,7 +49,8 @@ import {
   Sparkles,
   Check,
   X,
-  Zap
+  Zap,
+  Briefcase
 } from "lucide-react";
 
 export default function ConciliacaoPage() {
@@ -65,9 +66,13 @@ export default function ConciliacaoPage() {
   const [contas, setContas] = useState([]);
   const [selectedConta, setSelectedConta] = useState(null);
   
-  // Contas bancárias
+  // Contas bancárias (usado apenas para importação)
   const [contasBancarias, setContasBancarias] = useState([]);
-  const [selectedContaBancaria, setSelectedContaBancaria] = useState("");
+  const [selectedContaBancariaImport, setSelectedContaBancariaImport] = useState("");
+  
+  // Centros de Custo
+  const [centrosCusto, setCentrosCusto] = useState([]);
+  const [selectedCentroCusto, setSelectedCentroCusto] = useState("todos");
   
   // Filtros do extrato
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
@@ -90,6 +95,9 @@ export default function ConciliacaoPage() {
   const [showSugestoes, setShowSugestoes] = useState(false);
   const [processandoSugestoes, setProcessandoSugestoes] = useState(false);
   const [tolerancia, setTolerancia] = useState(0); // 0 = exato, 1 = 1%, 2 = 2%, etc.
+  
+  // Modal de seleção de conta bancária para importação
+  const [showImportModal, setShowImportModal] = useState(false);
   
   const fileInputRef = useRef(null);
   const token = localStorage.getItem("token");
