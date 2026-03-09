@@ -12090,6 +12090,14 @@ async def list_all_extratos_importados(current_user: dict = Depends(get_current_
     return extratos
 
 
+@api_router.delete("/conciliacao/extratos")
+async def limpar_extratos(current_user: dict = Depends(get_current_user)):
+    """Limpa todos os itens de extrato importados que não foram conciliados"""
+    result = await db.extratos_bancarios.delete_many({"conciliado": {"$ne": True}})
+    await create_audit_log(current_user, "delete", "extratos_bancarios", "all", f"Limpou {result.deleted_count} extratos não conciliados")
+    return {"message": f"{result.deleted_count} itens de extrato removidos", "count": result.deleted_count}
+
+
 @api_router.get("/conciliacao/extratos/{conta_bancaria_id}")
 async def list_extratos_importados(conta_bancaria_id: str, current_user: dict = Depends(get_current_user)):
     """Lista todos os itens de extrato importados para uma conta bancária"""
