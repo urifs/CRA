@@ -112,19 +112,18 @@ export default function ConciliacaoPage() {
 
   const fetchData = async () => {
     try {
-      const [contasBancariasRes, conciliacoesRes] = await Promise.all([
+      const [contasBancariasRes, conciliacoesRes, centrosCustoRes] = await Promise.all([
         axios.get(`${API}/admin/contas-bancarias?ativo=true`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API}/conciliacao`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
+        axios.get(`${API}/conciliacao`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] })),
+        axios.get(`${API}/centros-custo`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
       ]);
       
       setContasBancarias(contasBancariasRes.data);
       setConciliacoes(conciliacoesRes.data || []);
+      setCentrosCusto(centrosCustoRes.data || []);
       
-      // Se tiver uma conta bancária selecionada, buscar extratos
-      if (contasBancariasRes.data.length > 0) {
-        setSelectedContaBancaria(contasBancariasRes.data[0].id);
-        await fetchExtratosEContas(contasBancariasRes.data[0].id);
-      }
+      // Carregar todos os extratos e contas
+      await fetchExtratosEContas();
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dados");
@@ -133,10 +132,10 @@ export default function ConciliacaoPage() {
     }
   };
 
-  const fetchExtratosEContas = async (contaBancariaId) => {
+  const fetchExtratosEContas = async () => {
     try {
       const [extratosRes, contasPagarRes, contasReceberRes] = await Promise.all([
-        axios.get(`${API}/conciliacao/extratos/${contaBancariaId}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] })),
+        axios.get(`${API}/conciliacao/extratos`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] })),
         axios.get(`${API}/admin/contas-pagar`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/admin/contas-receber`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
