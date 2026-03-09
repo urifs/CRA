@@ -4101,17 +4101,26 @@ class ContaPagarResponse(BaseModel):
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
     valor_final: Optional[float] = None
+    # Parcelamento
+    total_parcelas: Optional[int] = 1
+    numero_parcela: Optional[int] = 1
+    parcela_origem_id: Optional[str] = None
+    # Datas
     data_emissao: Optional[str] = None
     data_vencimento: str
     data_pagamento: Optional[str] = None
     data_cancelamento: Optional[str] = None
     plano_conta_id: Optional[str] = None
     plano_conta_nome: Optional[str] = None
+    subconta_id: Optional[str] = None
+    subconta_nome: Optional[str] = None
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
     forma_pagamento: str
     conta_movimento: Optional[str] = None
+    conta_bancaria_id: Optional[str] = None
+    conta_bancaria_nome: Optional[str] = None
     status: str
     observacoes: Optional[str] = None
     created_at: str
