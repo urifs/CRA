@@ -7980,24 +7980,36 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("end_date", "-")[:10] if item.get("end_date") else "-")
                 ])
         elif category == "contas_pagar":
-            headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Status", True), cell("Fornecedor", True)]
+            headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Quitação", True), cell("Status", True), cell("Fornecedor", True)]
             table_data = [headers]
             for item in data:
+                data_quitacao = item.get("data_pagamento", "-")
+                if data_quitacao and data_quitacao != "-" and len(str(data_quitacao)) >= 10:
+                    data_quitacao = str(data_quitacao)[:10]
+                else:
+                    data_quitacao = "-"
                 table_data.append([
                     cell(item.get("descricao", "-")),
                     cell(f"R$ {item.get('valor', 0):.2f}"),
                     cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
+                    cell(data_quitacao),
                     cell(item.get("status", "-").upper()),
                     cell(item.get("fornecedor_nome", "-"))
                 ])
         elif category == "contas_receber":
-            headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Status", True), cell("Cliente", True)]
+            headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Recebimento", True), cell("Status", True), cell("Cliente", True)]
             table_data = [headers]
             for item in data:
+                data_recebimento = item.get("data_recebimento", "-")
+                if data_recebimento and data_recebimento != "-" and len(str(data_recebimento)) >= 10:
+                    data_recebimento = str(data_recebimento)[:10]
+                else:
+                    data_recebimento = "-"
                 table_data.append([
                     cell(item.get("descricao", "-")),
                     cell(f"R$ {item.get('valor', 0):.2f}"),
                     cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
+                    cell(data_recebimento),
                     cell(item.get("status", "-").upper()),
                     cell(item.get("cliente_nome", "-"))
                 ])
