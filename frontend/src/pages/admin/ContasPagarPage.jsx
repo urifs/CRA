@@ -596,7 +596,7 @@ export default function ContasPagarPage() {
             
             {/* Seção de Parcelamento - apenas para novas contas */}
             {!editingConta && (
-              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50/50">
+              <div className="border-2 border-blue-300 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-blue-100">
                 <div className="flex items-center gap-3 mb-3">
                   <input
                     type="checkbox"
@@ -609,10 +609,10 @@ export default function ContasPagarPage() {
                         setIntervaloDias("30");
                       }
                     }}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
-                  <label htmlFor="isParcelado" className="text-sm font-medium text-gray-700">
-                    Parcelar esta conta
+                  <label htmlFor="isParcelado" className="text-sm font-semibold text-blue-700 cursor-pointer">
+                    📋 Parcelar esta conta em múltiplas vezes
                   </label>
                 </div>
                 
