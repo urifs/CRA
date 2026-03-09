@@ -1040,6 +1040,71 @@ export default function ConciliacaoPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de Importação de Extrato */}
+      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="text-[#D4A000]" size={20} />
+              Importar Extrato Bancário
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Building2 size={16} className="text-gray-500" />
+                Conta Bancária *
+              </Label>
+              <Select 
+                value={selectedContaBancariaImport} 
+                onValueChange={setSelectedContaBancariaImport}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a conta do extrato..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasBancarias.map(conta => (
+                    <SelectItem key={conta.id} value={conta.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 size={14} />
+                        {conta.banco} - Ag: {conta.agencia} / CC: {conta.conta}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                O extrato será vinculado a esta conta bancária
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowImportModal(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (!selectedContaBancariaImport) {
+                    toast.error("Selecione uma conta bancária");
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
+                disabled={!selectedContaBancariaImport || importando}
+                className="flex-1 bg-[#D4A000] hover:bg-yellow-600"
+              >
+                {importando ? (
+                  <Loader2 className="animate-spin mr-2" size={18} />
+                ) : (
+                  <Upload size={18} className="mr-2" />
+                )}
+                Selecionar PDF
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
