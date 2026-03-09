@@ -615,9 +615,22 @@ export default function ConciliacaoPage() {
                 <FileText className="text-yellow-600" size={20} />
                 Extrato Bancário
               </CardTitle>
-              <Badge variant="outline" className="bg-yellow-100">
-                {extratosFiltrados.length} itens
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-yellow-100">
+                  {extratosFiltrados.length} itens
+                </Badge>
+                {extratoItems.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLimparExtrato}
+                    className="text-red-600 hover:bg-red-50 h-7 px-2"
+                    title="Limpar extrato"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
+              </div>
             </div>
             
             {/* Filtros do Extrato */}
