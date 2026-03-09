@@ -485,6 +485,10 @@ export default function ImportacaoNFPage() {
             <FileText size={16} className="mr-2" />
             Notas Importadas ({nfesImportadas.length + nfsesImportadas.length})
           </TabsTrigger>
+          <TabsTrigger value="manual" data-testid="tab-manual">
+            <Upload size={16} className="mr-2" />
+            Importação Manual
+          </TabsTrigger>
           <TabsTrigger value="config" data-testid="tab-config">
             <Settings size={16} className="mr-2" />
             CNPJs/Certificados ({certificados.length})
