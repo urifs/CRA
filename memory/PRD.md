@@ -1,6 +1,35 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 09/03/2026 (Sessão 27 - Continuação)
+
+### Melhoria: Extração Automática de Dados do XML na Importação Manual
+- ✅ **Novo endpoint**: `POST /api/nf/extrair-xml` - Extrai dados de arquivo XML de NF-e
+- ✅ **Upload destacado**: Seção em destaque no topo para upload de XML
+- ✅ **Preenchimento automático**: Ao fazer upload do XML, todos os campos são preenchidos automaticamente:
+  - Número da Nota, Série, Chave de Acesso
+  - Data de Emissão
+  - CNPJ e Razão Social do Emitente
+  - CNPJ e Razão Social do Destinatário
+  - Valores: Total, Produtos, Frete, Desconto
+- ✅ **Exibição de itens**: Mostra os itens extraídos do XML em uma tabela
+- ✅ **Fallback manual**: Se a extração falhar, permite preenchimento manual
+- ✅ **Testado com XML de NF-e**: Funcionamento verificado via API
+
+#### Como usar
+1. Acesse "Importação NF" > "Importação Manual"
+2. Clique em "Selecionar Arquivo XML"
+3. Aguarde o processamento - os campos serão preenchidos automaticamente
+4. Verifique os dados e selecione Centro de Custo/Plano de Contas
+5. Clique em "Importar Nota"
+
+### Melhoria: Visual do Parcelamento em Contas a Pagar/Receber
+- ✅ **Destaque visual melhorado**: Fundo gradiente e borda mais grossa
+- ✅ **Checkbox maior**: Mais fácil de visualizar e clicar
+- ✅ **Texto com ícone**: 📋 para identificação rápida
+
+---
+
 ## Changelog - 09/03/2026 (Sessão 27)
 
 ### Melhoria: Filtro "Todas" no Relatório por Conta Bancária
