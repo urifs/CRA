@@ -486,7 +486,14 @@ export default function ContasPagarPage() {
                   >
                     <td className="p-3 font-mono">{c.numero}</td>
                     <td className="p-3">{c.fornecedor_nome || "-"}</td>
-                    <td className="p-3 max-w-[200px] truncate">{c.descricao}</td>
+                    <td className="p-3 max-w-[200px]">
+                      <div className="truncate">{c.descricao}</div>
+                      {c.total_parcelas > 1 && (
+                        <span className="text-xs text-blue-600 font-medium">
+                          Parcela {c.numero_parcela}/{c.total_parcelas}
+                        </span>
+                      )}
+                    </td>
                     <td className="p-3">{c.documento || "-"}</td>
                     <td className="p-3">{c.data_emissao ? new Date(c.data_emissao).toLocaleDateString('pt-BR') : "-"}</td>
                     <td className="p-3">{new Date(c.data_vencimento).toLocaleDateString('pt-BR')}</td>
