@@ -123,6 +123,42 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
+  // Exportar relatório por conta bancária
+  const exportRelatorioPorContaBancaria = async () => {
+    if (!relContaBancaria) {
+      toast.error("Selecione uma conta bancária");
+      return;
+    }
+    
+    setExportingRelatorio(true);
+    try {
+      const response = await axios.get(
+        `${API}/export/relatorio-conta-bancaria?conta_bancaria_id=${relContaBancaria}&tipo=${relTipoConta}&status=${relStatusConta}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        }
+      );
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const tipoLabel = relTipoConta === "pagar" ? "Pagar" : "Receber";
+      link.setAttribute('download', `CRA_Relatorio_${tipoLabel}_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Relatório exportado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao exportar relatório:", error);
+      toast.error("Erro ao exportar relatório");
+    } finally {
+      setExportingRelatorio(false);
+    }
+  };
+
   // Buscar itens individuais de uma subcategoria
   const fetchSubcategoryItems = async (subcategoryId) => {
     // Mapear subcategoria para coleção correta
