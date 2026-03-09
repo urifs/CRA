@@ -1068,6 +1068,105 @@ export default function ExportPage({ module = "gerenciamento" }) {
         })}
       </div>
 
+      {/* Relatório por Conta Bancária - apenas no módulo administrativo */}
+      {module === "administrativo" && (
+        <Card className="mt-6 border-2 border-amber-200">
+          <CardHeader className="bg-amber-50 border-b border-amber-200 pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Landmark className="text-amber-600" size={20} />
+              Relatório por Conta Bancária
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Exporte um relatório de contas a pagar ou receber filtrado por conta bancária e status.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Seleção de Conta Bancária */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Building2 size={14} className="text-gray-500" />
+                  Conta Bancária *
+                </label>
+                <Select value={relContaBancaria} onValueChange={setRelContaBancaria}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contasBancarias.map(conta => (
+                      <SelectItem key={conta.id} value={conta.id}>
+                        {conta.banco} - Ag: {conta.agencia} / CC: {conta.conta}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Tipo de Conta */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <DollarSign size={14} className="text-gray-500" />
+                  Tipo de Conta
+                </label>
+                <Select value={relTipoConta} onValueChange={setRelTipoConta}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pagar">
+                      <div className="flex items-center gap-2">
+                        <TrendingDown size={14} className="text-red-500" />
+                        Contas a Pagar
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="receber">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp size={14} className="text-green-500" />
+                        Contas a Receber
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Status */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Filter size={14} className="text-gray-500" />
+                  Status
+                </label>
+                <Select value={relStatusConta} onValueChange={setRelStatusConta}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="pendente">Pendentes / Em Aberto</SelectItem>
+                    <SelectItem value="quitada">Quitadas</SelectItem>
+                    <SelectItem value="parcial">Parcialmente Pagas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <Button
+              onClick={exportRelatorioPorContaBancaria}
+              disabled={!relContaBancaria || exportingRelatorio}
+              style={{ backgroundColor: accentColor }}
+              className="text-white"
+            >
+              {exportingRelatorio ? (
+                <Loader2 size={18} className="animate-spin mr-2" />
+              ) : (
+                <FileDown size={18} className="mr-2" />
+              )}
+              Exportar Relatório PDF
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Info */}
       <Card className="mt-6 bg-gray-50 border-gray-200">
         <CardContent className="p-4">
