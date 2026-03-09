@@ -10587,9 +10587,9 @@ async def export_relatorio_conta_bancaria(
                 cell("Fornecedor", True), 
                 cell("Descrição", True), 
                 cell("Vencimento", True), 
+                cell("Quitação", True),
                 cell("Valor", True),
                 cell("Pago", True),
-                cell("Saldo", True),
                 cell("Status", True)
             ]
         else:
@@ -10597,9 +10597,9 @@ async def export_relatorio_conta_bancaria(
                 cell("Cliente", True), 
                 cell("Descrição", True), 
                 cell("Vencimento", True), 
+                cell("Recebimento", True),
                 cell("Valor", True),
                 cell("Recebido", True),
-                cell("Saldo", True),
                 cell("Status", True)
             ]
         
@@ -10607,7 +10607,6 @@ async def export_relatorio_conta_bancaria(
         for item in data:
             valor = item.get("valor_final") or item.get("valor", 0)
             pago = item.get("valor_pago", 0) or item.get("valor_recebido", 0) or 0
-            saldo = valor - pago
             
             status_map = {
                 "quitada": "Quitada",
@@ -10620,18 +10619,29 @@ async def export_relatorio_conta_bancaria(
             
             nome = item.get("fornecedor_nome", "") if tipo == "pagar" else item.get("cliente_nome", "")
             
+            # Data de quitação
+            if tipo == "pagar":
+                data_quitacao = item.get("data_pagamento", "")
+            else:
+                data_quitacao = item.get("data_recebimento", "")
+            
+            if data_quitacao and len(str(data_quitacao)) >= 10:
+                data_quitacao = str(data_quitacao)[:10]
+            else:
+                data_quitacao = "-"
+            
             table_data.append([
                 cell(nome[:25] if nome else "-"),
                 cell((item.get("descricao", "") or "-")[:30]),
                 cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
+                cell(data_quitacao),
                 cell(f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
                 cell(f"R$ {pago:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
-                cell(f"R$ {saldo:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
                 cell(status_text)
             ])
         
         # Calcular larguras das colunas
-        col_widths = [3.2*cm, 4*cm, 2.2*cm, 2.3*cm, 2.3*cm, 2.3*cm, 1.8*cm]
+        col_widths = [3*cm, 3.5*cm, 2.2*cm, 2.2*cm, 2.3*cm, 2.3*cm, 1.8*cm]
         
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
         table.setStyle(TableStyle([
