@@ -6513,6 +6513,152 @@ async def importar_nf_manual(data: ImportacaoManualNFCreate, current_user: dict 
     }
 
 
+class XMLExtractRequest(BaseModel):
+    xml_base64: str
+
+
+@api_router.post("/nf/extrair-xml")
+async def extrair_dados_xml(data: XMLExtractRequest, current_user: dict = Depends(get_current_user)):
+    """Extrai dados de um arquivo XML de NF-e para preenchimento automático"""
+    from xml.etree import ElementTree as ET
+    
+    try:
+        # Decodificar o XML
+        xml_content = base64.b64decode(data.xml_base64).decode('utf-8')
+        
+        # Namespaces comuns de NF-e
+        ns = {
+            'nfe': 'http://www.portalfiscal.inf.br/nfe',
+            'ns': 'http://www.portalfiscal.inf.br/nfe'
+        }
+        
+        root = ET.fromstring(xml_content)
+        
+        # Tentar encontrar o nó principal da NF-e
+        nfe = root.find('.//nfe:NFe', ns) or root.find('.//NFe') or root
+        inf_nfe = nfe.find('.//nfe:infNFe', ns) or nfe.find('.//infNFe') or root.find('.//infNFe')
+        
+        resultado = {
+            "sucesso": True,
+            "tipo_nota": "nfe",
+            "numero_nota": "",
+            "serie": "1",
+            "chave_acesso": "",
+            "data_emissao": "",
+            "cnpj_emitente": "",
+            "razao_social_emitente": "",
+            "uf_emitente": "",
+            "ie_emitente": "",
+            "cnpj_destinatario": "",
+            "razao_social_destinatario": "",
+            "valor_total": 0,
+            "valor_produtos": 0,
+            "valor_frete": 0,
+            "valor_desconto": 0,
+            "itens": []
+        }
+        
+        if inf_nfe is None:
+            # Pode ser um resumo de NF-e (resNFe)
+            res_nfe = root.find('.//nfe:resNFe', ns) or root.find('.//resNFe')
+            if res_nfe is not None:
+                chave = res_nfe.findtext('.//nfe:chNFe', '', ns) or res_nfe.findtext('.//chNFe', '')
+                resultado["chave_acesso"] = chave
+                resultado["cnpj_emitente"] = res_nfe.findtext('.//nfe:CNPJ', '', ns) or res_nfe.findtext('.//CNPJ', '')
+                resultado["razao_social_emitente"] = res_nfe.findtext('.//nfe:xNome', '', ns) or res_nfe.findtext('.//xNome', '')
+                valor = res_nfe.findtext('.//nfe:vNF', '0', ns) or res_nfe.findtext('.//vNF', '0')
+                resultado["valor_total"] = float(valor) if valor else 0
+                resultado["valor_produtos"] = resultado["valor_total"]
+                data_emissao = res_nfe.findtext('.//nfe:dhEmi', '', ns) or res_nfe.findtext('.//dhEmi', '')
+                resultado["data_emissao"] = data_emissao[:10] if data_emissao else ""
+                
+                # Extrair número e série da chave de acesso
+                if len(chave) >= 34:
+                    resultado["numero_nota"] = chave[25:34].lstrip('0')
+                    resultado["serie"] = chave[22:25].lstrip('0') or "1"
+                    resultado["uf_emitente"] = chave[0:2]
+                
+                return resultado
+            else:
+                return {"sucesso": False, "erro": "Estrutura do XML não reconhecida. Não foi possível encontrar os dados da NF-e."}
+        
+        # Extrair chave de acesso
+        chave = inf_nfe.get('Id', '').replace('NFe', '') if inf_nfe.get('Id') else ''
+        resultado["chave_acesso"] = chave
+        
+        # Extrair UF da chave
+        if len(chave) >= 2:
+            resultado["uf_emitente"] = chave[0:2]
+        
+        # Dados de identificação (ide)
+        ide = inf_nfe.find('.//nfe:ide', ns) or inf_nfe.find('.//ide')
+        if ide is not None:
+            resultado["numero_nota"] = ide.findtext('.//nfe:nNF', '', ns) or ide.findtext('.//nNF', '')
+            resultado["serie"] = ide.findtext('.//nfe:serie', '1', ns) or ide.findtext('.//serie', '1')
+            data_emissao = ide.findtext('.//nfe:dhEmi', '', ns) or ide.findtext('.//dhEmi', '')
+            resultado["data_emissao"] = data_emissao[:10] if data_emissao else ""
+        
+        # Dados do emitente (emit)
+        emit = inf_nfe.find('.//nfe:emit', ns) or inf_nfe.find('.//emit')
+        if emit is not None:
+            resultado["cnpj_emitente"] = emit.findtext('.//nfe:CNPJ', '', ns) or emit.findtext('.//CNPJ', '')
+            resultado["razao_social_emitente"] = emit.findtext('.//nfe:xNome', '', ns) or emit.findtext('.//xNome', '')
+            resultado["ie_emitente"] = emit.findtext('.//nfe:IE', '', ns) or emit.findtext('.//IE', '')
+            
+            # Endereço do emitente para UF
+            ender_emit = emit.find('.//nfe:enderEmit', ns) or emit.find('.//enderEmit')
+            if ender_emit is not None:
+                uf = ender_emit.findtext('.//nfe:UF', '', ns) or ender_emit.findtext('.//UF', '')
+                if uf:
+                    resultado["uf_emitente"] = uf
+        
+        # Dados do destinatário (dest)
+        dest = inf_nfe.find('.//nfe:dest', ns) or inf_nfe.find('.//dest')
+        if dest is not None:
+            resultado["cnpj_destinatario"] = dest.findtext('.//nfe:CNPJ', '', ns) or dest.findtext('.//CNPJ', '') or dest.findtext('.//nfe:CPF', '', ns) or dest.findtext('.//CPF', '')
+            resultado["razao_social_destinatario"] = dest.findtext('.//nfe:xNome', '', ns) or dest.findtext('.//xNome', '')
+        
+        # Totais
+        total = inf_nfe.find('.//nfe:total', ns) or inf_nfe.find('.//total')
+        if total is not None:
+            icms_tot = total.find('.//nfe:ICMSTot', ns) or total.find('.//ICMSTot')
+            if icms_tot is not None:
+                valor_nf = icms_tot.findtext('.//nfe:vNF', '0', ns) or icms_tot.findtext('.//vNF', '0')
+                valor_prod = icms_tot.findtext('.//nfe:vProd', '0', ns) or icms_tot.findtext('.//vProd', '0')
+                valor_frete = icms_tot.findtext('.//nfe:vFrete', '0', ns) or icms_tot.findtext('.//vFrete', '0')
+                valor_desc = icms_tot.findtext('.//nfe:vDesc', '0', ns) or icms_tot.findtext('.//vDesc', '0')
+                
+                resultado["valor_total"] = float(valor_nf) if valor_nf else 0
+                resultado["valor_produtos"] = float(valor_prod) if valor_prod else 0
+                resultado["valor_frete"] = float(valor_frete) if valor_frete else 0
+                resultado["valor_desconto"] = float(valor_desc) if valor_desc else 0
+        
+        # Itens da nota
+        det_list = inf_nfe.findall('.//nfe:det', ns) or inf_nfe.findall('.//det')
+        for det in det_list:
+            prod = det.find('.//nfe:prod', ns) or det.find('.//prod')
+            if prod is not None:
+                item = {
+                    "codigo": prod.findtext('.//nfe:cProd', '', ns) or prod.findtext('.//cProd', ''),
+                    "descricao": prod.findtext('.//nfe:xProd', '', ns) or prod.findtext('.//xProd', ''),
+                    "ncm": prod.findtext('.//nfe:NCM', '', ns) or prod.findtext('.//NCM', ''),
+                    "cfop": prod.findtext('.//nfe:CFOP', '', ns) or prod.findtext('.//CFOP', ''),
+                    "unidade": prod.findtext('.//nfe:uCom', '', ns) or prod.findtext('.//uCom', ''),
+                    "quantidade": float(prod.findtext('.//nfe:qCom', '0', ns) or prod.findtext('.//qCom', '0')),
+                    "valor_unitario": float(prod.findtext('.//nfe:vUnCom', '0', ns) or prod.findtext('.//vUnCom', '0')),
+                    "valor_total": float(prod.findtext('.//nfe:vProd', '0', ns) or prod.findtext('.//vProd', '0'))
+                }
+                resultado["itens"].append(item)
+        
+        return resultado
+        
+    except ET.ParseError as e:
+        return {"sucesso": False, "erro": f"Erro ao processar XML: Formato inválido - {str(e)}"}
+    except Exception as e:
+        logging.error(f"Erro ao extrair dados do XML: {str(e)}")
+        return {"sucesso": False, "erro": f"Erro ao processar XML: {str(e)}"}
+
+
 # --- Aluguéis de Máquinas ---
 @api_router.get("/admin/alugueis")
 async def get_alugueis(
