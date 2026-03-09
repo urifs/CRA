@@ -836,6 +836,365 @@ export default function ImportacaoNFPage() {
           )}
         </TabsContent>
 
+        {/* Importação Manual Tab */}
+        <TabsContent value="manual" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload size={20} />
+                Importação Manual de NF
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Utilize esta opção quando a importação automática da SEFAZ falhar
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Tipo de Nota */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Tipo de Nota *</Label>
+                  <Select 
+                    value={manualForm.tipo_nota} 
+                    onValueChange={(value) => setManualForm({...manualForm, tipo_nota: value})}
+                  >
+                    <SelectTrigger data-testid="select-tipo-nota-manual">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nfe">NF-e (Nota Fiscal de Produtos)</SelectItem>
+                      <SelectItem value="nfse">NFS-e (Nota Fiscal de Serviços)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Número da Nota *</Label>
+                  <Input
+                    value={manualForm.numero_nota}
+                    onChange={(e) => setManualForm({...manualForm, numero_nota: e.target.value})}
+                    placeholder="Ex: 12345"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Série</Label>
+                  <Input
+                    value={manualForm.serie}
+                    onChange={(e) => setManualForm({...manualForm, serie: e.target.value})}
+                    placeholder="1"
+                  />
+                </div>
+                <div>
+                  <Label>Chave de Acesso (44 dígitos)</Label>
+                  <Input
+                    value={manualForm.chave_acesso}
+                    onChange={(e) => setManualForm({...manualForm, chave_acesso: e.target.value.replace(/\D/g, "")})}
+                    placeholder="Opcional"
+                    maxLength={44}
+                  />
+                </div>
+                <div>
+                  <Label>Data de Emissão *</Label>
+                  <Input
+                    type="date"
+                    value={manualForm.data_emissao}
+                    onChange={(e) => setManualForm({...manualForm, data_emissao: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Emitente */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-medium mb-3">Dados do Emitente</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>CNPJ Emitente *</Label>
+                    <Input
+                      value={formatCPFouCNPJ(manualForm.cnpj_emitente)}
+                      onChange={(e) => setManualForm({...manualForm, cnpj_emitente: e.target.value.replace(/\D/g, "")})}
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Razão Social Emitente *</Label>
+                    <Input
+                      value={manualForm.razao_social_emitente}
+                      onChange={(e) => setManualForm({...manualForm, razao_social_emitente: e.target.value})}
+                      placeholder="Nome do fornecedor"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Valores */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-medium mb-3">Valores</h4>
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <Label>Valor Total *</Label>
+                    <Input
+                      value={manualForm.valor_total}
+                      onChange={(e) => setManualForm({...manualForm, valor_total: e.target.value})}
+                      placeholder="R$ 0,00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Valor {manualForm.tipo_nota === "nfe" ? "Produtos" : "Serviços"}</Label>
+                    <Input
+                      value={manualForm.tipo_nota === "nfe" ? manualForm.valor_produtos : manualForm.valor_servicos}
+                      onChange={(e) => setManualForm({
+                        ...manualForm, 
+                        [manualForm.tipo_nota === "nfe" ? "valor_produtos" : "valor_servicos"]: e.target.value
+                      })}
+                      placeholder="R$ 0,00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Frete</Label>
+                    <Input
+                      value={manualForm.valor_frete}
+                      onChange={(e) => setManualForm({...manualForm, valor_frete: e.target.value})}
+                      placeholder="R$ 0,00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Desconto</Label>
+                    <Input
+                      value={manualForm.valor_desconto}
+                      onChange={(e) => setManualForm({...manualForm, valor_desconto: e.target.value})}
+                      placeholder="R$ 0,00"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Classificação */}
+              <div className="border rounded-lg p-4 bg-blue-50">
+                <h4 className="font-medium mb-3 text-blue-700">Classificação Contábil</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Centro de Custo</Label>
+                    <Select 
+                      value={manualForm.centro_custo_id} 
+                      onValueChange={(value) => {
+                        const centro = centrosCusto.find(c => c.id === value);
+                        setManualForm({
+                          ...manualForm, 
+                          centro_custo_id: value,
+                          centro_custo_nome: centro?.nome || ""
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nenhum</SelectItem>
+                        {centrosCusto.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Plano de Contas</Label>
+                    <Select 
+                      value={manualForm.plano_conta_id} 
+                      onValueChange={(value) => {
+                        const plano = planoContas.find(p => p.id === value);
+                        setManualForm({
+                          ...manualForm, 
+                          plano_conta_id: value,
+                          plano_conta_nome: plano?.nome || ""
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nenhum</SelectItem>
+                        {planoContas.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.codigo} - {p.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload de Arquivos */}
+              <div className="border rounded-lg p-4 bg-green-50">
+                <h4 className="font-medium mb-3 text-green-700">Arquivos (Opcional)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Arquivo XML</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept=".xml"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setXmlFileName(file.name);
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              const base64 = ev.target.result.split(",")[1];
+                              setManualForm({...manualForm, xml_base64: base64});
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="flex-1"
+                      />
+                    </div>
+                    {xmlFileName && <p className="text-xs text-gray-500 mt-1">{xmlFileName}</p>}
+                  </div>
+                  <div>
+                    <Label>Arquivo PDF (DANFE)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setPdfFileName(file.name);
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              const base64 = ev.target.result.split(",")[1];
+                              setManualForm({...manualForm, pdf_base64: base64});
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="flex-1"
+                      />
+                    </div>
+                    {pdfFileName && <p className="text-xs text-gray-500 mt-1">{pdfFileName}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Observações */}
+              <div>
+                <Label>Observações</Label>
+                <Input
+                  value={manualForm.observacoes}
+                  onChange={(e) => setManualForm({...manualForm, observacoes: e.target.value})}
+                  placeholder="Informações adicionais sobre a nota..."
+                />
+              </div>
+
+              {/* Botões */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setManualForm({
+                      tipo_nota: "nfe",
+                      numero_nota: "",
+                      serie: "1",
+                      chave_acesso: "",
+                      data_emissao: new Date().toISOString().split("T")[0],
+                      cnpj_emitente: "",
+                      razao_social_emitente: "",
+                      uf_emitente: "",
+                      cnpj_destinatario: "",
+                      razao_social_destinatario: "",
+                      valor_total: "",
+                      valor_produtos: "",
+                      valor_servicos: "",
+                      valor_frete: "",
+                      valor_desconto: "",
+                      centro_custo_id: "",
+                      centro_custo_nome: "",
+                      plano_conta_id: "",
+                      plano_conta_nome: "",
+                      xml_base64: "",
+                      pdf_base64: "",
+                      observacoes: ""
+                    });
+                    setXmlFileName("");
+                    setPdfFileName("");
+                  }}
+                >
+                  Limpar
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    if (!manualForm.numero_nota || !manualForm.cnpj_emitente || !manualForm.razao_social_emitente || !manualForm.valor_total) {
+                      toast.error("Preencha os campos obrigatórios: Número, CNPJ, Razão Social e Valor Total");
+                      return;
+                    }
+                    
+                    setImportandoManual(true);
+                    try {
+                      const valorTotal = parseFloat(manualForm.valor_total.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
+                      const valorProdutos = parseFloat((manualForm.valor_produtos || "").replace(/[^\d,.-]/g, "").replace(",", ".")) || valorTotal;
+                      const valorServicos = parseFloat((manualForm.valor_servicos || "").replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
+                      const valorFrete = parseFloat((manualForm.valor_frete || "").replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
+                      const valorDesconto = parseFloat((manualForm.valor_desconto || "").replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
+                      
+                      await axios.post(`${API}/nf/importar-manual`, {
+                        ...manualForm,
+                        valor_total: valorTotal,
+                        valor_produtos: manualForm.tipo_nota === "nfe" ? valorProdutos : null,
+                        valor_servicos: manualForm.tipo_nota === "nfse" ? valorServicos : null,
+                        valor_frete: valorFrete,
+                        valor_desconto: valorDesconto
+                      });
+                      
+                      toast.success("NF importada manualmente com sucesso!");
+                      fetchData();
+                      setActiveTab("notas");
+                      
+                      // Limpar formulário
+                      setManualForm({
+                        tipo_nota: "nfe",
+                        numero_nota: "",
+                        serie: "1",
+                        chave_acesso: "",
+                        data_emissao: new Date().toISOString().split("T")[0],
+                        cnpj_emitente: "",
+                        razao_social_emitente: "",
+                        uf_emitente: "",
+                        cnpj_destinatario: "",
+                        razao_social_destinatario: "",
+                        valor_total: "",
+                        valor_produtos: "",
+                        valor_servicos: "",
+                        valor_frete: "",
+                        valor_desconto: "",
+                        centro_custo_id: "",
+                        centro_custo_nome: "",
+                        plano_conta_id: "",
+                        plano_conta_nome: "",
+                        xml_base64: "",
+                        pdf_base64: "",
+                        observacoes: ""
+                      });
+                      setXmlFileName("");
+                      setPdfFileName("");
+                    } catch (error) {
+                      toast.error(error.response?.data?.detail || "Erro ao importar NF manualmente");
+                    } finally {
+                      setImportandoManual(false);
+                    }
+                  }}
+                  disabled={importandoManual}
+                  className="bg-green-600 hover:bg-green-700"
+                  data-testid="btn-importar-manual"
+                >
+                  {importandoManual ? <Loader2 className="animate-spin mr-2" size={16} /> : <Upload className="mr-2" size={16} />}
+                  Importar Nota
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Configurações Tab */}
         <TabsContent value="config" className="space-y-4">
           <div className="flex justify-between items-center">
