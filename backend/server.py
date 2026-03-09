@@ -5098,6 +5098,8 @@ async def update_conta_receber(id: str, data: ContaReceberCreate, current_user: 
 class QuitarContaReceberRequest(BaseModel):
     data_recebimento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None
+    valor_recebido: Optional[float] = None  # Se None, quita o valor total
+    observacao: Optional[str] = None
 
 @api_router.patch("/admin/contas-receber/{id}/quitar")
 async def quitar_conta_receber(id: str, data: Optional[QuitarContaReceberRequest] = None, current_user: dict = Depends(get_current_user)):
@@ -5109,10 +5111,55 @@ async def quitar_conta_receber(id: str, data: Optional[QuitarContaReceberRequest
     data_recebimento = data.data_recebimento if data and data.data_recebimento else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     conta_bancaria_id = data.conta_bancaria_id if data else None
     
-    update_data = {
-        "status": "quitada",
-        "data_recebimento": data_recebimento
+    # Calcular valores
+    valor_total = conta.get("valor_final") or conta.get("valor", 0)
+    valor_ja_recebido = conta.get("valor_recebido", 0) or 0
+    saldo_restante_atual = valor_total - valor_ja_recebido
+    
+    # Valor a receber nesta quitação
+    valor_recebido_agora = data.valor_recebido if data and data.valor_recebido is not None else saldo_restante_atual
+    
+    # Validar se o valor não excede o saldo restante
+    if valor_recebido_agora > saldo_restante_atual + 0.01:  # Margem para arredondamento
+        raise HTTPException(status_code=400, detail=f"Valor recebido ({valor_recebido_agora:.2f}) excede o saldo restante ({saldo_restante_atual:.2f})")
+    
+    # Calcular novo saldo
+    novo_valor_recebido = valor_ja_recebido + valor_recebido_agora
+    novo_saldo_restante = valor_total - novo_valor_recebido
+    
+    # Determinar status
+    if novo_saldo_restante <= 0.01:  # Considera quitada com margem de arredondamento
+        novo_status = "quitada"
+        novo_saldo_restante = 0
+    else:
+        novo_status = "parcial"
+    
+    # Criar registro de recebimento no histórico
+    recebimento_registro = {
+        "id": str(uuid.uuid4()),
+        "data": data_recebimento,
+        "valor": valor_recebido_agora,
+        "conta_bancaria_id": conta_bancaria_id,
+        "observacao": data.observacao if data else None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.get("name", current_user.get("email", ""))
     }
+    
+    # Buscar histórico existente ou criar novo
+    recebimentos_historico = conta.get("recebimentos", []) or []
+    recebimentos_historico.append(recebimento_registro)
+    
+    update_data = {
+        "status": novo_status,
+        "valor_recebido": novo_valor_recebido,
+        "saldo_restante": novo_saldo_restante,
+        "recebimentos": recebimentos_historico,
+        "data_ultimo_recebimento": data_recebimento
+    }
+    
+    # Se quitou totalmente, registrar data de recebimento final
+    if novo_status == "quitada":
+        update_data["data_recebimento"] = data_recebimento
     
     # Se informou conta bancária, vincular e atualizar saldo
     if conta_bancaria_id:
@@ -5120,16 +5167,25 @@ async def quitar_conta_receber(id: str, data: Optional[QuitarContaReceberRequest
         # Buscar conta bancária e aumentar o saldo (entrada de dinheiro)
         conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
         if conta_bancaria:
-            valor_conta = conta.get("valor_final") or conta.get("valor", 0)
-            novo_saldo = (conta_bancaria.get("saldo_atual", 0) or 0) + valor_conta
+            novo_saldo_banco = (conta_bancaria.get("saldo_atual", 0) or 0) + valor_recebido_agora
             await db.contas_bancarias.update_one(
                 {"id": conta_bancaria_id},
-                {"$set": {"saldo_atual": novo_saldo, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                {"$set": {"saldo_atual": novo_saldo_banco, "updated_at": datetime.now(timezone.utc).isoformat()}}
             )
     
     await db.contas_receber.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - QUITADA em {data_recebimento}")
-    return {"message": "Conta quitada com sucesso", "data_recebimento": data_recebimento}
+    
+    tipo_quitacao = "QUITADA" if novo_status == "quitada" else f"RECEBIMENTO PARCIAL R$ {valor_recebido_agora:.2f}"
+    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - {tipo_quitacao} em {data_recebimento}")
+    
+    return {
+        "message": "Recebimento registrado com sucesso",
+        "data_recebimento": data_recebimento,
+        "valor_recebido": valor_recebido_agora,
+        "valor_total_recebido": novo_valor_recebido,
+        "saldo_restante": novo_saldo_restante,
+        "status": novo_status
+    }
 
 @api_router.patch("/admin/contas-receber/{id}/cancelar")
 async def cancelar_conta_receber(id: str, current_user: dict = Depends(get_current_user)):
