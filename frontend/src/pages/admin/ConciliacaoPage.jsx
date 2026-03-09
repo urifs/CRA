@@ -400,6 +400,11 @@ export default function ConciliacaoPage() {
   const contasFiltradas = contas.filter(conta => {
     const isQuitada = conta.status === "quitada" || conta.status === "recebida";
     
+    // Filtro por centro de custo
+    if (selectedCentroCusto && selectedCentroCusto !== "todos") {
+      if (conta.centro_custo_id !== selectedCentroCusto) return false;
+    }
+    
     switch (filtroContas) {
       case "quitadas":
         if (!isQuitada) return false;
