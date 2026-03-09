@@ -40,6 +40,7 @@ import ContasReceberPage from "@/pages/admin/ContasReceberPage";
 import PlanoContasPage from "@/pages/admin/PlanoContasPage";
 import NFEPage from "@/pages/admin/NFEPage";
 import ImportacaoNFPage from "@/pages/admin/ImportacaoNFPage";
+import EmissaoNFPage from "@/pages/admin/EmissaoNFPage";
 import CadastrosPage from "@/pages/admin/CadastrosPage";
 import ProdutosPage from "@/pages/admin/ProdutosPage";
 import OrdensServicoPage from "@/pages/admin/OrdensServicoPage";
