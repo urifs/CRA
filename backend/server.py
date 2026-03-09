@@ -6290,6 +6290,229 @@ async def update_saldo_conta_bancaria(id: str, saldo: float, current_user: dict 
     updated = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
     return updated
 
+
+# ==================== MOVIMENTAÇÃO DE CONTAS ====================
+
+@api_router.get("/admin/movimentacoes")
+async def get_movimentacoes(
+    tipo: Optional[str] = None,
+    categoria: Optional[str] = None,
+    conta_bancaria_id: Optional[str] = None,
+    centro_custo_id: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Lista todas as movimentações de contas"""
+    query = {}
+    if tipo:
+        query["tipo"] = tipo
+    if categoria:
+        query["categoria"] = categoria
+    if conta_bancaria_id:
+        query["$or"] = [
+            {"conta_bancaria_origem_id": conta_bancaria_id},
+            {"conta_bancaria_destino_id": conta_bancaria_id}
+        ]
+    if centro_custo_id:
+        if "$or" in query:
+            query["$and"] = [
+                {"$or": query["$or"]},
+                {"$or": [
+                    {"centro_custo_origem_id": centro_custo_id},
+                    {"centro_custo_destino_id": centro_custo_id}
+                ]}
+            ]
+            del query["$or"]
+        else:
+            query["$or"] = [
+                {"centro_custo_origem_id": centro_custo_id},
+                {"centro_custo_destino_id": centro_custo_id}
+            ]
+    if data_inicio:
+        query["data_movimentacao"] = {"$gte": data_inicio}
+    if data_fim:
+        if "data_movimentacao" in query:
+            query["data_movimentacao"]["$lte"] = data_fim
+        else:
+            query["data_movimentacao"] = {"$lte": data_fim}
+    
+    movimentacoes = await db.movimentacoes_contas.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return movimentacoes
+
+
+@api_router.get("/admin/movimentacoes/{id}")
+async def get_movimentacao(id: str, current_user: dict = Depends(get_current_user)):
+    """Retorna uma movimentação específica"""
+    mov = await db.movimentacoes_contas.find_one({"id": id}, {"_id": 0})
+    if not mov:
+        raise HTTPException(status_code=404, detail="Movimentação não encontrada")
+    return mov
+
+
+@api_router.post("/admin/movimentacoes")
+async def create_movimentacao(data: MovimentacaoContaCreate, current_user: dict = Depends(get_current_user)):
+    """Cria uma nova movimentação de conta"""
+    
+    if data.valor <= 0:
+        raise HTTPException(status_code=400, detail="Valor deve ser maior que zero")
+    
+    numero = await get_next_sequence("movimentacoes_contas")
+    
+    mov = {
+        "id": str(uuid.uuid4()),
+        "numero": numero,
+        **data.model_dump(),
+        "created_by": current_user.get("name", current_user.get("email", "")),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Atualizar saldos das contas bancárias
+    if data.tipo == "saida" or data.tipo == "transferencia":
+        if data.conta_bancaria_origem_id:
+            conta_origem = await db.contas_bancarias.find_one({"id": data.conta_bancaria_origem_id})
+            if conta_origem:
+                novo_saldo = (conta_origem.get("saldo_atual", 0) or 0) - data.valor
+                await db.contas_bancarias.update_one(
+                    {"id": data.conta_bancaria_origem_id},
+                    {"$set": {"saldo_atual": novo_saldo, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+    
+    if data.tipo == "entrada" or data.tipo == "transferencia":
+        if data.conta_bancaria_destino_id:
+            conta_destino = await db.contas_bancarias.find_one({"id": data.conta_bancaria_destino_id})
+            if conta_destino:
+                novo_saldo = (conta_destino.get("saldo_atual", 0) or 0) + data.valor
+                await db.contas_bancarias.update_one(
+                    {"id": data.conta_bancaria_destino_id},
+                    {"$set": {"saldo_atual": novo_saldo, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+    
+    await db.movimentacoes_contas.insert_one(mov)
+    
+    await create_audit_log(
+        current_user, "create", "movimentacao_conta", mov["id"],
+        f"{data.tipo.upper()}: {data.descricao} - R$ {data.valor:.2f}"
+    )
+    
+    del mov["_id"]
+    return mov
+
+
+@api_router.delete("/admin/movimentacoes/{id}")
+async def delete_movimentacao(id: str, current_user: dict = Depends(get_current_user)):
+    """Exclui uma movimentação e reverte os saldos"""
+    mov = await db.movimentacoes_contas.find_one({"id": id}, {"_id": 0})
+    if not mov:
+        raise HTTPException(status_code=404, detail="Movimentação não encontrada")
+    
+    # Reverter saldos
+    if mov.get("tipo") == "saida" or mov.get("tipo") == "transferencia":
+        if mov.get("conta_bancaria_origem_id"):
+            conta_origem = await db.contas_bancarias.find_one({"id": mov["conta_bancaria_origem_id"]})
+            if conta_origem:
+                novo_saldo = (conta_origem.get("saldo_atual", 0) or 0) + mov["valor"]
+                await db.contas_bancarias.update_one(
+                    {"id": mov["conta_bancaria_origem_id"]},
+                    {"$set": {"saldo_atual": novo_saldo}}
+                )
+    
+    if mov.get("tipo") == "entrada" or mov.get("tipo") == "transferencia":
+        if mov.get("conta_bancaria_destino_id"):
+            conta_destino = await db.contas_bancarias.find_one({"id": mov["conta_bancaria_destino_id"]})
+            if conta_destino:
+                novo_saldo = (conta_destino.get("saldo_atual", 0) or 0) - mov["valor"]
+                await db.contas_bancarias.update_one(
+                    {"id": mov["conta_bancaria_destino_id"]},
+                    {"$set": {"saldo_atual": novo_saldo}}
+                )
+    
+    await db.movimentacoes_contas.delete_one({"id": id})
+    
+    await create_audit_log(
+        current_user, "delete", "movimentacao_conta", id,
+        f"Movimentação excluída: {mov['descricao']}"
+    )
+    
+    return {"message": "Movimentação excluída e saldos revertidos"}
+
+
+# ==================== IMPORTAÇÃO MANUAL DE NF ====================
+
+@api_router.post("/nf/importar-manual")
+async def importar_nf_manual(data: ImportacaoManualNFCreate, current_user: dict = Depends(get_current_user)):
+    """Importa uma NF manualmente quando a SEFAZ falha"""
+    
+    # Verificar se a nota já existe (pela chave de acesso ou número)
+    filtro_existente = {}
+    if data.chave_acesso:
+        filtro_existente["chave_acesso"] = data.chave_acesso
+    else:
+        filtro_existente["$and"] = [
+            {"numero_nota": data.numero_nota},
+            {"cnpj_emitente": data.cnpj_emitente.replace(".", "").replace("/", "").replace("-", "")}
+        ]
+    
+    if data.tipo_nota == "nfe":
+        existente = await db.nfe_importadas.find_one(filtro_existente)
+    else:
+        existente = await db.nfse_importadas.find_one(filtro_existente)
+    
+    if existente:
+        raise HTTPException(status_code=400, detail="Esta nota fiscal já foi importada anteriormente")
+    
+    nf_id = str(uuid.uuid4())
+    cnpj_limpo = data.cnpj_emitente.replace(".", "").replace("/", "").replace("-", "")
+    
+    nf_doc = {
+        "id": nf_id,
+        "numero_nota": data.numero_nota,
+        "serie": data.serie or "1",
+        "chave_acesso": data.chave_acesso,
+        "data_emissao": data.data_emissao,
+        "cnpj_emitente": cnpj_limpo,
+        "razao_social_emitente": data.razao_social_emitente,
+        "uf_emitente": data.uf_emitente,
+        "cnpj_destinatario": data.cnpj_destinatario,
+        "razao_social_destinatario": data.razao_social_destinatario,
+        "valor_total": data.valor_total,
+        "valor_produtos": data.valor_produtos or data.valor_total,
+        "valor_servicos": data.valor_servicos,
+        "valor_frete": data.valor_frete or 0,
+        "valor_desconto": data.valor_desconto or 0,
+        "centro_custo_id": data.centro_custo_id,
+        "centro_custo_nome": data.centro_custo_nome,
+        "plano_conta_id": data.plano_conta_id,
+        "plano_conta_nome": data.plano_conta_nome,
+        "xml_base64": data.xml_base64,
+        "pdf_base64": data.pdf_base64,
+        "observacoes": data.observacoes,
+        "importacao_manual": True,
+        "status": "nova",
+        "itens": [],
+        "created_by": current_user.get("name", current_user.get("email", "")),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if data.tipo_nota == "nfe":
+        await db.nfe_importadas.insert_one(nf_doc)
+        entity_type = "nfe_manual"
+    else:
+        await db.nfse_importadas.insert_one(nf_doc)
+        entity_type = "nfse_manual"
+    
+    await create_audit_log(
+        current_user, "create", entity_type, nf_id,
+        f"NF {data.numero_nota} - {data.razao_social_emitente} - R$ {data.valor_total:.2f}"
+    )
+    
+    return {
+        "message": f"{'NF-e' if data.tipo_nota == 'nfe' else 'NFS-e'} importada manualmente com sucesso",
+        "id": nf_id,
+        "numero_nota": data.numero_nota
+    }
+
+
 # --- Aluguéis de Máquinas ---
 @api_router.get("/admin/alugueis")
 async def get_alugueis(
