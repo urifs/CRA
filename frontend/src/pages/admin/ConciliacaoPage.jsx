@@ -50,7 +50,8 @@ import {
   Check,
   X,
   Zap,
-  Briefcase
+  Briefcase,
+  Trash2
 } from "lucide-react";
 
 export default function ConciliacaoPage() {
