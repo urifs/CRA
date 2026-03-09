@@ -378,6 +378,7 @@ export default function ContasPagarPage() {
           <SelectContent className="z-[9999]">
             <SelectItem value="all">Todos Status</SelectItem>
             <SelectItem value="em_aberto">Em Aberto</SelectItem>
+            <SelectItem value="parcial">Parcialmente Pagas</SelectItem>
             <SelectItem value="quitada">Quitadas</SelectItem>
             <SelectItem value="cancelada">Canceladas</SelectItem>
           </SelectContent>
