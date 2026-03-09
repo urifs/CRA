@@ -1,6 +1,26 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 09/03/2026 (Sessão 27)
+
+### Melhoria: Filtro "Todas" no Relatório por Conta Bancária
+- ✅ **Nova opção no dropdown "Tipo de Conta"**: "Todas (Pagar e Receber)"
+- ✅ **Backend atualizado**: Endpoint `/api/export/relatorio-conta-bancaria` aceita `tipo=todas`
+- ✅ **Lógica de busca combinada**: Busca dados de `contas_pagar` e `contas_receber` simultaneamente
+- ✅ **Ordenação unificada**: Resultados ordenados por data de vencimento (mais recente primeiro)
+- ✅ **Título dinâmico**: PDF gerado com título "Contas a Pagar e Receber - [Status]"
+- ✅ **Testado via curl e frontend**: Funcionamento verificado
+
+#### Uso
+1. Acesse "Exportação" no menu Administrativo
+2. Role até "Relatório por Conta Bancária"
+3. Selecione a conta bancária
+4. No "Tipo de Conta", escolha "Todas (Pagar e Receber)"
+5. Selecione o status desejado (Todas, Pendentes, Quitadas, Parcialmente Pagas)
+6. Clique em "Exportar Relatório PDF"
+
+---
+
 ## Changelog - 09/03/2026 (Sessão 26 - Continuação 3)
 
 ### Novas Funcionalidades Implementadas
