@@ -309,6 +309,7 @@ export default function ContasPagarPage() {
 
   const getStatusInfo = (conta) => {
     if (conta.status === "quitada") return { label: "Quitada", color: "bg-green-100 text-green-700", icon: CheckCircle2 };
+    if (conta.status === "parcial") return { label: "Parcial", color: "bg-yellow-100 text-yellow-700", icon: CircleDot };
     if (conta.status === "cancelada") return { label: "Cancelada", color: "bg-gray-100 text-gray-700", icon: X };
     const hoje = new Date().toISOString().split("T")[0];
     if (conta.data_vencimento < hoje) return { label: "Vencida", color: "bg-red-100 text-red-700", icon: AlertCircle };
@@ -326,16 +327,16 @@ export default function ContasPagarPage() {
     if (filterFormaPag && filterFormaPag !== "all" && c.forma_pagamento !== filterFormaPag) return false;
     
     const hoje = new Date().toISOString().split("T")[0];
-    if (filterVencimento === "vencidas" && (c.status !== "em_aberto" || c.data_vencimento >= hoje)) return false;
+    if (filterVencimento === "vencidas" && !["em_aberto", "pendente", "parcial"].includes(c.status) || (filterVencimento === "vencidas" && c.data_vencimento >= hoje)) return false;
     if (filterVencimento === "hoje" && c.data_vencimento !== hoje) return false;
-    if (filterVencimento === "a_vencer" && (c.status !== "em_aberto" || c.data_vencimento <= hoje)) return false;
+    if (filterVencimento === "a_vencer" && (!["em_aberto", "pendente", "parcial"].includes(c.status) || c.data_vencimento <= hoje)) return false;
     
     return true;
   });
 
   // Totais
-  const totalEmAberto = filteredContas.filter(c => c.status === "em_aberto" || c.status === "pendente").reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
-  const totalVencidas = filteredContas.filter(c => (c.status === "em_aberto" || c.status === "pendente") && c.data_vencimento < new Date().toISOString().split("T")[0]).reduce((s, c) => s + (c.valor_final || c.valor || 0), 0);
+  const totalEmAberto = filteredContas.filter(c => c.status === "em_aberto" || c.status === "pendente" || c.status === "parcial").reduce((s, c) => s + (c.saldo_restante || c.valor_final || c.valor || 0), 0);
+  const totalVencidas = filteredContas.filter(c => (c.status === "em_aberto" || c.status === "pendente" || c.status === "parcial") && c.data_vencimento < new Date().toISOString().split("T")[0]).reduce((s, c) => s + (c.saldo_restante || c.valor_final || c.valor || 0), 0);
   const totalRegistros = filteredContas.length;
 
   if (loading) return <div className="flex items-center justify-center min-h-[400px]"><div className="spinner w-12 h-12"></div></div>;
