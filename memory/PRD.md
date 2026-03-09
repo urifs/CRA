@@ -9,6 +9,7 @@
   - Opção "Todos os Centros de Custo" para ver todas as contas
 - ✅ **Extrato Bancário (Quadro Esquerdo)**: Exibe as movimentações importadas de todos os PDFs
   - Filtros de tipo (Todos/Entradas/Saídas) e de data (início/fim)
+  - **Botão "Limpar Extrato"**: Ícone de lixeira para remover itens não conciliados
 - ✅ **Contas do Sistema (Quadro Direito)**: Mostra contas a pagar e receber
   - **Filtro de tipo de conta**: Todas, Quitadas, A Pagar, A Receber
   - Campo de busca por descrição
@@ -16,7 +17,17 @@
 - ✅ **Modal de Importação de Extrato**: Ao clicar em "Importar Extrato PDF"
   - Abre modal para selecionar primeiro a conta bancária
   - Depois permite selecionar o arquivo PDF para upload
-- ✅ **Novo Endpoint**: `GET /api/conciliacao/extratos` - Lista todos os extratos importados (sem filtro por conta)
+- ✅ **Novo Endpoint**: `GET /api/conciliacao/extratos` - Lista todos os extratos importados
+- ✅ **Novo Endpoint**: `DELETE /api/conciliacao/extratos` - Limpa extratos não conciliados
+
+### Exportação: Relatório por Conta Bancária
+- ✅ **Nova seção na página de Exportação**: "Relatório por Conta Bancária"
+  - Seletor de **Conta Bancária**: Lista todas as contas bancárias cadastradas
+  - Seletor de **Tipo de Conta**: Contas a Pagar ou Contas a Receber
+  - Seletor de **Status**: Todas, Pendentes, Quitadas, Parcialmente Pagas
+  - Botão "Exportar Relatório PDF" gera relatório filtrado
+- ✅ **Novo Endpoint**: `GET /api/export/relatorio-conta-bancaria` - Gera PDF com relatório filtrado
+- ✅ **Relatório inclui**: Resumo de totais, tabela com todas as contas filtradas, valores pagos/recebidos e saldo restante
 
 ### Nova Funcionalidade: Quitação Parcial de Contas
 - ✅ **Contas a Pagar**: Implementada quitação parcial
