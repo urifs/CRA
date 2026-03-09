@@ -581,8 +581,82 @@ export default function ContasReceberPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className="form-label">Data Emissão</label><Input type="date" value={formData.data_emissao} onChange={(e) => setFormData({...formData, data_emissao: e.target.value})} /></div>
-              <div><label className="form-label">Data Vencimento *</label><Input type="date" value={formData.data_vencimento} onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})} required /></div>
+              <div><label className="form-label">{isParcelado ? "Data 1º Vencimento *" : "Data Vencimento *"}</label><Input type="date" value={formData.data_vencimento} onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})} required /></div>
             </div>
+            
+            {/* Seção de Parcelamento - apenas para novas contas */}
+            {!editingConta && (
+              <div className="border border-green-200 rounded-lg p-4 bg-green-50/50">
+                <div className="flex items-center gap-3 mb-3">
+                  <input
+                    type="checkbox"
+                    id="isParcelado"
+                    checked={isParcelado}
+                    onChange={(e) => {
+                      setIsParcelado(e.target.checked);
+                      if (!e.target.checked) {
+                        setTotalParcelas("1");
+                        setIntervaloDias("30");
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <label htmlFor="isParcelado" className="text-sm font-medium text-gray-700">
+                    Parcelar esta conta
+                  </label>
+                </div>
+                
+                {isParcelado && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="form-label">Número de Parcelas *</label>
+                      <Select value={totalParcelas} onValueChange={setTotalParcelas}>
+                        <SelectTrigger className="w-full h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="z-[9999]">
+                          {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24, 36, 48, 60].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="form-label">Intervalo entre Parcelas</label>
+                      <Select value={intervaloDias} onValueChange={setIntervaloDias}>
+                        <SelectTrigger className="w-full h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="z-[9999]">
+                          <SelectItem value="7">7 dias</SelectItem>
+                          <SelectItem value="14">14 dias</SelectItem>
+                          <SelectItem value="15">15 dias</SelectItem>
+                          <SelectItem value="21">21 dias</SelectItem>
+                          <SelectItem value="28">28 dias</SelectItem>
+                          <SelectItem value="30">30 dias (mensal)</SelectItem>
+                          <SelectItem value="45">45 dias</SelectItem>
+                          <SelectItem value="60">60 dias</SelectItem>
+                          <SelectItem value="90">90 dias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                
+                {isParcelado && parseInt(totalParcelas) > 1 && formData.valor && (
+                  <div className="mt-3 p-3 bg-white rounded border border-green-200">
+                    <p className="text-sm text-gray-600">
+                      <strong>Resumo:</strong> {totalParcelas}x de{" "}
+                      <span className="font-semibold text-green-600">
+                        {formatCurrency((parseCurrency(formData.valor) || 0) / parseInt(totalParcelas))}
+                      </span>
+                      {" "}(Total: {formatCurrency(parseCurrency(formData.valor) || 0)})
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Plano de Contas</label>
