@@ -5368,6 +5368,122 @@ async def create_conta_receber(data: ContaReceberCreate, current_user: dict = De
     del conta["_id"]
     return conta
 
+
+class ContaReceberParceladaCreate(BaseModel):
+    """Modelo para criar conta a receber parcelada"""
+    cliente_id: Optional[str] = None
+    cliente_nome: Optional[str] = None
+    documento: Optional[str] = None
+    numero_doc: Optional[str] = None
+    descricao: str
+    valor_total: float  # Valor total da NF
+    valor_desconto: Optional[float] = 0
+    valor_juros: Optional[float] = 0
+    valor_multa: Optional[float] = 0
+    data_emissao: Optional[str] = None
+    data_primeiro_vencimento: str  # Data de vencimento da primeira parcela
+    total_parcelas: int  # Número de parcelas
+    intervalo_dias: int = 30  # Intervalo entre parcelas (default: 30 dias)
+    plano_conta_id: Optional[str] = None
+    plano_conta_nome: Optional[str] = None
+    subconta_id: Optional[str] = None
+    subconta_nome: Optional[str] = None
+    centro_custo: Optional[str] = None
+    frota_id: Optional[str] = None
+    frota_nome: Optional[str] = None
+    forma_pagamento: str = "boleto"
+    conta_movimento: Optional[str] = None
+    conta_bancaria_id: Optional[str] = None
+    conta_bancaria_nome: Optional[str] = None
+    faturamento: Optional[str] = None
+    observacoes: Optional[str] = None
+
+
+@api_router.post("/admin/contas-receber/parcelado")
+async def create_conta_receber_parcelada(data: ContaReceberParceladaCreate, current_user: dict = Depends(get_current_user)):
+    """Cria múltiplas parcelas de uma conta a receber"""
+    if data.total_parcelas < 1:
+        raise HTTPException(status_code=400, detail="Número de parcelas deve ser maior que zero")
+    
+    if data.total_parcelas > 120:
+        raise HTTPException(status_code=400, detail="Número máximo de parcelas é 120")
+    
+    # Calcular valor de cada parcela
+    valor_parcela = round(data.valor_total / data.total_parcelas, 2)
+    # Ajustar a última parcela para compensar arredondamentos
+    valor_ultima_parcela = round(data.valor_total - (valor_parcela * (data.total_parcelas - 1)), 2)
+    
+    # Gerar ID de origem (para agrupar as parcelas)
+    parcela_origem_id = str(uuid.uuid4())
+    
+    parcelas_criadas = []
+    data_vencimento = datetime.strptime(data.data_primeiro_vencimento, "%Y-%m-%d")
+    
+    for i in range(data.total_parcelas):
+        numero_parcela = i + 1
+        valor = valor_parcela if numero_parcela < data.total_parcelas else valor_ultima_parcela
+        
+        numero = await get_next_sequence("contas_receber")
+        
+        conta = {
+            "id": str(uuid.uuid4()),
+            "numero": numero,
+            "cliente_id": data.cliente_id,
+            "cliente_nome": data.cliente_nome,
+            "documento": data.documento,
+            "numero_doc": data.numero_doc,
+            "descricao": f"{data.descricao} - Parcela {numero_parcela}/{data.total_parcelas}",
+            "valor": valor,
+            "valor_desconto": 0,
+            "valor_juros": 0,
+            "valor_multa": 0,
+            "valor_final": valor,
+            "total_parcelas": data.total_parcelas,
+            "numero_parcela": numero_parcela,
+            "parcela_origem_id": parcela_origem_id,
+            "data_emissao": data.data_emissao,
+            "data_vencimento": data_vencimento.strftime("%Y-%m-%d"),
+            "data_recebimento": None,
+            "data_cancelamento": None,
+            "plano_conta_id": data.plano_conta_id,
+            "plano_conta_nome": data.plano_conta_nome,
+            "subconta_id": data.subconta_id,
+            "subconta_nome": data.subconta_nome,
+            "centro_custo": data.centro_custo,
+            "frota_id": data.frota_id,
+            "frota_nome": data.frota_nome,
+            "forma_pagamento": data.forma_pagamento,
+            "conta_movimento": data.conta_movimento,
+            "conta_bancaria_id": data.conta_bancaria_id,
+            "conta_bancaria_nome": data.conta_bancaria_nome,
+            "status": "em_aberto",
+            "faturamento": data.faturamento,
+            "observacoes": data.observacoes,
+            "created_by": current_user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.contas_receber.insert_one(conta)
+        del conta["_id"]
+        parcelas_criadas.append(conta)
+        
+        # Próximo vencimento
+        data_vencimento = data_vencimento + timedelta(days=data.intervalo_dias)
+    
+    await create_audit_log(
+        current_user, "create", "conta_receber_parcelada", 
+        parcela_origem_id, 
+        f"{data.descricao} - {data.total_parcelas} parcelas"
+    )
+    
+    return {
+        "message": f"{data.total_parcelas} parcelas criadas com sucesso",
+        "parcela_origem_id": parcela_origem_id,
+        "valor_total": data.valor_total,
+        "valor_parcela": valor_parcela,
+        "parcelas": parcelas_criadas
+    }
+
 @api_router.put("/admin/contas-receber/{id}")
 async def update_conta_receber(id: str, data: ContaReceberCreate, current_user: dict = Depends(get_current_user)):
     conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
