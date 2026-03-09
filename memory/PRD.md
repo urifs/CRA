@@ -1,6 +1,41 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 09/03/2026 (Sessão 26 - Continuação 3)
+
+### Novas Funcionalidades Implementadas
+
+#### 1. Movimentação de Contas (Nova Página)
+- ✅ **Nova página**: `/administrativo/movimentacoes`
+- ✅ **Tipos de movimentação**: Entrada, Saída, Transferência
+- ✅ **Categorias**: Cancelamento de NF, Estorno, Devolução, Transferência Interna, Ajuste, Outros
+- ✅ **Transferência entre contas bancárias**: Atualiza saldos automaticamente
+- ✅ **Transferência entre centros de custo**: Vincula origem e destino
+- ✅ **Exclusão com reversão**: Ao excluir, os saldos são revertidos
+- ✅ **Filtros**: Por tipo, categoria, conta bancária e centro de custo
+
+#### 2. Importação Manual de NF (Nova Aba)
+- ✅ **Nova aba**: "Importação Manual" na página de Importação NF
+- ✅ **Uso**: Quando a SEFAZ falha na importação automática
+- ✅ **Campos**: Tipo NF, Número, Série, Chave de Acesso, Data Emissão
+- ✅ **Dados do Emitente**: CNPJ, Razão Social
+- ✅ **Valores**: Total, Produtos/Serviços, Frete, Desconto
+- ✅ **Classificação**: Centro de Custo, Plano de Contas
+- ✅ **Arquivos**: Upload de XML e PDF (opcional)
+
+#### 3. Baixas Parciais (Já existente - Verificado)
+- ✅ **Pagamento parcial**: Pagar parte do valor e deixar o resto para depois
+- ✅ **Status "Parcial"**: Badge amarelo na lista de contas
+- ✅ **Histórico de pagamentos**: Registra cada baixa parcial
+
+#### Novos Endpoints
+- `GET /api/admin/movimentacoes` - Lista movimentações
+- `POST /api/admin/movimentacoes` - Cria movimentação
+- `DELETE /api/admin/movimentacoes/{id}` - Exclui e reverte saldos
+- `POST /api/nf/importar-manual` - Importa NF manualmente
+
+---
+
 ## Changelog - 09/03/2026 (Sessão 26 - Continuação 2)
 
 ### Melhoria: Data de Quitação nos Relatórios Financeiros
