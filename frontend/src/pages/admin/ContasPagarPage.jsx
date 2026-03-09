@@ -62,6 +62,11 @@ export default function ContasPagarPage() {
   const [observacaoPagamento, setObservacaoPagamento] = useState("");
   const [showHistoricoPagamentos, setShowHistoricoPagamentos] = useState(false);
   
+  // Estados para parcelamento
+  const [isParcelado, setIsParcelado] = useState(false);
+  const [totalParcelas, setTotalParcelas] = useState("1");
+  const [intervaloDias, setIntervaloDias] = useState("30");
+  
   const [formData, setFormData] = useState({
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
     valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
