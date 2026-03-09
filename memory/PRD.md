@@ -1,6 +1,62 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 09/03/2026 (Sessão 26)
+
+### Nova Funcionalidade: Emissão de Notas Fiscais (NF-e e NFS-e)
+- ✅ **Nova Página**: `/administrativo/emissao-nf` - Emissão de Notas Fiscais
+- ✅ **Seletor de CNPJ Emitente**: Dropdown com todos os CNPJs cadastrados com certificados digitais
+- ✅ **Seletor de Tipo de Nota**: 
+  - NF-e (Nota Fiscal de Produtos - Modelo 55)
+  - NFS-e (Nota Fiscal de Serviços)
+
+#### NF-e (Notas Fiscais de Produtos)
+- ✅ **Dados do Destinatário**: CPF/CNPJ com consulta automática (BrasilAPI), Razão Social, IE, Email, Telefone
+- ✅ **Endereço do Destinatário**: CEP com consulta automática (ViaCEP), Logradouro, Número, Complemento, Bairro, Cidade, UF
+- ✅ **Seleção de Cadastro**: Dropdown para preencher automaticamente dados de clientes/fornecedores cadastrados
+- ✅ **Dados da Nota**: Natureza da Operação, Forma de Pagamento, Consumidor Final
+- ✅ **Itens**: 
+  - Seleção de produtos cadastrados no sistema
+  - Campos: Código, Descrição, NCM, CFOP, Unidade, Quantidade, Valor Unitário
+  - Tributação: ICMS, PIS, COFINS, IPI (alíquotas configuráveis)
+- ✅ **Totais**: Frete, Seguro, Desconto, Outras Despesas, Valor Total calculado automaticamente
+- ✅ **Informações Complementares**: Campo de texto livre
+
+#### NFS-e (Notas Fiscais de Serviço - Palmas/TO)
+- ✅ **Dados do Tomador**: CPF/CNPJ, Razão Social, IE, IM, Email, Telefone, Endereço completo
+- ✅ **Dados do Serviço**: 
+  - Código do Serviço (LC 116/2003) - 19 códigos pré-cadastrados
+  - CNAE (opcional)
+  - Código Tributário Municipal
+  - Discriminação do Serviço (texto detalhado)
+- ✅ **Valores**: Valor dos Serviços, Deduções, Alíquota ISS, ISS Retido (checkbox)
+- ✅ **Retenções**: PIS, COFINS, INSS, IR, CSLL, Outras Retenções
+- ✅ **Cálculos Automáticos**: Valor ISS e Valor Líquido calculados em tempo real
+
+#### Notas Emitidas
+- ✅ **Lista de Notas**: Tabela com todas as notas emitidas
+- ✅ **Filtros**: Tipo de Nota, CNPJ Emitente, Status
+- ✅ **Status com Badges**: Autorizada (verde), Rascunho (amarelo), Pendente (azul), Rejeitada (vermelho)
+- ✅ **Ações**: Ver detalhes, Download PDF, Download XML (quando disponível), Excluir (apenas rascunhos)
+
+#### Backend - Novos Endpoints
+- `GET /api/nfe/cfops` - Lista CFOPs disponíveis para emissão
+- `GET /api/nfse/codigos-servico` - Lista códigos de serviço LC 116/2003
+- `GET /api/notas-emitidas` - Lista todas as notas fiscais emitidas
+- `GET /api/notas-emitidas/{id}` - Detalhes de uma nota fiscal
+- `POST /api/nfe/emitir` - Emite uma NF-e
+- `POST /api/nfse/emitir` - Emite uma NFS-e (XML ABRASF 2.1 para Webiss Palmas/TO)
+- `DELETE /api/notas-emitidas/{id}` - Exclui nota (apenas rascunhos)
+- `GET /api/notas-emitidas/{id}/download-xml` - Download do XML
+- `GET /api/notas-emitidas/{id}/download-pdf` - Download do DANFE/NFS-e em PDF
+
+#### Observações Técnicas
+- ⚠️ **NF-e**: As notas são salvas como rascunho. A emissão direta via SEFAZ requer configuração adicional do PyNFe com assinatura digital
+- ⚠️ **NFS-e**: XML gerado no padrão ABRASF 2.1. A emissão via Webiss Palmas/TO requer configuração de assinatura digital SOAP
+- ✅ **Coleção MongoDB**: `notas_emitidas` - Armazena todas as notas (NF-e e NFS-e)
+
+---
+
 ## Changelog - 09/03/2026 (Sessão 25)
 
 ### Reformulação da Página de Conciliação Bancária
