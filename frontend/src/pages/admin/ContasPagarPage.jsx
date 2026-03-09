@@ -337,7 +337,13 @@ export default function ContasPagarPage() {
     setIsModalOpen(true);
   };
 
-  const closeModal = () => { setIsModalOpen(false); setEditingConta(null); };
+  const closeModal = () => { 
+    setIsModalOpen(false); 
+    setEditingConta(null); 
+    setIsParcelado(false);
+    setTotalParcelas("1");
+    setIntervaloDias("30");
+  };
 
   const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
