@@ -22,7 +22,8 @@ import {
   CreditCard,
   FileDown,
   FileInput,
-  ArrowLeftRight
+  ArrowLeftRight,
+  FilePlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatbotWidget from "@/components/ChatbotWidget";
