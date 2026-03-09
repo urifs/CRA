@@ -1,6 +1,23 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 09/03/2026 (Sessão 26 - Continuação 2)
+
+### Melhoria: Data de Quitação nos Relatórios Financeiros
+- ✅ **Exportação PDF**: Adicionada coluna "Quitação" (Contas a Pagar) e "Recebimento" (Contas a Receber)
+- ✅ **Exportação Excel**: Adicionada coluna "Quitação" (Contas a Pagar) e "Recebimento" (Contas a Receber)
+- ✅ **Relatório por Conta Bancária**: Adicionada coluna com data de quitação/recebimento
+- ✅ **Exportação Individual**: Seção "DATAS" já mostra Data de Pagamento/Recebimento
+
+#### Colunas dos Relatórios Financeiros (PDF/Excel)
+**Contas a Pagar:**
+| Descrição | Valor | Vencimento | **Quitação** | Status | Fornecedor | Centro de Custo | Plano de Contas |
+
+**Contas a Receber:**
+| Descrição | Valor | Vencimento | **Recebimento** | Status | Cliente | Centro de Custo | Plano de Contas |
+
+---
+
 ## Changelog - 09/03/2026 (Sessão 26 - Continuação)
 
 ### Nova Funcionalidade: Parcelamento de Contas a Pagar/Receber
