@@ -990,7 +990,7 @@ export default function ImportacaoNFPage() {
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {centrosCusto.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                         ))}
@@ -1014,7 +1014,7 @@ export default function ImportacaoNFPage() {
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {planoContas.map(p => (
                           <SelectItem key={p.id} value={p.id}>{p.codigo} - {p.nome}</SelectItem>
                         ))}
