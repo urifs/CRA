@@ -118,6 +118,37 @@ export default function ImportacaoNFPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [selectedCertificado, setSelectedCertificado] = useState("todos");
   const [selectedStatus, setSelectedStatus] = useState("todos");
+  
+  // Estados para importação manual
+  const [centrosCusto, setCentrosCusto] = useState([]);
+  const [planoContas, setPlanoContas] = useState([]);
+  const [importandoManual, setImportandoManual] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    tipo_nota: "nfe",
+    numero_nota: "",
+    serie: "1",
+    chave_acesso: "",
+    data_emissao: new Date().toISOString().split("T")[0],
+    cnpj_emitente: "",
+    razao_social_emitente: "",
+    uf_emitente: "",
+    cnpj_destinatario: "",
+    razao_social_destinatario: "",
+    valor_total: "",
+    valor_produtos: "",
+    valor_servicos: "",
+    valor_frete: "",
+    valor_desconto: "",
+    centro_custo_id: "",
+    centro_custo_nome: "",
+    plano_conta_id: "",
+    plano_conta_nome: "",
+    xml_base64: "",
+    pdf_base64: "",
+    observacoes: ""
+  });
+  const [xmlFileName, setXmlFileName] = useState("");
+  const [pdfFileName, setPdfFileName] = useState("");
 
   const [certForm, setCertForm] = useState({
     cnpj: "",
