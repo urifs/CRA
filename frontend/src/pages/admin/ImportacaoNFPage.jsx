@@ -149,6 +149,8 @@ export default function ImportacaoNFPage() {
   });
   const [xmlFileName, setXmlFileName] = useState("");
   const [pdfFileName, setPdfFileName] = useState("");
+  const [extractingXml, setExtractingXml] = useState(false);
+  const [xmlItens, setXmlItens] = useState([]);
 
   const [certForm, setCertForm] = useState({
     cnpj: "",
