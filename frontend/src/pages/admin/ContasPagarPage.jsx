@@ -172,6 +172,14 @@ export default function ContasPagarPage() {
     setQuitarContaInfo(conta);
     setDataPagamento(new Date().toISOString().split("T")[0]);
     setQuitarContaBancaria(conta.conta_bancaria_id || "");
+    // Calcular saldo restante
+    const valorTotal = conta.valor_final || conta.valor;
+    const valorJaPago = conta.valor_pago || 0;
+    const saldoRestante = valorTotal - valorJaPago;
+    setValorPagamento(formatCurrencyInput(saldoRestante.toFixed(2)));
+    setTipoPagamento("total");
+    setObservacaoPagamento("");
+    setShowHistoricoPagamentos(false);
     setShowQuitarModal(true);
   };
 
@@ -180,18 +188,49 @@ export default function ContasPagarPage() {
       toast.error("Selecione a conta bancária");
       return;
     }
+    
+    const valorTotal = quitarContaInfo.valor_final || quitarContaInfo.valor;
+    const valorJaPago = quitarContaInfo.valor_pago || 0;
+    const saldoRestante = valorTotal - valorJaPago;
+    
+    // Se for pagamento parcial, usar o valor informado
+    let valorPagar = saldoRestante;
+    if (tipoPagamento === "parcial") {
+      valorPagar = parseCurrency(valorPagamento);
+      if (!valorPagar || valorPagar <= 0) {
+        toast.error("Informe um valor válido para o pagamento");
+        return;
+      }
+      if (valorPagar > saldoRestante + 0.01) {
+        toast.error(`Valor excede o saldo restante (${formatCurrency(saldoRestante)})`);
+        return;
+      }
+    }
+    
     try {
-      await axios.patch(`${API}/admin/contas-pagar/${quitarContaId}/quitar`, {
+      const response = await axios.patch(`${API}/admin/contas-pagar/${quitarContaId}/quitar`, {
         data_pagamento: dataPagamento,
-        conta_bancaria_id: quitarContaBancaria
+        conta_bancaria_id: quitarContaBancaria,
+        valor_pago: tipoPagamento === "parcial" ? valorPagar : null,
+        observacao: observacaoPagamento || null
       });
-      toast.success("Conta quitada!"); 
+      
+      const msg = response.data.status === "quitada" 
+        ? "Conta quitada com sucesso!" 
+        : `Pagamento parcial registrado! Saldo restante: ${formatCurrency(response.data.saldo_restante)}`;
+      toast.success(msg);
+      
       setShowQuitarModal(false);
       setQuitarContaId(null);
       setQuitarContaInfo(null);
       setQuitarContaBancaria("");
+      setValorPagamento("");
+      setTipoPagamento("total");
+      setObservacaoPagamento("");
       fetchContas();
-    } catch (error) { toast.error("Erro ao quitar"); }
+    } catch (error) { 
+      toast.error(error.response?.data?.detail || "Erro ao processar pagamento"); 
+    }
   };
 
   const handleCancelar = async (id) => {
