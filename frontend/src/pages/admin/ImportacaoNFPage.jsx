@@ -1310,6 +1310,7 @@ export default function ImportacaoNFPage() {
                       });
                       setXmlFileName("");
                       setPdfFileName("");
+                      setXmlItens([]);
                     } catch (error) {
                       toast.error(error.response?.data?.detail || "Erro ao importar NF manualmente");
                     } finally {
