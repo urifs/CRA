@@ -4438,6 +4438,93 @@ class FormaPagamentoResponse(BaseModel):
     observacoes: Optional[str] = None
     created_at: str
 
+# --- Movimentação de Contas ---
+class MovimentacaoContaCreate(BaseModel):
+    """Modelo para movimentação entre contas/centros de custo"""
+    tipo: str  # entrada, saida, transferencia
+    descricao: str
+    valor: float
+    data_movimentacao: str
+    
+    # Origem (de onde sai o dinheiro)
+    conta_bancaria_origem_id: Optional[str] = None
+    conta_bancaria_origem_nome: Optional[str] = None
+    centro_custo_origem_id: Optional[str] = None
+    centro_custo_origem_nome: Optional[str] = None
+    
+    # Destino (para onde vai o dinheiro)
+    conta_bancaria_destino_id: Optional[str] = None
+    conta_bancaria_destino_nome: Optional[str] = None
+    centro_custo_destino_id: Optional[str] = None
+    centro_custo_destino_nome: Optional[str] = None
+    
+    # Classificação
+    categoria: str = "outros"  # cancelamento_nf, estorno, devolucao, transferencia_interna, ajuste, outros
+    documento_referencia: Optional[str] = None  # NF, recibo, etc
+    
+    observacoes: Optional[str] = None
+
+class MovimentacaoContaResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    numero: int
+    tipo: str
+    descricao: str
+    valor: float
+    data_movimentacao: str
+    conta_bancaria_origem_id: Optional[str] = None
+    conta_bancaria_origem_nome: Optional[str] = None
+    centro_custo_origem_id: Optional[str] = None
+    centro_custo_origem_nome: Optional[str] = None
+    conta_bancaria_destino_id: Optional[str] = None
+    conta_bancaria_destino_nome: Optional[str] = None
+    centro_custo_destino_id: Optional[str] = None
+    centro_custo_destino_nome: Optional[str] = None
+    categoria: str
+    documento_referencia: Optional[str] = None
+    observacoes: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: str
+
+# --- Importação Manual de NF ---
+class ImportacaoManualNFCreate(BaseModel):
+    """Modelo para importação manual de NF quando SEFAZ falha"""
+    tipo_nota: str  # nfe ou nfse
+    
+    # Dados da nota
+    numero_nota: str
+    serie: Optional[str] = "1"
+    chave_acesso: Optional[str] = None
+    data_emissao: str
+    
+    # Emitente
+    cnpj_emitente: str
+    razao_social_emitente: str
+    uf_emitente: Optional[str] = None
+    
+    # Destinatário
+    cnpj_destinatario: Optional[str] = None
+    razao_social_destinatario: Optional[str] = None
+    
+    # Valores
+    valor_total: float
+    valor_produtos: Optional[float] = None
+    valor_servicos: Optional[float] = None
+    valor_frete: Optional[float] = 0
+    valor_desconto: Optional[float] = 0
+    
+    # Classificação
+    centro_custo_id: Optional[str] = None
+    centro_custo_nome: Optional[str] = None
+    plano_conta_id: Optional[str] = None
+    plano_conta_nome: Optional[str] = None
+    
+    # Arquivos (em base64)
+    xml_base64: Optional[str] = None
+    pdf_base64: Optional[str] = None
+    
+    observacoes: Optional[str] = None
+
 # --- Contas Bancárias ---
 class ContaBancariaCreate(BaseModel):
     nome: str  # Nome identificador da conta (ex: "Conta Principal", "Conta Poupança")
