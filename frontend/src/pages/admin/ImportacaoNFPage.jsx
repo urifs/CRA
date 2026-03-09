@@ -1250,6 +1250,7 @@ export default function ImportacaoNFPage() {
                     });
                     setXmlFileName("");
                     setPdfFileName("");
+                    setXmlItens([]);
                   }}
                 >
                   Limpar
