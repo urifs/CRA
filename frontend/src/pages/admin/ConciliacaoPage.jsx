@@ -115,7 +115,7 @@ export default function ConciliacaoPage() {
       const [contasBancariasRes, conciliacoesRes, centrosCustoRes] = await Promise.all([
         axios.get(`${API}/admin/contas-bancarias?ativo=true`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API}/conciliacao`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] })),
-        axios.get(`${API}/centros-custo`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/centros-custo`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
       ]);
       
       setContasBancarias(contasBancariasRes.data);
