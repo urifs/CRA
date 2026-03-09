@@ -38,7 +38,8 @@ import {
   Receipt,
   FileCheck,
   CheckSquare,
-  HardHat
+  HardHat,
+  Landmark
 } from "lucide-react";
 
 const ICONS = {
