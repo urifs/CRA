@@ -514,7 +514,7 @@ export default function MovimentacoesPage() {
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhuma</SelectItem>
+                        <SelectItem value="none">Nenhuma</SelectItem>
                         {contasBancarias.map(c => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.nome} ({formatCurrency(c.saldo_atual || 0)})
@@ -533,7 +533,7 @@ export default function MovimentacoesPage() {
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {centrosCusto.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                         ))}
@@ -562,7 +562,7 @@ export default function MovimentacoesPage() {
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhuma</SelectItem>
+                        <SelectItem value="none">Nenhuma</SelectItem>
                         {contasBancarias.map(c => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.nome} ({formatCurrency(c.saldo_atual || 0)})
@@ -581,7 +581,7 @@ export default function MovimentacoesPage() {
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {centrosCusto.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                         ))}
