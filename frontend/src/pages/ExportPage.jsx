@@ -1114,6 +1114,12 @@ export default function ExportPage({ module = "gerenciamento" }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="todas">
+                      <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-blue-500" />
+                        Todas (Pagar e Receber)
+                      </div>
+                    </SelectItem>
                     <SelectItem value="pagar">
                       <div className="flex items-center gap-2">
                         <TrendingDown size={14} className="text-red-500" />
