@@ -173,6 +173,14 @@ export default function ContasReceberPage() {
     setQuitarContaInfo(conta);
     setDataRecebimento(new Date().toISOString().split("T")[0]);
     setQuitarContaBancaria(conta.conta_bancaria_id || "");
+    // Calcular saldo restante
+    const valorTotal = conta.valor_final || conta.valor;
+    const valorJaRecebido = conta.valor_recebido || 0;
+    const saldoRestante = valorTotal - valorJaRecebido;
+    setValorRecebimento(formatCurrencyInput(saldoRestante.toFixed(2)));
+    setTipoRecebimento("total");
+    setObservacaoRecebimento("");
+    setShowHistoricoRecebimentos(false);
     setShowQuitarModal(true);
   };
 
@@ -181,18 +189,49 @@ export default function ContasReceberPage() {
       toast.error("Selecione a conta bancária");
       return;
     }
+    
+    const valorTotal = quitarContaInfo.valor_final || quitarContaInfo.valor;
+    const valorJaRecebido = quitarContaInfo.valor_recebido || 0;
+    const saldoRestante = valorTotal - valorJaRecebido;
+    
+    // Se for recebimento parcial, usar o valor informado
+    let valorReceber = saldoRestante;
+    if (tipoRecebimento === "parcial") {
+      valorReceber = parseCurrency(valorRecebimento);
+      if (!valorReceber || valorReceber <= 0) {
+        toast.error("Informe um valor válido para o recebimento");
+        return;
+      }
+      if (valorReceber > saldoRestante + 0.01) {
+        toast.error(`Valor excede o saldo restante (${formatCurrency(saldoRestante)})`);
+        return;
+      }
+    }
+    
     try {
-      await axios.patch(`${API}/admin/contas-receber/${quitarContaId}/quitar`, {
+      const response = await axios.patch(`${API}/admin/contas-receber/${quitarContaId}/quitar`, {
         data_recebimento: dataRecebimento,
-        conta_bancaria_id: quitarContaBancaria
+        conta_bancaria_id: quitarContaBancaria,
+        valor_recebido: tipoRecebimento === "parcial" ? valorReceber : null,
+        observacao: observacaoRecebimento || null
       });
-      toast.success("Conta quitada!"); 
+      
+      const msg = response.data.status === "quitada" 
+        ? "Conta quitada com sucesso!" 
+        : `Recebimento parcial registrado! Saldo restante: ${formatCurrency(response.data.saldo_restante)}`;
+      toast.success(msg);
+      
       setShowQuitarModal(false);
       setQuitarContaId(null);
       setQuitarContaInfo(null);
       setQuitarContaBancaria("");
+      setValorRecebimento("");
+      setTipoRecebimento("total");
+      setObservacaoRecebimento("");
       fetchContas();
-    } catch (error) { toast.error("Erro ao quitar"); }
+    } catch (error) { 
+      toast.error(error.response?.data?.detail || "Erro ao processar recebimento"); 
+    }
   };
 
   const handleCancelar = async (id) => {
