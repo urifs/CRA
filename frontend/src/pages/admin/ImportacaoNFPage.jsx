@@ -172,7 +172,7 @@ export default function ImportacaoNFPage() {
 
   const fetchData = async () => {
     try {
-      const [certsRes, nfesRes, nfsesRes] = await Promise.all([
+      const [certsRes, nfesRes, nfsesRes, centrosRes, planoRes] = await Promise.all([
         axios.get(`${API}/nfe/certificados`),
         axios.get(`${API}/nfe/importadas`, {
           params: {
@@ -185,11 +185,15 @@ export default function ImportacaoNFPage() {
             certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
             status: selectedStatus !== "todos" ? selectedStatus : undefined
           }
-        }).catch(() => ({ data: [] }))
+        }).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/centros-custo`).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/plano-contas`).catch(() => ({ data: [] }))
       ]);
       setCertificados(certsRes.data);
       setNfesImportadas(nfesRes.data);
       setNfsesImportadas(nfsesRes.data || []);
+      setCentrosCusto(centrosRes.data || []);
+      setPlanoContas(planoRes.data || []);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
