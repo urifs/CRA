@@ -279,6 +279,146 @@ class NFeImportadaResponse(BaseModel):
     status: str = "nova"  # nova, processada, ignorada
     created_at: str
 
+# ============ EMISSÃO DE NF-e / NFS-e MODELS ============
+
+class NFeItemEmissao(BaseModel):
+    """Item para emissão de NF-e"""
+    produto_id: Optional[str] = None  # ID do produto cadastrado
+    codigo: str
+    descricao: str
+    ncm: str = "00000000"
+    cfop: str = "5102"  # Default: Venda de mercadoria
+    unidade: str = "UN"
+    quantidade: float
+    valor_unitario: float
+    valor_total: float
+    # Tributos
+    origem: str = "0"  # 0 = Nacional
+    cst_icms: str = "00"
+    aliquota_icms: float = 0
+    valor_icms: float = 0
+    cst_pis: str = "01"
+    aliquota_pis: float = 0
+    valor_pis: float = 0
+    cst_cofins: str = "01"
+    aliquota_cofins: float = 0
+    valor_cofins: float = 0
+    cst_ipi: str = "50"
+    aliquota_ipi: float = 0
+    valor_ipi: float = 0
+
+class NFeEmissaoCreate(BaseModel):
+    """Modelo para emissão de NF-e (Nota Fiscal de Produtos)"""
+    certificado_id: str
+    # Destinatário
+    dest_cpf_cnpj: str
+    dest_razao_social: str
+    dest_ie: Optional[str] = None  # Inscrição Estadual
+    dest_email: Optional[str] = None
+    dest_telefone: Optional[str] = None
+    # Endereço do destinatário
+    dest_cep: str
+    dest_logradouro: str
+    dest_numero: str
+    dest_complemento: Optional[str] = None
+    dest_bairro: str
+    dest_cidade: str
+    dest_uf: str
+    dest_codigo_municipio: Optional[str] = None
+    # Dados da nota
+    natureza_operacao: str = "Venda de Mercadoria"
+    tipo_operacao: str = "1"  # 0=Entrada, 1=Saída
+    finalidade: str = "1"  # 1=Normal, 2=Complementar, 3=Ajuste, 4=Devolução
+    consumidor_final: str = "1"  # 0=Normal, 1=Consumidor Final
+    presenca_comprador: str = "1"  # 1=Presencial, 9=Não presencial
+    # Forma de pagamento
+    forma_pagamento: str = "01"  # 01=Dinheiro, 02=Cheque, 03=Cartão Crédito, etc.
+    valor_pagamento: Optional[float] = None
+    # Transporte
+    modalidade_frete: str = "9"  # 9=Sem frete
+    transportador_cnpj: Optional[str] = None
+    transportador_razao: Optional[str] = None
+    # Itens
+    itens: List[NFeItemEmissao]
+    # Totais
+    valor_produtos: float
+    valor_frete: float = 0
+    valor_seguro: float = 0
+    valor_desconto: float = 0
+    valor_outros: float = 0
+    valor_total: float
+    # Informações adicionais
+    info_complementar: Optional[str] = None
+
+class NFSeItemEmissao(BaseModel):
+    """Item/Serviço para emissão de NFS-e"""
+    produto_id: Optional[str] = None  # ID do produto/serviço cadastrado
+    codigo_servico: str  # Código do serviço LC 116/2003
+    descricao: str
+    quantidade: float = 1
+    valor_unitario: float
+    valor_total: float
+    aliquota_iss: float = 0
+    valor_iss: float = 0
+
+class NFSeEmissaoCreate(BaseModel):
+    """Modelo para emissão de NFS-e (Nota Fiscal de Serviços) - Palmas/TO"""
+    certificado_id: str
+    # Tomador do serviço
+    tomador_cpf_cnpj: str
+    tomador_razao_social: str
+    tomador_ie: Optional[str] = None
+    tomador_im: Optional[str] = None  # Inscrição Municipal
+    tomador_email: Optional[str] = None
+    tomador_telefone: Optional[str] = None
+    # Endereço do tomador
+    tomador_cep: str
+    tomador_logradouro: str
+    tomador_numero: str
+    tomador_complemento: Optional[str] = None
+    tomador_bairro: str
+    tomador_cidade: str
+    tomador_uf: str
+    tomador_codigo_municipio: Optional[str] = None
+    # Dados do serviço
+    codigo_cnae: Optional[str] = None
+    codigo_tributario_municipio: str
+    item_lista_servico: str  # Código do serviço LC 116/2003
+    discriminacao: str  # Descrição detalhada do serviço
+    # Valores
+    valor_servicos: float
+    valor_deducoes: float = 0
+    valor_pis: float = 0
+    valor_cofins: float = 0
+    valor_inss: float = 0
+    valor_ir: float = 0
+    valor_csll: float = 0
+    outras_retencoes: float = 0
+    valor_iss: float = 0
+    aliquota_iss: float = 0
+    valor_liquido: float
+    # ISS
+    iss_retido: bool = False
+    # Informações adicionais
+    info_complementar: Optional[str] = None
+    # Itens (opcional, para detalhamento)
+    itens: List[NFSeItemEmissao] = []
+
+class NotaFiscalEmitidaResponse(BaseModel):
+    """Resposta após emissão de nota fiscal"""
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    tipo: str  # "nfe" ou "nfse"
+    numero: str
+    serie: str
+    chave_acesso: Optional[str] = None
+    protocolo: Optional[str] = None
+    status: str  # "autorizada", "rejeitada", "pendente", "rascunho"
+    mensagem: Optional[str] = None
+    xml_base64: Optional[str] = None
+    pdf_base64: Optional[str] = None
+    created_at: str
+
 # ============ OIL CHANGE / USAGE MODELS ============
 
 class UsageLogCreate(BaseModel):
