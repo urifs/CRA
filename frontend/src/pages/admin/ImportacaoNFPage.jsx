@@ -1184,57 +1184,29 @@ export default function ImportacaoNFPage() {
                 </div>
               </div>
 
-              {/* Upload de Arquivos */}
+              {/* Upload de PDF (opcional) */}
               <div className="border rounded-lg p-4 bg-green-50">
-                <h4 className="font-medium mb-3 text-green-700">Arquivos (Opcional)</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Arquivo XML</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="file"
-                        accept=".xml"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setXmlFileName(file.name);
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              const base64 = ev.target.result.split(",")[1];
-                              setManualForm({...manualForm, xml_base64: base64});
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="flex-1"
-                      />
-                    </div>
-                    {xmlFileName && <p className="text-xs text-gray-500 mt-1">{xmlFileName}</p>}
-                  </div>
-                  <div>
-                    <Label>Arquivo PDF (DANFE)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="file"
-                        accept=".pdf"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setPdfFileName(file.name);
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              const base64 = ev.target.result.split(",")[1];
-                              setManualForm({...manualForm, pdf_base64: base64});
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="flex-1"
-                      />
-                    </div>
-                    {pdfFileName && <p className="text-xs text-gray-500 mt-1">{pdfFileName}</p>}
-                  </div>
+                <h4 className="font-medium mb-3 text-green-700">Arquivo PDF - DANFE (Opcional)</h4>
+                <div className="flex gap-2">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setPdfFileName(file.name);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const base64 = ev.target.result.split(",")[1];
+                          setManualForm({...manualForm, pdf_base64: base64});
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="flex-1"
+                  />
                 </div>
+                {pdfFileName && <p className="text-xs text-gray-500 mt-1">✓ {pdfFileName}</p>}
               </div>
 
               {/* Observações */}
