@@ -402,7 +402,11 @@ export default function ConciliacaoPage() {
     
     // Filtro por centro de custo
     if (selectedCentroCusto && selectedCentroCusto !== "todos") {
-      if (conta.centro_custo_id !== selectedCentroCusto) return false;
+      // Buscar o nome do centro de custo selecionado
+      const centroCustoSelecionado = centrosCusto.find(cc => cc.id === selectedCentroCusto);
+      if (centroCustoSelecionado) {
+        if (conta.centro_custo !== centroCustoSelecionado.nome) return false;
+      }
     }
     
     switch (filtroContas) {
