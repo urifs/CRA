@@ -10068,6 +10068,196 @@ import shutil
 UPLOAD_DIR = Path(__file__).parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# Relatório de Contas por Conta Bancária
+@api_router.get("/export/relatorio-conta-bancaria")
+async def export_relatorio_conta_bancaria(
+    conta_bancaria_id: str,
+    tipo: str = "pagar",  # "pagar" ou "receber"
+    status: str = "todas",  # "todas", "pendente", "quitada", "parcial"
+    current_user: dict = Depends(get_current_user)
+):
+    """Exporta relatório de contas a pagar ou receber filtrado por conta bancária e status"""
+    
+    # Buscar conta bancária
+    conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
+    if not conta_bancaria:
+        raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
+    
+    # Definir coleção e filtros
+    if tipo == "pagar":
+        collection = db.contas_pagar
+        titulo = "Contas a Pagar"
+    else:
+        collection = db.contas_receber
+        titulo = "Contas a Receber"
+    
+    # Construir filtro
+    filtro = {"conta_bancaria_id": conta_bancaria_id}
+    
+    if status == "pendente":
+        filtro["status"] = {"$in": ["pendente", "em_aberto"]}
+        titulo += " - Pendentes"
+    elif status == "quitada":
+        filtro["status"] = "quitada"
+        titulo += " - Quitadas"
+    elif status == "parcial":
+        filtro["status"] = "parcial"
+        titulo += " - Parcialmente Pagas"
+    else:
+        titulo += " - Todas"
+    
+    # Buscar dados
+    data = await collection.find(filtro, {"_id": 0}).sort("data_vencimento", -1).to_list(5000)
+    
+    # Gerar PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm, leftMargin=1.5*cm, rightMargin=1.5*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, textColor=colors.black, alignment=TA_CENTER, spaceAfter=10)
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=TA_CENTER, spaceAfter=20)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=9, textColor=colors.black, spaceAfter=5)
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, textColor=colors.black, wordWrap='LTR', leading=10)
+    header_cell_style = ParagraphStyle('HeaderCellStyle', parent=styles['Normal'], fontSize=8, textColor=colors.white, fontName='Helvetica-Bold', wordWrap='LTR', leading=10)
+    
+    def cell(text, is_header=False):
+        if text is None:
+            text = "-"
+        return Paragraph(str(text), header_cell_style if is_header else cell_style)
+    
+    elements = []
+    
+    # Logo
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            logo = RLImage(logo_path, width=2.5*cm, height=2.5*cm, kind='proportional')
+            elements.append(logo)
+            elements.append(Spacer(1, 10))
+    except Exception as e:
+        logging.warning(f"Não foi possível carregar o logo: {e}")
+    
+    # Título
+    elements.append(Paragraph("CRA Construtora", title_style))
+    elements.append(Paragraph(f"Relatório de {titulo}", title_style))
+    
+    # Info da conta bancária
+    banco_info = f"{conta_bancaria.get('banco', '')} - Ag: {conta_bancaria.get('agencia', '')} / CC: {conta_bancaria.get('conta', '')}"
+    elements.append(Paragraph(f"Conta Bancária: {banco_info}", subtitle_style))
+    elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
+    elements.append(Spacer(1, 15))
+    
+    # Resumo
+    total_valor = sum(c.get("valor_final") or c.get("valor", 0) for c in data)
+    total_pago = sum(c.get("valor_pago", 0) or 0 for c in data) if tipo == "pagar" else sum(c.get("valor_recebido", 0) or 0 for c in data)
+    total_saldo = total_valor - total_pago
+    
+    elements.append(Paragraph(f"Total de registros: {len(data)}", normal_style))
+    elements.append(Paragraph(f"Valor Total: R$ {total_valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), normal_style))
+    if status != "pendente":
+        label_pago = "Total Pago" if tipo == "pagar" else "Total Recebido"
+        elements.append(Paragraph(f"{label_pago}: R$ {total_pago:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), normal_style))
+        elements.append(Paragraph(f"Saldo Restante: R$ {total_saldo:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), normal_style))
+    elements.append(Spacer(1, 15))
+    
+    if not data:
+        elements.append(Paragraph("Nenhum registro encontrado para os filtros selecionados.", normal_style))
+    else:
+        # Tabela
+        if tipo == "pagar":
+            headers = [
+                cell("Fornecedor", True), 
+                cell("Descrição", True), 
+                cell("Vencimento", True), 
+                cell("Valor", True),
+                cell("Pago", True),
+                cell("Saldo", True),
+                cell("Status", True)
+            ]
+        else:
+            headers = [
+                cell("Cliente", True), 
+                cell("Descrição", True), 
+                cell("Vencimento", True), 
+                cell("Valor", True),
+                cell("Recebido", True),
+                cell("Saldo", True),
+                cell("Status", True)
+            ]
+        
+        table_data = [headers]
+        for item in data:
+            valor = item.get("valor_final") or item.get("valor", 0)
+            pago = item.get("valor_pago", 0) or item.get("valor_recebido", 0) or 0
+            saldo = valor - pago
+            
+            status_map = {
+                "quitada": "Quitada",
+                "parcial": "Parcial",
+                "pendente": "Pendente",
+                "em_aberto": "Em Aberto",
+                "cancelada": "Cancelada"
+            }
+            status_text = status_map.get(item.get("status", ""), item.get("status", "-"))
+            
+            nome = item.get("fornecedor_nome", "") if tipo == "pagar" else item.get("cliente_nome", "")
+            
+            table_data.append([
+                cell(nome[:25] if nome else "-"),
+                cell((item.get("descricao", "") or "-")[:30]),
+                cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
+                cell(f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+                cell(f"R$ {pago:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+                cell(f"R$ {saldo:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")),
+                cell(status_text)
+            ])
+        
+        # Calcular larguras das colunas
+        col_widths = [3.2*cm, 4*cm, 2.2*cm, 2.3*cm, 2.3*cm, 2.3*cm, 1.8*cm]
+        
+        table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#D4A000')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('TOPPADDING', (0, 0), (-1, 0), 8),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+        ]))
+        elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Log de auditoria
+    await create_audit_log(
+        user=current_user,
+        action="exportar PDF",
+        entity_type="relatório conta bancária",
+        entity_id=conta_bancaria_id,
+        entity_name=f"{titulo} - {banco_info}",
+        details=f"Exportou {len(data)} registros",
+        module="Exportação"
+    )
+    
+    filename = f"CRA_Relatorio_{tipo.capitalize()}_{conta_bancaria.get('banco', 'Banco')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 ALLOWED_EXTENSIONS = {'.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
