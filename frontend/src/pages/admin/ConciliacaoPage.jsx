@@ -204,6 +204,23 @@ export default function ConciliacaoPage() {
     }
   };
 
+  const handleLimparExtrato = async () => {
+    if (!window.confirm("Tem certeza que deseja limpar todos os itens do extrato não conciliados?")) {
+      return;
+    }
+    
+    try {
+      const response = await axios.delete(`${API}/conciliacao/extratos`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(response.data.message || "Extrato limpo com sucesso!");
+      setExtratoItems([]);
+      setSelectedExtratoItem(null);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao limpar extrato");
+    }
+  };
+
   const handleConciliar = async () => {
     if (!selectedExtratoItem || !selectedConta) {
       toast.error("Selecione um item do extrato e uma conta para conciliar");
