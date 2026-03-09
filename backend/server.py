@@ -10838,7 +10838,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 @api_router.get("/export/relatorio-conta-bancaria")
 async def export_relatorio_conta_bancaria(
     conta_bancaria_id: str,
-    tipo: str = "pagar",  # "pagar" ou "receber"
+    tipo: str = "pagar",  # "pagar", "receber" ou "todas"
     status: str = "todas",  # "todas", "pendente", "quitada", "parcial"
     current_user: dict = Depends(get_current_user)
 ):
@@ -10849,31 +10849,49 @@ async def export_relatorio_conta_bancaria(
     if not conta_bancaria:
         raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
     
-    # Definir coleção e filtros
-    if tipo == "pagar":
-        collection = db.contas_pagar
-        titulo = "Contas a Pagar"
-    else:
-        collection = db.contas_receber
-        titulo = "Contas a Receber"
-    
-    # Construir filtro
-    filtro = {"conta_bancaria_id": conta_bancaria_id}
+    # Construir filtro base
+    filtro_base = {"conta_bancaria_id": conta_bancaria_id}
     
     if status == "pendente":
-        filtro["status"] = {"$in": ["pendente", "em_aberto"]}
+        filtro_base["status"] = {"$in": ["pendente", "em_aberto"]}
+    elif status == "quitada":
+        filtro_base["status"] = "quitada"
+    elif status == "parcial":
+        filtro_base["status"] = "parcial"
+    
+    # Buscar dados conforme o tipo
+    data = []
+    if tipo == "pagar":
+        data = await db.contas_pagar.find(filtro_base, {"_id": 0}).sort("data_vencimento", -1).to_list(5000)
+        for d in data:
+            d["_tipo"] = "pagar"
+        titulo = "Contas a Pagar"
+    elif tipo == "receber":
+        data = await db.contas_receber.find(filtro_base, {"_id": 0}).sort("data_vencimento", -1).to_list(5000)
+        for d in data:
+            d["_tipo"] = "receber"
+        titulo = "Contas a Receber"
+    else:  # todas
+        data_pagar = await db.contas_pagar.find(filtro_base, {"_id": 0}).sort("data_vencimento", -1).to_list(5000)
+        data_receber = await db.contas_receber.find(filtro_base, {"_id": 0}).sort("data_vencimento", -1).to_list(5000)
+        for d in data_pagar:
+            d["_tipo"] = "pagar"
+        for d in data_receber:
+            d["_tipo"] = "receber"
+        data = data_pagar + data_receber
+        # Ordenar por data de vencimento
+        data.sort(key=lambda x: x.get("data_vencimento", ""), reverse=True)
+        titulo = "Contas a Pagar e Receber"
+    
+    # Adicionar status ao título
+    if status == "pendente":
         titulo += " - Pendentes"
     elif status == "quitada":
-        filtro["status"] = "quitada"
         titulo += " - Quitadas"
     elif status == "parcial":
-        filtro["status"] = "parcial"
         titulo += " - Parcialmente Pagas"
     else:
         titulo += " - Todas"
-    
-    # Buscar dados
-    data = await collection.find(filtro, {"_id": 0}).sort("data_vencimento", -1).to_list(5000)
     
     # Gerar PDF
     buffer = io.BytesIO()
@@ -10915,14 +10933,13 @@ async def export_relatorio_conta_bancaria(
     
     # Resumo
     total_valor = sum(c.get("valor_final") or c.get("valor", 0) for c in data)
-    total_pago = sum(c.get("valor_pago", 0) or 0 for c in data) if tipo == "pagar" else sum(c.get("valor_recebido", 0) or 0 for c in data)
+    total_pago = sum(c.get("valor_pago", 0) or c.get("valor_recebido", 0) or 0 for c in data)
     total_saldo = total_valor - total_pago
     
     elements.append(Paragraph(f"Total de registros: {len(data)}", normal_style))
     elements.append(Paragraph(f"Valor Total: R$ {total_valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), normal_style))
     if status != "pendente":
-        label_pago = "Total Pago" if tipo == "pagar" else "Total Recebido"
-        elements.append(Paragraph(f"{label_pago}: R$ {total_pago:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), normal_style))
+        elements.append(Paragraph(f"Total Pago/Recebido: R$ {total_pago:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), normal_style))
         elements.append(Paragraph(f"Saldo Restante: R$ {total_saldo:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), normal_style))
     elements.append(Spacer(1, 15))
     
