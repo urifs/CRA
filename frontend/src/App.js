@@ -216,6 +216,7 @@ function App() {
             <Route path="nfe" element={<NFEPage />} />
             <Route path="importacao-nf" element={<ImportacaoNFPage />} />
             <Route path="emissao-nf" element={<EmissaoNFPage />} />
+            <Route path="movimentacoes" element={<MovimentacoesPage />} />
             <Route path="cadastros" element={<CadastrosPage />} />
             <Route path="produtos" element={<ProdutosPage />} />
             <Route path="ordens-servico" element={<OrdensServicoPage />} />
