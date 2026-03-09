@@ -90,6 +90,12 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [selectedContaBancaria, setSelectedContaBancaria] = useState(null);
   const [contasBancarias, setContasBancarias] = useState([]);
 
+  // State para relatório por conta bancária
+  const [relContaBancaria, setRelContaBancaria] = useState("");
+  const [relTipoConta, setRelTipoConta] = useState("pagar");
+  const [relStatusConta, setRelStatusConta] = useState("todas");
+  const [exportingRelatorio, setExportingRelatorio] = useState(false);
+
   // State para modal de seleção de empresa (Recibo/Duplicata)
   const [empresaModal, setEmpresaModal] = useState({
     open: false,
