@@ -12080,6 +12080,16 @@ async def list_conciliacoes(current_user: dict = Depends(get_current_user)):
     return conciliacoes
 
 
+@api_router.get("/conciliacao/extratos")
+async def list_all_extratos_importados(current_user: dict = Depends(get_current_user)):
+    """Lista todos os itens de extrato importados de todas as contas bancárias"""
+    extratos = await db.extratos_bancarios.find(
+        {"conciliado": {"$ne": True}}, 
+        {"_id": 0}
+    ).sort("data", -1).to_list(1000)
+    return extratos
+
+
 @api_router.get("/conciliacao/extratos/{conta_bancaria_id}")
 async def list_extratos_importados(conta_bancaria_id: str, current_user: dict = Depends(get_current_user)):
     """Lista todos os itens de extrato importados para uma conta bancária"""
