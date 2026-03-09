@@ -446,7 +446,8 @@ export default function ContasPagarPage() {
                     <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${status.color}`}><StatusIcon className="inline mr-1" size={12} />{status.label}</span></td>
                     <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-1">
-                        {(c.status === "em_aberto" || c.status === "pendente") && <Button size="sm" variant="outline" className="text-green-600" onClick={() => openQuitarModal(c)} title="Quitar" data-testid={`quitar-btn-${c.id}`}><CheckCircle2 size={14} /></Button>}
+                        {(c.status === "em_aberto" || c.status === "pendente" || c.status === "parcial") && <Button size="sm" variant="outline" className="text-green-600" onClick={() => openQuitarModal(c)} title={c.status === "parcial" ? "Registrar Pagamento" : "Quitar"} data-testid={`quitar-btn-${c.id}`}><CheckCircle2 size={14} /></Button>}
+                        {(c.pagamentos && c.pagamentos.length > 0) && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setQuitarContaInfo(c); setShowHistoricoPagamentos(true); }} title="Ver Histórico"><History size={14} /></Button>}
                         <Button size="sm" variant="outline" onClick={() => openModal(c)}><Edit size={14} /></Button>
                         {(c.status === "em_aberto" || c.status === "pendente") && <Button size="sm" variant="outline" className="text-[#E31A1A]" onClick={() => handleCancelar(c.id)} title="Cancelar"><X size={14} /></Button>}
                         <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></Button>
