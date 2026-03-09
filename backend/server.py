@@ -10220,27 +10220,65 @@ async def generate_excel_report(category: str, data: list, title: str) -> io.Byt
     date_format = workbook.add_format({'border': 1, 'num_format': 'dd/mm/yyyy', 'valign': 'vcenter'})
     
     # Definir headers e dados baseado na categoria
-    if category in ["contas_pagar", "contas_receber"]:
-        headers = ["Descrição", "Valor", "Vencimento", "Status", "Fornecedor/Cliente", "Centro de Custo", "Plano de Contas"]
+    if category == "contas_pagar":
+        headers = ["Descrição", "Valor", "Vencimento", "Quitação", "Status", "Fornecedor", "Centro de Custo", "Plano de Contas"]
         worksheet.set_column(0, 0, 30)  # Descrição
         worksheet.set_column(1, 1, 15)  # Valor
         worksheet.set_column(2, 2, 12)  # Vencimento
-        worksheet.set_column(3, 3, 12)  # Status
-        worksheet.set_column(4, 4, 25)  # Fornecedor
-        worksheet.set_column(5, 5, 20)  # Centro de Custo
-        worksheet.set_column(6, 6, 20)  # Plano de Contas
+        worksheet.set_column(3, 3, 12)  # Quitação
+        worksheet.set_column(4, 4, 12)  # Status
+        worksheet.set_column(5, 5, 25)  # Fornecedor
+        worksheet.set_column(6, 6, 20)  # Centro de Custo
+        worksheet.set_column(7, 7, 20)  # Plano de Contas
         
         for col, header in enumerate(headers):
             worksheet.write(0, col, header, header_format)
         
         for row, item in enumerate(data, 1):
+            data_quitacao = item.get("data_pagamento", "")
+            if data_quitacao and len(str(data_quitacao)) >= 10:
+                data_quitacao = str(data_quitacao)[:10]
+            else:
+                data_quitacao = ""
+            
             worksheet.write(row, 0, item.get("descricao", ""), cell_format)
             worksheet.write(row, 1, float(item.get("valor", 0)), money_format)
             worksheet.write(row, 2, item.get("data_vencimento", "")[:10] if item.get("data_vencimento") else "", cell_format)
-            worksheet.write(row, 3, item.get("status", "").capitalize(), cell_format)
-            worksheet.write(row, 4, item.get("fornecedor_nome", "") or item.get("cliente_nome", ""), cell_format)
-            worksheet.write(row, 5, item.get("centro_custo_nome", ""), cell_format)
-            worksheet.write(row, 6, item.get("plano_contas_nome", ""), cell_format)
+            worksheet.write(row, 3, data_quitacao, cell_format)
+            worksheet.write(row, 4, item.get("status", "").capitalize(), cell_format)
+            worksheet.write(row, 5, item.get("fornecedor_nome", ""), cell_format)
+            worksheet.write(row, 6, item.get("centro_custo_nome", ""), cell_format)
+            worksheet.write(row, 7, item.get("plano_contas_nome", ""), cell_format)
+    
+    elif category == "contas_receber":
+        headers = ["Descrição", "Valor", "Vencimento", "Recebimento", "Status", "Cliente", "Centro de Custo", "Plano de Contas"]
+        worksheet.set_column(0, 0, 30)  # Descrição
+        worksheet.set_column(1, 1, 15)  # Valor
+        worksheet.set_column(2, 2, 12)  # Vencimento
+        worksheet.set_column(3, 3, 12)  # Recebimento
+        worksheet.set_column(4, 4, 12)  # Status
+        worksheet.set_column(5, 5, 25)  # Cliente
+        worksheet.set_column(6, 6, 20)  # Centro de Custo
+        worksheet.set_column(7, 7, 20)  # Plano de Contas
+        
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+        
+        for row, item in enumerate(data, 1):
+            data_recebimento = item.get("data_recebimento", "")
+            if data_recebimento and len(str(data_recebimento)) >= 10:
+                data_recebimento = str(data_recebimento)[:10]
+            else:
+                data_recebimento = ""
+            
+            worksheet.write(row, 0, item.get("descricao", ""), cell_format)
+            worksheet.write(row, 1, float(item.get("valor", 0)), money_format)
+            worksheet.write(row, 2, item.get("data_vencimento", "")[:10] if item.get("data_vencimento") else "", cell_format)
+            worksheet.write(row, 3, data_recebimento, cell_format)
+            worksheet.write(row, 4, item.get("status", "").capitalize(), cell_format)
+            worksheet.write(row, 5, item.get("cliente_nome", ""), cell_format)
+            worksheet.write(row, 6, item.get("centro_custo_nome", ""), cell_format)
+            worksheet.write(row, 7, item.get("plano_contas_nome", ""), cell_format)
     
     elif category == "machines":
         headers = ["Nome", "Placa", "Marca", "Modelo", "Ano", "Status", "Categoria"]
