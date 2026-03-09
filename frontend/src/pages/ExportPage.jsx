@@ -144,7 +144,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      const tipoLabel = relTipoConta === "pagar" ? "Pagar" : "Receber";
+      const tipoLabel = relTipoConta === "pagar" ? "Pagar" : relTipoConta === "receber" ? "Receber" : "Geral";
       link.setAttribute('download', `CRA_Relatorio_${tipoLabel}_${new Date().toISOString().split('T')[0]}.pdf`);
       document.body.appendChild(link);
       link.click();
