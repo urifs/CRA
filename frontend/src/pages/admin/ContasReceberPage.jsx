@@ -57,6 +57,10 @@ export default function ContasReceberPage() {
   const [quitarContaInfo, setQuitarContaInfo] = useState(null);
   const [dataRecebimento, setDataRecebimento] = useState(new Date().toISOString().split("T")[0]);
   const [quitarContaBancaria, setQuitarContaBancaria] = useState("");
+  const [valorRecebimento, setValorRecebimento] = useState("");
+  const [tipoRecebimento, setTipoRecebimento] = useState("total"); // "total" ou "parcial"
+  const [observacaoRecebimento, setObservacaoRecebimento] = useState("");
+  const [showHistoricoRecebimentos, setShowHistoricoRecebimentos] = useState(false);
   
   const [formData, setFormData] = useState({
     cliente_nome: "", documento: "", numero_doc: "", descricao: "",
