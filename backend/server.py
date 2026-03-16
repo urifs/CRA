@@ -10293,9 +10293,9 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     elements.append(detail_table)
     elements.append(Spacer(1, 1*cm))
     
-    # Assinatura
+    # Assinatura - usar nome do fornecedor/cliente ao invés da empresa
     elements.append(Paragraph("_" * 50, ParagraphStyle('Linha', alignment=1)))
-    elements.append(Paragraph(empresa_nome, ParagraphStyle('Assinatura', fontSize=10, alignment=1)))
+    elements.append(Paragraph(pessoa_nome, ParagraphStyle('Assinatura', fontSize=10, alignment=1)))
     
     doc.build(elements)
     buffer.seek(0)
