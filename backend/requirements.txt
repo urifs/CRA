@@ -139,3 +139,9 @@ websockets==15.0.1
 xlsxwriter==3.2.9
 yarl==1.22.0
 zipp==3.23.0
+erpbrasil.base==2.4.1
+erpbrasil.edoc.pdf==1.2.1
+nfelib==2.5.1
+py3o.template==0.10.0
+pycairo==1.29.0
+rlPyCairo==0.4.0
