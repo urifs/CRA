@@ -10862,6 +10862,56 @@ async def generate_excel_report(category: str, data: list, title: str) -> io.Byt
                     else:
                         worksheet.write(row, col, str(value)[:50] if value else "", cell_format)
     
+    # Adicionar linha de total quando houver valores monetários
+    total_valor = 0
+    campo_valor = None
+    row_total = len(data) + 2  # +2 para header e linha em branco
+    
+    # Identificar o campo de valor baseado na categoria
+    if category == "contas_pagar":
+        campo_valor = "valor"
+        col_valor = 1  # coluna do valor
+    elif category == "contas_receber":
+        campo_valor = "valor"
+        col_valor = 1
+    elif category == "alugueis":
+        campo_valor = "valor"
+        col_valor = 3
+    elif category == "maintenances":
+        campo_valor = "part_value"
+        col_valor = 2
+    
+    if campo_valor:
+        for item in data:
+            try:
+                valor = item.get(campo_valor, 0) or 0
+                total_valor += float(valor)
+            except (ValueError, TypeError):
+                pass
+        
+        if total_valor > 0:
+            # Formatos para o total
+            total_label_format = workbook.add_format({
+                'bold': True,
+                'bg_color': '#FFE0E0',
+                'border': 2,
+                'align': 'right',
+                'valign': 'vcenter',
+                'font_size': 11
+            })
+            total_value_format = workbook.add_format({
+                'bold': True,
+                'bg_color': '#FFE0E0',
+                'border': 2,
+                'num_format': 'R$ #,##0.00',
+                'valign': 'vcenter',
+                'font_size': 11
+            })
+            
+            # Escrever o total
+            worksheet.write(row_total, col_valor - 1, "TOTAL GERAL:", total_label_format)
+            worksheet.write(row_total, col_valor, total_valor, total_value_format)
+    
     workbook.close()
     buffer.seek(0)
     return buffer
