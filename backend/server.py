@@ -14480,6 +14480,10 @@ api_router.include_router(export_router)
 api_router.include_router(stock_router)
 api_router.include_router(obras_router)
 
+
+# ===== Endpoints de Importação Automática (devem estar antes do include_router) =====
+# Nota: As funções scheduler e importação estão no final do arquivo
+
 # Include the router in the main app
 app.include_router(api_router)
 
