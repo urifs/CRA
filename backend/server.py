@@ -14166,7 +14166,32 @@ async def importar_extrato_pdf(
                     
                     value_str = value_matches[-1]
                     value = float(value_str.replace('.', '').replace(',', '.'))
-                    tipo = "saida" if value < 0 else "entrada"
+                    
+                    # Determinar tipo (entrada ou saída) - lógica melhorada
+                    tipo = "entrada"  # default
+                    line_upper = line.upper()
+                    
+                    # Verificar se o valor é negativo explicitamente
+                    if value < 0:
+                        tipo = "saida"
+                        value = abs(value)
+                    # Verificar padrões de débito/saída
+                    elif any(palavra in line_upper for palavra in [
+                        'DEB', 'DEBITO', 'DÉBITO', 'PGTO', 'PAG', 'PAGAMENTO',
+                        'TRANSF ENV', 'TED ENV', 'DOC ENV', 'PIX ENV', 'ENVIAD',
+                        'SAQUE', 'TARIFA', 'TAR ', 'IOF', 'JUROS',
+                        'COMPRA', 'BOLETO', 'TITULO', 'IMPOSTOS',
+                        ' D ', ' D$', '(D)', '-D-', ' S '
+                    ]):
+                        tipo = "saida"
+                    # Verificar padrões de crédito/entrada
+                    elif any(palavra in line_upper for palavra in [
+                        'CRED', 'CREDITO', 'CRÉDITO', 'REC', 'RECEBIMENTO',
+                        'TRANSF REC', 'TED REC', 'DOC REC', 'PIX REC', 'RECEBID',
+                        'DEP', 'DEPOSITO', 'DEPÓSITO', 'RENDIMENTO',
+                        ' C ', ' C$', '(C)', '-C-', ' E '
+                    ]):
+                        tipo = "entrada"
                     
                     desc_start = line.find(date_str) + len(date_str)
                     desc_end = line.find(value_str)
