@@ -14708,8 +14708,8 @@ async def importar_nfse_automatico(certificado_id: str):
     return {"novas": 0, "erro": "Integração NFS-e automática não implementada"}
 
 
-# Endpoints para gerenciar importação automática
-@api_router.post("/nf/importacao-automatica/executar")
+# Endpoints para gerenciar importação automática (usando app diretamente pois está após include_router)
+@app.post("/api/nf/importacao-automatica/executar")
 async def executar_importacao_automatica(current_user: dict = Depends(get_current_user)):
     """Executa a importação automática manualmente"""
     if current_user.get("role") != "admin":
@@ -14721,7 +14721,7 @@ async def executar_importacao_automatica(current_user: dict = Depends(get_curren
     return {"message": "Importação automática iniciada em background", "status": "processing"}
 
 
-@api_router.get("/nf/importacao-automatica/status")
+@app.get("/api/nf/importacao-automatica/status")
 async def status_importacao_automatica(current_user: dict = Depends(get_current_user)):
     """Retorna o status da última importação automática"""
     ultimo_log = await db.logs_importacao.find_one(
@@ -14740,7 +14740,7 @@ async def status_importacao_automatica(current_user: dict = Depends(get_current_
     }
 
 
-@api_router.get("/nf/importacao-automatica/logs")
+@app.get("/api/nf/importacao-automatica/logs")
 async def logs_importacao_automatica(limit: int = 10, current_user: dict = Depends(get_current_user)):
     """Retorna os últimos logs de importação automática"""
     logs = await db.logs_importacao.find(
