@@ -14704,6 +14704,49 @@ async def importar_nfse_automatico(certificado_id: str):
     return {"novas": 0, "erro": "Integração NFS-e automática não implementada"}
 
 
+# Endpoints para gerenciar importação automática
+@api_router.post("/nf/importacao-automatica/executar")
+async def executar_importacao_automatica(current_user: dict = Depends(get_current_user)):
+    """Executa a importação automática manualmente"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem executar importação automática")
+    
+    import asyncio
+    asyncio.create_task(importacao_automatica_notas())
+    
+    return {"message": "Importação automática iniciada em background", "status": "processing"}
+
+
+@api_router.get("/nf/importacao-automatica/status")
+async def status_importacao_automatica(current_user: dict = Depends(get_current_user)):
+    """Retorna o status da última importação automática"""
+    ultimo_log = await db.logs_importacao.find_one(
+        {"tipo": "importacao_automatica"},
+        sort=[("data_hora", -1)]
+    )
+    
+    if not ultimo_log:
+        return {"ultimo_log": None, "scheduler_ativo": scheduler.running}
+    
+    del ultimo_log["_id"]
+    return {
+        "ultimo_log": ultimo_log,
+        "scheduler_ativo": scheduler.running,
+        "proximo_agendamento": "22:00 (horário de Brasília)"
+    }
+
+
+@api_router.get("/nf/importacao-automatica/logs")
+async def logs_importacao_automatica(limit: int = 10, current_user: dict = Depends(get_current_user)):
+    """Retorna os últimos logs de importação automática"""
+    logs = await db.logs_importacao.find(
+        {"tipo": "importacao_automatica"},
+        {"_id": 0}
+    ).sort("data_hora", -1).limit(limit).to_list(limit)
+    
+    return logs
+
+
 @app.on_event("startup")
 async def startup_event():
     """Inicializa o scheduler de importação automática"""
