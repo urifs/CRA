@@ -1,6 +1,21 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 11/03/2026 (Sessão 28)
+
+### Melhoria: Download de DANFE Real para NF-e Importadas
+- ✅ **DANFE real gerado a partir do XML**: Usando biblioteca `erpbrasil.edoc.pdf` para gerar DANFE oficial
+- ✅ **PDF original quando disponível**: Se a nota tem PDF armazenado, usa ele diretamente
+- ✅ **Fallback com aviso**: Se não conseguir gerar DANFE real, gera versão simplificada com aviso visual
+- ✅ **Dependências instaladas**: `erpbrasil.edoc.pdf`, `nfelib`, `pycairo`, `rlPyCairo`, LibreOffice
+- ✅ **Link para Portal NF-e**: PDF simplificado inclui link para consulta oficial
+
+### Correções de Bugs
+- ✅ **Erro 500 no Dashboard**: Corrigido comparação de datas com valores `None`
+- ✅ **URL incorreta centro-custo**: Corrigido `/centro-custo` para `/centros-custo` no AdminDashboardPage
+
+---
+
 ## Changelog - 09/03/2026 (Sessão 27 - Continuação)
 
 ### Melhoria: Extração Automática de Dados do XML na Importação Manual
