@@ -14086,8 +14086,44 @@ async def importar_extrato_pdf(
                                 value_str = value_matches[-1]
                                 value = float(value_str.replace('.', '').replace(',', '.'))
                                 
-                                # Determinar tipo (entrada ou saída)
-                                tipo = "saida" if value < 0 or "-" in row_text.split(value_str)[0][-5:] else "entrada"
+                                # Determinar tipo (entrada ou saída) - lógica melhorada
+                                tipo = "entrada"  # default
+                                row_upper = row_text.upper()
+                                
+                                # Verificar se o valor é negativo explicitamente
+                                if value < 0:
+                                    tipo = "saida"
+                                    value = abs(value)
+                                # Verificar padrões de débito/saída nos extratos
+                                elif any(palavra in row_upper for palavra in [
+                                    'DEB', 'DEBITO', 'DÉBITO', 'PGTO', 'PAG', 'PAGAMENTO',
+                                    'TRANSF ENV', 'TED ENV', 'DOC ENV', 'PIX ENV', 'ENVIAD',
+                                    'SAQUE', 'TARIFA', 'TAR ', 'IOF', 'JUROS',
+                                    'COMPRA', 'BOLETO', 'TITULO', 'IMPOSTOS',
+                                    'ENERGIA', 'AGUA', 'TELEFONE', 'INTERNET',
+                                    'CARTAO', 'VISA', 'MASTER', 'ELO',
+                                    ' D ', ' D$', '(D)', '-D-', ' S '
+                                ]):
+                                    tipo = "saida"
+                                # Verificar padrões de crédito/entrada
+                                elif any(palavra in row_upper for palavra in [
+                                    'CRED', 'CREDITO', 'CRÉDITO', 'REC', 'RECEBIMENTO',
+                                    'TRANSF REC', 'TED REC', 'DOC REC', 'PIX REC', 'RECEBID',
+                                    'DEP', 'DEPOSITO', 'DEPÓSITO', 'RENDIMENTO', 'JUROS CR',
+                                    ' C ', ' C$', '(C)', '-C-', ' E '
+                                ]):
+                                    tipo = "entrada"
+                                # Verificar se há indicador de D ou C no texto próximo ao valor
+                                else:
+                                    # Verificar caracteres próximos ao valor
+                                    valor_idx = row_text.find(value_str)
+                                    if valor_idx > 0:
+                                        antes = row_text[max(0, valor_idx-5):valor_idx].upper()
+                                        depois = row_text[valor_idx+len(value_str):valor_idx+len(value_str)+5].upper()
+                                        if 'D' in antes or 'D' in depois or '-' in antes:
+                                            tipo = "saida"
+                                        elif 'C' in antes or 'C' in depois or '+' in antes:
+                                            tipo = "entrada"
                                 
                                 # Extrair descrição (texto entre data e valor)
                                 desc_start = row_text.find(date_str) + len(date_str)
