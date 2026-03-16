@@ -14273,18 +14273,64 @@ async def download_nfe_xml(nfe_id: str, current_user: dict = Depends(get_current
 
 @api_router.get("/nfe/importadas/{nfe_id}/download-pdf")
 async def download_nfe_danfe(nfe_id: str, current_user: dict = Depends(get_current_user)):
-    """Download do DANFE (PDF) da NF-e"""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
-    from reportlab.lib.units import mm, cm
+    """Download do DANFE (PDF) da NF-e - gera DANFE real a partir do XML oficial"""
     
     nfe = await db.nfe_importadas.find_one({"id": nfe_id})
     if not nfe:
         raise HTTPException(status_code=404, detail="NF-e não encontrada")
     
+    # Verificar se tem PDF armazenado (PDF original)
+    pdf_base64 = nfe.get("pdf_base64")
+    if pdf_base64:
+        try:
+            pdf_content = base64.b64decode(pdf_base64)
+            filename = f"DANFE_NFe_{nfe.get('numero_nf', 'sem_numero')}.pdf"
+            return Response(
+                content=pdf_content,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
+        except Exception as e:
+            logging.warning(f"Erro ao decodificar PDF armazenado: {e}")
+    
+    # Verificar se tem XML para gerar DANFE
+    xml_base64 = nfe.get("xml_base64")
+    if xml_base64:
+        try:
+            # Decodificar XML
+            xml_content = base64.b64decode(xml_base64).decode('utf-8')
+            
+            # Tentar gerar DANFE usando erpbrasil.edoc.pdf
+            try:
+                from erpbrasil.edoc.pdf import base as edoc_pdf
+                
+                # Gerar DANFE
+                pdf_content = edoc_pdf.ImprimirXml.imprimir(
+                    string_xml=xml_content,
+                    tipo_impressao='nfe'
+                )
+                
+                if pdf_content:
+                    filename = f"DANFE_NFe_{nfe.get('numero_nf', 'sem_numero')}.pdf"
+                    return Response(
+                        content=pdf_content,
+                        media_type="application/pdf",
+                        headers={"Content-Disposition": f"attachment; filename={filename}"}
+                    )
+            except Exception as danfe_error:
+                logging.warning(f"Erro ao gerar DANFE com erpbrasil: {danfe_error}")
+                # Fallback para DANFE simplificado
+        except Exception as xml_error:
+            logging.warning(f"Erro ao processar XML: {xml_error}")
+    
+    # Fallback: Gerar DANFE simplificado usando ReportLab
     try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+        from reportlab.lib.units import mm, cm
+        
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=1*cm, rightMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
         
@@ -14299,6 +14345,7 @@ async def download_nfe_danfe(nfe_id: str, current_user: dict = Depends(get_curre
         # Cabeçalho
         elements.append(Paragraph("DOCUMENTO AUXILIAR DA NOTA FISCAL ELETRÔNICA", title_style))
         elements.append(Paragraph("DANFE - Representação Simplificada", subtitle_style))
+        elements.append(Paragraph("<font color='red'><b>⚠ PDF gerado pelo sistema - Para obter o DANFE oficial, consulte o Portal da NF-e</b></font>", small_style))
         elements.append(Spacer(1, 10))
         
         # Info da NF
@@ -14308,6 +14355,86 @@ async def download_nfe_danfe(nfe_id: str, current_user: dict = Depends(get_curre
         ]
         
         table = Table(nf_info, colWidths=[3*cm, 5*cm, 3*cm, 5*cm])
+        table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 10))
+        
+        # Chave de acesso
+        elements.append(Paragraph("<b>CHAVE DE ACESSO</b>", subtitle_style))
+        chave = nfe.get("chave_acesso", "")
+        chave_formatada = " ".join([chave[i:i+4] for i in range(0, len(chave), 4)])
+        elements.append(Paragraph(chave_formatada, small_style))
+        elements.append(Paragraph(f"<font color='blue'>Consulte em: https://www.nfe.fazenda.gov.br/portal</font>", small_style))
+        elements.append(Spacer(1, 10))
+        
+        # Emitente
+        elements.append(Paragraph("<b>EMITENTE</b>", subtitle_style))
+        emit_info = [
+            ["Razão Social:", nfe.get("razao_social_emitente", "-")],
+            ["CNPJ:", nfe.get("cnpj_emitente", "-")],
+        ]
+        table = Table(emit_info, colWidths=[3*cm, 13*cm])
+        table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 10))
+        
+        # Itens
+        itens = nfe.get("itens", [])
+        if itens:
+            elements.append(Paragraph("<b>ITENS DA NOTA FISCAL</b>", subtitle_style))
+            
+            itens_data = [["#", "Descrição", "Qtd", "Un", "Valor Unit.", "Valor Total"]]
+            for i, item in enumerate(itens, 1):
+                desc = item.get("descricao", "-")
+                if len(desc) > 40:
+                    desc = desc[:40] + "..."
+                itens_data.append([
+                    str(i),
+                    desc,
+                    str(item.get("quantidade", 0)),
+                    item.get("unidade", "UN"),
+                    f"R$ {item.get('valor_unitario', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    f"R$ {item.get('valor_total', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                ])
+            
+            table = Table(itens_data, colWidths=[1*cm, 7*cm, 1.5*cm, 1.5*cm, 2.5*cm, 2.5*cm])
+            table.setStyle(TableStyle([
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ]))
+            elements.append(table)
+        
+        elements.append(Spacer(1, 15))
+        elements.append(Paragraph(f"<i>Documento gerado pelo Sistema CRA em {datetime.now().strftime('%d/%m/%Y %H:%M')}</i>", small_style))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        filename = f"DANFE_NFe_{nfe.get('numero_nf', 'sem_numero')}.pdf"
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar DANFE: {str(e)}")
         table.setStyle(TableStyle([
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
