@@ -13042,16 +13042,32 @@ async def download_nfse_xml(nfse_id: str, current_user: dict = Depends(get_curre
 
 @api_router.get("/nfse/importadas/{nfse_id}/download-pdf")
 async def download_nfse_pdf(nfse_id: str, current_user: dict = Depends(get_current_user)):
-    """Download do PDF da NFS-e"""
+    """Download do PDF da NFS-e - usa PDF original se disponível"""
+    
+    nfse = await db.nfse_importadas.find_one({"id": nfse_id})
+    if not nfse:
+        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
+    
+    # Verificar se tem PDF armazenado (PDF original da prefeitura)
+    pdf_base64 = nfse.get("pdf_base64")
+    if pdf_base64:
+        try:
+            pdf_content = base64.b64decode(pdf_base64)
+            filename = f"NFSe_{nfse.get('numero_nfse', 'sem_numero')}.pdf"
+            return Response(
+                content=pdf_content,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
+        except Exception as e:
+            logging.warning(f"Erro ao decodificar PDF armazenado: {e}")
+    
+    # Fallback: Gerar PDF simplificado
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
     from reportlab.lib.units import mm, cm
-    
-    nfse = await db.nfse_importadas.find_one({"id": nfse_id})
-    if not nfse:
-        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
     
     try:
         buffer = io.BytesIO()
@@ -13061,11 +13077,13 @@ async def download_nfse_pdf(nfse_id: str, current_user: dict = Depends(get_curre
         title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=14, spaceAfter=6, alignment=1)
         subtitle_style = ParagraphStyle('Subtitle', parent=styles['Heading2'], fontSize=10, spaceAfter=4)
         normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=8)
+        small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=7)
         
         elements = []
         
         # Cabeçalho
         elements.append(Paragraph("NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e", title_style))
+        elements.append(Paragraph("<font color='red'><b>⚠ PDF gerado pelo sistema - Para obter a NFS-e oficial, consulte o portal da prefeitura</b></font>", small_style))
         elements.append(Spacer(1, 10))
         
         # Info da NFS-e
