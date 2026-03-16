@@ -8683,6 +8683,55 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         elements.append(table)
+        
+        # Calcular e adicionar total quando houver valores monetários
+        total_valor = 0
+        campo_valor = None
+        
+        # Identificar o campo de valor baseado na categoria
+        if category in ["contas_pagar", "contas_receber"]:
+            campo_valor = "valor_final" if any(item.get("valor_final") for item in data) else "valor"
+        elif category == "maintenances":
+            campo_valor = "part_value"
+        elif category == "ordens_servico":
+            campo_valor = "valor_total"
+        elif category == "alugueis":
+            campo_valor = "valor_total"
+        elif category == "stock_items":
+            campo_valor = None  # Não somar estoque
+        elif category == "folha_pagamento":
+            campo_valor = "salario_liquido"
+        elif category == "produtos_admin":
+            campo_valor = None  # Não somar produtos
+        elif category == "contas_bancarias":
+            campo_valor = "saldo_atual"
+        
+        if campo_valor:
+            for item in data:
+                try:
+                    valor = item.get(campo_valor, 0) or 0
+                    total_valor += float(valor)
+                except (ValueError, TypeError):
+                    pass
+            
+            if total_valor > 0:
+                elements.append(Spacer(1, 15))
+                total_style = ParagraphStyle('TotalStyle', parent=styles['Normal'], fontSize=12, fontName='Helvetica-Bold', textColor=colors.Color(0.89, 0.10, 0.10))
+                
+                # Formatação do valor em formato brasileiro
+                total_formatado = f"R$ {total_valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
+                # Criar uma tabela para o total
+                total_data = [[cell("TOTAL GERAL:", True), Paragraph(total_formatado, ParagraphStyle('TotalValor', fontSize=12, fontName='Helvetica-Bold', alignment=2))]]
+                total_table = Table(total_data, colWidths=[doc.width * 0.7, doc.width * 0.3])
+                total_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.Color(0.95, 0.95, 0.95)),
+                    ('BOX', (0, 0), (-1, -1), 1, colors.Color(0.89, 0.10, 0.10)),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                    ('TOPPADDING', (0, 0), (-1, -1), 8),
+                    ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+                ]))
+                elements.append(total_table)
     
     # Rodapé
     elements.append(Spacer(1, 30))
