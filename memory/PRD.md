@@ -1,6 +1,23 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 11/03/2026 (Sessão 28 - Continuação 3)
+
+### Correção: Total em Todas as Exportações
+- ✅ **PDF com Total**: Adicionado "TOTAL GERAL" ao final de todos os relatórios PDF (Contas a Pagar, Receber, Aluguéis, etc.)
+- ✅ **Excel com Total**: Adicionada linha de total nos arquivos Excel exportados
+- ✅ **Formatação brasileira**: Valores formatados como "R$ X.XXX,XX"
+- ✅ **Visual destacado**: Total com fundo colorido e fonte em negrito
+
+### Correção: Conciliação Bancária - Entradas e Saídas
+- ✅ **Lógica melhorada**: Sistema agora detecta corretamente entradas e saídas nos extratos
+- ✅ **Padrões de débito detectados**: DEB, DEBITO, PGTO, PAGAMENTO, TRANSF ENV, TED ENV, DOC ENV, PIX ENV, SAQUE, TARIFA, COMPRA, BOLETO, etc.
+- ✅ **Padrões de crédito detectados**: CRED, CREDITO, REC, RECEBIMENTO, TRANSF REC, TED REC, DOC REC, PIX REC, DEP, DEPOSITO, RENDIMENTO, etc.
+- ✅ **Indicadores D/C**: Detecta caracteres "D" e "C" próximos aos valores
+- ✅ **Valores negativos**: Identifica automaticamente como saída
+
+---
+
 ## Changelog - 11/03/2026 (Sessão 28 - Continuação 2)
 
 ### Verificação e Correção: Importação Automática de NF-e e NFS-e
