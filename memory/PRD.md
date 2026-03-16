@@ -1,6 +1,28 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 11/03/2026 (Sessão 28 - Continuação)
+
+### Nova Funcionalidade: Importação Automática de Notas às 22h
+- ✅ **Agendamento automático**: Sistema importa NF-e de todos os CNPJs cadastrados diariamente às 22:00 (Brasília)
+- ✅ **APScheduler integrado**: Usando biblioteca robusta para agendamento de tarefas
+- ✅ **Logs de importação**: Registra cada execução com quantidade de notas importadas e erros
+- ✅ **Endpoints de controle**:
+  - `POST /api/nf/importacao-automatica/executar` - Executa importação manualmente
+  - `GET /api/nf/importacao-automatica/status` - Status do scheduler e última execução
+  - `GET /api/nf/importacao-automatica/logs` - Histórico de importações
+
+### Correção: Formato de Data no Recibo
+- ✅ **Datas em formato brasileiro (dd/mm/aaaa)**: Corrigido formato de data de vencimento e pagamento
+
+### Correção: Assinatura no Recibo
+- ✅ **Nome do fornecedor/cliente**: Campo de assinatura agora mostra o nome correto (fornecedor/cliente) ao invés do emissor
+
+### Nota sobre Importação Manual
+- ✅ **Notas importadas manualmente já aparecem no painel**: Campo `importacao_manual: true` marca notas importadas via XML
+
+---
+
 ## Changelog - 11/03/2026 (Sessão 28)
 
 ### Melhoria: Download de DANFE Real para NF-e Importadas
