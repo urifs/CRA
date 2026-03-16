@@ -1,6 +1,25 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 11/03/2026 (Sessão 28 - Continuação 2)
+
+### Verificação e Correção: Importação Automática de NF-e e NFS-e
+- ✅ **Importação automática NF-e funcionando**: Testada com sucesso, conecta na SEFAZ e importa documentos
+- ✅ **Logs detalhados**: Sistema registra cada execução com status, quantidade e erros
+- ✅ **Correção do processamento**: Ajustado parsing da resposta SEFAZ para formato correto
+- ✅ **NFS-e preparada**: Estrutura pronta para integração com Webiss (Palmas-TO)
+
+### Verificação: Notas no Painel
+- ✅ **Notas importadas aparecem no painel**: 121 NF-e e 3 NFS-e visíveis
+- ✅ **Notas manuais também aparecem**: Notas importadas via XML aparecem junto com as automáticas
+
+### Status Atual
+- **Importação automática**: Agendada para 22:00 diariamente (Brasília)
+- **Scheduler ativo**: Confirmado funcionando
+- **SEFAZ retornando cStat=137**: Significa "nenhum documento novo" (já importados)
+
+---
+
 ## Changelog - 11/03/2026 (Sessão 28 - Continuação)
 
 ### Nova Funcionalidade: Importação Automática de Notas às 22h
