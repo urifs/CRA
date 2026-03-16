@@ -10248,8 +10248,23 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     plano_contas = item.get("plano_contas_nome", "-")
     centro_custo = item.get("centro_custo_nome", "-")
     forma_pag = item.get("forma_pagamento_nome", "-")
-    data_venc = item.get("data_vencimento", "-")
-    data_pag = item.get("data_pagamento") or item.get("data_recebimento") or "-"
+    
+    # Formatar datas para o formato brasileiro (dd/mm/aaaa)
+    def formatar_data_br(data_str):
+        if not data_str or data_str == "-":
+            return "-"
+        try:
+            # Tentar formato YYYY-MM-DD
+            if len(data_str) >= 10 and "-" in data_str:
+                partes = data_str[:10].split("-")
+                if len(partes) == 3:
+                    return f"{partes[2]}/{partes[1]}/{partes[0]}"
+            return data_str
+        except:
+            return data_str
+    
+    data_venc = formatar_data_br(item.get("data_vencimento", "-"))
+    data_pag = formatar_data_br(item.get("data_pagamento") or item.get("data_recebimento") or "-")
     obs = item.get("observacoes", "-")
     
     # Estilo com word-wrap para textos longos
