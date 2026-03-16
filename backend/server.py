@@ -14501,6 +14501,229 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# ===== SISTEMA DE IMPORTAÇÃO AUTOMÁTICA DE NOTAS =====
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+scheduler = AsyncIOScheduler(timezone="America/Sao_Paulo")
+
+
+async def importacao_automatica_notas():
+    """Importa automaticamente NF-e e NFS-e de todos os CNPJs cadastrados"""
+    logger.info("=" * 50)
+    logger.info("INICIANDO IMPORTAÇÃO AUTOMÁTICA DE NOTAS FISCAIS")
+    logger.info("=" * 50)
+    
+    try:
+        # Buscar todos os certificados ativos
+        certificados = await db.nfe_certificados.find({"ativo": True}).to_list(100)
+        logger.info(f"Encontrados {len(certificados)} certificados ativos para importação")
+        
+        total_nfe_importadas = 0
+        total_nfse_importadas = 0
+        erros = []
+        
+        for cert in certificados:
+            cert_id = cert.get("id")
+            cnpj = cert.get("cnpj", "")
+            razao = cert.get("razao_social", cnpj)
+            
+            logger.info(f"Processando certificado: {razao} (CNPJ: {cnpj})")
+            
+            # Importar NF-e
+            try:
+                resultado_nfe = await importar_nfe_automatico(cert_id)
+                total_nfe_importadas += resultado_nfe.get("novas", 0)
+                logger.info(f"  NF-e: {resultado_nfe.get('novas', 0)} novas importadas")
+            except Exception as e:
+                erro_msg = f"Erro NF-e {razao}: {str(e)}"
+                erros.append(erro_msg)
+                logger.error(erro_msg)
+            
+            # Importar NFS-e (se configurado para a cidade)
+            try:
+                resultado_nfse = await importar_nfse_automatico(cert_id)
+                total_nfse_importadas += resultado_nfse.get("novas", 0)
+                logger.info(f"  NFS-e: {resultado_nfse.get('novas', 0)} novas importadas")
+            except Exception as e:
+                erro_msg = f"Erro NFS-e {razao}: {str(e)}"
+                erros.append(erro_msg)
+                logger.warning(erro_msg)  # Warning porque nem todos CNPJs têm NFS-e
+        
+        # Criar registro de log de importação
+        log_importacao = {
+            "id": str(uuid.uuid4()),
+            "tipo": "importacao_automatica",
+            "data_hora": datetime.now(timezone.utc).isoformat(),
+            "total_certificados": len(certificados),
+            "nfe_importadas": total_nfe_importadas,
+            "nfse_importadas": total_nfse_importadas,
+            "erros": erros,
+            "status": "concluido" if not erros else "concluido_com_erros"
+        }
+        await db.logs_importacao.insert_one(log_importacao)
+        
+        logger.info("=" * 50)
+        logger.info(f"IMPORTAÇÃO AUTOMÁTICA CONCLUÍDA")
+        logger.info(f"NF-e importadas: {total_nfe_importadas}")
+        logger.info(f"NFS-e importadas: {total_nfse_importadas}")
+        logger.info(f"Erros: {len(erros)}")
+        logger.info("=" * 50)
+        
+    except Exception as e:
+        logger.error(f"ERRO CRÍTICO na importação automática: {str(e)}")
+
+
+async def importar_nfe_automatico(certificado_id: str):
+    """Importa NF-e automaticamente (versão interna sem auth)"""
+    certificado = await db.nfe_certificados.find_one({"id": certificado_id})
+    if not certificado or not certificado.get("ativo"):
+        return {"novas": 0, "erro": "Certificado inválido ou inativo"}
+    
+    # Verificar se está bloqueado
+    bloqueado_ate = certificado.get("bloqueado_ate")
+    if bloqueado_ate:
+        bloqueio_dt = datetime.fromisoformat(bloqueado_ate.replace('Z', '+00:00')) if isinstance(bloqueado_ate, str) else bloqueado_ate
+        if datetime.now(timezone.utc) < bloqueio_dt:
+            return {"novas": 0, "erro": "Certificado bloqueado"}
+    
+    novas_importadas = 0
+    ultimo_nsu_processado = certificado.get("ultimo_nsu", "000000000000000")
+    
+    try:
+        import tempfile
+        import gzip
+        from xml.etree import ElementTree as ET
+        
+        cert_data = base64.b64decode(certificado["certificado_base64"])
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pfx') as cert_file:
+            cert_file.write(cert_data)
+            cert_path = cert_file.name
+        
+        ns = {
+            'nfe': 'http://www.portalfiscal.inf.br/nfe',
+            'res': 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe'
+        }
+        
+        # Usar PyNFe para consultar
+        from pynfe.processamento.comunicacao import ComunicacaoSefaz
+        from pynfe.entidades.certificado import CertificadoA1
+        
+        certificado_obj = CertificadoA1(cert_path, certificado.get("senha", ""))
+        comunicacao = ComunicacaoSefaz(
+            uf=certificado.get("uf_certificado", "TO"),
+            certificado=certificado_obj,
+            homologacao=False
+        )
+        
+        # Consultar distribuição DFe
+        try:
+            resposta = comunicacao.consultar_distribuicao_dfe(
+                cnpj=certificado["cnpj"].replace(".", "").replace("/", "").replace("-", ""),
+                ultimo_nsu=ultimo_nsu_processado
+            )
+            
+            if hasattr(resposta, 'docZip') and resposta.docZip:
+                for doc in resposta.docZip:
+                    nsu = doc.NSU if hasattr(doc, 'NSU') else str(doc.get('@NSU', ''))
+                    xml_gzip = base64.b64decode(doc.valueOf_ if hasattr(doc, 'valueOf_') else str(doc))
+                    xml_content = gzip.decompress(xml_gzip).decode('utf-8')
+                    
+                    # Processar XML
+                    root = ET.fromstring(xml_content)
+                    res_nfe = root.find('.//nfe:resNFe', ns) or root.find('.//resNFe')
+                    
+                    if res_nfe is not None:
+                        chave = res_nfe.findtext('.//nfe:chNFe', '', ns) or res_nfe.findtext('.//chNFe', '')
+                        
+                        # Verificar se já existe
+                        existing = await db.nfe_importadas.find_one({"chave_acesso": chave})
+                        if existing:
+                            continue
+                        
+                        cnpj_emit = res_nfe.findtext('.//nfe:CNPJ', '', ns) or res_nfe.findtext('.//CNPJ', '')
+                        razao_emit = res_nfe.findtext('.//nfe:xNome', '', ns) or res_nfe.findtext('.//xNome', '')
+                        valor = res_nfe.findtext('.//nfe:vNF', '0', ns) or res_nfe.findtext('.//vNF', '0')
+                        data_emissao = res_nfe.findtext('.//nfe:dhEmi', '', ns) or res_nfe.findtext('.//dhEmi', '')
+                        
+                        numero_nf = chave[25:34].lstrip('0') if len(chave) >= 34 else ""
+                        serie = chave[22:25].lstrip('0') if len(chave) >= 25 else "1"
+                        
+                        doc_nfe = {
+                            "id": str(uuid.uuid4()),
+                            "certificado_id": certificado_id,
+                            "cnpj_destinatario": certificado["cnpj"],
+                            "chave_acesso": chave,
+                            "numero_nf": numero_nf or "N/A",
+                            "serie": serie or "1",
+                            "data_emissao": data_emissao[:10] if data_emissao else datetime.now(timezone.utc).isoformat()[:10],
+                            "cnpj_emitente": cnpj_emit,
+                            "razao_social_emitente": razao_emit or "Emitente não identificado",
+                            "valor_total": float(valor) if valor else 0.0,
+                            "itens": [],
+                            "xml_base64": base64.b64encode(xml_content.encode()).decode(),
+                            "nsu": nsu,
+                            "status": "nova",
+                            "importacao_automatica": True,
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        }
+                        await db.nfe_importadas.insert_one(doc_nfe)
+                        novas_importadas += 1
+                        
+                        if nsu > ultimo_nsu_processado:
+                            ultimo_nsu_processado = nsu
+            
+            # Atualizar último NSU
+            await db.nfe_certificados.update_one(
+                {"id": certificado_id},
+                {"$set": {"ultimo_nsu": ultimo_nsu_processado, "ultima_consulta": datetime.now(timezone.utc).isoformat()}}
+            )
+            
+        except Exception as e:
+            logger.warning(f"Erro ao consultar SEFAZ: {str(e)}")
+        
+        # Limpar arquivo temporário
+        try:
+            os.unlink(cert_path)
+        except:
+            pass
+        
+    except Exception as e:
+        logger.error(f"Erro na importação automática NF-e: {str(e)}")
+        return {"novas": 0, "erro": str(e)}
+    
+    return {"novas": novas_importadas}
+
+
+async def importar_nfse_automatico(certificado_id: str):
+    """Importa NFS-e automaticamente (versão interna sem auth)"""
+    # NFS-e geralmente requer integração específica com a prefeitura
+    # Por enquanto retorna 0 até implementar integração com prefeituras específicas
+    return {"novas": 0, "erro": "Integração NFS-e automática não implementada"}
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Inicializa o scheduler de importação automática"""
+    logger.info("Iniciando scheduler de importação automática de notas...")
+    
+    # Agendar importação diária às 22:00 (horário de Brasília)
+    scheduler.add_job(
+        importacao_automatica_notas,
+        CronTrigger(hour=22, minute=0, timezone="America/Sao_Paulo"),
+        id="importacao_automatica_22h",
+        replace_existing=True,
+        name="Importação Automática de Notas às 22h"
+    )
+    
+    scheduler.start()
+    logger.info("Scheduler iniciado - Importação automática agendada para 22:00 (Brasília)")
+
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+async def shutdown_scheduler():
+    """Desliga o scheduler"""
+    scheduler.shutdown(wait=False)
+    logger.info("Scheduler de importação automática encerrado")
