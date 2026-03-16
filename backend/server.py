@@ -14611,22 +14611,21 @@ async def importar_nfe_automatico(certificado_id: str):
             'res': 'http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe'
         }
         
-        # Usar PyNFe para consultar
+        # Usar PyNFe para consultar (mesma abordagem da importação manual)
         from pynfe.processamento.comunicacao import ComunicacaoSefaz
-        from pynfe.entidades.certificado import CertificadoA1
         
-        certificado_obj = CertificadoA1(cert_path, certificado.get("senha", ""))
-        comunicacao = ComunicacaoSefaz(
-            uf=certificado.get("uf_certificado", "TO"),
-            certificado=certificado_obj,
-            homologacao=False
+        con = ComunicacaoSefaz(
+            uf=certificado.get("uf", "TO"),
+            certificado=cert_path,
+            certificado_senha=certificado.get("senha_certificado", ""),
+            homologacao=(certificado.get("ambiente", "producao") == "homologacao")
         )
         
         # Consultar distribuição DFe
         try:
-            resposta = comunicacao.consultar_distribuicao_dfe(
+            resposta = con.consulta_distribuicao(
                 cnpj=certificado["cnpj"].replace(".", "").replace("/", "").replace("-", ""),
-                ultimo_nsu=ultimo_nsu_processado
+                nsu=int(ultimo_nsu_processado) if ultimo_nsu_processado.isdigit() else 0
             )
             
             if hasattr(resposta, 'docZip') and resposta.docZip:
