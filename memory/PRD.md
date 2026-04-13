@@ -1,7 +1,22 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
-## Changelog - 11/03/2026 (Sessão 28 - Continuação 3)
+## Changelog - 13/04/2026 (Sessão 29)
+
+### Nova Funcionalidade: Filtro de Centro de Custo na Exportação
+- ✅ **Painel de seleção obrigatório**: Banner amarelo no topo da página de Exportação (módulo Administrativo) exige seleção antes de exportar
+- ✅ **Modal de seleção**: Abre modal com todas as opções de CC cadastradas + "Todos os Centros de Custo"
+- ✅ **Estados visuais**: Amarelo (não selecionado), Azul (todos), Verde (CC específico selecionado)
+- ✅ **Bloqueio de exportação**: Seção de categorias fica opaca/desabilitada até CC ser selecionado
+- ✅ **Backend filtrado**: Endpoints export_pdf, export_excel, export_ofx aceitam `?centro_custo=NOME`
+- ✅ **Exportação combinada**: POST /api/export/combined aceita campo `centro_custo` no body
+- ✅ **Filtro aplicado em**: Coleções `contas_pagar` e `contas_receber` (únicas com campo centro_custo)
+- ✅ **Módulo Gerenciamento**: Não afetado (filtro só aparece no módulo Administrativo)
+- ✅ **Testado**: 12/12 testes passaram (testing_agent_v3_fork)
+
+---
+
+
 
 ### Correção: Total em Todas as Exportações
 - ✅ **PDF com Total**: Adicionado "TOTAL GERAL" ao final de todos os relatórios PDF (Contas a Pagar, Receber, Aluguéis, etc.)
