@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Response, Body
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Response, Body, Query
 from fastapi.responses import FileResponse
 """
 ================================================================================
@@ -8745,7 +8745,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
     return buffer
 
 @api_router.get("/export/pdf/{category}")
-async def export_pdf(category: str, current_user: dict = Depends(get_current_user)):
+async def export_pdf(category: str, centro_custo: Optional[str] = Query(None), current_user: dict = Depends(get_current_user)):
     """Exporta dados de uma categoria em PDF com filtros"""
     
     # Mapear categoria para coleção, título e filtro
@@ -8866,7 +8866,13 @@ async def export_pdf(category: str, current_user: dict = Depends(get_current_use
     config = category_configs[category]
     collection_name = config["collection"]
     title = config["title"]
-    query_filter = config["filter"]
+    query_filter = dict(config["filter"])  # Cópia para não mutar o original
+    
+    # Aplicar filtro de centro de custo para coleções financeiras
+    FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
+    if centro_custo and collection_name in FINANCIAL_COLLECTIONS:
+        query_filter["centro_custo"] = centro_custo
+        title += f" - {centro_custo}"
     
     # Buscar dados com filtro
     collection = db[collection_name]
@@ -8911,6 +8917,7 @@ class CombinedExportRequest(BaseModel):
     categories: list[str]
     format: str = "pdf"  # pdf, excel
     filters: Optional[dict] = None  # Filtros específicos por ID
+    centro_custo: Optional[str] = None  # Filtro por centro de custo
 
 @api_router.post("/export/combined")
 async def export_combined(data: CombinedExportRequest, current_user: dict = Depends(get_current_user)):
@@ -8960,10 +8967,18 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
             if "ids" in specific_filter:
                 query_filter["id"] = {"$in": specific_filter["ids"]}
         
+        # Aplicar filtro de centro de custo para coleções financeiras
+        FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
+        if data.centro_custo and config["collection"] in FINANCIAL_COLLECTIONS:
+            query_filter["centro_custo"] = data.centro_custo
+
         items = await db[config["collection"]].find(query_filter, {"_id": 0}).to_list(1000)
         if items:
+            section_title = config["title"]
+            if data.centro_custo and config["collection"] in FINANCIAL_COLLECTIONS:
+                section_title += f" - {data.centro_custo}"
             all_data.append({
-                "title": config["title"],
+                "title": section_title,
                 "items": items,
                 "category": cat_id
             })
@@ -10999,7 +11014,7 @@ NEWFILEUID:NONE
     return ofx_content
 
 @api_router.get("/export/excel/{category}")
-async def export_excel(category: str, current_user: dict = Depends(get_current_user)):
+async def export_excel(category: str, centro_custo: Optional[str] = Query(None), current_user: dict = Depends(get_current_user)):
     """Exporta dados de uma categoria em Excel"""
     
     category_configs = {
@@ -11023,8 +11038,15 @@ async def export_excel(category: str, current_user: dict = Depends(get_current_u
         raise HTTPException(status_code=400, detail=f"Categoria '{category}' inválida para Excel")
     
     config = category_configs[category]
+    excel_filter = dict(config["filter"])
+    
+    # Aplicar filtro de centro de custo para coleções financeiras
+    FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
+    if centro_custo and config["collection"] in FINANCIAL_COLLECTIONS:
+        excel_filter["centro_custo"] = centro_custo
+    
     collection = db[config["collection"]]
-    data = await collection.find(config["filter"], {"_id": 0}).to_list(5000)
+    data = await collection.find(excel_filter, {"_id": 0}).to_list(5000)
     
     excel_buffer = await generate_excel_report(config["collection"], data, config["title"])
     
@@ -11047,7 +11069,7 @@ async def export_excel(category: str, current_user: dict = Depends(get_current_u
     )
 
 @api_router.get("/export/ofx/{category}")
-async def export_ofx(category: str, current_user: dict = Depends(get_current_user)):
+async def export_ofx(category: str, centro_custo: Optional[str] = Query(None), current_user: dict = Depends(get_current_user)):
     """Exporta dados financeiros em formato OFX"""
     
     valid_categories = {
@@ -11061,7 +11083,9 @@ async def export_ofx(category: str, current_user: dict = Depends(get_current_use
         raise HTTPException(status_code=400, detail="OFX só está disponível para contas a pagar/receber")
     
     config = valid_categories[category]
-    query_filter = config.get("filter", {})
+    query_filter = dict(config.get("filter", {}))
+    if centro_custo:
+        query_filter["centro_custo"] = centro_custo
     collection = db[config["collection"]]
     data = await collection.find(query_filter, {"_id": 0}).to_list(5000)
     

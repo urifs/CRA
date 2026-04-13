@@ -97,6 +97,11 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [relStatusConta, setRelStatusConta] = useState("todas");
   const [exportingRelatorio, setExportingRelatorio] = useState(false);
 
+  // State para filtro de Centro de Custo
+  const [centrosCusto, setCentrosCusto] = useState([]);
+  const [selectedCentroCusto, setSelectedCentroCusto] = useState(null); // null=não selecionado, "todos"=todos, ou nome string
+  const [ccSelectorOpen, setCcSelectorOpen] = useState(false);
+
   // State para modal de seleção de empresa (Recibo/Duplicata)
   const [empresaModal, setEmpresaModal] = useState({
     open: false,
@@ -110,8 +115,20 @@ export default function ExportPage({ module = "gerenciamento" }) {
     fetchCategories();
     if (module === "administrativo") {
       fetchContasBancarias();
+      fetchCentrosCusto();
     }
   }, [module]);
+
+  const fetchCentrosCusto = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/centros-custo`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCentrosCusto(response.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar centros de custo:", error);
+    }
+  };
 
   const fetchContasBancarias = async () => {
     try {
@@ -503,6 +520,10 @@ export default function ExportPage({ module = "gerenciamento" }) {
       toast.error("Selecione pelo menos um item para exportar");
       return;
     }
+    if (!canExport()) {
+      setCcSelectorOpen(true);
+      return;
+    }
     
     setExporting('all-combined');
     try {
@@ -515,10 +536,12 @@ export default function ExportPage({ module = "gerenciamento" }) {
         }
       });
 
+      const ccParam = getCentroCustoParam();
       const response = await axios.post(`${API}/export/combined`, {
         categories: selectedItems,
         format: 'pdf',
-        filters: Object.keys(filters).length > 0 ? filters : null
+        filters: Object.keys(filters).length > 0 ? filters : null,
+        centro_custo: ccParam || null
       }, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -542,17 +565,38 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
+  // Helper: retorna o nome do CC selecionado para incluir na URL
+  const getCentroCustoParam = () => {
+    if (module !== "administrativo") return null;
+    if (!selectedCentroCusto || selectedCentroCusto === "todos") return null;
+    return selectedCentroCusto;
+  };
+
+  // Helper: verifica se pode exportar (CC selecionado ou módulo gerenciamento)
+  const canExport = () => {
+    if (module !== "administrativo") return true;
+    return selectedCentroCusto !== null;
+  };
+
   const exportPDF = async (itemId) => {
+    if (!canExport()) {
+      setCcSelectorOpen(true);
+      return;
+    }
     setExporting(`pdf-${itemId}`);
     try {
-      const response = await axios.get(`${API}/export/pdf/${itemId}`, {
+      const ccParam = getCentroCustoParam();
+      const apiUrl = ccParam
+        ? `${API}/export/pdf/${itemId}?centro_custo=${encodeURIComponent(ccParam)}`
+        : `${API}/export/pdf/${itemId}`;
+      const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
       
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = url;
+      link.href = blobUrl;
       
       const contentDisposition = response.headers['content-disposition'];
       let filename = `CRA_Relatorio_${itemId}.pdf`;
@@ -567,7 +611,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
       
       toast.success("PDF exportado!");
     } catch (error) {
@@ -579,9 +623,17 @@ export default function ExportPage({ module = "gerenciamento" }) {
   };
 
   const exportExcel = async (itemId) => {
+    if (!canExport()) {
+      setCcSelectorOpen(true);
+      return;
+    }
     setExporting(`excel-${itemId}`);
     try {
-      const response = await axios.get(`${API}/export/excel/${itemId}`, {
+      const ccParam = getCentroCustoParam();
+      const apiUrl = ccParam
+        ? `${API}/export/excel/${itemId}?centro_custo=${encodeURIComponent(ccParam)}`
+        : `${API}/export/excel/${itemId}`;
+      const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -615,9 +667,17 @@ export default function ExportPage({ module = "gerenciamento" }) {
   };
 
   const exportOFX = async (itemId) => {
+    if (!canExport()) {
+      setCcSelectorOpen(true);
+      return;
+    }
     setExporting(`ofx-${itemId}`);
     try {
-      const response = await axios.get(`${API}/export/ofx/${itemId}`, {
+      const ccParam = getCentroCustoParam();
+      const apiUrl = ccParam
+        ? `${API}/export/ofx/${itemId}?centro_custo=${encodeURIComponent(ccParam)}`
+        : `${API}/export/ofx/${itemId}`;
+      const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -751,8 +811,68 @@ export default function ExportPage({ module = "gerenciamento" }) {
         </div>
       </div>
 
+      {/* Centro de Custo Filter Banner - apenas módulo administrativo */}
+      {module === "administrativo" && (
+        <div className={`mb-6 rounded-xl border-2 p-4 transition-all ${
+          selectedCentroCusto === null
+            ? 'border-amber-300 bg-amber-50'
+            : selectedCentroCusto === "todos"
+            ? 'border-blue-200 bg-blue-50'
+            : 'border-green-300 bg-green-50'
+        }`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                selectedCentroCusto === null ? 'bg-amber-200' :
+                selectedCentroCusto === "todos" ? 'bg-blue-100' : 'bg-green-100'
+              }`}>
+                <Filter size={18} className={
+                  selectedCentroCusto === null ? 'text-amber-700' :
+                  selectedCentroCusto === "todos" ? 'text-blue-600' : 'text-green-700'
+                } />
+              </div>
+              <div>
+                <p className={`font-semibold text-sm ${
+                  selectedCentroCusto === null ? 'text-amber-800' :
+                  selectedCentroCusto === "todos" ? 'text-blue-800' : 'text-green-800'
+                }`}>
+                  {selectedCentroCusto === null
+                    ? 'Selecione o Centro de Custo para exportar'
+                    : selectedCentroCusto === "todos"
+                    ? 'Exportando: Todos os Centros de Custo'
+                    : `Exportando: ${selectedCentroCusto}`
+                  }
+                </p>
+                <p className={`text-xs ${
+                  selectedCentroCusto === null ? 'text-amber-600' :
+                  selectedCentroCusto === "todos" ? 'text-blue-500' : 'text-green-600'
+                }`}>
+                  {selectedCentroCusto === null
+                    ? 'Os botões de exportação ficam bloqueados até a seleção ser feita'
+                    : 'Dados financeiros filtrados por este centro de custo'
+                  }
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCcSelectorOpen(true)}
+              className={`shrink-0 ${
+                selectedCentroCusto === null
+                  ? 'border-amber-400 text-amber-700 hover:bg-amber-100'
+                  : 'border-gray-300 text-gray-600 hover:bg-gray-100'
+              }`}
+              data-testid="cc-selector-btn"
+            >
+              {selectedCentroCusto === null ? 'Selecionar Centro de Custo' : 'Alterar'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Categories */}
-      <div className="space-y-3">
+      <div className={`space-y-3 ${module === "administrativo" && selectedCentroCusto === null ? 'opacity-50 pointer-events-none' : ''}`}>
         {categories.map((category) => {
           const Icon = ICONS[category.icon] || FileText;
           const isExpanded = expandedCategories[category.id];
@@ -1197,6 +1317,79 @@ export default function ExportPage({ module = "gerenciamento" }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Seleção de Centro de Custo */}
+      <Dialog open={ccSelectorOpen} onOpenChange={setCcSelectorOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Filter className="text-amber-500" size={20} />
+              Selecionar Centro de Custo para Exportação
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="text-sm text-gray-600 mb-4">
+              Selecione o centro de custo. Os dados financeiros (Contas a Pagar/Receber) serão filtrados de acordo com a seleção.
+            </p>
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {/* Opção Todos */}
+              <button
+                onClick={() => { setSelectedCentroCusto("todos"); setCcSelectorOpen(false); }}
+                className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                  selectedCentroCusto === "todos"
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                }`}
+                data-testid="cc-option-todos"
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <FileDown size={14} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Todos os Centros de Custo</p>
+                  <p className="text-xs text-gray-500">Exportar sem filtro de centro de custo</p>
+                </div>
+                {selectedCentroCusto === "todos" && (
+                  <div className="ml-auto w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                    <CheckSquare size={12} className="text-white" />
+                  </div>
+                )}
+              </button>
+
+              {/* Lista de Centros de Custo */}
+              {centrosCusto.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">Nenhum centro de custo cadastrado</p>
+              ) : (
+                centrosCusto.map((cc) => (
+                  <button
+                    key={cc.id}
+                    onClick={() => { setSelectedCentroCusto(cc.nome); setCcSelectorOpen(false); }}
+                    className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      selectedCentroCusto === cc.nome
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                    }`}
+                    data-testid={`cc-option-${cc.id}`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                      <Building2 size={14} className="text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{cc.nome}</p>
+                      {cc.codigo && <p className="text-xs text-gray-500">Código: {cc.codigo}</p>}
+                    </div>
+                    {selectedCentroCusto === cc.nome && (
+                      <div className="ml-auto w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                        <CheckSquare size={12} className="text-white" />
+                      </div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Seleção de Empresa para Recibo/Duplicata */}
       <Dialog open={empresaModal.open} onOpenChange={(open) => !open && closeEmpresaModal()}>
