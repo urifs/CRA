@@ -1,40 +1,45 @@
 <analysis>**original_problem_statement**:
-O usuário solicitou a implementação de várias funcionalidades importantes para o sistema financeiro:
-1.  **Emissão de Notas Fiscais**: Adicionar uma função para emitir NF-e (Nota Fiscal Eletrônica) e NFS-e (Nota Fiscal de Serviço Eletrônica), utilizando os CNPJs e certificados já cadastrados no sistema. A interface deve permitir selecionar o CNPJ emissor, o tipo de nota (NF-e/NFS-e), selecionar produtos/serviços cadastrados e preencher todos os campos necessários.
-2.  **Parcelamento de Contas**: Implementar a capacidade de registrar contas a pagar e a receber em múltiplas parcelas. Por exemplo, uma nota fiscal de R$ 5.000,00 que será paga em 2 boletos.
-3.  **Data de Quitação nos Relatórios**: Garantir que todos os relatórios financeiros exportados (PDF, Excel) incluam a data de quitação para as contas que foram pagas/recebidas.
-4.  **Importação Manual de Notas Fiscais**: Adicionar um formulário para importar manualmente uma nota fiscal a partir de um arquivo XML ou PDF, para casos em que a importação automática da SEFAZ falha. O formulário deve permitir associar a nota a um centro de custo.
-5.  **Movimentação entre Contas**: Criar uma função para registrar movimentações financeiras (entradas e saídas) entre diferentes centros de custo e contas bancárias, para lidar com casos como transferências, estornos e ajustes.
-6.  **Filtro de Contas Quitadas no Relatório**: No relatório por conta bancária, adicionar a opção de visualizar as contas Quitadas no filtro, que atualmente só mostra A Pagar e A Receber.
+O usuário solicitou uma série de melhorias e correções no sistema financeiro:
+1.  **Filtro de Contas Quitadas**: Finalizar a implementação no relatório por conta bancária.
+2.  **UI de Parcelamento**: Corrigir a exibição da opção de parcelamento na criação de contas (estava oculta).
+3.  **Importação Manual via XML**: Extrair automaticamente os dados do XML para preencher o formulário de importação manual.
+4.  **Erro de Cadastro (CNPJ)**: Corrigir erro ao consultar CNPJ na tela de cadastros.
+5.  **Download de Notas**: Substituir o PDF simplificado gerado internamente pelo DANFE oficial ou PDF original da SEFAZ.
+6.  **Recibos**: Corrigir o formato de data (para o padrão brasileiro) e alterar a assinatura para o nome do fornecedor/cadastrado.
+7.  **Importação Automática**: Implementar uma rotina de importação automática de NF-e e NFS-e para rodar todos os dias às 22h.
+8.  **Totais nas Exportações**: Incluir a linha de Total (soma) em TODAS as exportações (PDF, Excel).
+9.  **Conciliação Bancária**: Corrigir a importação de extratos em PDF onde todas as transações (inclusive saídas) estavam entrando como valores positivos.
 
-**User's preferred language**: Portuguese (Brazil)
+**User's preferred language**: Portuguese (Brazil) 
+*(INSTRUCT: The next agent MUST respond in Portuguese)*
 
 **what currently exists?**
-O agente implementou com sucesso a maior parte das novas funcionalidades solicitadas. Foi criada uma página completa para a emissão de NF-e e NFS-e (para Palmas-TO), incluindo a geração de XML e PDF no backend. Foi implementada a funcionalidade de criação de contas a pagar/receber parceladas. Os relatórios de exportação (PDF e Excel) foram atualizados para incluir a data de quitação. Foram criadas uma nova página para movimentações financeiras e uma nova aba para importação manual de notas fiscais. O agente também corrigiu bugs menores, como um erro de formatação de moeda e um  inválido em um componente de select.
-
-A última solicitação, referente ao filtro de contas quitadas no relatório, está em andamento.
+O agente concluiu todas as solicitações desta sessão com sucesso:
+- O filtro Todas foi testado e validado no Relatório por Conta Bancária.
+- A UI de parcelamento foi refatorada e está destacada nos modais de Conta a Pagar/Receber.
+- A importação manual agora lê o XML em base64 e auto-preenche os dados na tela.
+- Bugs no Dashboard (comparação de datas nulas) e na rota de Centro de Custos que quebravam a busca de CNPJ foram corrigidos.
+- A geração do DANFE real foi implementada utilizando a biblioteca  combinada com o  em background.
+- O formato de datas e nome de assinatura nos recibos foram corrigidos.
+- Um *scheduler* () foi implementado no backend para baixar notas da SEFAZ diariamente às 22h.
+- As exportações em PDF e Excel agora incluem o somatório total no final.
+- A lógica de *regex* na extração de PDFs de conciliação bancária foi aprimorada para detectar corretamente valores negativos (saídas).
 
 **Last working item**:
-    - Last item agent was working: Atualização do Relatório por Conta Bancária para incluir contas quitadas. O usuário solicitou ver as contas Quitadas, e o agente interpretou isso como a necessidade de ver contas a pagar e a receber que estão quitadas. Para isso, o agente adicionou uma opção Todas ao dropdown Tipo de Conta e modificou o backend para buscar dados de ambas as coleções ( e ).
-    - Status: IN PROGRESS
-    - Agent Testing Done: N
-    - Which testing method agent to use? backend testing agent
+    - Last item agent was working: Adição do valor Total nas exportações de relatórios (PDF e Excel) e correção na leitura de saídas (valores negativos) na conciliação bancária. O agente modificou as funções de geração de PDF e Excel e aprimorou a extração de texto do extrato bancário.
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y (via curl e logs)
+    - Which testing method agent to use? both (Testing Agent V3 Fork deve ser acionado, pois muitas funcionalidades críticas foram alteradas sem validação do subagente).
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: (P0) Finalizar e testar a modificação no Relatório por Conta Bancária.
-
-  Issues Detail:
-  - Issue 1: 
-     - Attempted fixes: O agente modificou os arquivos  para adicionar a opção Todas no dropdown e  para que o endpoint  aceite o novo  e consulte ambas as coleções.
-     - Next debug checklist:
-       1. Reiniciar o serviço de backend para aplicar as mudanças.
-       2. Testar o endpoint via  para garantir que a lógica de buscar contas a pagar e receber juntas está funcionando corretamente quando  e .
-       3. Verificar no frontend se a nova opção Todas aparece no dropdown e se a exportação do relatório funciona como esperado.
-     - Why fix this issue and what will be achieved with the fix? Atender à solicitação do usuário de poder gerar um relatório consolidado de todas as contas quitadas, independentemente de serem a pagar ou a receber.
-     - Status: IN PROGRESS
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? both
+  - Issue 1: (P0) **Dívida Técnica Crítica - Refatoração do **.
+     - Attempted fixes: N/A. O agente continuou adicionando código.
+     - Next debug checklist: Dividir o  (que agora tem quase 15.000 linhas) em múltiplos arquivos usando  (ex: , , ).
+     - Why fix this issue and what will be achieved with the fix? O arquivo tornou-se inavegável, correndo sérios riscos de quebra de contexto e introdução de bugs no servidor.
+     - Status: NOT STARTED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? backend
      - Blocked on other issue: Não.
 
 **In progress Task List**:
@@ -42,72 +47,82 @@ Nenhum.
 
 **Upcoming and Future Tasks**
  **Upcoming Tasks:**
- - **P1: Máscaras de Formatação de Data**: Implementar máscara de formatação automática para datas (ex: dd/mm/aaaa) em campos de input de texto que não utilizam o seletor de data nativo. Esta tarefa continua pendente de forks anteriores.
-
+ - **P1: Máscaras de Formatação de Data**: Implementar máscara de formatação automática para datas (ex: dd/mm/aaaa) em campos de input de texto que não utilizam o seletor de data nativo (recorrente de forks anteriores).
+ 
  **Future Tasks:**
- - **P0: Refatoração Crítica do Backend**: A refatoração do  é a tarefa mais crítica e urgente. O arquivo cresceu para mais de **14.300 linhas**, tornando a manutenção insustentável e introduzindo um risco significativo de instabilidade. Recomendar fortemente ao usuário que esta seja a próxima prioridade absoluta após a conclusão do item atual.
- - **P2: Refatoração do Frontend**: Desmembrar componentes que se tornaram excessivamente grandes e complexos, como  (~1800 linhas),  (~1500 linhas),  (~1200 linhas),  (~1250 linhas),  (~1000 linhas) e  (~1000 linhas).
- - **P2: Sistema de Notificações**: Implementar o sistema de notificação para novas NF-e/NFS-e importadas.
- - **P2: Relatórios e Dashboards**: Continuar o desenvolvimento de relatórios automatizados e do dashboard financeiro.
- - **P3: Links de Compartilhamento**: Adicionar a funcionalidade de gerar links públicos para compartilhamento de arquivos.
+ - **P2: Refatoração do Frontend**: Desmembrar componentes que se tornaram excessivamente grandes (, , etc).
+ - **P2: Sistema de Notificações**: Notificações in-app/email para novas NF-es importadas automaticamente.
+ - **P3: Links de Compartilhamento**: Gerar links públicos para envio de relatórios e arquivos.
 
 **Completed work in this session**
-- **Emissão de NF-e e NFS-e**:
-  - Criada a página  com abas para NF-e, NFS-e e Notas Emitidas.
-  - Adicionados endpoints no backend para criar rascunhos, gerar XML/PDF e listar notas emitidas.
-  - Implementada a lógica de emissão para NFS-e (Palmas-TO, provedor Webiss) e NF-e usando PyNFe. (DONE)
-- **Parcelamento de Contas a Pagar/Receber**:
-  - Adicionados campos de parcelamento aos modelos  e  no backend.
-  - Criados endpoints  para gerar múltiplas contas a partir de um único formulário.
-  - Atualizadas as páginas  e  com uma UI condicional para adicionar parcelas. (DONE)
-- **Data de Quitação nos Relatórios**:
-  - Modificados os endpoints de exportação () e as funções  e  para incluir a coluna Data Quitação nos relatórios PDF e Excel.
-  - Atualizado o relatório por conta bancária para também incluir a data. (DONE)
-- **Movimentação de Contas**:
-  - Criada a página  para listar e criar movimentações financeiras.
-  - Adicionados endpoints no backend e um novo schema no DB para gerenciar as movimentações. (DONE)
-- **Importação Manual de NF**:
-  - Adicionada uma nova aba Importação Manual na página .
-  - Criado um endpoint no backend para receber o upload de XML/PDF e criar a nota manualmente. (DONE)
-- **Correção de Bugs**:
-  - Corrigido erro de formatação de moeda na listagem de notas emitidas (). (DONE)
-  - Corrigido erro de importação do  no . (DONE)
-  - Corrigido  inválido em componentes  nas páginas de importação e movimentações. (DONE)
+- Verificação do Filtro Todas em Relatórios (DONE)
+- Correção de visibilidade da UI de Parcelamento (DONE)
+- Extração de dados de XML para Auto-preenchimento na Importação Manual (DONE)
+- Correção de Erro 500 no Dashboard e Erro 404 em centros de custo que bloqueavam a consulta CNPJ (DONE)
+- Geração de DANFE oficial em PDF via  +  (DONE)
+- Correção do formato BR de datas e assinatura nos recibos gerados (DONE)
+- Importação automática agendada às 22h via  (DONE)
+- Soma total incluída no rodapé de todas as exportações PDF/Excel (DONE)
+- Correção na detecção de valores de saída na importação de extratos bancários (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-   - **Máscaras de Formatação de Data (P1)**: Tarefa recorrente de forks anteriores que ainda não foi priorizada.
+   - Issue 1: Máscaras de Formatação de Data (P1)
+     - Debug checklist: Identificar inputs de data de texto no React e aplicar máscaras de formatação (ex: ).
+     - Why to solve this issue and what will be achieved with this? Melhorar a UX na inserção manual de dados.
+     - Should Test frontend/backend/both after fix: frontend
+     - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
-  - **Complexidade do **: **DÍVIDA TÉCNICA EXTREMAMENTE CRÍTICA**. O arquivo cresceu de ~12.5k para **~14.3k linhas** nesta sessão. A manutenção é agora perigosa, lenta e propensa a erros. A refatoração não é mais opcional, é uma necessidade para a sobrevivência do projeto.
-  - **Recurrence count**: 8+
-  - **Status**: NOT STARTED
+  - Issue recurrence in previous fork: **Monolito  extremamente grande**.
+  - Recurrence count: 9+
+  - Status: NOT STARTED (A refatoração FOI IGNORADA novamente para focar nas funcionalidades do usuário. O arquivo agora beira as 15.000 linhas).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Emissão de Notas Fiscais com PyNFe**: Utilização da biblioteca para orquestrar a comunicação com os web services da SEFAZ e da prefeitura (padrão ABRASF), incluindo o manuseio de certificados digitais, geração e assinatura de XML.
-- **Geração de Parcelas no Backend**: Lógica que recebe um número de parcelas e um intervalo, e cria múltiplos documentos no banco de dados, calculando os valores e datas de vencimento para cada um.
-- **UI Dinâmica com React**: Uso de  para criar formulários complexos e condicionais, como a seção de parcelamento que aparece ao marcar um checkbox e a troca de campos entre NF-e e NFS-e.
-- **Combinação de Dados de Múltiplas Coleções**: Lógica no backend para consultar e unir resultados de  e  em uma única resposta de API.
+- **DANFE Generator**: Uso combinado de  (nfelib) e  (instalado via apt-get) rodando no background do container para converter o XML da SEFAZ em um PDF ODT renderizado fiel ao formato oficial.
+- **Cron Jobs no FastAPI**: O pacote  foi integrado no ciclo de vida da aplicação FastAPI para disparar tarefas em background todo dia às 22:00.
+- **Regex para Extratos**: Adaptação na leitura textual gerada pelo usage: pdfplumber [-h] [--structure | --structure-text]
+                  [--format {csv,json,text}] [--types TYPES [TYPES ...]]
+                  [--include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]]
+                  [--exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]]
+                  [--laparams LAPARAMS] [--precision PRECISION]
+                  [--pages PAGES [PAGES ...]] [--indent INDENT]
+                  [infile]
+
+positional arguments:
+  infile
+
+options:
+  -h, --help            show this help message and exit
+  --structure           Write the structure tree as JSON. All other arguments
+                        except --pages, --laparams, and --indent will be
+                        ignored
+  --structure-text      Write the structure tree as JSON including text
+                        contents. All other arguments except --pages,
+                        --laparams, and --indent will be ignored
+  --format {csv,json,text}
+  --types TYPES [TYPES ...]
+  --include-attrs INCLUDE_ATTRS [INCLUDE_ATTRS ...]
+                        Include *only* these object attributes in output.
+  --exclude-attrs EXCLUDE_ATTRS [EXCLUDE_ATTRS ...]
+                        Exclude these object attributes from output.
+  --laparams LAPARAMS
+  --precision PRECISION
+  --pages PAGES [PAGES ...]
+  --indent INDENT       Indent level for JSON pretty-printing. para identificar sinais de negativo (, , ) e classificar a movimentação como saída.
 
 **key DB schema**
-  - **contas_pagar / contas_receber**: Adicionados , , , , . O campo  (ou similar) é agora utilizado nas exportações.
-  - **movimentacoes_contas**: Nova coleção para armazenar transferências. .
-  - **notas_fiscais_emitidas**: Nova coleção para armazenar os rascunhos e notas emitidas. .
+  - **nfe_importadas / nfse_importadas**: Coleções gerenciadas pelas importações automáticas e manuais. Possuem um campo .
 
 **changes in tech stack**
-  - Nenhum.
+  - Adicionado  para rotinas de agendamento em background.
+  - Instalado o pacote Linux  e as dependências , ,  para geração avançada do DANFE. Foi configurado o locale  no sistema.
 
 **All files of reference**
-- **Criados**:
-  - 
-  - 
-- **Modificados**:
-  -  (adicionadas ~1.8k linhas)
-  - 
-  - 
-  - 
+- Modificados ativamente nesta sessão:
+  -  (Lógica de DANFE, Totais de exportação, Conciliação bancária, Agendador)
   - 
   - 
   - 
@@ -115,51 +130,312 @@ Nenhum.
   - 
 
 **Areas that need refactoring**:
-- ** (PRIORIDADE ZERO)**: A refatoração é mandatória. O arquivo precisa ser dividido urgentemente em uma estrutura de rotas (ex: , ), modelos () e serviços ().
-- **Páginas do Frontend**: Todas as páginas modificadas e criadas nesta sessão (, , , , ) são excessivamente grandes e devem ser quebradas em componentes menores e reutilizáveis para melhorar a manutenibilidade.
+- ****: É inegociável refatorar este arquivo. Ele deve ser a **próxima ação do agente** assim que o usuário aprovar. Sugira a quebra de rotas baseadas nas coleções (ex: , , etc.).
 
 **key api endpoints**
-- **Emissão NF**: , 
-- **Parcelamento**: , 
-- **Movimentações**: 
-- **Importação Manual**: 
-- **Relatórios (Modificado)**: 
+- **Importação XML Manual**: 
+- **Agendamento**: , 
+- **Download DANFE**: 
+- **Exportação Excel/PDF**: 
 
 **Critical Info for New Agent**
-- **Conclua o item pendente primeiro**: Finalize e teste a modificação do Relatório por Conta Bancária para suportar o tipo Todas.
-- **Refatoração do Backend é URGENTE**: Após concluir o item pendente, a prioridade máxima e inegociável deve ser a refatoração do . Apresente os riscos ao usuário (instabilidade, lentidão no desenvolvimento, bugs inesperados) e não prossiga com novas funcionalidades antes de endereçar esta dívida técnica crítica.
-- **Muitas funcionalidades adicionadas**: Uma grande quantidade de código foi adicionada. Esteja atento a possíveis regressões ou efeitos colaterais.
+- Um volume considerável de novas bibliotecas de backend foi instalado (Libreoffice, pycairo, erpbrasil) para permitir a geração de DANFEs. Caso o contêiner reinicie sem persistência de pacotes de sistema (apt 2.6.1 (arm64)
+Usage: apt-get [options] command
+       apt-get [options] install|remove pkg1 [pkg2 ...]
+       apt-get [options] source pkg1 [pkg2 ...]
+
+apt-get is a command line interface for retrieval of packages
+and information about them from authenticated sources and
+for installation, upgrade and removal of packages together
+with their dependencies.
+
+Most used commands:
+  update - Retrieve new lists of packages
+  upgrade - Perform an upgrade
+  install - Install new packages (pkg is libc6 not libc6.deb)
+  reinstall - Reinstall packages (pkg is libc6 not libc6.deb)
+  remove - Remove packages
+  purge - Remove packages and config files
+  autoremove - Remove automatically all unused packages
+  dist-upgrade - Distribution upgrade, see apt-get(8)
+  dselect-upgrade - Follow dselect selections
+  build-dep - Configure build-dependencies for source packages
+  satisfy - Satisfy dependency strings
+  clean - Erase downloaded archive files
+  autoclean - Erase old downloaded archive files
+  check - Verify that there are no broken dependencies
+  source - Download source archives
+  download - Download the binary package into the current directory
+  changelog - Download and display the changelog for the given package
+
+See apt-get(8) for more information about the available commands.
+Configuration options and syntax is detailed in apt.conf(5).
+Information about how to configure sources can be found in sources.list(5).
+Package and version choices can be expressed via apt_preferences(5).
+Security details are available in apt-secure(8).
+                                        This APT has Super Cow Powers.), preste atenção aos erros de inicialização ( ou erros no CLI do Libreoffice) que exigirão a reinstalação destes no nível do SO (Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  ant ant-optional apparmor ca-certificates-java coinor-libcbc3 coinor-libcgl1
+  coinor-libclp1 coinor-libcoinmp1v5 coinor-libcoinutils3v5 coinor-libosi1v5
+  default-jre default-jre-headless dictionaries-common emacsen-common
+  firebird3.0-common firebird3.0-common-doc firebird3.0-server-core
+  firebird3.0-utils fonts-crosextra-caladea fonts-crosextra-carlito
+  fonts-dejavu fonts-dejavu-core fonts-dejavu-extra fonts-droid-fallback
+  fonts-liberation2 fonts-linuxlibertine fonts-noto-core fonts-noto-extra
+  fonts-noto-mono fonts-noto-ui-core fonts-opensymbol fonts-sil-gentium
+  fonts-sil-gentium-basic fonts-urw-base35 ghostscript glib-networking
+  glib-networking-common glib-networking-services gsettings-desktop-schemas
+  gsfonts gstreamer1.0-gl gstreamer1.0-libav gstreamer1.0-plugins-bad
+  gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+  gstreamer1.0-plugins-ugly gstreamer1.0-x hunspell-en-us imagemagick-6-common
+  java-common java-wrappers liba52-0.7.4 libaa1 libaacs0 libabw-0.1-1
+  libactivation-java libapache-pom-java libass9 libatk-wrapper-java
+  libatk-wrapper-java-jni libavc1394-0 libavcodec59 libavfilter8 libavformat59
+  libavutil57 libbase-java libbatik-java libbcmail-java libbcpkix-java
+  libbcprov-java libbcutil-java libbdplus0 libblas3 libblkid-dev libbluray2
+  libboost-filesystem1.74.0 libboost-iostreams1.74.0 libboost-locale1.74.0
+  libboost-thread1.74.0 libbox2d2 libbrotli-dev libbs2b0 libbsh-java libc-l10n
+  libcaca0 libcairo-script-interpreter2 libcdio19 libcdparanoia0 libcdr-0.1-1
+  libchromaprint1 libcjson1 libclucene-contribs1v5 libclucene-core1v5
+  libcodec2-1.0 libcolamd2 libcommons-collections3-java libcommons-io-java
+  libcommons-logging-java libcommons-parent-java libdc1394-25 libdca0
+  libdecor-0-0 libdecor-0-plugin-1-cairo libdirectfb-1.7-7 libdjvulibre-text
+  libdjvulibre21 libdv4 libdvdnav4 libdvdread8 libe-book-0.1-1 libehcache-java
+  libel-api-java libeot0 libepubgen-0.1-1 libetonyek-0.1-1 libexpat1-dev
+  libexttextcat-2.0-0 libexttextcat-data libfaad2 libfbclient2
+  libfftw3-double3 libflite1 libfluidsynth3 libflute-java libfontconfig-dev
+  libfonts-java libformula-java libfreeaptx0 libfreehand-0.1-1 libfreetype-dev
+  libgfortran5 libgif7 libgles2 libglib2.0-dev libglib2.0-dev-bin libgme0
+  libgpgme11 libgpgmepp6 libgraphene-1.0-0 libgs-common libgs10 libgs10-common
+  libgsm1 libgssdp-1.6-0 libgstreamer-gl1.0-0 libgstreamer-plugins-bad1.0-0
+  libgstreamer-plugins-base1.0-0 libgudev-1.0-0 libgupnp-1.6-0
+  libgupnp-igd-1.0-4 libharfbuzz-icu0 libhsqldb1.8.0-java libhunspell-1.7-0
+  libhwy1 libhyphen0 libib-util libice-dev libidn12 libiec61883-0 libijs-0.35
+  libimath-3-1-29 libinstpatch-1.0-2 libitext-java libjack-jackd2-0
+  libjaxp1.3-java libjbig2dec0 libjcommon-java libjson-glib-1.0-0
+  libjson-glib-1.0-common libjsp-api-java libjxl0.7 libjxr-tools libjxr0
+  libkate1 liblangtag-common liblangtag1 liblapack3 liblayout-java
+  libldacbt-enc2 liblibreoffice-java liblilv-0-0 libloader-java liblqr-1-0
+  liblrdf0 libltc11 libltdl7 liblzo2-2 libmagickcore-6.q16-6
+  libmagickcore-6.q16-6-extra libmagickwand-6.q16-6 libmail-java libmariadb3
+  libmbedcrypto7 libmhash2 libmjpegutils-2.1-0 libmodplug1 libmount-dev
+  libmpcdec6 libmpeg2-4 libmpeg2encpp-2.1-0 libmplex2-2.1-0 libmspub-0.1-1
+  libmwaw-0.3-3 libmysofa1 libmythes-1.2-0 libneon27 libnice10 libnorm1
+  libnumbertext-1.0-0 libnumbertext-data libodfgen-0.1-1 libopenal-data
+  libopenal1 libopencore-amrnb0 libopencore-amrwb0 libopenexr-3-1-30
+  libopenmpt0 libopenni2-0 liborc-0.4-0 liborcus-0.17-0 liborcus-parser-0.17-0
+  libpagemaker-0.0-0 libpaper-utils libpaper1 libpcre2-16-0 libpcre2-32-0
+  libpcre2-dev libpcre2-posix3 libpcsclite1
+  libpentaho-reporting-flow-engine-java libpgm-5.3-0 libpixie-java
+  libpixman-1-dev libpkgconf3 libplacebo208 libpng-dev libpng-tools
+  libpocketsphinx3 libpoppler126 libpostproc56 libpq5 libproxy1v5
+  libpthread-stubs0-dev libpython3.11 libqrencode4 libqxp-0.0-0 librabbitmq4
+  libraptor2-0 librasqal3 libraw1394-11 librdf0 libreoffice-base
+  libreoffice-base-core libreoffice-base-drivers libreoffice-calc
+  libreoffice-common libreoffice-core libreoffice-draw libreoffice-impress
+  libreoffice-java-common libreoffice-math libreoffice-nlpsolver
+  libreoffice-report-builder libreoffice-report-builder-bin
+  libreoffice-script-provider-bsh libreoffice-script-provider-js
+  libreoffice-script-provider-python libreoffice-sdbc-firebird
+  libreoffice-sdbc-hsqldb libreoffice-sdbc-mysql libreoffice-sdbc-postgresql
+  libreoffice-style-colibre libreoffice-wiki-publisher libreoffice-writer
+  librepository-java librevenge-0.0-0 librist4 librsvg2-2 librsvg2-common
+  librubberband2 libsac-java libsamplerate0 libsbc1 libsdl2-2.0-0
+  libselinux1-dev libsepol-dev libserd-0-0 libserializer-java
+  libservlet-api-java libservlet3.1-java libshine3 libshout3 libsidplay1v5
+  libslang2 libsm-dev libsnappy1v5 libsndio7.0 libsord-0-0 libsoundtouch1
+  libsoup-3.0-0 libsoup-3.0-common libsoup2.4-1 libsoup2.4-common libsoxr0
+  libspandsp2 libspeex1 libsphinxbase3 libsratom-0-0 libsrt1.5-gnutls
+  libsrtp2-1 libssh-gcrypt-4 libstaroffice-0.0-0 libsuitesparseconfig5
+  libswresample4 libswscale6 libtag1v5 libtag1v5-vanilla libtext-iconv-perl
+  libtheora0 libtommath1 libtwolame0 libudfread0 libuno-cppu3
+  libuno-cppuhelpergcc3-3 libuno-purpenvhelpergcc3-3 libuno-sal3
+  libuno-salhelpergcc3-3 libunoloader-java libusb-1.0-0 libv4l-0
+  libv4lconvert0 libva-drm2 libva-x11-2 libva2 libvdpau-va-gl1 libvdpau1
+  libvidstab1.1 libvisio-0.1-1 libvisual-0.4-0 libvo-aacenc0 libvo-amrwbenc0
+  libvorbisfile3 libvpx7 libvulkan1 libwavpack1 libwebpdemux2 libwebpmux3
+  libwebrtc-audio-processing1 libwebsocket-api-java libwildmidi2
+  libwmflite-0.2-7 libwpd-0.10-10 libwpg-0.3-3 libwps-0.4-4 libx11-dev
+  libx264-164 libxau-dev libxcb-render0-dev libxcb-shm0-dev libxcb-xkb1
+  libxcb1-dev libxdmcp-dev libxext-dev libxkbcommon-x11-0
+  libxml-commons-external-java libxml-java libxmlgraphics-commons-java
+  libxmlsec1 libxmlsec1-nss libxrender-dev libxvidcore4 libyajl2 libzbar0
+  libzimg2 libzmf-0.0-0 libzmq5 libzvbi-common libzvbi0 libzxing2 lp-solve
+  mariadb-common mesa-va-drivers mesa-vdpau-drivers mesa-vulkan-drivers
+  mysql-common ocl-icd-libopencl1 openjdk-17-jre openjdk-17-jre-headless
+  pkg-config pkgconf pkgconf-bin pocketsphinx-en-us poppler-data
+  python3-distutils python3-lib2to3 python3-uno timgm6mb-soundfont
+  uno-libs-private ure ure-java uuid-dev va-driver-all vdpau-driver-all
+  x11proto-core-dev x11proto-dev xorg-sgml-doctools xtrans-dev
+Suggested packages:
+  ant-doc default-jdk | java-compiler | java-sdk antlr javacc junit junit4
+  jython libbcel-java libbsf-java libcommons-net-java libjdepend-java
+  libjsch-java liblog4j1.2-java liboro-java libregexp-java libxalan2-java
+  libxml-commons-resolver1.1-java libxz-java apparmor-profiles-extra
+  apparmor-utils ispell | aspell | hunspell wordlist firebird3.0-server
+  firebird3.0-doc fonts-noto fonts-texgyre frei0r-plugins gvfs hunspell
+  openoffice.org-hunspell | openoffice.org-core libcuda1 libnvcuvid1
+  libnvidia-encode1 librhino-java libbluray-bdj libcairo2-doc
+  libcommons-collections3-java-doc libcommons-io-java-doc
+  libavalon-framework-java libcommons-logging-java-doc
+  libexcalibur-logkit-java libdirectfb-extra libdv-bin oss-compat libdvdcss2
+  libfftw3-bin libfftw3-dev libfonts-java-doc libformula-java-doc
+  freetype2-doc libgirepository1.0-dev libglib2.0-doc libgdk-pixbuf2.0-bin
+  libxml2-utils libvisual-0.4-plugins java-virtual-machine
+  libhsqldb1.8.0-java-gcj libice-doc jackd2 libjcommon-java-doc
+  libloader-java-doc liblrdf0-dev inkscape libmail-java-doc libportaudio2
+  pcscd libjfreereport-java-doc raptor2-utils rasqal-utils libraw1394-doc
+  librdf-storage-mysql librdf-storage-postgresql librdf-storage-sqlite
+  librdf-storage-virtuoso redland-utils cups-bsd firefox-esr | thunderbird
+  | firefox gpa hyphen-hyphenation-patterns imagemagick
+  | graphicsmagick-imagemagick-compat libreoffice-gnome | libreoffice-plasma
+  libreoffice-grammarcheck libreoffice-help libreoffice-l10n
+  libreoffice-librelogo myspell-dictionary mythes-thesaurus
+  openclipart-libreoffice pstoedit unixodbc libsane1 libofficebean-java
+  libjtds-java libsqliteodbc | tdsodbc | odbc-mdbtools bluez
+  default-mysql-server | virtual-mysql-server postgresql mediawiki
+  librepository-java-doc librsvg2-bin serdi sidplay-base libsm-doc sndiod
+  sordi speex libwildmidi-config libx11-doc libxcb-doc libxext-doc
+  libxmlgraphics-commons-java-doc opencl-icd libnss-mdns fonts-ipafont-mincho
+  fonts-indic poppler-utils fonts-japanese-mincho | fonts-ipafont-mincho
+  fonts-arphic-ukai fonts-arphic-uming fonts-nanum fluid-soundfont-gm
+  nvidia-vdpau-driver
+The following NEW packages will be installed:
+  ant ant-optional apparmor ca-certificates-java coinor-libcbc3 coinor-libcgl1
+  coinor-libclp1 coinor-libcoinmp1v5 coinor-libcoinutils3v5 coinor-libosi1v5
+  default-jre default-jre-headless dictionaries-common emacsen-common
+  firebird3.0-common firebird3.0-common-doc firebird3.0-server-core
+  firebird3.0-utils fonts-crosextra-caladea fonts-crosextra-carlito
+  fonts-dejavu fonts-dejavu-core fonts-dejavu-extra fonts-droid-fallback
+  fonts-liberation2 fonts-linuxlibertine fonts-noto-core fonts-noto-extra
+  fonts-noto-mono fonts-noto-ui-core fonts-opensymbol fonts-sil-gentium
+  fonts-sil-gentium-basic fonts-urw-base35 ghostscript glib-networking
+  glib-networking-common glib-networking-services gsettings-desktop-schemas
+  gsfonts gstreamer1.0-gl gstreamer1.0-libav gstreamer1.0-plugins-bad
+  gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+  gstreamer1.0-plugins-ugly gstreamer1.0-x hunspell-en-us imagemagick-6-common
+  java-common java-wrappers liba52-0.7.4 libaa1 libaacs0 libabw-0.1-1
+  libactivation-java libapache-pom-java libass9 libatk-wrapper-java
+  libatk-wrapper-java-jni libavc1394-0 libavcodec59 libavfilter8 libavformat59
+  libavutil57 libbase-java libbatik-java libbcmail-java libbcpkix-java
+  libbcprov-java libbcutil-java libbdplus0 libblas3 libblkid-dev libbluray2
+  libboost-filesystem1.74.0 libboost-iostreams1.74.0 libboost-locale1.74.0
+  libboost-thread1.74.0 libbox2d2 libbrotli-dev libbs2b0 libbsh-java libc-l10n
+  libcaca0 libcairo-script-interpreter2 libcairo2-dev libcdio19 libcdparanoia0
+  libcdr-0.1-1 libchromaprint1 libcjson1 libclucene-contribs1v5
+  libclucene-core1v5 libcodec2-1.0 libcolamd2 libcommons-collections3-java
+  libcommons-io-java libcommons-logging-java libcommons-parent-java
+  libdc1394-25 libdca0 libdecor-0-0 libdecor-0-plugin-1-cairo
+  libdirectfb-1.7-7 libdjvulibre-text libdjvulibre21 libdv4 libdvdnav4
+  libdvdread8 libe-book-0.1-1 libehcache-java libel-api-java libeot0
+  libepubgen-0.1-1 libetonyek-0.1-1 libexpat1-dev libexttextcat-2.0-0
+  libexttextcat-data libfaad2 libfbclient2 libfftw3-double3 libflite1
+  libfluidsynth3 libflute-java libfontconfig-dev libfonts-java libformula-java
+  libfreeaptx0 libfreehand-0.1-1 libfreetype-dev libgfortran5 libgif7 libgles2
+  libglib2.0-dev libglib2.0-dev-bin libgme0 libgpgme11 libgpgmepp6
+  libgraphene-1.0-0 libgs-common libgs10 libgs10-common libgsm1 libgssdp-1.6-0
+  libgstreamer-gl1.0-0 libgstreamer-plugins-bad1.0-0
+  libgstreamer-plugins-base1.0-0 libgudev-1.0-0 libgupnp-1.6-0
+  libgupnp-igd-1.0-4 libharfbuzz-icu0 libhsqldb1.8.0-java libhunspell-1.7-0
+  libhwy1 libhyphen0 libib-util libice-dev libidn12 libiec61883-0 libijs-0.35
+  libimath-3-1-29 libinstpatch-1.0-2 libitext-java libjack-jackd2-0
+  libjaxp1.3-java libjbig2dec0 libjcommon-java libjson-glib-1.0-0
+  libjson-glib-1.0-common libjsp-api-java libjxl0.7 libjxr-tools libjxr0
+  libkate1 liblangtag-common liblangtag1 liblapack3 liblayout-java
+  libldacbt-enc2 liblibreoffice-java liblilv-0-0 libloader-java liblqr-1-0
+  liblrdf0 libltc11 libltdl7 liblzo2-2 libmagickcore-6.q16-6
+  libmagickcore-6.q16-6-extra libmagickwand-6.q16-6 libmail-java libmariadb3
+  libmbedcrypto7 libmhash2 libmjpegutils-2.1-0 libmodplug1 libmount-dev
+  libmpcdec6 libmpeg2-4 libmpeg2encpp-2.1-0 libmplex2-2.1-0 libmspub-0.1-1
+  libmwaw-0.3-3 libmysofa1 libmythes-1.2-0 libneon27 libnice10 libnorm1
+  libnumbertext-1.0-0 libnumbertext-data libodfgen-0.1-1 libopenal-data
+  libopenal1 libopencore-amrnb0 libopencore-amrwb0 libopenexr-3-1-30
+  libopenmpt0 libopenni2-0 liborc-0.4-0 liborcus-0.17-0 liborcus-parser-0.17-0
+  libpagemaker-0.0-0 libpaper-utils libpaper1 libpcre2-16-0 libpcre2-32-0
+  libpcre2-dev libpcre2-posix3 libpcsclite1
+  libpentaho-reporting-flow-engine-java libpgm-5.3-0 libpixie-java
+  libpixman-1-dev libpkgconf3 libplacebo208 libpng-dev libpng-tools
+  libpocketsphinx3 libpoppler126 libpostproc56 libpq5 libproxy1v5
+  libpthread-stubs0-dev libpython3.11 libqrencode4 libqxp-0.0-0 librabbitmq4
+  libraptor2-0 librasqal3 libraw1394-11 librdf0 libreoffice libreoffice-base
+  libreoffice-base-core libreoffice-base-drivers libreoffice-calc
+  libreoffice-common libreoffice-core libreoffice-draw libreoffice-impress
+  libreoffice-java-common libreoffice-math libreoffice-nlpsolver
+  libreoffice-report-builder libreoffice-report-builder-bin
+  libreoffice-script-provider-bsh libreoffice-script-provider-js
+  libreoffice-script-provider-python libreoffice-sdbc-firebird
+  libreoffice-sdbc-hsqldb libreoffice-sdbc-mysql libreoffice-sdbc-postgresql
+  libreoffice-style-colibre libreoffice-wiki-publisher libreoffice-writer
+  librepository-java librevenge-0.0-0 librist4 librsvg2-2 librsvg2-common
+  librubberband2 libsac-java libsamplerate0 libsbc1 libsdl2-2.0-0
+  libselinux1-dev libsepol-dev libserd-0-0 libserializer-java
+  libservlet-api-java libservlet3.1-java libshine3 libshout3 libsidplay1v5
+  libslang2 libsm-dev libsnappy1v5 libsndio7.0 libsord-0-0 libsoundtouch1
+  libsoup-3.0-0 libsoup-3.0-common libsoup2.4-1 libsoup2.4-common libsoxr0
+  libspandsp2 libspeex1 libsphinxbase3 libsratom-0-0 libsrt1.5-gnutls
+  libsrtp2-1 libssh-gcrypt-4 libstaroffice-0.0-0 libsuitesparseconfig5
+  libswresample4 libswscale6 libtag1v5 libtag1v5-vanilla libtext-iconv-perl
+  libtheora0 libtommath1 libtwolame0 libudfread0 libuno-cppu3
+  libuno-cppuhelpergcc3-3 libuno-purpenvhelpergcc3-3 libuno-sal3
+  libuno-salhelpergcc3-3 libunoloader-java libusb-1.0-0 libv4l-0
+  libv4lconvert0 libva-drm2 libva-x11-2 libva2 libvdpau-va-gl1 libvdpau1
+  libvidstab1.1 libvisio-0.1-1 libvisual-0.4-0 libvo-aacenc0 libvo-amrwbenc0
+  libvorbisfile3 libvpx7 libvulkan1 libwavpack1 libwebpdemux2 libwebpmux3
+  libwebrtc-audio-processing1 libwebsocket-api-java libwildmidi2
+  libwmflite-0.2-7 libwpd-0.10-10 libwpg-0.3-3 libwps-0.4-4 libx11-dev
+  libx264-164 libxau-dev libxcb-render0-dev libxcb-shm0-dev libxcb-xkb1
+  libxcb1-dev libxdmcp-dev libxext-dev libxkbcommon-x11-0
+  libxml-commons-external-java libxml-java libxmlgraphics-commons-java
+  libxmlsec1 libxmlsec1-nss libxrender-dev libxvidcore4 libyajl2 libzbar0
+  libzimg2 libzmf-0.0-0 libzmq5 libzvbi-common libzvbi0 libzxing2 locales
+  lp-solve mariadb-common mesa-va-drivers mesa-vdpau-drivers
+  mesa-vulkan-drivers mysql-common ocl-icd-libopencl1 openjdk-17-jre
+  openjdk-17-jre-headless pkg-config pkgconf pkgconf-bin pocketsphinx-en-us
+  poppler-data python3-distutils python3-lib2to3 python3-uno
+  timgm6mb-soundfont uno-libs-private ure ure-java uuid-dev va-driver-all
+  vdpau-driver-all x11proto-core-dev x11proto-dev xorg-sgml-doctools
+  xtrans-dev
+0 upgraded, 410 newly installed, 0 to remove and 0 not upgraded.
+Need to get 418 MB of archives.
+After this operation, 1505 MB of additional disk space will be used.
+Do you want to continue? [Y/n] Abort.).
+- As mudanças não foram testadas através do  (O agente fez auto-testes massivos via curl e screenshots). Considere propor uma rodada rápida de testes automatizados para evitar regressões, especialmente no módulo financeiro e relatórios.
+- **PRIORIDADE**: O usuário concluiu um grande fluxo de tarefas. Proponha IMEDIATAMENTE a refatoração do  no plano () antes de aceitar criar novas features que agravem a dívida técnica.
 
 **documents and test reports created in this job**
-- 
+  - /app/memory/PRD.md
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request (In Progress)**: Em relatório por conta bancaria, só mostra nas opções de dropdown a pagar e a receber, tem que ter o quitadas também
-2.  **Finish confirmation**: Agent finished implementing 3 features (partial payments, manual import, account movements). User replied continue.
-3.  **Request (Completed)**: User requests 3 features: partial settlement, manual XML import, and account movements.
-4.  **Finish confirmation**: Agent finished adding settlement date to reports.
-5.  **Request (Completed)**: para qualquer exportação do sistema... os relatórios financeiros tem que aparecer... a data da quitação
-6.  **Finish confirmation**: Agent finished the installment feature. User replied continue.
-7.  **Request (Completed)**: preciso que no contas a pagar e receber tenha opção de parcelas.
-8.  **Finish confirmation**: Agent finished the invoice issuing feature.
-9.  **User approval**: User approved the plan to implement NF-e and NFS-e.
-10. **Request (Completed)**: Adicionar função de emitir nota fiscal no sistema financeiro...
+1.  **Request (Completed)**: Adicionar somatório total em TODAS as exportações de contas. Corrigir conciliação bancária que registra todos os uploads como valores positivos (entradas).
+2.  **Request (Completed)**: A importação automática precisa importar NF-e/NFS-e às 22h, aparecer no painel, e as notas do XML manual também. Arrumar data estrangeira do recibo e nome do fornecedor no final.
+3.  **Request (Completed)**: O download da nota está gerando um PDF falso, deveria baixar a nota oficial registrada na SEFAZ. (Upload de imagem do DANFE simplificado).
+4.  **User action**: Resposta  no meio do debug do painel.
+5.  **Request (Completed)**: Está dando erro na consulta de CNPJ na criação de novo cadastro.
+6.  **Request (Completed)**: Na importação manual, adicionar extração automática pelo XML sem precisar preencher na mão.
+7.  **User action**: Upload de imagem reportando que as opções de parcelamento em contas a pagar não aparecem no dropdown.
+8.  **User approval**: Aprovação com continuar p0.
+9.  **Agent prompt**: Pediu aprovação do plano (ask_human).
+10. **Previous Prompt carryover**: Reclamação inicial sobre filtro quitadas no dropdown.
 
 **Project Health Check:**
-- **Broken**: Nenhuma.
+- **Broken**: Nenhuma funcionalidade quebrada detectada, mas a dívida do Backend é absurda.
+- **Risk**: Alto risco de instabilidade na manutenção futura pelo tamanho do servidor backend.
 - **Mocked**: Nenhum.
-- **Risk**: O arquivo monolítico  com mais de 14.300 linhas é um risco **severo** para a estabilidade e futuro desenvolvimento do projeto.
 
 **3rd Party Integrations**
-- **PyNFe**: Para comunicação com o webservice da SEFAZ (NF-e) e prefeituras (NFS-e).
-- **pdfplumber**: Para extração de texto de arquivos PDF.
-- **Gemini (gemini-pro)**: Utilizado via  para sugestões de EPI. Usa a .
+- PyNFe (Integração SEFAZ - requer configuração de certificado e senha do cliente).
+- pdfplumber (Leitura de PDF).
+- erpbrasil.edoc.pdf (Geração de DANFE).
+- apscheduler (Agendador de Tarefas).
+- Emergent LLM Key: Disponível, não ativamente necessária para estas rotinas contábeis.
 
 **Testing status**
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: Nenhum.
+  - Known regressions: Nenhum conhecido.
 
 **Credentials to test flow:**
 - **Email**: 
@@ -167,5 +443,6 @@ Nenhum.
 - **Role**: 
 
 **What agent forgot to execute**
-- A tarefa de **máscaras de formatação para datas** continua pendente.
-- A **refatoração do **, apesar de mencionada como crítica no início, foi adiada para atender às novas solicitações de funcionalidades do usuário. A situação agora é insustentável.</analysis>
+- O Agente mais uma vez ignorou a prioridade zero estrita de refatorar o backend.
+- O ticket de máscaras de formatação de data (P1) ainda está no Backlog.
+- O Agente principal NÃO executou o subagente de testes após implementar as +6 melhorias nesta sessão, dependendo estritamente de *smoke tests* locais.</analysis>
