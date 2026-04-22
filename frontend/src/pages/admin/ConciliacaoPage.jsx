@@ -78,10 +78,11 @@ export default function ConciliacaoPage() {
   // Filtros do extrato
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
-  const [filtroTipoExtrato, setFiltroTipoExtrato] = useState("todos"); // "entrada", "saida", "todos"
+  const [filtroTipoExtrato, setFiltroTipoExtrato] = useState("todos");
+  const [buscaExtrato, setBuscaExtrato] = useState("");
   
   // Filtros das contas
-  const [filtroContas, setFiltroContas] = useState("todas"); // "quitadas", "a_pagar", "a_receber", "todas"
+  const [filtroContas, setFiltroContas] = useState("todas");
   const [buscaConta, setBuscaConta] = useState("");
   
   // Conciliações realizadas
@@ -406,16 +407,26 @@ export default function ConciliacaoPage() {
   };
 
   // Filtrar extratos
-  const extratosFiltrados = extratoItems.filter(item => {
-    if (filtroTipoExtrato !== "todos" && item.tipo !== filtroTipoExtrato) return false;
-    if (filtroDataInicio && item.data < filtroDataInicio) return false;
-    if (filtroDataFim && item.data > filtroDataFim) return false;
-    if (item.conciliado) return false; // Ocultar já conciliados
-    return true;
-  });
+  const extratosFiltrados = extratoItems
+    .filter(item => {
+      if (filtroTipoExtrato !== "todos" && item.tipo !== filtroTipoExtrato) return false;
+      if (filtroDataInicio && item.data < filtroDataInicio) return false;
+      if (filtroDataFim && item.data > filtroDataFim) return false;
+      if (item.conciliado) return false;
+      if (buscaExtrato) {
+        const termo = buscaExtrato.toLowerCase();
+        if (!(item.descricao || "").toLowerCase().includes(termo)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const diff = new Date(a.data) - new Date(b.data);
+      return diff !== 0 ? diff : (a.descricao || "").localeCompare(b.descricao || "");
+    });
 
-  // Filtrar contas
-  const contasFiltradas = contas.filter(conta => {
+  // Filtrar e ordenar contas (crescente por data de vencimento)
+  const contasFiltradas = contas
+    .filter(conta => {
     const isQuitada = conta.status === "quitada" || conta.status === "recebida";
     
     // Filtro por centro de custo
@@ -450,7 +461,12 @@ export default function ConciliacaoPage() {
     if (conta.conciliado) return false; // Ocultar já conciliados
     
     return true;
-  });
+    })
+    .sort((a, b) => {
+      const dateA = a.data_vencimento || a.created_at || "";
+      const dateB = b.data_vencimento || b.created_at || "";
+      return new Date(dateA) - new Date(dateB);
+    });
 
   const getContaBancariaName = (id) => {
     const conta = contasBancarias.find(c => c.id === id);
@@ -651,14 +667,22 @@ export default function ConciliacaoPage() {
                 value={filtroDataInicio}
                 onChange={(e) => setFiltroDataInicio(e.target.value)}
                 className="w-36 h-8"
-                placeholder="Data início"
               />
               <Input 
                 type="date" 
                 value={filtroDataFim}
                 onChange={(e) => setFiltroDataFim(e.target.value)}
                 className="w-36 h-8"
-                placeholder="Data fim"
+              />
+            </div>
+            <div className="mt-2 relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+              <Input
+                data-testid="busca-extrato"
+                placeholder="Buscar por descrição..."
+                value={buscaExtrato}
+                onChange={(e) => setBuscaExtrato(e.target.value)}
+                className="h-8 text-sm pl-8"
               />
             </div>
           </CardHeader>

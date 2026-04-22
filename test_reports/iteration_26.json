@@ -1,0 +1,93 @@
+{
+  "summary": "Completed testing of Conciliação Bancária bug fixes: (1) PDF import extracts transaction values correctly (not balance), (2) Extrato list sorted ASC (oldest first), (3) Search field with data-testid='busca-extrato' present and working. All 8 backend tests passed, 1 skipped (endpoint not implemented). Frontend tests verified all features working correctly.",
+  
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/conciliacao/extrato/{conta_id}", "issue": "Endpoint returns 404 - not implemented", "priority": "LOW"}
+    ]
+  },
+  
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  
+  "passed_tests": [
+    "1. POST /api/conciliacao/importar-extrato: PDF import returns 200 with correct count",
+    "2. PDF import extracts transaction values (500, 1200, 350, 800, 25) NOT balance values (9500, 10700, etc.)",
+    "3. GET /api/conciliacao/extratos: Returns list with correct structure (id, data, descricao, valor, tipo)",
+    "4. DELETE /api/conciliacao/extratos: Clears non-reconciled extratos successfully",
+    "5. Frontend: data-testid='busca-extrato' search field present in Extrato Bancário panel",
+    "6. Frontend: Search field filters extratos by description (typing 'PIX' shows only PIX transactions)",
+    "7. Frontend: Extrato Bancário sorted ASC by date (15/04, 16/04, 17/04, 18/04, 19/04)",
+    "8. Frontend: Contas do Sistema sorted ASC by data_vencimento",
+    "9. Frontend: Transaction values displayed correctly (-R$ 500,00, +R$ 1.200,00, etc.)"
+  ],
+  
+  "failed_tests": [],
+  
+  "skipped_tests": [
+    "GET /api/conciliacao/extrato/{conta_id} - endpoint not implemented (returns 404)"
+  ],
+  
+  "test_report_links": [
+    "/app/backend/tests/test_conciliacao_bancaria.py",
+    "/app/test_reports/pytest/pytest_conciliacao.xml"
+  ],
+  
+  "action_items": [],
+  
+  "critical_code_review_comments": [
+    "selecionar_valor_e_tipo() function correctly uses FIRST value (transaction) instead of LAST value (balance)",
+    "Frontend extratosFiltrados uses .sort((a,b) => new Date(a.data) - new Date(b.data)) for ASC sorting",
+    "Frontend contasFiltradas uses .sort((a,b) => new Date(dateA) - new Date(dateB)) for ASC sorting by vencimento",
+    "Search input has data-testid='busca-extrato' for automated testing",
+    "Deduplication uses first 80 chars of description to avoid duplicates"
+  ],
+  
+  "updated_files": [
+    "/app/backend/tests/test_conciliacao_bancaria.py"
+  ],
+  
+  "success_rate": {
+    "backend": "89% (8/9 passed, 1 skipped)",
+    "frontend": "100%"
+  },
+  
+  "test_credentials": {
+    "email": "test@test.com",
+    "password": "password",
+    "role": "admin"
+  },
+  
+  "seed_data_creation": "Created test PDF with 5 transactions using reportlab for backend testing",
+  
+  "retest_needed": false,
+  
+  "should_main_agent_self_test": false,
+  
+  "context_for_next_testing_agent": "Conciliação Bancária features are working correctly. The PDF import uses selecionar_valor_e_tipo() to extract the FIRST value (transaction amount) instead of the LAST value (running balance). Frontend sorting is ASC (oldest first) for both Extrato Bancário and Contas do Sistema. Search field with data-testid='busca-extrato' filters extratos by description.",
+  
+  "verified_features": {
+    "pdf_import": {
+      "endpoint": "POST /api/conciliacao/importar-extrato",
+      "status": "Working",
+      "value_extraction": "Uses FIRST value (transaction) not LAST (balance)"
+    },
+    "extrato_sorting": {
+      "order": "ASC (oldest first)",
+      "implementation": ".sort((a,b) => new Date(a.data) - new Date(b.data))"
+    },
+    "contas_sorting": {
+      "order": "ASC by data_vencimento",
+      "implementation": ".sort((a,b) => new Date(dateA) - new Date(dateB))"
+    },
+    "search_field": {
+      "data_testid": "busca-extrato",
+      "placeholder": "Buscar por descrição...",
+      "functionality": "Filters extratos by description text"
+    }
+  }
+}

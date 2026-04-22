@@ -14579,181 +14579,244 @@ async def importar_extrato_pdf(
         raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
     
     try:
-        # Ler o arquivo PDF
         content = await file.read()
-        
-        # Usar pdfplumber para extrair texto
-        import pdfplumber
+        import pdfplumber, re
         
         extracted_items = []
         
+        # ---- helpers ----
+        DATE_RE = re.compile(r'(\d{2}/\d{2}/\d{4}|\d{2}/\d{2}/\d{2})')
+        VALUE_RE = re.compile(r'-?\s*\d{1,3}(?:\.\d{3})*,\d{2}')
+
+        def parse_date(s):
+            s = s.strip()
+            try:
+                fmt = "%d/%m/%y" if len(s.split('/')[-1]) == 2 else "%d/%m/%Y"
+                return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
+            except Exception:
+                return None
+
+        def parse_valor(raw: str) -> float:
+            return float(raw.strip().replace(' ', '').replace('.', '').replace(',', '.'))
+
+        def detectar_tipo_por_keywords(texto: str, tipo_inicial: str) -> str:
+            t = texto.upper()
+            DEBITO_KW = [
+                'DEB', 'DEBIT', 'DÉBITO', 'PGTO', 'PAGAMENTO', 'PAG ', 'SAQUE',
+                'TARIFA', 'TAR ', 'IOF', 'JUROS', 'COMPRA', 'BOLETO', 'TITULO',
+                'PIX ENV', 'PIX PAGO', 'TED ENV', 'DOC ENV', 'ENVIAD',
+                'TRANSF ENV', 'RESGAT', 'CARTAO', 'VISA', 'MASTER', 'ELO',
+                'IMPOSTOS', 'AGUA ', 'ENERGIA', 'TELEFONE', 'INTERNET', 'GAS ',
+            ]
+            CREDITO_KW = [
+                'CRED', 'CREDIT', 'CRÉDITO', 'DEP ', 'DEPÓSITO', 'DEPOSITO',
+                'RENDIMENTO', 'REMUNER', 'PIX REC', 'TED REC', 'DOC REC',
+                'RECEBID', 'RECEB ', 'TRANSF REC', 'SALARIO', 'SALÁRIO',
+                'APLICAC', 'REND ', 'JUROS CR',
+            ]
+            for kw in DEBITO_KW:
+                if kw in t:
+                    return "saida"
+            for kw in CREDITO_KW:
+                if kw in t:
+                    return "entrada"
+            return tipo_inicial
+
+        def selecionar_valor_e_tipo(values_raw: list, linha_texto: str):
+            """
+            Extrai valor da transação (NÃO o saldo corrente).
+            Extratos BR típicos: DATE  DESCRIÇÃO  VALOR_TX  SALDO
+            O saldo é sempre o último valor → usar o primeiro ou detectar via D/C.
+            """
+            if not values_raw:
+                return None, "entrada"
+
+            tipo = "entrada"
+
+            # 1) Valor negativo explícito → saída
+            for raw in values_raw:
+                if raw.strip().startswith('-'):
+                    return abs(parse_valor(raw)), "saida"
+
+            # 2) Indicador D/C/E/S logo após o valor
+            for raw in values_raw:
+                idx = linha_texto.find(raw.strip())
+                if idx < 0:
+                    continue
+                after = linha_texto[idx + len(raw.strip()):idx + len(raw.strip()) + 5].strip().upper()
+                if after and after[0] in ('D', 'S'):
+                    return abs(parse_valor(raw)), "saida"
+                if after and after[0] in ('C', 'E'):
+                    return abs(parse_valor(raw)), "entrada"
+
+            # 3) Sem indicador → primeiro valor é a transação, último é o saldo
+            # (se só tem 1 valor, é a própria transação)
+            valor_tx_raw = values_raw[0]
+            v = abs(parse_valor(valor_tx_raw))
+
+            # 4) Afinar tipo por palavras-chave
+            tipo = detectar_tipo_por_keywords(linha_texto, tipo)
+
+            return v, tipo
+
+        def extrair_descricao(linha: str, date_str: str, value_str: str) -> str:
+            """Extrai a descrição entre a data e o primeiro valor."""
+            d_start = linha.find(date_str)
+            v_start = linha.find(value_str.strip())
+            if d_start >= 0 and v_start > d_start:
+                desc = linha[d_start + len(date_str):v_start].strip()
+            else:
+                desc = DATE_RE.sub('', VALUE_RE.sub('', linha)).strip()
+            # Limpar espaços múltiplos
+            desc = re.sub(r'\s{2,}', ' ', desc)
+            return desc[:200]
+
+        # ── Extração principal ──────────────────────────────────────────────
         with pdfplumber.open(io.BytesIO(content)) as pdf:
             full_text = ""
             for page in pdf.pages:
                 text = page.extract_text()
                 if text:
                     full_text += text + "\n"
-                
-                # Tentar extrair tabelas
+
+                # --- Tentar tabelas primeiro ---
                 tables = page.extract_tables()
                 for table in tables:
-                    for row in table:
-                        if row and len(row) >= 3:
-                            # Tentar identificar data e valor
-                            row_text = " ".join([str(cell) for cell in row if cell])
-                            
-                            # Padrão para data: dd/mm/yyyy ou dd/mm/yy
-                            date_pattern = r'(\d{2}/\d{2}/\d{2,4})'
-                            date_match = re.search(date_pattern, row_text)
-                            
-                            # Padrão para valor: números com vírgula decimal
-                            value_pattern = r'(-?\d{1,3}(?:\.\d{3})*,\d{2})'
-                            value_matches = re.findall(value_pattern, row_text)
-                            
-                            if date_match and value_matches:
-                                date_str = date_match.group(1)
-                                # Converter data para formato ISO
-                                try:
-                                    if len(date_str.split('/')[-1]) == 2:
-                                        date_obj = datetime.strptime(date_str, "%d/%m/%y")
-                                    else:
-                                        date_obj = datetime.strptime(date_str, "%d/%m/%Y")
-                                    iso_date = date_obj.strftime("%Y-%m-%d")
-                                except:
-                                    continue
-                                
-                                # Pegar o último valor encontrado (geralmente é o saldo ou valor da transação)
-                                value_str = value_matches[-1]
-                                value = float(value_str.replace('.', '').replace(',', '.'))
-                                
-                                # Determinar tipo (entrada ou saída) - lógica melhorada
-                                tipo = "entrada"  # default
-                                row_upper = row_text.upper()
-                                
-                                # Verificar se o valor é negativo explicitamente
-                                if value < 0:
-                                    tipo = "saida"
-                                    value = abs(value)
-                                # Verificar padrões de débito/saída nos extratos
-                                elif any(palavra in row_upper for palavra in [
-                                    'DEB', 'DEBITO', 'DÉBITO', 'PGTO', 'PAG', 'PAGAMENTO',
-                                    'TRANSF ENV', 'TED ENV', 'DOC ENV', 'PIX ENV', 'ENVIAD',
-                                    'SAQUE', 'TARIFA', 'TAR ', 'IOF', 'JUROS',
-                                    'COMPRA', 'BOLETO', 'TITULO', 'IMPOSTOS',
-                                    'ENERGIA', 'AGUA', 'TELEFONE', 'INTERNET',
-                                    'CARTAO', 'VISA', 'MASTER', 'ELO',
-                                    ' D ', ' D$', '(D)', '-D-', ' S '
-                                ]):
-                                    tipo = "saida"
-                                # Verificar padrões de crédito/entrada
-                                elif any(palavra in row_upper for palavra in [
-                                    'CRED', 'CREDITO', 'CRÉDITO', 'REC', 'RECEBIMENTO',
-                                    'TRANSF REC', 'TED REC', 'DOC REC', 'PIX REC', 'RECEBID',
-                                    'DEP', 'DEPOSITO', 'DEPÓSITO', 'RENDIMENTO', 'JUROS CR',
-                                    ' C ', ' C$', '(C)', '-C-', ' E '
-                                ]):
-                                    tipo = "entrada"
-                                # Verificar se há indicador de D ou C no texto próximo ao valor
-                                else:
-                                    # Verificar caracteres próximos ao valor
-                                    valor_idx = row_text.find(value_str)
-                                    if valor_idx > 0:
-                                        antes = row_text[max(0, valor_idx-5):valor_idx].upper()
-                                        depois = row_text[valor_idx+len(value_str):valor_idx+len(value_str)+5].upper()
-                                        if 'D' in antes or 'D' in depois or '-' in antes:
-                                            tipo = "saida"
-                                        elif 'C' in antes or 'C' in depois or '+' in antes:
-                                            tipo = "entrada"
-                                
-                                # Extrair descrição (texto entre data e valor)
-                                desc_start = row_text.find(date_str) + len(date_str)
-                                desc_end = row_text.find(value_str)
-                                descricao = row_text[desc_start:desc_end].strip()
-                                if not descricao:
-                                    descricao = row_text.replace(date_str, '').replace(value_str, '').strip()
-                                
-                                if descricao and len(descricao) > 3:
-                                    extracted_items.append({
-                                        "id": str(uuid.uuid4()),
-                                        "conta_bancaria_id": conta_bancaria_id,
-                                        "data": iso_date,
-                                        "descricao": descricao[:200],
-                                        "valor": abs(value),
-                                        "tipo": tipo,
-                                        "conciliado": False,
-                                        "created_at": datetime.now(timezone.utc).isoformat()
-                                    })
-        
-        # Se não encontrou nada nas tabelas, tentar extrair do texto
-        if not extracted_items:
-            lines = full_text.split('\n')
-            for line in lines:
-                date_pattern = r'(\d{2}/\d{2}/\d{2,4})'
-                date_match = re.search(date_pattern, line)
-                value_pattern = r'(-?\d{1,3}(?:\.\d{3})*,\d{2})'
-                value_matches = re.findall(value_pattern, line)
-                
-                if date_match and value_matches:
-                    date_str = date_match.group(1)
-                    try:
-                        if len(date_str.split('/')[-1]) == 2:
-                            date_obj = datetime.strptime(date_str, "%d/%m/%y")
-                        else:
-                            date_obj = datetime.strptime(date_str, "%d/%m/%Y")
-                        iso_date = date_obj.strftime("%Y-%m-%d")
-                    except:
+                    if not table:
                         continue
-                    
-                    value_str = value_matches[-1]
-                    value = float(value_str.replace('.', '').replace(',', '.'))
-                    
-                    # Determinar tipo (entrada ou saída) - lógica melhorada
-                    tipo = "entrada"  # default
-                    line_upper = line.upper()
-                    
-                    # Verificar se o valor é negativo explicitamente
-                    if value < 0:
-                        tipo = "saida"
-                        value = abs(value)
-                    # Verificar padrões de débito/saída
-                    elif any(palavra in line_upper for palavra in [
-                        'DEB', 'DEBITO', 'DÉBITO', 'PGTO', 'PAG', 'PAGAMENTO',
-                        'TRANSF ENV', 'TED ENV', 'DOC ENV', 'PIX ENV', 'ENVIAD',
-                        'SAQUE', 'TARIFA', 'TAR ', 'IOF', 'JUROS',
-                        'COMPRA', 'BOLETO', 'TITULO', 'IMPOSTOS',
-                        ' D ', ' D$', '(D)', '-D-', ' S '
-                    ]):
-                        tipo = "saida"
-                    # Verificar padrões de crédito/entrada
-                    elif any(palavra in line_upper for palavra in [
-                        'CRED', 'CREDITO', 'CRÉDITO', 'REC', 'RECEBIMENTO',
-                        'TRANSF REC', 'TED REC', 'DOC REC', 'PIX REC', 'RECEBID',
-                        'DEP', 'DEPOSITO', 'DEPÓSITO', 'RENDIMENTO',
-                        ' C ', ' C$', '(C)', '-C-', ' E '
-                    ]):
-                        tipo = "entrada"
-                    
-                    desc_start = line.find(date_str) + len(date_str)
-                    desc_end = line.find(value_str)
-                    descricao = line[desc_start:desc_end].strip()
-                    
-                    if descricao and len(descricao) > 3:
+                    # Detectar header row para identificar colunas de Débito/Crédito/Saldo
+                    header_row = table[0] if table else []
+                    header_lower = [str(h or '').lower() for h in header_row]
+
+                    def col_idx(keywords):
+                        for kw in keywords:
+                            for i, h in enumerate(header_lower):
+                                if kw in h:
+                                    return i
+                        return -1
+
+                    col_debito  = col_idx(['déb', 'deb', 'saída', 'saida'])
+                    col_credito = col_idx(['créd', 'cred', 'entr', 'entrada'])
+                    col_valor   = col_idx(['valor', 'movim', 'quantia'])
+                    col_saldo   = col_idx(['saldo', 'balance'])
+
+                    for row in table:
+                        if not row:
+                            continue
+                        row_cells = [str(c or '').strip() for c in row]
+                        row_text  = ' '.join(row_cells)
+
+                        date_match = DATE_RE.search(row_text)
+                        if not date_match:
+                            continue
+
+                        iso_date = parse_date(date_match.group(1))
+                        if not iso_date:
+                            continue
+
+                        # Tentar colunas específicas de débito/crédito
+                        valor_final = None
+                        tipo_final  = "entrada"
+
+                        if col_debito >= 0 and col_credito >= 0:
+                            v_deb = row_cells[col_debito] if col_debito < len(row_cells) else ""
+                            v_cred = row_cells[col_credito] if col_credito < len(row_cells) else ""
+                            # Usa coluna não vazia
+                            if v_deb and VALUE_RE.search(v_deb):
+                                valor_final = abs(parse_valor(VALUE_RE.findall(v_deb)[0]))
+                                tipo_final = "saida"
+                            elif v_cred and VALUE_RE.search(v_cred):
+                                valor_final = abs(parse_valor(VALUE_RE.findall(v_cred)[0]))
+                                tipo_final = "entrada"
+
+                        if valor_final is None and col_valor >= 0:
+                            if col_valor < len(row_cells):
+                                cell_v = row_cells[col_valor]
+                                matches_v = VALUE_RE.findall(cell_v)
+                                if matches_v:
+                                    valor_final, tipo_final = selecionar_valor_e_tipo(matches_v, cell_v)
+
+                        if valor_final is None:
+                            # Sem colunas identificadas: pegar todos os valores da linha
+                            all_vals = VALUE_RE.findall(row_text)
+                            # Excluir a coluna de saldo (último valor) e selecionar do restante
+                            vals_sem_saldo = all_vals[:-1] if len(all_vals) > 1 else all_vals
+                            if not vals_sem_saldo:
+                                continue
+                            valor_final, tipo_final = selecionar_valor_e_tipo(vals_sem_saldo, row_text)
+
+                        if valor_final is None or valor_final == 0:
+                            continue
+
+                        tipo_final = detectar_tipo_por_keywords(row_text, tipo_final)
+
+                        # Descrição: células entre data e valor (excluindo saldo)
+                        saldo_cell = row_cells[col_saldo] if col_saldo >= 0 and col_saldo < len(row_cells) else ""
+                        descricao  = row_text
+                        descricao  = DATE_RE.sub('', descricao)
+                        if saldo_cell:
+                            descricao = descricao.replace(saldo_cell, '')
+                        descricao = VALUE_RE.sub('', descricao).strip()
+                        descricao = re.sub(r'\s{2,}', ' ', descricao)[:200]
+
+                        if len(descricao) < 2:
+                            continue
+
                         extracted_items.append({
                             "id": str(uuid.uuid4()),
                             "conta_bancaria_id": conta_bancaria_id,
                             "data": iso_date,
-                            "descricao": descricao[:200],
-                            "valor": abs(value),
-                            "tipo": tipo,
+                            "descricao": descricao,
+                            "valor": valor_final,
+                            "tipo": tipo_final,
                             "conciliado": False,
                             "created_at": datetime.now(timezone.utc).isoformat()
                         })
-        
-        # Remover duplicatas baseado em data+valor+descrição
+
+        # --- Fallback: extração linha por linha do texto ---
+        if not extracted_items and full_text:
+            for line in full_text.split('\n'):
+                line = line.strip()
+                if len(line) < 10:
+                    continue
+                date_match = DATE_RE.search(line)
+                if not date_match:
+                    continue
+                iso_date = parse_date(date_match.group(1))
+                if not iso_date:
+                    continue
+
+                all_vals = VALUE_RE.findall(line)
+                if not all_vals:
+                    continue
+
+                # Excluir último valor (provável saldo) para selecionar transação
+                vals_sem_saldo = all_vals[:-1] if len(all_vals) > 1 else all_vals
+                valor_final, tipo_final = selecionar_valor_e_tipo(vals_sem_saldo, line)
+                if valor_final is None or valor_final == 0:
+                    continue
+
+                tipo_final  = detectar_tipo_por_keywords(line, tipo_final)
+                descricao   = extrair_descricao(line, date_match.group(1), vals_sem_saldo[0])
+                if len(descricao) < 2:
+                    continue
+
+                extracted_items.append({
+                    "id": str(uuid.uuid4()),
+                    "conta_bancaria_id": conta_bancaria_id,
+                    "data": iso_date,
+                    "descricao": descricao,
+                    "valor": valor_final,
+                    "tipo": tipo_final,
+                    "conciliado": False,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+
+        # Remover duplicatas verdadeiras (mesma data + mesmo valor + mesma descrição >80 chars)
         unique_items = []
         seen = set()
         for item in extracted_items:
-            key = f"{item['data']}_{item['valor']}_{item['descricao'][:50]}"
+            key = f"{item['data']}|{item['valor']:.2f}|{item['descricao'][:80]}"
             if key not in seen:
                 seen.add(key)
                 unique_items.append(item)
