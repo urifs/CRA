@@ -1,0 +1,74 @@
+{
+  "summary": "Validação da refatoração Sessão 32 - iteração 2: extração de NFS-e (routes/nfse.py, 6 endpoints) e NF-e (routes/nfe.py, 12 endpoints). Todos os 18 endpoints dos novos routers funcionam. Zero regressão em Conciliação (extração anterior) ou em outros módulos (auth, admin/contas-pagar, admin/contas-receber, admin/dashboard, export/pdf). Rota /nfe/importar/{cert_id} continua existindo em server.py conforme esperado. Resultado: 34 passed, 1 skipped, 0 failed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "NFS-e GET /api/nfse/importadas -> 200 (lista, 3 itens reais)",
+    "NFS-e GET /api/nfse/importadas/{id} -> 200 (real) e 404 (id fake)",
+    "NFS-e GET /api/nfse/importadas/{id}/download-xml -> 404 para id fake",
+    "NFS-e GET /api/nfse/importadas/{id}/download-pdf -> 404 para id fake; 200 com binário %PDF- para id real",
+    "NFS-e POST /api/nfse/importadas/{id}/criar-conta-pagar -> 404 para id fake",
+    "NFS-e PATCH /api/nfse/importadas/{id}/status -> 400 (status inválido), 404 (id fake)",
+    "NFS-e auth obrigatória -> 401/403 sem token",
+    "NF-e GET /api/nfe/certificados -> 200 (1 certificado real preservado)",
+    "NF-e POST /api/nfe/certificados com certificado base64 inválido -> 400",
+    "NF-e PATCH /api/nfe/certificados/{id} atualiza inscricao_municipal e url_nfse (valores originais restaurados após teste)",
+    "NF-e PATCH /api/nfe/certificados/fake-nonexistent-id -> 404",
+    "NF-e DELETE /api/nfe/certificados/fake-nonexistent-id -> 404 (sem deletar cert real)",
+    "NF-e GET /api/nfe/importadas -> 200 (121 itens, conforme esperado)",
+    "NF-e GET /api/nfe/importadas/{id} -> 200 (real) e 404 (id fake)",
+    "NF-e POST /api/nfe/importadas/{id}/criar-conta-pagar -> 404 (id fake)",
+    "NF-e PATCH /api/nfe/importadas/{id}/status -> 400 (status inválido), 404 (id fake)",
+    "NF-e GET /api/nfe/novas-count -> 200 com {count: int}",
+    "NF-e GET /api/nfe/importadas/{id}/download-xml -> 200 com XML iniciando em <nfeProc versao=\"4.00\"",
+    "NF-e GET /api/nfe/importadas/{id}/download-pdf -> 404 (id fake); 200 com %PDF- quando real",
+    "Import routes permanecem em server.py: POST /api/nfe/importar/{cert_id} responde 404 'Certificado não encontrado' (rota existe, não é 405)",
+    "REGRESSÃO Conciliação: GET /api/conciliacao, /api/conciliacao/extratos, POST /api/conciliacao/conciliar (404) - OK",
+    "REGRESSÃO outros: /api/auth/login, /api/admin/contas-pagar, /api/admin/contas-receber, /api/admin/dashboard, /api/export/pdf/contas_pagar (PDF válido) - OK"
+  ],
+  "failed_tests": [],
+  "skipped_tests": [
+    "TestNFeImportadas::test_criar_conta_pagar_already_linked - skipped porque nenhuma das 121 NF-e atualmente tem conta_pagar_id vinculado (não é bug, é estado do banco; branch 400 existe no código linha 281-282 de routes/nfe.py)"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_nfe_nfse_refactor.py",
+    "/app/test_reports/pytest/pytest_nfe_nfse_refactor.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/nfse.py (272 linhas) e routes/nfe.py (437 linhas) bem estruturados. Imports limpos, usam utils.auth/audit/database corretamente.",
+    "Routers registrados em server.py linhas 73-74 (imports) e 14078-14079 (include_router). Não há conflito de paths com os endpoints de importação que continuam em server.py (linhas 12738 e 13083).",
+    "Todas as queries de listagem/detalhe usam projection {_id: 0} - seguro contra erro de serialização do ObjectId.",
+    "GET /nfe/certificados exclui corretamente certificado_base64 e senha_certificado da resposta (linha 65) - boa prática de segurança.",
+    "POST /nfe/certificados valida o certificado PKCS12 antes de salvar (carregamento via cryptography.hazmat.pkcs12) - validação fail-fast.",
+    "PATCH /nfe/certificados também valida senha/certificado se atualizados - consistente com POST.",
+    "Audit logs registrados em todas as mutações (criar/editar/excluir certificado, criar conta a pagar via NFS-e/NF-e) via create_audit_log.",
+    "NOTA menor: routes/nfse.py importa reportlab localmente dentro da função download_nfse_pdf (lazy import) - correto, evita custo de import no startup quando endpoint não é usado.",
+    "Sugestão opcional: em routes/nfe.py linha 392 o filename inclui os 20 primeiros chars de chave_acesso que pode estar vazia se o campo não existir - no fallback 'sem_numero' o arquivo fica 'NFe_sem_numero_.xml' (com underscore trailing). Cosmético, não quebra.",
+    "REGRESSÃO CRÍTICA CONFIRMADA: server.py continua registrando o /nfe/importar/{cert_id} e /nfse/importar/{cert_id} (linhas 12738 e 13083), e as rotas respondem - main agent seguiu plano corretamente."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_nfe_nfse_refactor.py"
+  ],
+  "success_rate": {
+    "backend": "100% (34/34 passed, 1 ambiente-dependente skipped)",
+    "frontend": "N/A (skipped per request)"
+  },
+  "test_credentials": {
+    "email": "test@test.com",
+    "password": "password",
+    "role": "admin"
+  },
+  "seed_data_creation": "Nenhum dado seedado. Teste de PATCH de certificado restaura os valores originais de inscricao_municipal e url_nfse após cada run. Tentativa de POST de certificado usa CNPJ prefixado com 'TEST_' e falha em 400 ANTES da gravação (certificado_base64 inválido), então nada é persistido. Nenhum dado de produção foi modificado.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Estado do banco no momento do teste: 121 NF-e importadas (0 com conta_pagar_id vinculado), 3 NFS-e importadas, 1 certificado real (CNPJ 04887879000196 - CONSTRUTORA RODRIGUES ALMEIDA LTDA). Para testar o branch 400 'já possui conta a pagar vinculada' em criar-conta-pagar, seria necessário primeiro rodar POST /nfe/importadas/{id}/criar-conta-pagar e depois rodar de novo no mesmo id - o teste test_criar_conta_pagar_already_linked foi deixado em pytest.skip porque exigiria criar dado real persistido. Arquivo reutilizável: /app/backend/tests/test_nfe_nfse_refactor.py (use como regression suite nas próximas extrações). Paths corretos já documentados em iteration_27.json: /api/admin/contas-pagar, /api/admin/contas-receber, /api/admin/dashboard, /api/export/pdf/{categoria_com_underscore}. Payload correto de POST /api/conciliacao/conciliar: {extrato_id, conta_id, conta_tipo} (não 'extrato_item_id'/'tipo' como tinha em documentação anterior - corrigido nesta iteração).",
+  "rca_of_the_issue": "Nenhum problema funcional encontrado. Único ajuste foi no próprio teste: payload de /api/conciliacao/conciliar usa chaves extrato_id/conta_id/conta_tipo (conforme routes/conciliacao.py linhas 332-334), corrigido e passando."
+}
