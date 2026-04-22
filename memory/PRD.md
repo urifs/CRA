@@ -1,7 +1,44 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
-## Changelog - 22/04/2026 (Sessão 32)
+## Changelog - 22/04/2026 (Sessão 32) — PARTE 3: Refatoração Fase 1
+
+### 🧹 Refatoração Incremental do `server.py` (P0 - dívida técnica recorrente 10+ forks)
+
+**3 domínios extraídos nesta parte — testados e validados pelo testing agent:**
+
+1. ✅ **Conciliação Bancária** → `/app/backend/routes/conciliacao.py` (415 linhas, 7 endpoints) — 16/16 testes (iteration_27)
+2. ✅ **NFS-e (Notas de Serviço)** → `/app/backend/routes/nfse.py` (271 linhas, 6 endpoints)
+3. ✅ **NF-e (Certificados/Importadas/Downloads)** → `/app/backend/routes/nfe.py` (436 linhas, 12 endpoints) — 34/34 testes totais (iteration_28), zero regressão
+
+**Infra compartilhada:** utils/audit.py, utils/auth.py, utils/database.py
+
+**Métricas:**
+- 📉 `server.py`: 15.487 → **14.421 linhas** (-1.066, -6,9%)
+- 🎯 25 endpoints migrados | ✅ 0 regressões
+
+**Pendente Fase 1 Parte 2 (próxima sessão):**
+- 🔴 Financeiro: Contas a Pagar/Receber (~640 linhas, 14 endpoints)
+- 🟡 Emissão NF-e / NFS-e (~740 linhas)
+- 🟡 Importação SOAP (~575 linhas, acoplada ao scheduler)
+
+---
+
+
+## Changelog - 22/04/2026 (Sessão 32) — PARTE 2: Edit CNPJs + Bug fix produção
+
+### Bug Fix Crítico — Sumiço de CNPJs/NFes em Produção
+- ✅ Decorator `@api_router.get("/nfe/importadas")` havia sido removido acidentalmente em commit anterior → re-adicionado (posteriormente migrado para `routes/nfe.py`)
+- ✅ Frontend: `.catch()` individuais em cada `axios.get` do Promise.all evitando derrubar toda a tela
+
+### Feature — Editar CNPJs/Certificados
+- ✅ `PATCH /api/nfe/certificados/{id}` atualiza razao_social, uf, ambiente, ativo, inscricao_municipal, url_nfse
+- ✅ Modal "Editar CNPJ/Certificado" no frontend com seção NFS-e (IM + URL Webservice)
+
+---
+
+
+## Changelog - 22/04/2026 (Sessão 32) — PARTE 1: DANFE
 
 ### DANFE em Layout Oficial
 - ✅ **Novo gerador**: `/app/backend/utils/danfe_generator.py` extrai dados completos do XML (emit, dest, transp, totais, itens, duplicatas, protocolo) e completa com dados do MongoDB
