@@ -177,13 +177,13 @@ export default function ImportacaoNFPage() {
   const fetchData = async () => {
     try {
       const [certsRes, nfesRes, nfsesRes, centrosRes, planoRes] = await Promise.all([
-        axios.get(`${API}/nfe/certificados`),
+        axios.get(`${API}/nfe/certificados`).catch((e) => { console.error("Erro certificados:", e); return { data: [] }; }),
         axios.get(`${API}/nfe/importadas`, {
           params: {
             certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
             status: selectedStatus !== "todos" ? selectedStatus : undefined
           }
-        }),
+        }).catch((e) => { console.error("Erro NF-e:", e); return { data: [] }; }),
         axios.get(`${API}/nfse/importadas`, {
           params: {
             certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,

@@ -13422,6 +13422,7 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
 
 
 
+@api_router.get("/nfe/importadas")
 async def list_nfe_importadas(
     certificado_id: Optional[str] = None,
     status: Optional[str] = None,
