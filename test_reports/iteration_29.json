@@ -1,0 +1,75 @@
+{
+  "summary": "Validação Sessão 32 Fase 1 Parte 2 — extração de Financeiro (routes/financeiro.py, 14 endpoints), Emissão NF (routes/emissao_nf.py, 10 endpoints) e Importação NF (routes/importacao_nf.py, 2 endpoints). Resultado: 39/41 testes passaram (95%). Funcionalidade core das 6 extrações OK; scheduler de importação automática preservado; zero regressão em Conciliação/NFS-e/NF-e/auth/dashboard/export. Encontrados 2 bugs reais no response do POST /admin/contas-pagar: (1) leak de _id ObjectId; (2) campos ausentes no payload retornado (valor_final, created_by, subconta_*, conta_bancaria_*, total_parcelas, numero_parcela, parcela_origem_id). Os dados são corretamente persistidos no MongoDB (operações subsequentes PUT/PATCH/DELETE no mesmo id funcionam), mas o payload de resposta do POST está incompleto e expõe _id.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/admin/contas-pagar",
+        "issue": "Response JSON contém '_id' do MongoDB (ex: '_id':'69e94870cc2532316cb33cb0') mesmo após conta.pop('_id', None). Provável race com Motor que mantém referência mutável, OU cópia da dict é retornada via outro caminho. Causa leak de ObjectId não-serializável em integrações futuras e vaza estrutura interna do banco.",
+        "priority": "HIGH"
+      },
+      {
+        "endpoint": "POST /api/admin/contas-pagar",
+        "issue": "Response omite campos importantes que constam na model: valor_final, created_by, subconta_id, subconta_nome, conta_bancaria_id, conta_bancaria_nome, total_parcelas, numero_parcela, parcela_origem_id. Frontend que consumir o response não terá o valor_final calculado. Verificar se POST /api/admin/contas-receber tem o mesmo problema (não testado em detalhe, mas estrutura idêntica em routes/financeiro.py linhas 499-517 — provavelmente sim).",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "FINANCEIRO Contas a Pagar: GET (com filtros status/vencimento/search), POST parcelado (3 parcelas criadas, 400 para total_parcelas=0), PUT, PATCH /quitar (status=quitada), PATCH /cancelar, DELETE, 404 em ids inválidos",
+    "FINANCEIRO Contas a Receber: GET, POST + PATCH /quitar (status=quitada), POST /parcelado retorna 400 para total_parcelas=0, PATCH /cancelar e DELETE retornam 404 para id inválido",
+    "EMISSÃO NF: GET /api/nfe/cfops retorna exatamente 8 CFOPs com codigo+descricao; GET /api/nfse/codigos-servico retorna lista LC 116 (19 itens) com codigo+descricao",
+    "EMISSÃO NF Listagens: GET /nfe/emitidas, /nfse/emitidas, /notas-emitidas — todos 200; GET /notas-emitidas/{fake} -> 404",
+    "EMISSÃO NF Mutações: POST /nfe/emitir e POST /nfse/emitir retornam 404 para certificado_id inválido (validação fail-fast OK)",
+    "EMISSÃO NF Downloads: DELETE /notas-emitidas/{fake}, GET .../download-xml, GET .../download-pdf — todos 404 para id inválido",
+    "IMPORTAÇÃO NF: POST /api/nfe/importar/fake-id e POST /api/nfse/importar/fake-id retornam 404 (sem disparar SOAP SEFAZ)",
+    "REGRESSÃO FASE 1 PARTE 1: /api/conciliacao, /api/nfse/importadas, /api/nfe/importadas, /api/nfe/certificados, /api/nfe/novas-count, /api/nfe/importadas/{fake}/download-pdf -> 404 — todos OK",
+    "REGRESSÃO SCHEDULER: GET /api/nf/importacao-automatica/status -> 200 com scheduler_ativo=true; GET /api/nf/importacao-automatica/logs -> 200. Scheduler continuou funcional após extração das funções importar_nfe/importar_nfse para routes/importacao_nf.py (re-import via 'from routes.importacao_nf import importar_nfe, importar_nfse' em server.py funcionou)",
+    "REGRESSÃO GERAL: POST /api/auth/login, GET /admin/dashboard, /admin/centros-custo, /admin/plano-contas, /api/export/pdf/contas_pagar (PDF binário válido %PDF-) — todos OK"
+  ],
+  "failed_tests": [
+    "TestContasPagar::test_create_minimal — assertion 'data[valor_final] == 100.0' falhou: campo valor_final não vem na response (KeyError). Confirmado via curl direto: response do POST omite valor_final, created_by e vários outros, e ainda contém _id.",
+    "TestContasPagar::test_update — falhou em cascade pois created_ids[0] foi um id de parcela (não da conta minimal que falhou antes). PUT em si responde 200, mas a response não tem 'descricao' do mesmo modo (assertion errou). Não testado em isolamento se PUT também sofre do mesmo bug de campos faltantes — provável que sim, dada a estrutura."
+  ],
+  "skipped_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_financeiro_emissao_importacao.py",
+    "/app/test_reports/pytest/pytest_financeiro_emissao_importacao.xml"
+  ],
+  "action_items": [
+    "INVESTIGAR routes/financeiro.py:220-238 (POST /contas-pagar): por que conta.pop('_id', None) não está removendo o _id no response. Hipótese: a chamada 'await create_audit_log(...)' entre insert_one e pop pode estar interagindo com a mesma referência. Sugestão: criar um dict de resposta independente OU usar 'response_dict = {k: v for k, v in conta.items() if k != \"_id\"}' explicitamente. Também garantir que TODOS os campos relevantes (valor_final, created_by) estão no response. Aplicar fix análogo em POST /contas-pagar/parcelado, POST /contas-receber, POST /contas-receber/parcelado.",
+    "INVESTIGAR por que campos como valor_final, created_by, subconta_id, conta_bancaria_id, total_parcelas, numero_parcela, parcela_origem_id estão SUMINDO da response. Ordem dos campos na resposta sugere que algo está re-serializando o dict. Verificar se há algum middleware ou response_model implícito.",
+    "ADICIONAR retorno explícito de 'valor_final' nos POST/PUT de Contas a Pagar/Receber (frontend pode precisar)."
+  ],
+  "critical_code_review_comments": [
+    "routes/financeiro.py (720 linhas) bem organizado: models → contas-pagar (CRUD+parcelado+quitar+cancelar) → contas-receber (idem). DRY OK; lógica de quitação parcial bem implementada (valor_pago, saldo_restante, status='parcial'/'quitada').",
+    "BUG REAL: leak de _id em POST contas-pagar (e provavelmente todas as POST de financeiro). Não causa 500, mas vaza ObjectId não JSON-serializável em outros contextos.",
+    "routes/emissao_nf.py (833 linhas): organização clara — tabelas constantes (CFOPS, LC116) → listagens → emissão (rascunho com PDF/XML helpers). Validação fail-fast correta (404 cert ausente, 400 cert inativo). NOTA: SOAP envelope NFS-e está hardcoded para Webiss/Palmas-TO (codigo_municipio 1721000) — aceitável dado contexto da empresa. Lazy imports de reportlab/pynfe corretos.",
+    "routes/importacao_nf.py (608 linhas): preservou completamente o contrato com o scheduler — funções importar_nfe/importar_nfse mantêm assinatura compatível para serem re-importadas em server.py. Boa preservação de retorno (dict com message/novas_nfes/aviso/bloqueado_ate). Tratamento de rate-limit SEFAZ (cStat 656 → bloqueio 1h) preservado. Limite diário de 3 consultas preservado. Linhas 14-16,19-20 importam módulos depois re-importados localmente (gzip, tempfile, ET) — duplicação cosmética, não funcional.",
+    "utils/sequences.py (não inspecionado em detalhe, mas POST contas-pagar retorna 'numero':23 (int sequencial). Sequence helper funciona.",
+    "VALIDAÇÃO 'total_parcelas < 1' (linha 246/524 routes/financeiro.py) é manual — quando frontend envia 0, retorna 400 'Número de parcelas deve ser maior que zero'. Pydantic não valida via Field(ge=1). Funciona, mas seria mais limpo com Field constraints.",
+    "Audit log presente em todas as mutações financeiras e de notas — boa rastreabilidade."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_financeiro_emissao_importacao.py (NOVO)"
+  ],
+  "success_rate": {
+    "backend": "95% (39/41 passed). 2 falhas relacionadas ao mesmo bug: response do POST contas-pagar omite campos e leak _id.",
+    "frontend": "N/A (skipped per request)"
+  },
+  "test_credentials": {
+    "email": "test@test.com",
+    "password": "password",
+    "role": "admin"
+  },
+  "seed_data_creation": "Cleanup automático: todos os ids criados (1 conta minimal + 3 parcelas + 1 conta receber) são deletados em test_zzz_cleanup. Dados TEST_ não persistem após o run. Nenhum dado de produção alterado.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Após main agent corrigir o leak de _id e os campos ausentes em routes/financeiro.py (POST contas-pagar/contas-receber e seus parcelados), re-rodar pytest /app/backend/tests/test_financeiro_emissao_importacao.py — esperando 41/41. Reuse este arquivo como regression suite para próximas extrações da Sessão 32. Estado atual confirma: 6 módulos extraídos OK (Conciliação+NFS-e+NF-e+Financeiro+Emissão+Importação); scheduler /api/nf/importacao-automatica/status retorna scheduler_ativo:true; CFOPs=8 itens, LC116=19 itens. Para POST /api/admin/contas-pagar: payload mínimo válido = {descricao, valor, data_vencimento}. Para POST parcelado: {descricao, valor_total, data_primeiro_vencimento, total_parcelas (>=1, <=120), intervalo_dias}. POST /nfe/emitir e /nfse/emitir validam certificado_id antes de qualquer outra coisa. NÃO testar /nfe/importar/{cert_real} (rate limit SEFAZ — cert real é id do certificado da CONSTRUTORA RODRIGUES ALMEIDA LTDA CNPJ 04887879000196).",
+  "rca_of_the_issue": "Bug 1 (leak _id): conta.pop('_id', None) executa após insert_one mutar o dict adicionando _id (ObjectId). A chamada awaited create_audit_log() entre as duas operações não deveria afetar, mas o pop está executando — o response ainda contém _id. Hipótese: pode haver alguma cópia interna pelo motor/asyncio que captura o estado anterior ao pop, OU o ObjectId está sendo re-adicionado por algum mecanismo. Mitigação: substituir 'conta.pop(\"_id\", None); return conta' por 'return {k: v for k, v in conta.items() if k != \"_id\"}'. Bug 2 (campos ausentes): tipo conta = {id, numero, **data.model_dump(), valor_final, created_by, created_at} deveria expor todos os campos, mas response omite alguns. Verificar se model_dump() está usando exclude_none/exclude_unset (não vi config explícita, mas vale checar). Mitigação: construir dict de resposta explicitamente com os campos desejados ao invés de retornar conta direto."
+}
