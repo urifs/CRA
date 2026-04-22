@@ -1,6 +1,41 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 22/04/2026 (Sessão 32) — PARTE 5: Refatoração Fase 2 COMPLETA 🚀
+
+### 🧹 server.py reduzido em **48%** (-7.428 linhas, de 15.487 → 8.059)
+
+**3 novos routers + 2 reativados nesta parte — 73/73 testes passaram (iteration_31):**
+
+| Domínio | Arquivo | Tipo | Linhas | Endpoints |
+|---------|---------|------|--------|-----------|
+| Exportação (PDF/Excel/OFX/Recibo/Duplicata/Extrato) | `routes/exports_all.py` | NOVO | 3.522 | ~20 |
+| Dashboard | `routes/dashboard.py` | NOVO | 148 | 1 |
+| Medições | `routes/medicoes.py` | NOVO | 253 | 6 |
+| Stock (duplicados removidos) | `routes/stock.py` | Reativado | 543 | 14 |
+| Obras (duplicados removidos) | `routes/obras.py` | Reativado | 402 | 9 |
+
+**Problema resolvido — "Shadow routes":**
+- `routes/stock.py` e `routes/obras.py` já existiam mas estavam sendo **silenciosamente ignorados** porque havia duplicados diretos (`@api_router.*`) em server.py que venciam pela ordem de registro no FastAPI. Removidos os duplicados, os routers modulares ficaram ativos.
+
+**Bug fix UPLOAD_DIR / StaticFiles:**
+- Durante a extração, descobri que `UPLOAD_DIR` e `from fastapi.staticfiles import StaticFiles` estavam definidos inline no meio do bloco de export (linha ~10719). Movi-os para o topo de server.py.
+
+### Totais consolidados desta sessão (32):
+- 📉 `server.py`: 15.487 → 8.059 (-7.428 linhas, **-48%**)
+- 📈 **10 routers modulares** criados/refatorados totalizando 12.079 linhas organizadas
+- 🎯 **72+ endpoints migrados**
+- ✅ **73/73 testes backend** — zero regressão em 5 iterações de testing agent (27, 28, 29, 30, 31)
+
+### Fase 2 — Pendente para próxima sessão:
+- 🟠 **Contas Bancárias** — dar uma olhada e extrair se ainda houver bloco relevante
+- 🟠 **Auth avançado** (já em routes/auth.py mas server.py pode ter duplicados shadowed)
+- 🟢 Pytest em `/app/backend/tests/` para cobertura contínua
+- 🟢 Split de `ImportacaoNFPage.jsx` (1900+ linhas)
+
+---
+
+
 ## Changelog - 22/04/2026 (Sessão 32) — PARTE 4: Refatoração Fase 1 COMPLETA 🎉
 
 ### 🧹 6 Domínios Extraídos, 0 Regressões
