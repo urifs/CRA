@@ -1,7 +1,19 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
-## Changelog - 22/04/2026 (Sessão 30)
+## Changelog - 22/04/2026 (Sessão 31)
+
+### Conciliação Bancária — 3 correções:
+- ✅ **Valores corretos na extração de PDF**: Algoritmo reescrito. Antes usava `value_matches[-1]` (o SALDO), agora usa `selecionar_valor_e_tipo()` que detecta D/C, valor negativo explícito, ou usa o PRIMEIRO valor da linha (excluindo o último = saldo corrente)
+- ✅ **Suporte a tabelas do pdfplumber**: Detecção de colunas Débito/Crédito/Saldo por cabeçalho; fallback para texto linha por linha
+- ✅ **Ordenação crescente**: Extrato Bancário e Contas do Sistema exibidos do mais antigo ao mais recente
+- ✅ **Campo de busca no painel do Extrato**: Input `data-testid="busca-extrato"` filtra em tempo real por descrição
+- ✅ **Campo de busca no painel de Contas**: Já existia, mantido
+- ✅ **Testado**: 8/9 backend (1 skipped - endpoint não implementado), 100% frontend
+
+---
+
+
 
 ### Correções e Padronização de Exportações
 - ✅ **Exportação combinada corrigida**: `export_combined` usava `list(keys)[:6]` (campos brutos MongoDB). Reescrito para usar `generate_pdf_report()` por seção + merge com PyPDF2 → colunas legíveis em todos os relatórios
