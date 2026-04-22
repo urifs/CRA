@@ -57,11 +57,18 @@ class TestContasPagar:
         r = requests.post(f"{BASE_URL}/api/admin/contas-pagar", headers=H, json=payload, timeout=30)
         assert r.status_code == 200, r.text
         data = r.json()
+        # BUG FIX iteration 29 verification: no _id leak, all new fields present
+        assert "_id" not in data, f"_id leaked in response: {data}"
         assert data["descricao"] == "TEST_CP_MIN"
         assert data["valor"] == 100.0
-        assert data["valor_final"] == 100.0
+        assert data["valor_final"] == 100.0, f"valor_final missing/wrong: {data}"
         assert "id" in data and "numero" in data
         assert isinstance(data["numero"], int)
+        # Fields required by FIX — must be present (may be None)
+        for f in ("created_by", "subconta_id", "subconta_nome",
+                  "conta_bancaria_id", "conta_bancaria_nome",
+                  "total_parcelas", "numero_parcela", "parcela_origem_id"):
+            assert f in data, f"Campo obrigatório ausente no response: {f} — data={data}"
         TestContasPagar.created_ids.append(data["id"])
 
         # GET para confirmar persistência
@@ -93,7 +100,17 @@ class TestContasPagar:
         assert r.status_code == 200, r.text
         data = r.json()
         assert len(data["parcelas"]) == 3
-        for p in data["parcelas"]:
+        # Verify each parcela has all required fields and no _id leak
+        parent_id = None
+        for idx, p in enumerate(data["parcelas"], start=1):
+            assert "_id" not in p, f"_id leaked in parcela: {p}"
+            assert p.get("total_parcelas") == 3, f"total_parcelas wrong in {p}"
+            assert p.get("numero_parcela") == idx, f"numero_parcela wrong for idx={idx}: {p}"
+            assert "valor_final" in p
+            assert "created_by" in p
+            assert "parcela_origem_id" in p
+            if idx == 1:
+                parent_id = p["parcela_origem_id"] or p["id"]
             TestContasPagar.created_ids.append(p["id"])
 
     def test_update(self, H):
@@ -106,8 +123,12 @@ class TestContasPagar:
         }
         r = requests.put(f"{BASE_URL}/api/admin/contas-pagar/{cid}", headers=H, json=payload, timeout=30)
         assert r.status_code == 200, r.text
-        assert r.json()["descricao"] == "TEST_CP_MIN_UPDATED"
-        assert r.json()["valor"] == 150.0
+        data = r.json()
+        # PUT fix verification: no _id leak, valor_final recomputed
+        assert "_id" not in data, f"_id leaked in PUT response: {data}"
+        assert data["descricao"] == "TEST_CP_MIN_UPDATED"
+        assert data["valor"] == 150.0
+        assert data.get("valor_final") == 150.0, f"valor_final should be recalculated: {data}"
 
     def test_quitar(self, H):
         cid = TestContasPagar.created_ids[1]
@@ -152,12 +173,42 @@ class TestContasReceber:
         }
         r = requests.post(f"{BASE_URL}/api/admin/contas-receber", headers=H, json=payload, timeout=30)
         assert r.status_code == 200, r.text
-        cid = r.json()["id"]
+        data = r.json()
+        # BUG FIX verification for Contas a Receber as well
+        assert "_id" not in data, f"_id leaked in response: {data}"
+        assert data.get("valor_final") == 200.0, f"valor_final missing: {data}"
+        for f in ("created_by", "subconta_id", "subconta_nome",
+                  "conta_bancaria_id", "conta_bancaria_nome",
+                  "total_parcelas", "numero_parcela", "parcela_origem_id"):
+            assert f in data, f"Campo ausente no response CR: {f} — data={data}"
+        cid = data["id"]
         TestContasReceber.created_ids.append(cid)
 
         r2 = requests.patch(f"{BASE_URL}/api/admin/contas-receber/{cid}/quitar", headers=H, json={}, timeout=30)
         assert r2.status_code == 200
-        assert r2.json()["status"] == "quitada"
+        body = r2.json()
+        assert "_id" not in body, f"_id leaked in quitar response: {body}"
+        assert body["status"] == "quitada"
+
+    def test_parcelado_ok_receber(self, H):
+        payload = {
+            "descricao": "TEST_CR_PAR_OK",
+            "valor_total": 600.0,
+            "data_primeiro_vencimento": (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d"),
+            "total_parcelas": 2,
+            "intervalo_dias": 30,
+        }
+        r = requests.post(f"{BASE_URL}/api/admin/contas-receber/parcelado", headers=H, json=payload, timeout=30)
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert len(data["parcelas"]) == 2
+        for idx, p in enumerate(data["parcelas"], start=1):
+            assert "_id" not in p, f"_id leaked in CR parcela: {p}"
+            assert p.get("total_parcelas") == 2
+            assert p.get("numero_parcela") == idx
+            assert "valor_final" in p
+            assert "parcela_origem_id" in p
+            TestContasReceber.created_ids.append(p["id"])
 
     def test_parcelado_invalid(self, H):
         payload = {

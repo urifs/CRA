@@ -1,0 +1,50 @@
+{
+  "summary": "Re-teste após fix de conflito de rota em /admin/contas-pagar e /admin/contas-receber. Endpoints duplicados removidos de routes/admin.py (linhas 243-412 substituídas por placeholder de comentário); routes/financeiro.py é agora o único dono dos paths. Atualizei o test suite para validar explicitamente: (a) ausência de _id na response, (b) presença de valor_final, created_by, subconta_id, subconta_nome, conta_bancaria_id, conta_bancaria_nome, total_parcelas, numero_parcela, parcela_origem_id no POST, PUT e parcelado de Contas a Pagar e Contas a Receber. Resultado: 42/42 PASSED (100%). Zero regressão em Conciliação, NF-e, NFS-e, scheduler, auth, dashboard e export.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "TestContasPagar (10/10): list, list_with_filters, create_minimal (valida _id ausente, valor_final=100.0 e TODOS os novos campos: created_by, subconta_id, subconta_nome, conta_bancaria_id, conta_bancaria_nome, total_parcelas, numero_parcela, parcela_origem_id), parcelado_invalid (400 para total_parcelas=0), parcelado_ok (3 parcelas, cada com total_parcelas=3, numero_parcela=1..3, valor_final, parcela_origem_id — SEM _id), update (valor_final recomputa para 150.0, sem _id), quitar, cancelar, quitar_404, cleanup",
+    "TestContasReceber (6/6): list, create_and_quitar (valida mesmos campos + sem _id em POST e em PATCH /quitar), parcelado_ok_receber (2 parcelas com numero_parcela/total_parcelas/valor_final/parcela_origem_id corretos), parcelado_invalid 400, cancelar/delete 404, cleanup",
+    "TestEmissaoTabelas: GET /api/nfe/cfops (8 itens) e /api/nfse/codigos-servico (lista LC116 com codigo+descricao)",
+    "TestNotasEmitidas (9/9): GET /nfe/emitidas, /nfse/emitidas, /notas-emitidas; GET /notas-emitidas/fake->404; POST /nfe/emitir e /nfse/emitir retornam 404 para cert inválido; DELETE e downloads XML/PDF retornam 404",
+    "TestImportacaoNF: POST /nfe/importar/fake e /nfse/importar/fake -> 404 (sem bater SEFAZ real)",
+    "TestRegressao (13/13): /api/conciliacao, /api/nfse/importadas, /api/nfe/importadas, /api/nfe/certificados, /api/nfe/novas-count, /api/nfe/importadas/fake/download-pdf 404, scheduler_status (scheduler_ativo=true), scheduler_logs, login, /admin/dashboard, /admin/centros-custo, /admin/plano-contas, /api/export/pdf/contas_pagar (PDF binário válido)"
+  ],
+  "failed_tests": [],
+  "skipped_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_financeiro_emissao_importacao.py",
+    "/app/test_reports/pytest/pytest_financeiro_emissao_importacao.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/admin.py linhas 243-245: placeholder comentado OK (sem código morto). Conflito de rota resolvido — path /admin/contas-pagar e /admin/contas-receber têm agora um único handler (em routes/financeiro.py).",
+    "Fix validado objetivamente: POST /api/admin/contas-pagar agora retorna payload completo com valor_final recalculado, created_by populado do JWT, e todos os campos opcionais presentes (mesmo que None). _id ObjectId não vaza em nenhuma rota financeira testada (POST/PUT/PATCH quitar).",
+    "Sugestão de melhoria (não-bloqueante, para próxima iteração): substituir validação manual 'total_parcelas < 1' por Pydantic Field(ge=1, le=120) nos schemas ParceladoCreate de Contas a Pagar e Contas a Receber em routes/financeiro.py — reduz 4 linhas de validação manual e expõe constraint no OpenAPI.",
+    "Scheduler /api/nf/importacao-automatica preservado (scheduler_ativo=true) após a remoção dos endpoints duplicados — zero colateral."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_financeiro_emissao_importacao.py (ampliado: assertions explícitas de _id ausente e campos novos em POST/PUT/parcelado de CP e CR)"
+  ],
+  "success_rate": {
+    "backend": "100% (42/42 passed)",
+    "frontend": "N/A (skipped per request)"
+  },
+  "test_credentials": {
+    "email": "test@test.com",
+    "password": "password",
+    "role": "admin"
+  },
+  "seed_data_creation": "Cleanup automático via test_zzz_cleanup: todos os ids criados (1 CP minimal + 3 parcelas CP + 1 CR minimal + 2 parcelas CR) são deletados ao fim do run. Nenhum dado de produção alterado.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Fix de conflito de rota /admin/contas-* validado e fechado. Test suite /app/backend/tests/test_financeiro_emissao_importacao.py agora é a regression canonica para Sessão 32 Parte 2 (42 tests, <1s execução). Se nova extração for feita em admin.py, garantir que não se recriem endpoints em routes/admin.py com paths já registrados em outros routers — FastAPI usa order-of-registration (primeiro registrado ganha). Payload mínimo POST CP: {descricao, valor, data_vencimento}. POST parcelado CP/CR: {descricao, valor_total, data_primeiro_vencimento, total_parcelas in [1..120], intervalo_dias}. created_by é preenchido a partir do JWT (user id). NUNCA testar /nfe/importar ou /nfse/importar com certificado real 04887879000196 (rate-limit SEFAZ).",
+  "rca_of_the_issue": "BUG ANTERIOR (iteration_29): endpoints duplicados em routes/admin.py linhas 243-412 com model Pydantic antigo (sem campos valor_final, created_by, subconta_*, conta_bancaria_*, total_parcelas, numero_parcela, parcela_origem_id) e com 'conta[_id]=str(...)' sobrescreviam os endpoints novos de routes/financeiro.py devido à ordem de include_router em server.py. Por isso a response do POST /contas-pagar vinha com _id leaked e campos novos ausentes, MAS as mutações subsequentes (PUT/PATCH/DELETE do router novo) funcionavam porque não havia duplicação nesses paths.\n\nFIX APLICADO: main agent removeu 166 linhas (lines 243-412) de admin.py deixando apenas um comentário placeholder. Agora routes/financeiro.py é o único handler. Validado via test suite ampliado com assertions estruturais (_id not in data + presença explícita de cada campo novo). Todos os 42 testes passam, incluindo os 2 que falhavam na iteration 29. Zero regressão em todas as outras rotas do sistema."
+}
