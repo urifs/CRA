@@ -12824,6 +12824,82 @@ async def create_nfe_certificado(certificado: NFeCertificadoCreate, current_user
     
     return {"id": doc["id"], "cnpj": doc["cnpj"], "razao_social": doc["razao_social"]}
 
+
+class NFeCertificadoUpdate(BaseModel):
+    razao_social: Optional[str] = None
+    uf: Optional[str] = None
+    ambiente: Optional[str] = None
+    ativo: Optional[bool] = None
+    inscricao_municipal: Optional[str] = None
+    url_nfse: Optional[str] = None
+    senha_certificado: Optional[str] = None
+    certificado_base64: Optional[str] = None
+
+
+@api_router.patch("/nfe/certificados/{certificado_id}")
+async def update_nfe_certificado(
+    certificado_id: str,
+    data: NFeCertificadoUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """Atualiza campos do certificado (Inscrição Municipal, URL NFS-e, etc.)."""
+    certificado = await db.nfe_certificados.find_one({"id": certificado_id})
+    if not certificado:
+        raise HTTPException(status_code=404, detail="Certificado não encontrado")
+
+    update_fields = {}
+    for key in ("razao_social", "uf", "ambiente", "ativo", "inscricao_municipal", "url_nfse"):
+        value = getattr(data, key)
+        if value is not None:
+            update_fields[key] = value
+
+    # Se o usuário decidiu trocar o certificado em si, valida antes
+    if data.certificado_base64 and data.senha_certificado:
+        try:
+            from cryptography.hazmat.primitives.serialization import pkcs12
+            cert_data = base64.b64decode(data.certificado_base64)
+            pkcs12.load_key_and_certificates(cert_data, data.senha_certificado.encode())
+            update_fields["certificado_base64"] = data.certificado_base64
+            update_fields["senha_certificado"] = data.senha_certificado
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Certificado inválido ou senha incorreta: {str(e)}")
+    elif data.senha_certificado and not data.certificado_base64:
+        # Trocando apenas a senha — valida com o certificado atual
+        try:
+            from cryptography.hazmat.primitives.serialization import pkcs12
+            cert_data = base64.b64decode(certificado.get("certificado_base64", ""))
+            pkcs12.load_key_and_certificates(cert_data, data.senha_certificado.encode())
+            update_fields["senha_certificado"] = data.senha_certificado
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Senha incorreta para o certificado atual: {str(e)}")
+
+    if not update_fields:
+        return {"message": "Nada para atualizar"}
+
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.nfe_certificados.update_one(
+        {"id": certificado_id},
+        {"$set": update_fields},
+    )
+
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type="nfe_certificado",
+        entity_id=certificado_id,
+        entity_name=f"{certificado.get('razao_social')} ({certificado.get('cnpj')})",
+        details=f"Campos atualizados: {', '.join(k for k in update_fields if k not in ('senha_certificado', 'certificado_base64', 'updated_at'))}",
+        module="Financeiro",
+    )
+
+    atualizado = await db.nfe_certificados.find_one(
+        {"id": certificado_id},
+        {"_id": 0, "certificado_base64": 0, "senha_certificado": 0},
+    )
+    return atualizado
+
+
 @api_router.delete("/nfe/certificados/{certificado_id}")
 async def delete_nfe_certificado(certificado_id: str, current_user: dict = Depends(get_current_user)):
     """Remove um certificado cadastrado"""

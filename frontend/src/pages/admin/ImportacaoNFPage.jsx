@@ -46,7 +46,8 @@ import {
   CreditCard,
   Clock,
   Timer,
-  Ban
+  Ban,
+  Pencil
 } from "lucide-react";
 import { formatCPFouCNPJ } from "@/utils/masks";
 
@@ -115,6 +116,15 @@ export default function ImportacaoNFPage() {
   const [showAddCertificado, setShowAddCertificado] = useState(false);
   const [showNFeDetail, setShowNFeDetail] = useState(null);
   const [deleteCertificadoId, setDeleteCertificadoId] = useState(null);
+  const [editCertificado, setEditCertificado] = useState(null);
+  const [editForm, setEditForm] = useState({
+    razao_social: "",
+    uf: "SP",
+    ambiente: "producao",
+    inscricao_municipal: "",
+    url_nfse: "",
+  });
+  const [editLoading, setEditLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [selectedCertificado, setSelectedCertificado] = useState("todos");
   const [selectedStatus, setSelectedStatus] = useState("todos");
@@ -341,6 +351,39 @@ export default function ImportacaoNFPage() {
       fetchData();
     } catch (error) {
       toast.error("Erro ao remover certificado");
+    }
+  };
+
+  const openEditCertificado = (cert) => {
+    setEditForm({
+      razao_social: cert.razao_social || "",
+      uf: cert.uf || "SP",
+      ambiente: cert.ambiente || "producao",
+      inscricao_municipal: cert.inscricao_municipal || "",
+      url_nfse: cert.url_nfse || "",
+    });
+    setEditCertificado(cert);
+  };
+
+  const handleUpdateCertificado = async (e) => {
+    e.preventDefault();
+    if (!editCertificado) return;
+    setEditLoading(true);
+    try {
+      await axios.patch(`${API}/nfe/certificados/${editCertificado.id}`, {
+        razao_social: editForm.razao_social,
+        uf: editForm.uf,
+        ambiente: editForm.ambiente,
+        inscricao_municipal: editForm.inscricao_municipal,
+        url_nfse: editForm.url_nfse,
+      });
+      toast.success("Certificado atualizado com sucesso!");
+      setEditCertificado(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao atualizar certificado");
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -1457,6 +1500,16 @@ export default function ImportacaoNFPage() {
                       <Button 
                         variant="outline" 
                         size="sm"
+                        className="text-blue-600 hover:bg-blue-50"
+                        onClick={() => openEditCertificado(cert)}
+                        data-testid={`edit-cnpj-${cert.id}`}
+                        title="Editar dados fiscais (Inscrição Municipal, URL NFS-e)"
+                      >
+                        <Pencil size={14} />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
                         className="text-red-600 hover:bg-red-50"
                         onClick={() => setDeleteCertificadoId(cert.id)}
                       >
@@ -1813,6 +1866,117 @@ export default function ImportacaoNFPage() {
               Remover
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Editar CNPJ/Certificado */}
+      <Dialog open={!!editCertificado} onOpenChange={(open) => !open && setEditCertificado(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar CNPJ/Certificado</DialogTitle>
+            <DialogDescription>
+              Atualize os dados fiscais do CNPJ. O certificado digital (.pfx) e CNPJ não podem ser alterados.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateCertificado} data-testid="edit-cnpj-form">
+            <div className="grid gap-4 py-2">
+              {editCertificado && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">CNPJ</p>
+                  <p className="font-mono text-sm font-bold">{formatCPFouCNPJ(editCertificado.cnpj)}</p>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="edit-razao">Razão Social</Label>
+                <Input
+                  id="edit-razao"
+                  data-testid="edit-razao-social"
+                  value={editForm.razao_social}
+                  onChange={(e) => setEditForm({ ...editForm, razao_social: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>UF</Label>
+                  <Select
+                    value={editForm.uf}
+                    onValueChange={(v) => setEditForm({ ...editForm, uf: v })}
+                  >
+                    <SelectTrigger data-testid="edit-uf">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ufs.map((uf) => (
+                        <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Ambiente</Label>
+                  <Select
+                    value={editForm.ambiente}
+                    onValueChange={(v) => setEditForm({ ...editForm, ambiente: v })}
+                  >
+                    <SelectTrigger data-testid="edit-ambiente">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="producao">Produção</SelectItem>
+                      <SelectItem value="homologacao">Homologação</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 pt-4 mt-1">
+                <h4 className="text-sm font-bold text-gray-700 mb-3">NFS-e (Nota Fiscal de Serviço)</h4>
+                <div className="grid gap-3">
+                  <div>
+                    <Label htmlFor="edit-im">Inscrição Municipal</Label>
+                    <Input
+                      id="edit-im"
+                      data-testid="edit-inscricao-municipal"
+                      placeholder="Ex.: 1234567"
+                      value={editForm.inscricao_municipal}
+                      onChange={(e) => setEditForm({ ...editForm, inscricao_municipal: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-url">URL Webservice NFS-e</Label>
+                    <Input
+                      id="edit-url"
+                      data-testid="edit-url-nfse"
+                      placeholder="https://palmasto.webiss.com.br/ws/nfse.asmx"
+                      value={editForm.url_nfse}
+                      onChange={(e) => setEditForm({ ...editForm, url_nfse: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Use a URL SOAP do webservice da prefeitura. Obtenha-a no portal da sua prefeitura do seu município.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditCertificado(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editLoading} data-testid="edit-cnpj-save">
+                {editLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar alterações"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
