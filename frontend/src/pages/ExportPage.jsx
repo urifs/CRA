@@ -527,20 +527,10 @@ export default function ExportPage({ module = "gerenciamento" }) {
     
     setExporting('all-combined');
     try {
-      // Construir filtros específicos
-      const filters = {};
-      Object.keys(specificFilters).forEach(key => {
-        const filter = specificFilters[key];
-        if (filter?.selectedIds?.length > 0 && selectedItems.includes(key)) {
-          filters[key] = { ids: filter.selectedIds };
-        }
-      });
-
       const ccParam = getCentroCustoParam();
       const response = await axios.post(`${API}/export/combined`, {
         categories: selectedItems,
         format: 'pdf',
-        filters: Object.keys(filters).length > 0 ? filters : null,
         centro_custo: ccParam || null
       }, {
         headers: { Authorization: `Bearer ${token}` },
