@@ -1,6 +1,20 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 22/04/2026 (Sessão 32)
+
+### DANFE em Layout Oficial
+- ✅ **Novo gerador**: `/app/backend/utils/danfe_generator.py` extrai dados completos do XML (emit, dest, transp, totais, itens, duplicatas, protocolo) e completa com dados do MongoDB
+- ✅ **Template HTML + WeasyPrint**: `/app/backend/templates/danfe.html` replica as seções do DANFE oficial (cabeçalho com emitente/identificação/chave, natureza+protocolo, destinatário, cálculo imposto, transportador, produtos, dados adicionais)
+- ✅ **Code128 barcode**: Renderizado a partir da chave de acesso (python-barcode)
+- ✅ **Formatações oficiais**: CNPJ `XX.XXX.XXX/XXXX-XX`, CEP `XXXXX-XXX`, datas DD/MM/AAAA, valores `X.XXX,XX`, chave em grupos de 4 dígitos, número `000.000.000`, série `001`
+- ✅ **Endpoint atualizado**: `GET /api/nfe/importadas/{nfe_id}/download-pdf` agora usa o novo gerador (mantém fallback para PDF original armazenado)
+- ✅ **Dependências**: Adicionados `weasyprint==68.1` e `python-barcode==0.16.1` em requirements.txt
+- ✅ **Testado**: 3 NFes reais (com XML completo) geraram PDF A4 fidedigno ao modelo
+
+---
+
+
 ## Changelog - 22/04/2026 (Sessão 31)
 
 ### Conciliação Bancária — 3 correções:

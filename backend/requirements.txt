@@ -145,3 +145,5 @@ nfelib==2.5.1
 py3o.template==0.10.0
 pycairo==1.29.0
 rlPyCairo==0.4.0
+weasyprint==68.1
+python-barcode==0.16.1
