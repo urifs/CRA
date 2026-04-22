@@ -8361,6 +8361,24 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
             text = "-"
         return Paragraph(str(text), header_cell_style if is_header else cell_style)
     
+    def fmt_date(val):
+        """Converte YYYY-MM-DD para DD/MM/AAAA"""
+        if not val:
+            return "-"
+        s = str(val).strip()[:10]
+        if len(s) == 10 and s[4] == '-':
+            return f"{s[8:10]}/{s[5:7]}/{s[0:4]}"
+        return s if s else "-"
+    
+    def fmt_money(val):
+        """Formata valor em R$ X.XXX,XX (padrão brasileiro)"""
+        try:
+            f = float(val or 0)
+            formatted = f"{f:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            return f"R$ {formatted}"
+        except (ValueError, TypeError):
+            return "R$ 0,00"
+    
     elements = []
     
     # Logo CRA (tentar carregar do arquivo local)
@@ -8407,8 +8425,8 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                 table_data.append([
                     cell(item.get("part_name", "-")),
                     cell(tipo),
-                    cell(f"R$ {item.get('part_value', 0):.2f}"),
-                    cell(item.get("replacement_date", "-")[:10] if item.get("replacement_date") else "-"),
+                    cell(fmt_money(item.get('part_value', 0))),
+                    cell(fmt_date(item.get("replacement_date"))),
                     cell("Sim" if item.get("is_oil_change") else "Não")
                 ])
         elif category == "stock_items":
@@ -8421,7 +8439,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("category", "-")),
                     cell(str(item.get("quantity", 0))),
                     cell(str(item.get("min_quantity", 0))),
-                    cell(f"R$ {item.get('unit_price', 0):.2f}")
+                    cell(fmt_money(item.get('unit_price', 0)))
                 ])
         elif category == "obras":
             headers = [cell("Nome", True), cell("Local", True), cell("Status", True), cell("Início", True), cell("Fim", True)]
@@ -8432,23 +8450,18 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("name", "-")),
                     cell(item.get("location", "-")),
                     cell(status_map.get(item.get("status", ""), item.get("status", "-"))),
-                    cell(item.get("start_date", "-")[:10] if item.get("start_date") else "-"),
-                    cell(item.get("end_date", "-")[:10] if item.get("end_date") else "-")
+                    cell(fmt_date(item.get("start_date"))),
+                    cell(fmt_date(item.get("end_date")))
                 ])
         elif category == "contas_pagar":
             headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Quitação", True), cell("Status", True), cell("Fornecedor", True)]
             table_data = [headers]
             for item in data:
-                data_quitacao = item.get("data_pagamento", "-")
-                if data_quitacao and data_quitacao != "-" and len(str(data_quitacao)) >= 10:
-                    data_quitacao = str(data_quitacao)[:10]
-                else:
-                    data_quitacao = "-"
                 table_data.append([
                     cell(item.get("descricao", "-")),
-                    cell(f"R$ {item.get('valor', 0):.2f}"),
-                    cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
-                    cell(data_quitacao),
+                    cell(fmt_money(item.get('valor', 0))),
+                    cell(fmt_date(item.get("data_vencimento"))),
+                    cell(fmt_date(item.get("data_pagamento"))),
                     cell(item.get("status", "-").upper()),
                     cell(item.get("fornecedor_nome", "-"))
                 ])
@@ -8456,16 +8469,11 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
             headers = [cell("Descrição", True), cell("Valor", True), cell("Vencimento", True), cell("Recebimento", True), cell("Status", True), cell("Cliente", True)]
             table_data = [headers]
             for item in data:
-                data_recebimento = item.get("data_recebimento", "-")
-                if data_recebimento and data_recebimento != "-" and len(str(data_recebimento)) >= 10:
-                    data_recebimento = str(data_recebimento)[:10]
-                else:
-                    data_recebimento = "-"
                 table_data.append([
                     cell(item.get("descricao", "-")),
-                    cell(f"R$ {item.get('valor', 0):.2f}"),
-                    cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-"),
-                    cell(data_recebimento),
+                    cell(fmt_money(item.get('valor', 0))),
+                    cell(fmt_date(item.get("data_vencimento"))),
+                    cell(fmt_date(item.get("data_recebimento"))),
                     cell(item.get("status", "-").upper()),
                     cell(item.get("cliente_nome", "-"))
                 ])
@@ -8488,7 +8496,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(str(item.get("numero", "-"))),
                     cell(item.get("descricao", "-")),
                     cell(item.get("cliente_nome", "-")),
-                    cell(f"R$ {item.get('valor_total', 0):.2f}"),
+                    cell(fmt_money(item.get('valor_total', 0))),
                     cell(item.get("status", "-").upper())
                 ])
         elif category == "alugueis":
@@ -8498,9 +8506,9 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                 table_data.append([
                     cell(item.get("maquina_nome", "-")),
                     cell(item.get("cliente_nome", "-")),
-                    cell(f"R$ {item.get('valor_total', 0):.2f}"),
+                    cell(fmt_money(item.get('valor_total', 0))),
                     cell(item.get("status", "-").upper()),
-                    cell(item.get("data_vencimento", "-")[:10] if item.get("data_vencimento") else "-")
+                    cell(fmt_date(item.get("data_vencimento")))
                 ])
         elif category == "produtos_admin":
             headers = [cell("Código", True), cell("Descrição", True), cell("Unidade", True), cell("Preço", True), cell("Estoque", True)]
@@ -8510,7 +8518,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("codigo", "-")),
                     cell(item.get("descricao", "-")),
                     cell(item.get("unidade", "-")),
-                    cell(f"R$ {item.get('preco', 0):.2f}"),
+                    cell(fmt_money(item.get('preco', 0))),
                     cell(str(item.get("estoque", 0)))
                 ])
         elif category == "plano_contas":
@@ -8556,7 +8564,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell("ENTRADA" if item.get("movement_type") == "entrada" else "SAÍDA"),
                     cell(str(item.get("quantity", 0))),
                     cell(item.get("reason", "-")),
-                    cell(item.get("created_at", "-")[:10] if item.get("created_at") else "-")
+                    cell(fmt_date(item.get("created_at")))
                 ])
         elif category == "usage_logs":
             headers = [cell("Máquina ID", True), cell("Horas", True), cell("Data", True), cell("Observações", True)]
@@ -8565,7 +8573,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                 table_data.append([
                     cell(item.get("machine_id", "-")[:15] if item.get("machine_id") else "-"),
                     cell(str(item.get("hours", 0))),
-                    cell(item.get("created_at", "-")[:10] if item.get("created_at") else "-"),
+                    cell(fmt_date(item.get("created_at"))),
                     cell(item.get("notes", "-"))
                 ])
         elif category == "users":
@@ -8577,14 +8585,14 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("name", "-")),
                     cell(item.get("email", "-")),
                     cell(role_map.get(item.get("role", ""), item.get("role", "-"))),
-                    cell(item.get("created_at", "-")[:10] if item.get("created_at") else "-")
+                    cell(fmt_date(item.get("created_at")))
                 ])
         elif category == "audit_logs":
             headers = [cell("Data", True), cell("Usuário", True), cell("Ação", True), cell("Módulo", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
-                    cell(item.get("created_at", "-")[:16] if item.get("created_at") else "-"),
+                    cell(fmt_date(item.get("created_at"))),
                     cell(item.get("user_name", "-")),
                     cell(item.get("action", "-")),
                     cell(item.get("module", "-"))
@@ -8598,7 +8606,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("nome", "-")),
                     cell(item.get("cpf", "-")),
                     cell(item.get("cargo", "-")),
-                    cell(item.get("data_admissao", "-")[:10] if item.get("data_admissao") else "-"),
+                    cell(fmt_date(item.get("data_admissao"))),
                     cell(status_map.get(item.get("status", ""), item.get("status", "-")))
                 ])
         elif category == "ponto_registros":
@@ -8607,21 +8615,21 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
             for item in data:
                 table_data.append([
                     cell(item.get("funcionario_nome", "-")),
-                    cell(item.get("data", "-")[:10] if item.get("data") else "-"),
+                    cell(fmt_date(item.get("data"))),
                     cell(item.get("entrada", "-")),
                     cell(item.get("saida", "-")),
                     cell(item.get("horas_trabalhadas", "-"))
                 ])
         elif category == "folha_pagamento":
-            headers = [cell("Funcionário", True), cell("Competência", True), cell("Salário", True), cell("Descontos", True), cell("Líquido", True)]
+            headers = [cell("Funcionário", True), cell("Competência", True), cell("Salário Bruto", True), cell("Descontos", True), cell("Salário Líquido", True)]
             table_data = [headers]
             for item in data:
                 table_data.append([
                     cell(item.get("funcionario_nome", "-")),
                     cell(item.get("competencia", "-")),
-                    cell(f"R$ {item.get('salario_bruto', 0):.2f}"),
-                    cell(f"R$ {item.get('total_descontos', 0):.2f}"),
-                    cell(f"R$ {item.get('salario_liquido', 0):.2f}")
+                    cell(fmt_money(item.get('salario_bruto', 0))),
+                    cell(fmt_money(item.get('total_descontos', 0))),
+                    cell(fmt_money(item.get('salario_liquido', 0)))
                 ])
         elif category == "ferias":
             headers = [cell("Funcionário", True), cell("Período Aquisitivo", True), cell("Início", True), cell("Fim", True), cell("Status", True)]
@@ -8630,8 +8638,8 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                 table_data.append([
                     cell(item.get("funcionario_nome", "-")),
                     cell(item.get("periodo_aquisitivo", "-")),
-                    cell(item.get("data_inicio", "-")[:10] if item.get("data_inicio") else "-"),
-                    cell(item.get("data_fim", "-")[:10] if item.get("data_fim") else "-"),
+                    cell(fmt_date(item.get("data_inicio"))),
+                    cell(fmt_date(item.get("data_fim"))),
                     cell(item.get("status", "-").upper())
                 ])
         elif category == "epi_fichas":
@@ -8641,8 +8649,8 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                 table_data.append([
                     cell(item.get("funcionario_nome", "-")),
                     cell(item.get("epi_nome", "-")),
-                    cell(item.get("data_entrega", "-")[:10] if item.get("data_entrega") else "-"),
-                    cell(item.get("data_validade", "-")[:10] if item.get("data_validade") else "-"),
+                    cell(fmt_date(item.get("data_entrega"))),
+                    cell(fmt_date(item.get("data_validade"))),
                     cell(item.get("ca", "-"))
                 ])
         elif category == "contas_bancarias":
@@ -8654,7 +8662,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(item.get("banco", "-")),
                     cell(item.get("agencia", "-")),
                     cell(item.get("conta", "-")),
-                    cell(f"R$ {item.get('saldo_atual', 0):.2f}")
+                    cell(fmt_money(item.get('saldo_atual', 0)))
                 ])
         else:
             # Fallback genérico
@@ -10734,73 +10742,76 @@ async def generate_excel_report(category: str, data: list, title: str) -> io.Byt
     money_format = workbook.add_format({'border': 1, 'num_format': 'R$ #,##0.00', 'valign': 'vcenter'})
     date_format = workbook.add_format({'border': 1, 'num_format': 'dd/mm/yyyy', 'valign': 'vcenter'})
     
+    def fmt_date_xl(val):
+        """Converte YYYY-MM-DD para DD/MM/AAAA como string"""
+        if not val:
+            return ""
+        s = str(val).strip()[:10]
+        if len(s) == 10 and s[4] == '-':
+            return f"{s[8:10]}/{s[5:7]}/{s[0:4]}"
+        return s
+    
+    def fmt_money_xl(val):
+        """Converte valor para float seguro"""
+        try:
+            return float(val or 0)
+        except (ValueError, TypeError):
+            return 0.0
+    
+    def write_headers(headers):
+        worksheet.set_row(0, 18)
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+    
     # Definir headers e dados baseado na categoria
     if category == "contas_pagar":
         headers = ["Descrição", "Valor", "Vencimento", "Quitação", "Status", "Fornecedor", "Centro de Custo", "Plano de Contas"]
-        worksheet.set_column(0, 0, 30)  # Descrição
-        worksheet.set_column(1, 1, 15)  # Valor
-        worksheet.set_column(2, 2, 12)  # Vencimento
-        worksheet.set_column(3, 3, 12)  # Quitação
-        worksheet.set_column(4, 4, 12)  # Status
-        worksheet.set_column(5, 5, 25)  # Fornecedor
-        worksheet.set_column(6, 6, 20)  # Centro de Custo
-        worksheet.set_column(7, 7, 20)  # Plano de Contas
-        
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_format)
-        
+        worksheet.set_column(0, 0, 35)
+        worksheet.set_column(1, 1, 15)
+        worksheet.set_column(2, 2, 14)
+        worksheet.set_column(3, 3, 14)
+        worksheet.set_column(4, 4, 12)
+        worksheet.set_column(5, 5, 28)
+        worksheet.set_column(6, 6, 22)
+        worksheet.set_column(7, 7, 22)
+        write_headers(headers)
         for row, item in enumerate(data, 1):
-            data_quitacao = item.get("data_pagamento", "")
-            if data_quitacao and len(str(data_quitacao)) >= 10:
-                data_quitacao = str(data_quitacao)[:10]
-            else:
-                data_quitacao = ""
-            
             worksheet.write(row, 0, item.get("descricao", ""), cell_format)
-            worksheet.write(row, 1, float(item.get("valor", 0)), money_format)
-            worksheet.write(row, 2, item.get("data_vencimento", "")[:10] if item.get("data_vencimento") else "", cell_format)
-            worksheet.write(row, 3, data_quitacao, cell_format)
+            worksheet.write(row, 1, fmt_money_xl(item.get("valor")), money_format)
+            worksheet.write(row, 2, fmt_date_xl(item.get("data_vencimento")), cell_format)
+            worksheet.write(row, 3, fmt_date_xl(item.get("data_pagamento")), cell_format)
             worksheet.write(row, 4, item.get("status", "").capitalize(), cell_format)
             worksheet.write(row, 5, item.get("fornecedor_nome", ""), cell_format)
-            worksheet.write(row, 6, item.get("centro_custo_nome", ""), cell_format)
-            worksheet.write(row, 7, item.get("plano_contas_nome", ""), cell_format)
+            worksheet.write(row, 6, item.get("centro_custo", "") or item.get("centro_custo_nome", ""), cell_format)
+            worksheet.write(row, 7, item.get("plano_conta_nome", "") or item.get("plano_contas_nome", ""), cell_format)
     
     elif category == "contas_receber":
         headers = ["Descrição", "Valor", "Vencimento", "Recebimento", "Status", "Cliente", "Centro de Custo", "Plano de Contas"]
-        worksheet.set_column(0, 0, 30)  # Descrição
-        worksheet.set_column(1, 1, 15)  # Valor
-        worksheet.set_column(2, 2, 12)  # Vencimento
-        worksheet.set_column(3, 3, 12)  # Recebimento
-        worksheet.set_column(4, 4, 12)  # Status
-        worksheet.set_column(5, 5, 25)  # Cliente
-        worksheet.set_column(6, 6, 20)  # Centro de Custo
-        worksheet.set_column(7, 7, 20)  # Plano de Contas
-        
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_format)
-        
+        worksheet.set_column(0, 0, 35)
+        worksheet.set_column(1, 1, 15)
+        worksheet.set_column(2, 2, 14)
+        worksheet.set_column(3, 3, 14)
+        worksheet.set_column(4, 4, 12)
+        worksheet.set_column(5, 5, 28)
+        worksheet.set_column(6, 6, 22)
+        worksheet.set_column(7, 7, 22)
+        write_headers(headers)
         for row, item in enumerate(data, 1):
-            data_recebimento = item.get("data_recebimento", "")
-            if data_recebimento and len(str(data_recebimento)) >= 10:
-                data_recebimento = str(data_recebimento)[:10]
-            else:
-                data_recebimento = ""
-            
             worksheet.write(row, 0, item.get("descricao", ""), cell_format)
-            worksheet.write(row, 1, float(item.get("valor", 0)), money_format)
-            worksheet.write(row, 2, item.get("data_vencimento", "")[:10] if item.get("data_vencimento") else "", cell_format)
-            worksheet.write(row, 3, data_recebimento, cell_format)
+            worksheet.write(row, 1, fmt_money_xl(item.get("valor")), money_format)
+            worksheet.write(row, 2, fmt_date_xl(item.get("data_vencimento")), cell_format)
+            worksheet.write(row, 3, fmt_date_xl(item.get("data_recebimento")), cell_format)
             worksheet.write(row, 4, item.get("status", "").capitalize(), cell_format)
             worksheet.write(row, 5, item.get("cliente_nome", ""), cell_format)
-            worksheet.write(row, 6, item.get("centro_custo_nome", ""), cell_format)
-            worksheet.write(row, 7, item.get("plano_contas_nome", ""), cell_format)
+            worksheet.write(row, 6, item.get("centro_custo", "") or item.get("centro_custo_nome", ""), cell_format)
+            worksheet.write(row, 7, item.get("plano_conta_nome", "") or item.get("plano_contas_nome", ""), cell_format)
     
     elif category == "machines":
         headers = ["Nome", "Placa", "Marca", "Modelo", "Ano", "Status", "Categoria"]
-        worksheet.set_column(0, 0, 25)
-        worksheet.set_column(1, 1, 12)
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_format)
+        worksheet.set_column(0, 0, 28)
+        worksheet.set_column(1, 1, 14)
+        worksheet.set_column(6, 6, 20)
+        write_headers(headers)
         for row, item in enumerate(data, 1):
             status = "Operacional" if item.get("status") == "operational" else "Em Manutenção"
             worksheet.write(row, 0, item.get("name", ""), cell_format)
@@ -10812,11 +10823,11 @@ async def generate_excel_report(category: str, data: list, title: str) -> io.Byt
             worksheet.write(row, 6, item.get("category_name", ""), cell_format)
     
     elif category == "cadastros":
-        headers = ["Nome/Razão", "CPF/CNPJ", "Tipo", "Telefone", "Email", "Cidade", "Status"]
-        worksheet.set_column(0, 0, 30)
+        headers = ["Nome/Razão Social", "CPF/CNPJ", "Tipo", "Telefone", "Email", "Cidade", "Status"]
+        worksheet.set_column(0, 0, 35)
         worksheet.set_column(1, 1, 18)
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_format)
+        worksheet.set_column(4, 4, 28)
+        write_headers(headers)
         for row, item in enumerate(data, 1):
             worksheet.write(row, 0, item.get("nome_razao", ""), cell_format)
             worksheet.write(row, 1, item.get("cpf_cnpj", ""), cell_format)
@@ -10828,53 +10839,233 @@ async def generate_excel_report(category: str, data: list, title: str) -> io.Byt
     
     elif category == "alugueis":
         headers = ["Nº", "Máquina", "Cliente", "Valor", "Data Entrega", "Vencimento", "Status", "Contrato"]
-        worksheet.set_column(0, 0, 8)
-        worksheet.set_column(1, 1, 20)
-        worksheet.set_column(2, 2, 25)
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_format)
+        worksheet.set_column(1, 1, 24)
+        worksheet.set_column(2, 2, 28)
+        write_headers(headers)
         for row, item in enumerate(data, 1):
             worksheet.write(row, 0, item.get("numero", ""), cell_format)
             worksheet.write(row, 1, item.get("maquina_nome", ""), cell_format)
             worksheet.write(row, 2, item.get("cliente_nome", ""), cell_format)
-            worksheet.write(row, 3, float(item.get("valor", 0)), money_format)
-            worksheet.write(row, 4, item.get("data_entrega", "")[:10] if item.get("data_entrega") else "", cell_format)
-            worksheet.write(row, 5, item.get("data_vencimento", "")[:10] if item.get("data_vencimento") else "", cell_format)
+            worksheet.write(row, 3, fmt_money_xl(item.get("valor")), money_format)
+            worksheet.write(row, 4, fmt_date_xl(item.get("data_entrega")), cell_format)
+            worksheet.write(row, 5, fmt_date_xl(item.get("data_vencimento")), cell_format)
             worksheet.write(row, 6, item.get("status", "").capitalize(), cell_format)
             worksheet.write(row, 7, item.get("numero_contrato", ""), cell_format)
     
+    elif category == "maintenances":
+        headers = ["Equipamento", "Peça", "Tipo", "Valor", "Data", "Troca de Óleo"]
+        worksheet.set_column(0, 0, 28)
+        worksheet.set_column(1, 1, 28)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            tipo = "Preventiva" if item.get("maintenance_type") == "preventiva" else "Corretiva"
+            worksheet.write(row, 0, item.get("machine_name", "") or item.get("machine_id", ""), cell_format)
+            worksheet.write(row, 1, item.get("part_name", ""), cell_format)
+            worksheet.write(row, 2, tipo, cell_format)
+            worksheet.write(row, 3, fmt_money_xl(item.get("part_value")), money_format)
+            worksheet.write(row, 4, fmt_date_xl(item.get("replacement_date")), cell_format)
+            worksheet.write(row, 5, "Sim" if item.get("is_oil_change") else "Não", cell_format)
+    
+    elif category == "stock_items":
+        headers = ["Nome", "Código", "Categoria", "Quantidade", "Qtd. Mínima", "Preço Unitário"]
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(1, 1, 16)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("name", ""), cell_format)
+            worksheet.write(row, 1, item.get("code", ""), cell_format)
+            worksheet.write(row, 2, item.get("category", ""), cell_format)
+            worksheet.write(row, 3, item.get("quantity", 0), cell_format)
+            worksheet.write(row, 4, item.get("min_quantity", 0), cell_format)
+            worksheet.write(row, 5, fmt_money_xl(item.get("unit_price")), money_format)
+    
+    elif category == "obras":
+        headers = ["Nome", "Local", "Cliente", "Status", "Data Início", "Data Fim", "Contrato"]
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(1, 1, 25)
+        write_headers(headers)
+        status_map_obras = {"em_andamento": "Em andamento", "concluida": "Concluída", "pausada": "Pausada"}
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("name", "") or item.get("nome", ""), cell_format)
+            worksheet.write(row, 1, item.get("location", "") or item.get("local", ""), cell_format)
+            worksheet.write(row, 2, item.get("cliente", "") or item.get("cliente_nome", ""), cell_format)
+            worksheet.write(row, 3, status_map_obras.get(item.get("status", ""), item.get("status", "")), cell_format)
+            worksheet.write(row, 4, fmt_date_xl(item.get("start_date") or item.get("data_inicio")), cell_format)
+            worksheet.write(row, 5, fmt_date_xl(item.get("end_date") or item.get("data_fim")), cell_format)
+            worksheet.write(row, 6, item.get("numero_contrato", ""), cell_format)
+    
+    elif category == "produtos_admin":
+        headers = ["Código", "Descrição", "Unidade", "Preço", "Estoque"]
+        worksheet.set_column(1, 1, 35)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("codigo", ""), cell_format)
+            worksheet.write(row, 1, item.get("descricao", ""), cell_format)
+            worksheet.write(row, 2, item.get("unidade", ""), cell_format)
+            worksheet.write(row, 3, fmt_money_xl(item.get("preco")), money_format)
+            worksheet.write(row, 4, item.get("estoque", 0), cell_format)
+    
+    elif category == "ordens_servico":
+        headers = ["Nº OS", "Descrição", "Cliente", "Valor Total", "Data", "Status"]
+        worksheet.set_column(1, 1, 35)
+        worksheet.set_column(2, 2, 28)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("numero", ""), cell_format)
+            worksheet.write(row, 1, item.get("descricao", ""), cell_format)
+            worksheet.write(row, 2, item.get("cliente_nome", ""), cell_format)
+            worksheet.write(row, 3, fmt_money_xl(item.get("valor_total")), money_format)
+            worksheet.write(row, 4, fmt_date_xl(item.get("data_abertura") or item.get("created_at")), cell_format)
+            worksheet.write(row, 5, item.get("status", "").capitalize(), cell_format)
+    
+    elif category == "contas_bancarias":
+        headers = ["Nome", "Banco", "Agência", "Conta", "Tipo", "Titular", "Saldo Atual"]
+        worksheet.set_column(0, 0, 25)
+        worksheet.set_column(1, 1, 20)
+        worksheet.set_column(5, 5, 28)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("nome", ""), cell_format)
+            worksheet.write(row, 1, item.get("banco", ""), cell_format)
+            worksheet.write(row, 2, item.get("agencia", ""), cell_format)
+            worksheet.write(row, 3, item.get("conta", ""), cell_format)
+            worksheet.write(row, 4, item.get("tipo", ""), cell_format)
+            worksheet.write(row, 5, item.get("titular", ""), cell_format)
+            worksheet.write(row, 6, fmt_money_xl(item.get("saldo_atual") or item.get("saldo")), money_format)
+    
+    elif category == "funcionarios":
+        headers = ["Nome", "CPF", "Cargo", "Setor", "Admissão", "Salário", "Status"]
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(2, 2, 22)
+        write_headers(headers)
+        status_map_func = {"ativo": "Ativo", "ferias": "Férias", "afastado": "Afastado", "desligado": "Desligado"}
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("nome", ""), cell_format)
+            worksheet.write(row, 1, item.get("cpf", ""), cell_format)
+            worksheet.write(row, 2, item.get("cargo", ""), cell_format)
+            worksheet.write(row, 3, item.get("setor", ""), cell_format)
+            worksheet.write(row, 4, fmt_date_xl(item.get("data_admissao")), cell_format)
+            worksheet.write(row, 5, fmt_money_xl(item.get("salario")), money_format)
+            worksheet.write(row, 6, status_map_func.get(item.get("status", ""), item.get("status", "")), cell_format)
+    
+    elif category == "folha_pagamento":
+        headers = ["Funcionário", "Competência", "Salário Bruto", "Descontos", "Salário Líquido"]
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(1, 1, 14)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("funcionario_nome", ""), cell_format)
+            worksheet.write(row, 1, item.get("competencia", ""), cell_format)
+            worksheet.write(row, 2, fmt_money_xl(item.get("salario_bruto")), money_format)
+            worksheet.write(row, 3, fmt_money_xl(item.get("total_descontos")), money_format)
+            worksheet.write(row, 4, fmt_money_xl(item.get("salario_liquido")), money_format)
+    
+    elif category == "ponto_registros":
+        headers = ["Funcionário", "Data", "Entrada", "Saída", "Horas Trabalhadas"]
+        worksheet.set_column(0, 0, 30)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("funcionario_nome", ""), cell_format)
+            worksheet.write(row, 1, fmt_date_xl(item.get("data")), cell_format)
+            worksheet.write(row, 2, item.get("entrada", ""), cell_format)
+            worksheet.write(row, 3, item.get("saida", ""), cell_format)
+            worksheet.write(row, 4, item.get("horas_trabalhadas", ""), cell_format)
+    
+    elif category == "ferias":
+        headers = ["Funcionário", "Período Aquisitivo", "Início", "Fim", "Dias", "Status"]
+        worksheet.set_column(0, 0, 30)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("funcionario_nome", ""), cell_format)
+            worksheet.write(row, 1, item.get("periodo_aquisitivo", ""), cell_format)
+            worksheet.write(row, 2, fmt_date_xl(item.get("data_inicio")), cell_format)
+            worksheet.write(row, 3, fmt_date_xl(item.get("data_fim")), cell_format)
+            worksheet.write(row, 4, item.get("dias", ""), cell_format)
+            worksheet.write(row, 5, item.get("status", "").capitalize(), cell_format)
+    
+    elif category == "epi_fichas":
+        headers = ["Funcionário", "EPI", "CA", "Data Entrega", "Validade", "Quantidade"]
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(1, 1, 25)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("funcionario_nome", ""), cell_format)
+            worksheet.write(row, 1, item.get("epi_nome", ""), cell_format)
+            worksheet.write(row, 2, item.get("ca", ""), cell_format)
+            worksheet.write(row, 3, fmt_date_xl(item.get("data_entrega")), cell_format)
+            worksheet.write(row, 4, fmt_date_xl(item.get("data_validade")), cell_format)
+            worksheet.write(row, 5, item.get("quantidade", 1), cell_format)
+    
+    elif category == "plano_contas":
+        headers = ["Código", "Nome", "Tipo", "Conta Pai"]
+        worksheet.set_column(1, 1, 30)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("codigo", ""), cell_format)
+            worksheet.write(row, 1, item.get("nome", ""), cell_format)
+            worksheet.write(row, 2, "Receita" if item.get("tipo") == "receita" else "Despesa", cell_format)
+            worksheet.write(row, 3, item.get("pai_nome", "Raiz"), cell_format)
+    
+    elif category == "centros_custo":
+        headers = ["Código", "Nome", "Descrição"]
+        worksheet.set_column(1, 1, 28)
+        worksheet.set_column(2, 2, 35)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("codigo", ""), cell_format)
+            worksheet.write(row, 1, item.get("nome", ""), cell_format)
+            worksheet.write(row, 2, item.get("descricao", ""), cell_format)
+    
+    elif category == "medicoes":
+        headers = ["Descrição", "Obra", "Valor", "Data", "Status"]
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(1, 1, 25)
+        write_headers(headers)
+        for row, item in enumerate(data, 1):
+            worksheet.write(row, 0, item.get("descricao", ""), cell_format)
+            worksheet.write(row, 1, item.get("obra_nome", "") or item.get("obra", ""), cell_format)
+            worksheet.write(row, 2, fmt_money_xl(item.get("valor")), money_format)
+            worksheet.write(row, 3, fmt_date_xl(item.get("data") or item.get("created_at")), cell_format)
+            worksheet.write(row, 4, item.get("status", "").capitalize(), cell_format)
+    
     else:
-        # Genérico: pegar as chaves do primeiro item
+        # Genérico: pegar as chaves relevantes do primeiro item (excluindo IDs internos)
+        SKIP_KEYS = {"_id", "password", "id", "created_by"}
         if data:
-            keys = [k for k in data[0].keys() if k not in ["_id", "password"]]
+            keys = [k for k in data[0].keys() if k not in SKIP_KEYS][:12]
             for col, key in enumerate(keys):
-                worksheet.write(0, col, key.replace("_", " ").title(), header_format)
+                label = key.replace("_", " ").title()
+                worksheet.write(0, col, label, header_format)
+                worksheet.set_column(col, col, 20)
             for row, item in enumerate(data, 1):
                 for col, key in enumerate(keys):
                     value = item.get(key, "")
-                    if isinstance(value, (int, float)):
+                    # Detectar campos de data (YYYY-MM-DD)
+                    if isinstance(value, str) and len(value) >= 10 and value[4:5] == '-':
+                        worksheet.write(row, col, fmt_date_xl(value), cell_format)
+                    elif isinstance(value, (int, float)):
                         worksheet.write(row, col, value, cell_format)
                     else:
-                        worksheet.write(row, col, str(value)[:50] if value else "", cell_format)
+                        worksheet.write(row, col, str(value)[:60] if value else "", cell_format)
     
     # Adicionar linha de total quando houver valores monetários
     total_valor = 0
     campo_valor = None
-    row_total = len(data) + 2  # +2 para header e linha em branco
-    
-    # Identificar o campo de valor baseado na categoria
-    if category == "contas_pagar":
-        campo_valor = "valor"
-        col_valor = 1  # coluna do valor
-    elif category == "contas_receber":
-        campo_valor = "valor"
-        col_valor = 1
+    col_valor = 1
+    row_total = len(data) + 2
+
+    if category in ["contas_pagar", "contas_receber"]:
+        campo_valor = "valor"; col_valor = 1
     elif category == "alugueis":
-        campo_valor = "valor"
-        col_valor = 3
+        campo_valor = "valor"; col_valor = 3
     elif category == "maintenances":
-        campo_valor = "part_value"
-        col_valor = 2
+        campo_valor = "part_value"; col_valor = 3
+    elif category == "ordens_servico":
+        campo_valor = "valor_total"; col_valor = 3
+    elif category == "folha_pagamento":
+        campo_valor = "salario_liquido"; col_valor = 4
+    elif category == "contas_bancarias":
+        campo_valor = "saldo_atual"; col_valor = 6
     
     if campo_valor:
         for item in data:
