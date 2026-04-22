@@ -1,7 +1,20 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
-## Changelog - 13/04/2026 (Sessão 29)
+## Changelog - 22/04/2026 (Sessão 30)
+
+### Correções e Padronização de Exportações
+- ✅ **Exportação combinada corrigida**: `export_combined` usava `list(keys)[:6]` (campos brutos MongoDB). Reescrito para usar `generate_pdf_report()` por seção + merge com PyPDF2 → colunas legíveis em todos os relatórios
+- ✅ **`exportAllSelected` (frontend)**: Removida referência a `specificFilters` (undefined) que causava crash silencioso no botão "Exportar"
+- ✅ **Datas padronizadas DD/MM/AAAA**: Helpers `fmt_date()` / `fmt_date_xl()` aplicados em todos os campos de data (PDF e Excel)
+- ✅ **Moeda padronizada R$ X.XXX,XX**: Helpers `fmt_money()` / `fmt_money_xl()` com formato brasileiro (vírgula como decimal, ponto como milhar)
+- ✅ **Excel completo**: Mapeamentos específicos adicionados para `obras`, `maintenances`, `stock_items`, `produtos_admin`, `ordens_servico`, `contas_bancarias`, `funcionarios`, `folha_pagamento`, `ponto_registros`, `ferias`, `epi_fichas`, `plano_contas`, `centros_custo`, `medicoes`
+- ✅ **Normalização de variantes**: `contas_pagar_pendente`, `contas_receber_vencidas`, etc. mapeadas ao tipo base correto no export_combined
+- ✅ **Testado**: 27/27 testes passaram (testing_agent_v3_fork)
+
+---
+
+
 
 ### Nova Funcionalidade: Filtro de Centro de Custo na Exportação
 - ✅ **Painel de seleção obrigatório**: Banner amarelo no topo da página de Exportação (módulo Administrativo) exige seleção antes de exportar
