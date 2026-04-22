@@ -159,7 +159,9 @@ export default function ImportacaoNFPage() {
     ambiente: "producao",
     certificado_base64: "",
     senha_certificado: "",
-    certificado_nome: ""
+    certificado_nome: "",
+    inscricao_municipal: "",
+    url_nfse: ""
   });
 
   const ufs = [
@@ -304,7 +306,9 @@ export default function ImportacaoNFPage() {
         uf: certForm.uf,
         ambiente: certForm.ambiente,
         certificado_base64: certForm.certificado_base64,
-        senha_certificado: certForm.senha_certificado
+        senha_certificado: certForm.senha_certificado,
+        inscricao_municipal: certForm.inscricao_municipal || null,
+        url_nfse: certForm.url_nfse || null
       });
       toast.success("Certificado cadastrado com sucesso!");
       setShowAddCertificado(false);
@@ -315,7 +319,9 @@ export default function ImportacaoNFPage() {
         ambiente: "producao",
         certificado_base64: "",
         senha_certificado: "",
-        certificado_nome: ""
+        certificado_nome: "",
+        inscricao_municipal: "",
+        url_nfse: ""
       });
       fetchData();
     } catch (error) {
@@ -358,13 +364,10 @@ export default function ImportacaoNFPage() {
   const handleImportarNotas = async (certificadoId) => {
     const cert = certificados.find(c => c.id === certificadoId);
     
-    // Verificar bloqueio
     if (cert && isCertificadoBloqueado(cert)) {
       toast.error("Este certificado está bloqueado. Aguarde o cronômetro zerar.");
       return;
     }
-    
-    // Verificar limite diário
     if (cert && getConsultasRestantes(cert) <= 0) {
       toast.error("Limite diário de 3 consultas atingido. Tente novamente amanhã.");
       return;
@@ -373,24 +376,44 @@ export default function ImportacaoNFPage() {
     setImportando(true);
     setImportandoCertId(certificadoId);
     try {
-      const response = await axios.post(`${API}/nfe/importar/${certificadoId}`);
-      
-      // Verificar se há aviso especial (bloqueio da SEFAZ)
-      if (response.data.aviso) {
-        toast.warning(response.data.aviso, { duration: 8000 });
-      } else {
-        toast.success(response.data.message);
-        if (response.data.novas_nfes > 0) {
-          toast.info(`${response.data.novas_nfes} nova(s) NF-e encontrada(s)!`);
-        } else if (response.data.total_novas === 0) {
-          toast.info("Nenhuma nova NF-e encontrada na SEFAZ");
+      // Importar NF-e (SEFAZ) e NFS-e (prefeitura) em paralelo
+      const [nfeResult, nfseResult] = await Promise.allSettled([
+        axios.post(`${API}/nfe/importar/${certificadoId}`),
+        axios.post(`${API}/nfse/importar/${certificadoId}`)
+      ]);
+
+      // Tratar resultado NF-e
+      if (nfeResult.status === 'fulfilled') {
+        const d = nfeResult.value.data;
+        if (d.aviso) {
+          toast.warning(d.aviso, { duration: 8000 });
+        } else if (d.novas_nfes > 0) {
+          toast.success(`${d.novas_nfes} nova(s) NF-e importada(s)!`);
+        } else {
+          toast.info("NF-e: nenhuma nova nota encontrada na SEFAZ");
         }
+      } else {
+        toast.error(nfeResult.reason?.response?.data?.detail || "Erro ao importar NF-e");
       }
+
+      // Tratar resultado NFS-e
+      if (nfseResult.status === 'fulfilled') {
+        const d = nfseResult.value.data;
+        if (d.aviso) {
+          toast.info(d.aviso, { duration: 6000 });
+        } else if (d.novas_nfses > 0) {
+          toast.success(`${d.novas_nfses} nova(s) NFS-e importada(s)!`);
+        } else if (!d.aviso) {
+          toast.info("NFS-e: nenhuma nova nota encontrada");
+        }
+      } else {
+        const errMsg = nfseResult.reason?.response?.data?.detail;
+        if (errMsg) toast.error(`NFS-e: ${errMsg}`);
+      }
+
       fetchData();
     } catch (error) {
-      const detail = error.response?.data?.detail || "Erro ao importar notas";
-      toast.error(detail);
-      // Recarregar dados para atualizar estado de bloqueio
+      toast.error(error.response?.data?.detail || "Erro ao importar notas");
       fetchData();
     } finally {
       setImportando(false);
@@ -1493,7 +1516,7 @@ export default function ImportacaoNFPage() {
               Adicionar CNPJ/Certificado
             </DialogTitle>
             <DialogDescription>
-              Cadastre um CNPJ com certificado digital A1 para importar NF-e
+              Cadastre um CNPJ com certificado digital A1 para importar NF-e e NFS-e automaticamente
             </DialogDescription>
           </DialogHeader>
 
@@ -1583,6 +1606,31 @@ export default function ImportacaoNFPage() {
                 placeholder="Digite a senha do certificado"
                 required
               />
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Configuração NFS-e (Nota Fiscal de Serviço)</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Inscrição Municipal</Label>
+                  <Input
+                    value={certForm.inscricao_municipal}
+                    onChange={(e) => setCertForm({...certForm, inscricao_municipal: e.target.value})}
+                    placeholder="Ex: 123456"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    URL Webservice NFS-e
+                  </Label>
+                  <Input
+                    value={certForm.url_nfse}
+                    onChange={(e) => setCertForm({...certForm, url_nfse: e.target.value})}
+                    placeholder="https://prefeitura.cidade.gov.br/nfse/ws"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Preencha para habilitar a importação automática de NFS-e (padrão ABRASF). Consulte o portal da prefeitura do seu município.</p>
             </div>
 
             <DialogFooter>

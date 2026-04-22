@@ -236,6 +236,8 @@ class NFeCertificadoCreate(BaseModel):
     certificado_base64: str  # Certificado .pfx em base64
     senha_certificado: str
     ativo: bool = True
+    inscricao_municipal: Optional[str] = None  # Inscrição municipal para NFS-e
+    url_nfse: Optional[str] = None             # URL do webservice NFS-e da prefeitura
 
 class NFeCertificadoResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -248,6 +250,8 @@ class NFeCertificadoResponse(BaseModel):
     ultimo_nsu: str = "000000000000000"
     created_at: str
     updated_at: Optional[str] = None
+    inscricao_municipal: Optional[str] = None
+    url_nfse: Optional[str] = None
 
 class NFeItemResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -12751,6 +12755,10 @@ async def list_nfe_certificados(current_user: dict = Depends(get_current_user)):
             cert["consultas_hoje"] = 0
         if "bloqueado_ate" not in cert:
             cert["bloqueado_ate"] = None
+        if "inscricao_municipal" not in cert:
+            cert["inscricao_municipal"] = ""
+        if "url_nfse" not in cert:
+            cert["url_nfse"] = ""
     
     return certificados
 
@@ -12792,6 +12800,8 @@ async def create_nfe_certificado(certificado: NFeCertificadoCreate, current_user
         "certificado_base64": certificado.certificado_base64,
         "senha_certificado": certificado.senha_certificado,
         "ativo": certificado.ativo,
+        "inscricao_municipal": certificado.inscricao_municipal or "",
+        "url_nfse": certificado.url_nfse or "",
         "ultimo_nsu": "000000000000000",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None,
@@ -13179,7 +13189,239 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
         logger.error(f"Erro ao importar NF-e: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao consultar SEFAZ: {str(e)}")
 
-@api_router.get("/nfe/importadas")
+
+@api_router.post("/nfse/importar/{certificado_id}")
+async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_current_user)):
+    """Consulta e importa NFS-e do webservice municipal (padrão ABRASF) para o CNPJ especificado"""
+    certificado = await db.nfe_certificados.find_one({"id": certificado_id})
+    if not certificado:
+        raise HTTPException(status_code=404, detail="Certificado não encontrado")
+
+    if not certificado.get("ativo"):
+        raise HTTPException(status_code=400, detail="Certificado inativo")
+
+    url_nfse = (certificado.get("url_nfse") or "").strip()
+    if not url_nfse:
+        return {
+            "message": "Importação NFS-e ignorada: URL do webservice não configurada",
+            "novas_nfses": 0,
+            "aviso": "Para importar NFS-e, configure a URL do webservice NFS-e da prefeitura no cadastro do certificado."
+        }
+
+    cnpj_limpo = certificado["cnpj"].replace(".", "").replace("/", "").replace("-", "")
+    inscricao_municipal = (certificado.get("inscricao_municipal") or "").strip()
+    novas_importadas = 0
+    erros = []
+
+    try:
+        import tempfile
+        import requests as req_sync
+        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption, PublicFormat
+        from xml.etree import ElementTree as ET
+
+        cert_data = base64.b64decode(certificado["certificado_base64"])
+        senha = certificado.get("senha_certificado", "")
+
+        # Converter PFX para PEM para uso com requests
+        private_key, certificate_obj, _ = pkcs12.load_key_and_certificates(
+            cert_data, senha.encode() if senha else None
+        )
+        key_pem = private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        cert_pem_bytes = certificate_obj.public_bytes(Encoding.PEM)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pem') as f:
+            f.write(cert_pem_bytes)
+            cert_pem_path = f.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pem') as f:
+            f.write(key_pem)
+            key_pem_path = f.name
+
+        # Período: últimos 90 dias
+        data_final = datetime.now()
+        data_inicial = data_final - timedelta(days=90)
+
+        # Montar SOAP envelope ABRASF v2.01
+        cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
+        
+        im_tag = f"<InscricaoMunicipal>{inscricao_municipal}</InscricaoMunicipal>" if inscricao_municipal else ""
+        dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<ConsultarNfseRecebidosEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
+  <Consulente>
+    <CpfCnpj><Cnpj>{cnpj_limpo}</Cnpj></CpfCnpj>
+    {im_tag}
+  </Consulente>
+  <PeriodoEmissao>
+    <DataInicial>{data_inicial.strftime('%Y-%m-%d')}</DataInicial>
+    <DataFinal>{data_final.strftime('%Y-%m-%d')}</DataFinal>
+  </PeriodoEmissao>
+</ConsultarNfseRecebidosEnvio>"""
+
+        soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://www.abrasf.org.br/nfse.xsd">
+  <soap:Header/>
+  <soap:Body>
+    <nfse:ConsultarNfseRecebidos>
+      <nfse:nfseCabecMsg><![CDATA[{cabecalho_xml}]]></nfse:nfseCabecMsg>
+      <nfse:nfseDadosMsg><![CDATA[{dados_xml}]]></nfse:nfseDadosMsg>
+    </nfse:ConsultarNfseRecebidos>
+  </soap:Body>
+</soap:Envelope>"""
+
+        headers_soap = {
+            "Content-Type": "text/xml; charset=utf-8",
+            "SOAPAction": "http://www.abrasf.org.br/nfse.xsd/ConsultarNfseRecebidos"
+        }
+
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        response = req_sync.post(
+            url_nfse,
+            data=soap_envelope.encode("utf-8"),
+            headers=headers_soap,
+            cert=(cert_pem_path, key_pem_path),
+            verify=False,
+            timeout=30
+        )
+
+        # Limpar temporários
+        for p in [cert_pem_path, key_pem_path]:
+            try:
+                os.unlink(p)
+            except Exception:
+                pass
+
+        if response.status_code != 200:
+            return {
+                "message": f"Webservice NFS-e retornou erro HTTP {response.status_code}",
+                "novas_nfses": 0,
+                "aviso": f"Verifique a URL NFS-e configurada. Resposta: {response.text[:200]}"
+            }
+
+        # Parsear resposta XML
+        try:
+            root = ET.fromstring(response.text)
+        except ET.ParseError:
+            # Tentar extrair conteúdo CDATA
+            import re
+            inner = re.search(r'<\?xml.*?</\w+Resposta>', response.text, re.DOTALL)
+            if inner:
+                root = ET.fromstring(inner.group())
+            else:
+                return {"message": "Resposta XML inválida do webservice NFS-e", "novas_nfses": 0,
+                        "aviso": f"Resposta: {response.text[:300]}"}
+
+        # Namespace ABRASF
+        NFSE_NS = "http://www.abrasf.org.br/nfse.xsd"
+
+        def find_text(el, tag):
+            """Busca recursiva por tag ignorando namespace"""
+            for child in el.iter():
+                local = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                if local == tag:
+                    return (child.text or "").strip()
+            return ""
+
+        # Verificar erros na resposta
+        lista_mensagens = root.findall(f".//{{{NFSE_NS}}}ListaMensagemRetorno") or root.findall(".//ListaMensagemRetorno")
+        if lista_mensagens:
+            for msg in lista_mensagens:
+                codigo = find_text(msg, "Codigo")
+                descricao = find_text(msg, "Descricao")
+                if codigo and codigo not in ("0", "S"):
+                    erros.append(f"[{codigo}] {descricao}")
+
+        # Extrair NFS-e
+        comp_nfses = root.findall(f".//{{{NFSE_NS}}}CompNfse") or root.findall(".//CompNfse")
+
+        for comp in comp_nfses:
+            try:
+                numero = find_text(comp, "Numero")
+                codigo_verificacao = find_text(comp, "CodigoVerificacao")
+                data_emissao = find_text(comp, "DataEmissao")
+                discriminacao = find_text(comp, "Discriminacao")
+                valor_servicos = find_text(comp, "ValorServicos") or find_text(comp, "ValorLiquidoNfse")
+                valor_iss = find_text(comp, "ValorIss") or "0"
+                cnpj_prestador = find_text(comp, "Cnpj")
+                razao_prestador = find_text(comp, "RazaoSocial")
+                inscricao_prestador = find_text(comp, "InscricaoMunicipal")
+
+                if not numero:
+                    continue
+
+                # Verificar duplicata
+                existente = await db.nfse_importadas.find_one({
+                    "numero_nota": numero,
+                    "cnpj_emitente": cnpj_prestador or numero
+                })
+                if existente:
+                    continue
+
+                try:
+                    valor_float = float(valor_servicos.replace(",", ".")) if valor_servicos else 0.0
+                except (ValueError, TypeError):
+                    valor_float = 0.0
+
+                nfse_id = str(uuid.uuid4())
+                nfse_doc = {
+                    "id": nfse_id,
+                    "numero_nota": numero,
+                    "serie": "1",
+                    "chave_acesso": codigo_verificacao or f"{cnpj_limpo}-{numero}",
+                    "data_emissao": data_emissao[:10] if data_emissao else datetime.now().strftime("%Y-%m-%d"),
+                    "cnpj_emitente": cnpj_prestador,
+                    "razao_social_emitente": razao_prestador,
+                    "prestador_nome": razao_prestador,
+                    "cnpj_destinatario": cnpj_limpo,
+                    "valor_total": valor_float,
+                    "valor_servicos": valor_float,
+                    "valor_iss": float(valor_iss.replace(",", ".")) if valor_iss else 0.0,
+                    "descricao_servico": discriminacao,
+                    "inscricao_municipal_prestador": inscricao_prestador,
+                    "certificado_id": certificado_id,
+                    "importacao_manual": False,
+                    "status": "nova",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.nfse_importadas.insert_one(nfse_doc)
+                novas_importadas += 1
+
+            except Exception as e_item:
+                logger.warning(f"Erro ao processar NFS-e item: {e_item}")
+                continue
+
+    except req_sync.exceptions.SSLError as e:
+        return {
+            "message": "Erro SSL ao conectar ao webservice NFS-e",
+            "novas_nfses": 0,
+            "aviso": f"Verifique o certificado e a URL NFS-e. Detalhes: {str(e)[:200]}"
+        }
+    except req_sync.exceptions.ConnectionError as e:
+        return {
+            "message": "Não foi possível conectar ao webservice NFS-e",
+            "novas_nfses": 0,
+            "aviso": f"Verifique a URL NFS-e: {url_nfse}. Erro: {str(e)[:200]}"
+        }
+    except Exception as e:
+        logger.error(f"Erro ao importar NFS-e: {e}")
+        return {
+            "message": f"Erro na importação NFS-e: {str(e)[:200]}",
+            "novas_nfses": 0,
+            "aviso": str(e)[:300]
+        }
+
+    mensagem = f"{novas_importadas} nova(s) NFS-e importada(s)"
+    if erros:
+        mensagem += f" | Avisos: {'; '.join(erros[:2])}"
+
+    return {
+        "message": mensagem,
+        "novas_nfses": novas_importadas,
+        "erros": erros
+    }
+
+
+
 async def list_nfe_importadas(
     certificado_id: Optional[str] = None,
     status: Optional[str] = None,
@@ -15094,89 +15336,24 @@ async def importar_nfe_automatico(certificado_id: str):
 
 
 async def importar_nfse_automatico(certificado_id: str):
-    """Importa NFS-e automaticamente usando Webiss (Palmas-TO)"""
+    """Importa NFS-e automaticamente usando o webservice municipal configurado (ABRASF)"""
     certificado = await db.nfe_certificados.find_one({"id": certificado_id})
     if not certificado or not certificado.get("ativo"):
         return {"novas": 0, "erro": "Certificado inválido ou inativo"}
-    
-    # Verificar se tem inscrição municipal (necessário para NFS-e)
-    inscricao_municipal = certificado.get("inscricao_municipal")
-    if not inscricao_municipal:
-        return {"novas": 0, "erro": "Certificado sem inscrição municipal"}
-    
-    novas_importadas = 0
-    
+
+    url_nfse = (certificado.get("url_nfse") or "").strip()
+    if not url_nfse:
+        logger.info(f"NFS-e ignorada para {certificado.get('cnpj', '?')}: URL do webservice não configurada")
+        return {"novas": 0}
+
     try:
-        import tempfile
-        import requests
-        from xml.etree import ElementTree as ET
-        
-        cert_data = base64.b64decode(certificado["certificado_base64"])
-        cnpj_limpo = certificado["cnpj"].replace(".", "").replace("/", "").replace("-", "")
-        
-        # Criar arquivo temporário do certificado
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pfx') as cert_file:
-            cert_file.write(cert_data)
-            cert_path = cert_file.name
-        
-        # URLs do Webiss Palmas/TO
-        homologacao = certificado.get("ambiente", "producao") == "homologacao"
-        webiss_url = "https://homologacao.webiss.com.br/ws/nfse.asmx" if homologacao else "https://palmasto.webiss.com.br/ws/nfse.asmx"
-        
-        # Consultar NFS-e recebidas (tomadas)
-        # Período: últimos 30 dias
-        data_final = datetime.now()
-        data_inicial = data_final - timedelta(days=30)
-        
-        xml_consulta = f"""<?xml version="1.0" encoding="UTF-8"?>
-<ConsultarNfseRecebidosEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
-    <Consulente>
-        <CpfCnpj>
-            <Cnpj>{cnpj_limpo}</Cnpj>
-        </CpfCnpj>
-        <InscricaoMunicipal>{inscricao_municipal}</InscricaoMunicipal>
-    </Consulente>
-    <PeriodoEmissao>
-        <DataInicial>{data_inicial.strftime('%Y-%m-%d')}</DataInicial>
-        <DataFinal>{data_final.strftime('%Y-%m-%d')}</DataFinal>
-    </PeriodoEmissao>
-</ConsultarNfseRecebidosEnvio>"""
-        
-        try:
-            # Tentar consultar via SOAP
-            headers = {
-                'Content-Type': 'text/xml; charset=utf-8',
-                'SOAPAction': 'http://nfse.abrasf.org.br/ConsultarNfseServicoPrestado'
-            }
-            
-            soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-    <soap:Body>
-        {xml_consulta}
-    </soap:Body>
-</soap:Envelope>"""
-            
-            # Nota: A consulta real requer certificado digital SSL
-            # Esta é uma implementação simplificada
-            logger.info(f"Consultando NFS-e para CNPJ {cnpj_limpo[:8]}...")
-            
-            # Por enquanto, apenas log - implementação completa requer certificado SSL client
-            logger.info("NFS-e: Consulta via Webiss requer configuração SSL adicional")
-            
-        except Exception as e:
-            logger.warning(f"Erro na consulta NFS-e Webiss: {str(e)}")
-        
-        # Limpar arquivo temporário
-        try:
-            os.unlink(cert_path)
-        except:
-            pass
-        
+        resultado = await importar_nfse(certificado_id, current_user={"name": "scheduler", "role": "admin"})
+        novas = resultado.get("novas_nfses", 0) if isinstance(resultado, dict) else 0
+        logger.info(f"NFS-e importadas automaticamente para {certificado.get('cnpj', '?')}: {novas}")
+        return {"novas": novas}
     except Exception as e:
         logger.error(f"Erro na importação automática NFS-e: {str(e)}")
         return {"novas": 0, "erro": str(e)}
-    
-    return {"novas": novas_importadas}
 
 
 # Endpoints para gerenciar importação automática (usando app diretamente pois está após include_router)
