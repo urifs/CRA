@@ -8986,60 +8986,40 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
     if not all_data:
         raise HTTPException(status_code=400, detail="Nenhum dado encontrado para exportar")
     
-    # Gerar PDF combinado
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
-    styles = getSampleStyleSheet()
+    # Gerar PDF de cada seção usando generate_pdf_report (com colunas corretas)
+    # e depois mesclar com PyPDF2
+    from PyPDF2 import PdfWriter, PdfReader as PyPDFReader
     
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=16,
-        textColor=colors.HexColor('#E31A1A'),
-        spaceAfter=12
-    )
+    # Normalizar categoria para o mapeamento do generate_pdf_report
+    CATEGORY_NORMALIZE = {
+        "contas_pagar_pendente": "contas_pagar",
+        "contas_pagar_quitadas": "contas_pagar",
+        "contas_pagar_vencidas": "contas_pagar",
+        "contas_receber_pendente": "contas_receber",
+        "contas_receber_recebidas": "contas_receber",
+        "contas_receber_vencidas": "contas_receber",
+        "cadastros_clientes": "cadastros",
+        "cadastros_fornecedores": "cadastros",
+    }
     
-    elements = []
-    
+    writer = PdfWriter()
     for section in all_data:
-        # Título da seção
-        elements.append(Paragraph(section["title"], title_style))
-        elements.append(Spacer(1, 10))
-        
-        # Tabela de dados
-        if section["items"]:
-            # Pegar as colunas do primeiro item
-            sample = section["items"][0]
-            columns = list(sample.keys())[:6]  # Limitar a 6 colunas
-            
-            # Header
-            table_data = [columns]
-            
-            # Dados
-            for item in section["items"][:50]:  # Limitar a 50 itens por seção
-                row = [str(item.get(col, ""))[:30] for col in columns]
-                table_data.append(row)
-            
-            table = Table(table_data)
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E31A1A')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('FONTSIZE', (0, 1), (-1, -1), 7),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
-            elements.append(table)
-        
-        elements.append(PageBreak())
+        base_cat = CATEGORY_NORMALIZE.get(section["category"], section["category"])
+        section_buffer = await generate_pdf_report(
+            base_cat,
+            section["items"],
+            section["title"]
+        )
+        reader = PyPDFReader(section_buffer)
+        for page in reader.pages:
+            writer.add_page(page)
     
-    doc.build(elements)
-    buffer.seek(0)
+    merged_buffer = io.BytesIO()
+    writer.write(merged_buffer)
+    merged_buffer.seek(0)
     
     return StreamingResponse(
-        buffer,
+        merged_buffer,
         media_type="application/pdf",
         headers={
             "Content-Disposition": f"attachment; filename=CRA_Relatorio_Combinado_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
