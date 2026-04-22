@@ -1,6 +1,41 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Changelog - 22/04/2026 (Sessão 32) — PARTE 4: Refatoração Fase 1 COMPLETA 🎉
+
+### 🧹 6 Domínios Extraídos, 0 Regressões
+
+Total desta sessão:
+- 📉 `server.py`: **15.487 → 12.483 linhas** (-3.004, **-19,4%**)
+- 📈 6 routers modulares criados (3.296 linhas organizadas em arquivos coesos)
+- 🎯 **52 endpoints migrados**
+- ✅ **42/42 testes backend passaram** (iteration_30), zero regressão
+
+**Extrações (Fase 1 completa):**
+
+| # | Domínio | Arquivo | Endpoints | Linhas |
+|---|---------|---------|-----------|--------|
+| 1 | Conciliação Bancária | `routes/conciliacao.py` | 7 | 415 |
+| 2 | NFS-e (Serviços) | `routes/nfse.py` | 6 | 271 |
+| 3 | NF-e (Cert/Import/Downloads) | `routes/nfe.py` | 12 | 436 |
+| 4 | Financeiro (Pagar/Receber) | `routes/financeiro.py` | 14 | 720 |
+| 5 | Emissão NF-e/NFS-e | `routes/emissao_nf.py` | 10 | 833 |
+| 6 | Importação SEFAZ/ABRASF | `routes/importacao_nf.py` | 2 | 608 |
+
+**Utils compartilhados:**
+- `utils/audit.py` (create_audit_log)
+- `utils/auth.py` (get_current_user)
+- `utils/database.py` (MongoDB conn)
+- `utils/sequences.py` **NOVO** (get_next_sequence)
+
+**Bug de conflito de rota descoberto e corrigido:**
+- `routes/admin.py` tinha endpoints duplicados antigos de `/admin/contas-pagar` e `/admin/contas-receber` que sobrescreviam os novos em `routes/financeiro.py` (devido à ordem de `include_router`).
+- Causavam: response sem `valor_final`/`created_by`, vazamento de `_id`, modelo Pydantic desatualizado.
+- Fix: 166 linhas obsoletas removidas de `admin.py`.
+
+---
+
+
 ## Changelog - 22/04/2026 (Sessão 32) — PARTE 3: Refatoração Fase 1
 
 ### 🧹 Refatoração Incremental do `server.py` (P0 - dívida técnica recorrente 10+ forks)
