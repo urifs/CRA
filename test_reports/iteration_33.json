@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend E2E reproduction of attachment preview/download bug in Contas a Pagar and Contas a Receber. Logged in as test@test.com/password, navigated to /administrativo/a-pagar and /administrativo/a-receber, clicked edit pencil on existing account, scrolled to 'Anexos' section, uploaded a test PDF (a-pagar) and a test PNG (a-receber) via the 'Anexar' button, then clicked Visualizar (Eye) and Baixar (Download). BUG NOT REPRODUCIBLE: BOTH flows work end-to-end. Upload returns 200 application/json, list returns 200 with the new attachment, download returns 200 with correct content-type (application/pdf / image/png) and Content-Disposition attachment header, Authorization: Bearer <token> is present in every request. Preview modal (Dialog) opens correctly with iframe (PDF) or <img> (PNG) populated from blob URL. Download triggers browser download with correct suggested_filename (test.pdf / test.png). ZERO console errors and ZERO toast errors relating to attachments in both flows.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Preview Dialog (AttachmentsSection.jsx)", "issues": ["DialogContent emits React a11y warning 'Missing Description or aria-describedby' — minor accessibility nit, add <DialogDescription> or aria-describedby on DialogContent for Preview modal (line 314)."]},
+      {"screen": "Contas a Pagar/Receber page (table rows)", "issues": ["Hydration error in console: 'In HTML, <span> cannot be a child of <tbody>' and '<tr> span' — present on both pages but unrelated to attachments flow. Inspect table rendering in ContasPagarPage/ContasReceberPage for stray <span>."]}
+    ]
+  },
+  "test_report_links": [".screenshots/apagar_list.png", ".screenshots/apagar_modal.png", ".screenshots/apagar_preview.png", ".screenshots/areceber_preview.png"],
+  "action_items": [
+    "NENHUMA AÇÃO TÉCNICA NECESSÁRIA NO CÓDIGO DE ANEXOS — fluxo de Visualizar/Baixar de AttachmentsSection.jsx em /administrativo/a-pagar e /administrativo/a-receber está 100% funcional no browser.",
+    "Voltar ao usuário: pedir navegador/versão, print da tela com erro, e se possível: abrir DevTools → Network/Console e reproduzir. Hipóteses remanescentes (que NÃO se manifestaram em Chromium Playwright em ambiente clean): (a) extensão ad-blocker/uBlock bloqueando blob: URLs; (b) popup blocker impedindo window.open no fallback handlePreview (linha 172) para tipos não-pdf/não-imagem; (c) Content Security Policy mais restritiva em produção vs preview; (d) PDF criado com tipo MIME errado em uploads antigos fazendo o iframe render falhar silencioso (user assumed 'erro'); (e) cache com token expirado (401) — mas axios header é atualizado no useEffect do AuthProvider.",
+    "MELHORIAS DE ROBUSTEZ sugeridas no AttachmentsSection.jsx (opcional): (1) Em handleDownload linha 136, passar `type` ao Blob para evitar warnings em alguns browsers: `new Blob([response.data], { type: response.headers['content-type'] || 'application/octet-stream' })`. (2) Capturar e exibir error.response?.status e message no toast ao invés do genérico 'Erro ao baixar arquivo' — ajudará o usuário e o próximo debug (ex: `toast.error(\\`Erro ${error.response?.status ?? ''}: ${error.response?.data?.detail || error.message}\\`)`). (3) Em handlePreview, se o arquivo não for image/pdf e window.open for bloqueado por popup blocker, exibir um toast informando + link manual. Hoje falha silenciosamente.",
+    "Corrigir hydration warning '<span> cannot be a child of <tbody>' em ContasPagarPage/ContasReceberPage (render da tabela)."
+  ],
+  "critical_code_review_comments": [
+    "AttachmentsSection.jsx (391 linhas): bem abaixo do threshold de 700 — OK.",
+    "Token é consumido via useAuth() corretamente e anexado em cada request. Sem closure-stale-token detectado.",
+    "fetchAttachments não exibe toast quando falha (linha 64) — usuário não descobre quando a lista falha; só há console.error. Considerar toast.error para falha no fetch inicial.",
+    "handleDownload linha 136: Blob criado sem MIME type — funciona na prática mas melhor passar response.headers['content-type'] para evitar comportamento divergente em Firefox/Safari.",
+    "handlePreview linha 177 só exibe toast genérico 'Erro ao carregar visualização' sem status HTTP nem detail — dificulta RCA em produção. Sugerir log do status (ex.: error.response?.status)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped por request)", "frontend": "100% — upload, list, preview (PDF+PNG) e download de anexos funcionam em Contas a Pagar e Contas a Receber"},
+  "test_credentials": {"email": "test@test.com", "password": "password", "role": "admin"},
+  "seed_data_creation": "Criados 2 anexos de teste via UI: (1) em conta a pagar id 6f732ccd-72c3-41db-8b3e-7ec7636061f5 → attachment cafb95dd-2060-47bf-9b00-72af82a7e0b2 (test.pdf, 192 B); (2) em conta a receber id ae6ed8a2-6dd5-4877-9ca6-9c9427373adf → attachment 6a256df1-5bdb-4a3f-b19f-e9a6668def21 (test.png, 68 B). Não removidos — podem ser úteis para re-testes ou podem ser deletados via botão lixeira.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Fluxo de anexos (Visualizar/Baixar) em AttachmentsSection.jsx funciona 100% em Chromium no ambiente preview. BUG reportado pelo usuário NÃO foi reproduzido. Evidências capturadas: 200 OK em todos endpoints /api/attachments/*, Authorization header presente, preview dialog abre com iframe/img, download dispara com suggested_filename correto. Se usuário reportar novamente, pedir: navegador, extensões ativas (ad-blocker?), print do erro, aba Network e Console. Também verificar se o arquivo antigo pode ter file_type corrompido/vazio no banco (coluna file_type do collection attachments) — isso faria o Eye não aparecer pois canPreview = isImage||isPdf depende de attachment.file_type.",
+  "rca_of_the_issue": "NÃO REPRODUZIDO. Hipóteses originais do main agent descartadas: (a) token undefined — token está presente em todos requests (Authorization Bearer ...); (b) Blob sem type — funciona mesmo assim, browser usa filename para download e iframe/img pegam content-type do response anterior no handlePreview; (c) CSP blocking blob — iframe e img renderizam sem erro de CSP; (d) erro axios silenciado — nenhuma exceção disparada nos 4 cenários testados. Possíveis causas do lado do usuário (fora do alcance do ambiente de teste): extensão bloqueando blob: ou download, popup blocker em handlePreview fallback (linha 172), anexos legados com file_type vazio no banco (atributo canPreview falso = sem botão olho), ou cache/token stale em tab antiga. Recomendar ao main agent endurecer mensagens de erro no AttachmentsSection.jsx para capturar status HTTP real e pedir ao usuário reproduzir com DevTools aberto."
+}
