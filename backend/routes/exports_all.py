@@ -2275,6 +2275,14 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_documento") or item.get("cliente_cnpj") or "-"
     pessoa_telefone = item.get("fornecedor_telefone") or item.get("cliente_telefone") or "-"
     pessoa_endereco = item.get("fornecedor_endereco") or item.get("cliente_endereco") or "-"
+
+    # Determina PAGADOR (quem pagou) para o "Recebi(emos) de":
+    # - contas_pagar.*  → a empresa CRA pagou o fornecedor (pagador = empresa)
+    # - contas_receber.* / alugueis / imoveis → o cliente pagou a empresa (pagador = cliente)
+    if category.startswith("contas_pagar"):
+        pagador_nome = empresa_nome
+    else:
+        pagador_nome = item.get("cliente_nome") or item.get("fornecedor_nome") or empresa_nome
     
     label_style = ParagraphStyle('Label', fontSize=9, textColor=colors.gray)
     value_style = ParagraphStyle('Value', fontSize=10)
@@ -2297,7 +2305,7 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     valor = item.get("valor_final") or item.get("valor") or item.get("valor_aluguel") or 0
     valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     
-    elements.append(Paragraph(f"Recebi(emos) de <b>{pessoa_nome}</b> a importância de:", ParagraphStyle('Extenso', fontSize=10)))
+    elements.append(Paragraph(f"Recebi(emos) de <b>{pagador_nome}</b> a importância de:", ParagraphStyle('Extenso', fontSize=10)))
     elements.append(Spacer(1, 0.2*cm))
     elements.append(Paragraph(f"<b>{valor_por_extenso(valor)}</b>", ParagraphStyle('ValorExtenso', fontSize=10)))
     elements.append(Spacer(1, 0.3*cm))
@@ -2459,12 +2467,27 @@ async def export_duplicata(category: str, item_id: str, empresa: str = "locadora
     label_style = ParagraphStyle('Label', fontSize=7, textColor=colors.gray)
     value_style = ParagraphStyle('Value', fontSize=9)
     
+    # Formatar datas para o formato brasileiro (dd/mm/aaaa)
+    def formatar_data_br(data_str):
+        if not data_str or data_str == "-":
+            return "-"
+        try:
+            if len(data_str) >= 10 and "-" in data_str:
+                partes = data_str[:10].split("-")
+                if len(partes) == 3:
+                    return f"{partes[2]}/{partes[1]}/{partes[0]}"
+            return data_str
+        except Exception:
+            return data_str
+
+    data_venc_br = formatar_data_br(item.get("data_vencimento", "-"))
+
     # Linha 1: Valor, Número, Vencimento
     row1_data = [
         [Paragraph("VALOR", label_style), Paragraph("Nº DOCUMENTO", label_style), Paragraph("VENCIMENTO", label_style)],
         [Paragraph(f"<b>{valor_str}</b>", ParagraphStyle('V', fontSize=14)), 
          Paragraph(item_id[:12].upper(), value_style), 
-         Paragraph(f"<b>{item.get('data_vencimento', '-')}</b>", ParagraphStyle('Venc', fontSize=11))]
+         Paragraph(f"<b>{data_venc_br}</b>", ParagraphStyle('Venc', fontSize=11))]
     ]
     row1_table = Table(row1_data, colWidths=[6*cm, 6.5*cm, 6.5*cm])
     row1_table.setStyle(TableStyle([

@@ -1,5 +1,24 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Correções Recibo e Duplicata
+
+### ✅ Recibo de Pagamento (`/api/export/recibo/...`)
+- **"Recebi(emos) de" agora mostra corretamente quem PAGOU**:
+  - `contas_pagar.*` → CRA Locadora (a empresa que efetuou o pagamento ao fornecedor)
+  - `contas_receber.*` / `alugueis` / `imoveis` → Cliente (quem pagou a empresa)
+- Datas `data_vencimento` e `data_pagamento` continuam no formato **dd/mm/aaaa** (função `formatar_data_br` já existia).
+
+### ✅ Duplicata (`/api/export/duplicata/...`)
+- Campo **VENCIMENTO** agora formata corretamente em **dd/mm/aaaa** (antes saía em `2026-03-05`, agora `05/03/2026`).
+
+### Testing
+- Validação via `analyze_file_tool` (IA): 
+  - Recibo de conta_pagar confirma: "Recebi(emos) de **CRA LOCADORA**" ✅
+  - Duplicata confirma: VENCIMENTO em formato brasileiro dd/mm/aaaa ✅
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Robustez em Anexos de Contas
 
 ### 🔍 Investigação do bug reportado
