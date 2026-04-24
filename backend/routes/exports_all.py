@@ -811,13 +811,18 @@ async def export_pdf(category: str, centro_custo: Optional[str] = Query(None), c
         # Contas a Pagar
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar", "filter": {}},
         "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_pagar_pendentes": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "em_aberto"}},
         "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
+        "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
         "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas a Pagar Vencidas", "filter": {"status": "em_aberto", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
         
         # Contas a Receber
         "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber", "filter": {}},
         "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_receber_pendentes": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "em_aberto"}},
         "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_quitadas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_recebidas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
         "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas a Receber Vencidas", "filter": {"status": "em_aberto", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
         
         # Cadastros
@@ -893,7 +898,7 @@ async def export_pdf(category: str, centro_custo: Optional[str] = Query(None), c
     
     # Aplicar filtro de centro de custo para coleções financeiras
     FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
-    if centro_custo and collection_name in FINANCIAL_COLLECTIONS:
+    if centro_custo and centro_custo != "todos" and collection_name in FINANCIAL_COLLECTIONS:
         query_filter["centro_custo"] = centro_custo
         title += f" - {centro_custo}"
     
@@ -992,13 +997,13 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
         
         # Aplicar filtro de centro de custo para coleções financeiras
         FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
-        if data.centro_custo and config["collection"] in FINANCIAL_COLLECTIONS:
+        if data.centro_custo and data.centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
             query_filter["centro_custo"] = data.centro_custo
 
         items = await db[config["collection"]].find(query_filter, {"_id": 0}).to_list(1000)
         if items:
             section_title = config["title"]
-            if data.centro_custo and config["collection"] in FINANCIAL_COLLECTIONS:
+            if data.centro_custo and data.centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
                 section_title += f" - {data.centro_custo}"
             all_data.append({
                 "title": section_title,
@@ -3209,9 +3214,18 @@ async def export_excel(category: str, centro_custo: Optional[str] = Query(None),
         "stock_items": {"collection": "stock_items", "title": "Estoque", "filter": {}},
         "obras": {"collection": "obras", "title": "Obras", "filter": {}},
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas_a_Pagar", "filter": {}},
-        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "filter": {"status": "pendente"}},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_pagar_pendentes": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Quitadas", "filter": {"status": "quitada"}},
+        "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Quitadas", "filter": {"status": "quitada"}},
+        "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Vencidas", "filter": {"status": "em_aberto"}},
         "contas_receber": {"collection": "contas_receber", "title": "Contas_a_Receber", "filter": {}},
-        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "filter": {"status": "pendente"}},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_receber_pendentes": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "filter": {"status": "em_aberto"}},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas_a_Receber_Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_quitadas": {"collection": "contas_receber", "title": "Contas_a_Receber_Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_recebidas": {"collection": "contas_receber", "title": "Contas_a_Receber_Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas_a_Receber_Vencidas", "filter": {"status": "em_aberto"}},
         "cadastros": {"collection": "cadastros", "title": "Cadastros", "filter": {}},
         "cadastros_clientes": {"collection": "cadastros", "title": "Clientes", "filter": {"tipo_cadastro": "cliente"}},
         "cadastros_fornecedores": {"collection": "cadastros", "title": "Fornecedores", "filter": {"tipo_cadastro": "fornecedor"}},
@@ -3228,7 +3242,7 @@ async def export_excel(category: str, centro_custo: Optional[str] = Query(None),
     
     # Aplicar filtro de centro de custo para coleções financeiras
     FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
-    if centro_custo and config["collection"] in FINANCIAL_COLLECTIONS:
+    if centro_custo and centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
         excel_filter["centro_custo"] = centro_custo
     
     collection = db[config["collection"]]
@@ -3260,9 +3274,16 @@ async def export_ofx(category: str, centro_custo: Optional[str] = Query(None), c
     
     valid_categories = {
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas_a_Pagar", "type": "pagar"},
-        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "type": "pagar", "filter": {"status": "pendente"}},
+        "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "type": "pagar", "filter": {"status": "em_aberto"}},
+        "contas_pagar_pendentes": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Pendentes", "type": "pagar", "filter": {"status": "em_aberto"}},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Quitadas", "type": "pagar", "filter": {"status": "quitada"}},
+        "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Contas_a_Pagar_Quitadas", "type": "pagar", "filter": {"status": "quitada"}},
         "contas_receber": {"collection": "contas_receber", "title": "Contas_a_Receber", "type": "receber"},
-        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "type": "receber", "filter": {"status": "pendente"}},
+        "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "type": "receber", "filter": {"status": "em_aberto"}},
+        "contas_receber_pendentes": {"collection": "contas_receber", "title": "Contas_a_Receber_Pendentes", "type": "receber", "filter": {"status": "em_aberto"}},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas_a_Receber_Recebidas", "type": "receber", "filter": {"status": "quitada"}},
+        "contas_receber_quitadas": {"collection": "contas_receber", "title": "Contas_a_Receber_Recebidas", "type": "receber", "filter": {"status": "quitada"}},
+        "contas_receber_recebidas": {"collection": "contas_receber", "title": "Contas_a_Receber_Recebidas", "type": "receber", "filter": {"status": "quitada"}},
     }
     
     if category not in valid_categories:
@@ -3270,7 +3291,7 @@ async def export_ofx(category: str, centro_custo: Optional[str] = Query(None), c
     
     config = valid_categories[category]
     query_filter = dict(config.get("filter", {}))
-    if centro_custo:
+    if centro_custo and centro_custo != "todos":
         query_filter["centro_custo"] = centro_custo
     collection = db[config["collection"]]
     data = await collection.find(query_filter, {"_id": 0}).to_list(5000)
