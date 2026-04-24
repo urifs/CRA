@@ -6487,12 +6487,21 @@ async def upload_attachment(
     with open(file_path, "wb") as f:
         f.write(contents)
     
+    # Inferir content-type se não veio no upload (garante canPreview no frontend)
+    ext_mime = {
+        ".pdf": "application/pdf",
+        ".png": "image/png",
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".gif": "image/gif", ".webp": "image/webp",
+    }
+    file_type = file.content_type or ext_mime.get(file_ext) or "application/octet-stream"
+
     # Criar registro do anexo
     attachment = {
         "id": file_id,
         "filename": file.filename,
         "stored_filename": filename,
-        "file_type": file.content_type,
+        "file_type": file_type,
         "file_size": len(contents),
         "entity_type": entity_type,
         "entity_id": entity_id,
@@ -6535,11 +6544,22 @@ async def download_attachment(file_id: str, current_user: dict = Depends(get_cur
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
     
+    # Infere content-type para anexos legados (file_type vazio)
+    ext_mime = {
+        ".pdf": "application/pdf",
+        ".png": "image/png",
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".gif": "image/gif", ".webp": "image/webp",
+    }
+    stored = attachment.get("stored_filename", "")
+    ext = Path(stored).suffix.lower()
+    media_type = attachment.get("file_type") or ext_mime.get(ext) or "application/octet-stream"
+
     from fastapi.responses import FileResponse
     return FileResponse(
         path=str(file_path),
         filename=attachment["filename"],
-        media_type=attachment.get("file_type", "application/octet-stream")
+        media_type=media_type,
     )
 
 @api_router.get("/attachments/{entity_type}/{entity_id}")

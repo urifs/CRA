@@ -133,7 +133,8 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
         responseType: 'blob'
       });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: contentType }));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', filename);
@@ -143,7 +144,19 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Erro ao baixar arquivo:", error);
-      toast.error("Erro ao baixar arquivo");
+      const status = error.response?.status;
+      // response pode ser blob quando responseType='blob' — extrair mensagem
+      let detail = error.message;
+      if (error.response?.data instanceof Blob) {
+        try {
+          const txt = await error.response.data.text();
+          const parsed = JSON.parse(txt);
+          detail = parsed.detail || txt;
+        } catch {
+          detail = "Falha ao baixar (sem mensagem do servidor)";
+        }
+      }
+      toast.error(`Erro ao baixar arquivo${status ? ` (${status})` : ''}: ${detail}`);
     }
   };
 
@@ -157,8 +170,19 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
         responseType: 'blob'
       });
       
-      // Determinar o tipo correto
-      const contentType = response.headers['content-type'] || attachment.file_type || 'application/octet-stream';
+      // Determinar o tipo correto — prioriza resposta do servidor, depois o salvo, depois infere pela extensão
+      const ext = (attachment.filename || "").toLowerCase().split('.').pop();
+      const extMime = {
+        pdf: "application/pdf",
+        png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+        gif: "image/gif", webp: "image/webp",
+      }[ext];
+      const contentType =
+        response.headers['content-type'] ||
+        attachment.file_type ||
+        extMime ||
+        'application/octet-stream';
+
       const blob = new Blob([response.data], { type: contentType });
       const url = window.URL.createObjectURL(blob);
       setPreviewUrl(url);
@@ -168,13 +192,33 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
       } else if (contentType.includes("pdf")) {
         setPreviewType("pdf");
       } else {
-        // Para outros tipos, abrir em nova aba para download
-        window.open(url, '_blank');
+        // Para outros tipos, tenta abrir em nova aba; se bloqueado, baixa o arquivo
+        const opened = window.open(url, '_blank');
+        if (!opened) {
+          toast.info("Pop-up bloqueado. Baixando o arquivo…");
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', attachment.filename);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        }
         closePreview();
       }
     } catch (error) {
       console.error("Erro ao carregar preview:", error);
-      toast.error("Erro ao carregar visualização. Tente baixar o arquivo.");
+      const status = error.response?.status;
+      let detail = error.message;
+      if (error.response?.data instanceof Blob) {
+        try {
+          const txt = await error.response.data.text();
+          const parsed = JSON.parse(txt);
+          detail = parsed.detail || txt;
+        } catch {
+          detail = "Falha ao carregar visualização";
+        }
+      }
+      toast.error(`Erro ao visualizar${status ? ` (${status})` : ''}: ${detail}. Tente baixar o arquivo.`);
     } finally {
       setLoadingPreview(false);
     }
@@ -245,9 +289,11 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
       ) : (
         <div className="space-y-2">
           {attachments.map((attachment) => {
-            const FileIcon = getFileIcon(attachment.file_type);
-            const isImage = attachment.file_type?.startsWith("image/");
-            const isPdf = attachment.file_type?.includes("pdf");
+            const ext = (attachment.filename || "").toLowerCase().split('.').pop();
+            const imageExts = ["png", "jpg", "jpeg", "gif", "webp"];
+            const isImage = attachment.file_type?.startsWith("image/") || imageExts.includes(ext);
+            const isPdf = attachment.file_type?.includes("pdf") || ext === "pdf";
+            const FileIcon = isImage ? Image : (isPdf ? FileText : File);
             const canPreview = isImage || isPdf;
 
             return (

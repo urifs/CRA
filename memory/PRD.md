@@ -1,5 +1,26 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Robustez em Anexos de Contas
+
+### 🔍 Investigação do bug reportado
+- Backend testado via curl + Python: upload, list, download e delete **todos 200 OK** com content-type correto (PDF `%PDF`, PNG magic bytes OK).
+- Testing agent (Chromium Playwright) **NÃO reproduziu o bug** — fluxo de Visualizar/Baixar em `/administrativo/a-pagar` e `/administrativo/a-receber` funciona 100%.
+- **Conclusão**: bug é específico do ambiente do usuário (extensão/popup blocker/cache/anexo legado com file_type vazio).
+
+### 🛡️ Melhorias de robustez aplicadas no `AttachmentsSection.jsx`
+1. **Mensagens de erro informativas**: `handleDownload` e `handlePreview` agora extraem status HTTP real e mensagem do servidor (mesmo quando a resposta é um Blob de erro). Antes: "Erro ao baixar arquivo" (genérico). Agora: `Erro ao baixar arquivo (404): Arquivo não encontrado`.
+2. **Blob com type explícito** em `handleDownload` (melhor compatibilidade Firefox/Safari).
+3. **Inferência de content-type pela extensão** quando `response.headers['content-type']` ou `attachment.file_type` estão vazios.
+4. **Fallback anti-popup-blocker**: se `window.open` for bloqueado em `handlePreview`, faz download automático do arquivo.
+5. **canPreview robusto**: agora detecta preview por **extensão** do filename (`.pdf`, `.png`, `.jpg`, etc.) além do `file_type` — cobre anexos legados no banco com `file_type` vazio/null.
+
+### 🛡️ Melhorias no backend (`server.py`)
+1. `upload_attachment`: infere content-type pela extensão quando `file.content_type` vem vazio (garante que anexos futuros sempre tenham `file_type` correto).
+2. `download_attachment`: se `attachment.file_type` estiver vazio/null (legado), infere pela extensão do stored_filename. Garante que o browser receba sempre um content-type correto e possa renderizar iframe/img.
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Padrão de Cores Completo (Extrato + PDF)
 
 ### ✅ Padrão de cores aplicado no lado do Extrato
