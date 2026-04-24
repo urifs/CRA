@@ -59,13 +59,13 @@ export default function ConciliacaoPage() {
   const [importando, setImportando] = useState(false);
   const [conciliando, setConciliando] = useState(false);
   
-  // Dados do extrato importado
+  // Dados do extrato importado (agora multi-seleção)
   const [extratoItems, setExtratoItems] = useState([]);
-  const [selectedExtratoItem, setSelectedExtratoItem] = useState(null);
+  const [selectedExtratoIds, setSelectedExtratoIds] = useState([]);
   
-  // Dados das contas do sistema
+  // Dados das contas do sistema (multi-seleção via key "tipo-id")
   const [contas, setContas] = useState([]);
-  const [selectedConta, setSelectedConta] = useState(null);
+  const [selectedContaKeys, setSelectedContaKeys] = useState([]);
   
   // Contas bancárias (usado apenas para importação)
   const [contasBancarias, setContasBancarias] = useState([]);
@@ -84,6 +84,16 @@ export default function ConciliacaoPage() {
   // Filtros das contas
   const [filtroContas, setFiltroContas] = useState("todas");
   const [buscaConta, setBuscaConta] = useState("");
+  const [filtroContaDataInicio, setFiltroContaDataInicio] = useState("");
+  const [filtroContaDataFim, setFiltroContaDataFim] = useState("");
+  const [filtroContaTipoData, setFiltroContaTipoData] = useState("vencimento"); // "vencimento" | "pagamento"
+  
+  // Sugestões (marca os ids/keys sugeridos em azul)
+  const [sugestaoExtratoIds, setSugestaoExtratoIds] = useState(new Set());
+  const [sugestaoContaKeys, setSugestaoContaKeys] = useState(new Set());
+  
+  // Export PDF
+  const [exportando, setExportando] = useState(false);
   
   // Conciliações realizadas
   const [conciliacoes, setConciliacoes] = useState([]);
@@ -223,24 +233,34 @@ export default function ConciliacaoPage() {
     }
   };
 
-  const handleConciliar = async () => {
-    if (!selectedExtratoItem || !selectedConta) {
-      toast.error("Selecione um item do extrato e uma conta para conciliar");
+  const handleConciliarLote = async () => {
+    if (selectedExtratoIds.length === 0 || selectedContaKeys.length === 0) {
+      toast.error("Selecione ao menos 1 extrato e 1 conta para conciliar");
       return;
     }
-    
+
+    const contasPayload = selectedContaKeys.map((key) => {
+      const [tipo, ...rest] = key.split("-");
+      return { id: rest.join("-"), tipo };
+    });
+
     setConciliando(true);
     try {
-      await axios.post(`${API}/conciliacao/conciliar`, {
-        extrato_id: selectedExtratoItem.id,
-        conta_id: selectedConta.id,
-        conta_tipo: selectedConta.tipo
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      
-      toast.success("Conciliação realizada com sucesso!");
-      setSelectedExtratoItem(null);
-      setSelectedConta(null);
-      await fetchExtratosEContas(selectedContaBancaria);
+      const res = await axios.post(
+        `${API}/conciliacao/conciliar-lote`,
+        { extrato_ids: selectedExtratoIds, contas: contasPayload, tolerancia: 0.5 },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(res.data.message || "Conciliação em lote realizada com sucesso!");
+      setSelectedExtratoIds([]);
+      setSelectedContaKeys([]);
+      setSugestaoExtratoIds(new Set());
+      setSugestaoContaKeys(new Set());
+      await fetchExtratosEContas();
+      const conciliacoesRes = await axios.get(`${API}/conciliacao`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setConciliacoes(conciliacoesRes.data || []);
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao conciliar");
     } finally {
@@ -256,9 +276,41 @@ export default function ConciliacaoPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Conciliação desfeita!");
-      await fetchExtratosEContas(selectedContaBancaria);
+      await fetchExtratosEContas();
+      const conciliacoesRes = await axios.get(`${API}/conciliacao`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setConciliacoes(conciliacoesRes.data || []);
     } catch (error) {
       toast.error("Erro ao desfazer conciliação");
+    }
+  };
+
+  const handleExportarPDF = async (completo = false) => {
+    setExportando(true);
+    try {
+      const params = new URLSearchParams();
+      if (filtroDataInicio) params.append("data_inicio", filtroDataInicio);
+      if (filtroDataFim) params.append("data_fim", filtroDataFim);
+      if (completo) params.append("completo", "true");
+
+      const response = await axios.get(
+        `${API}/conciliacao/export-pdf?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${token}` }, responseType: "blob" }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Conciliacao_${new Date().toISOString().slice(0, 10)}${completo ? "_completo" : ""}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao exportar PDF");
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -325,6 +377,12 @@ export default function ConciliacaoPage() {
     setShowSugestoes(true);
     setProcessandoSugestoes(false);
     
+    // Marcar os ids sugeridos para destaque visual azul
+    const extIds = new Set(novasSugestoes.map((s) => s.extrato.id));
+    const contaKeys = new Set(novasSugestoes.map((s) => `${s.conta.tipo}-${s.conta.id}`));
+    setSugestaoExtratoIds(extIds);
+    setSugestaoContaKeys(contaKeys);
+
     if (novasSugestoes.length === 0) {
       toast.info("Nenhuma correspondência encontrada com os critérios atuais");
     } else {
@@ -342,10 +400,13 @@ export default function ConciliacaoPage() {
         conta_tipo: sugestao.conta.tipo
       }, { headers: { Authorization: `Bearer ${token}` } });
       
-      // Remover a sugestão da lista
       setSugestoes(prev => prev.filter(s => s.id !== sugestao.id));
       toast.success("Conciliação realizada!");
-      await fetchExtratosEContas(selectedContaBancaria);
+      await fetchExtratosEContas();
+      const conciliacoesRes = await axios.get(`${API}/conciliacao`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setConciliacoes(conciliacoesRes.data || []);
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao conciliar");
     } finally {
@@ -361,7 +422,6 @@ export default function ConciliacaoPage() {
   // Aceitar todas as sugestões
   const aceitarTodasSugestoes = async () => {
     if (sugestoes.length === 0) return;
-    
     if (!confirm(`Deseja conciliar automaticamente ${sugestoes.length} itens?`)) return;
     
     setConciliando(true);
@@ -383,8 +443,14 @@ export default function ConciliacaoPage() {
     
     setSugestoes([]);
     setShowSugestoes(false);
-    await fetchExtratosEContas(selectedContaBancaria);
-    
+    setSugestaoExtratoIds(new Set());
+    setSugestaoContaKeys(new Set());
+    await fetchExtratosEContas();
+    const conciliacoesRes = await axios.get(`${API}/conciliacao`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setConciliacoes(conciliacoesRes.data || []);
+
     if (erros > 0) {
       toast.warning(`${sucesso} conciliações realizadas, ${erros} erros`);
     } else {
@@ -406,13 +472,12 @@ export default function ConciliacaoPage() {
     return new Date(dateStr).toLocaleDateString("pt-BR");
   };
 
-  // Filtrar extratos
+  // Filtrar extratos (mostra também os conciliados, marcados em verde)
   const extratosFiltrados = extratoItems
     .filter(item => {
       if (filtroTipoExtrato !== "todos" && item.tipo !== filtroTipoExtrato) return false;
       if (filtroDataInicio && item.data < filtroDataInicio) return false;
       if (filtroDataFim && item.data > filtroDataFim) return false;
-      if (item.conciliado) return false;
       if (buscaExtrato) {
         const termo = buscaExtrato.toLowerCase();
         if (!(item.descricao || "").toLowerCase().includes(termo)) return false;
@@ -424,14 +489,13 @@ export default function ConciliacaoPage() {
       return diff !== 0 ? diff : (a.descricao || "").localeCompare(b.descricao || "");
     });
 
-  // Filtrar e ordenar contas (crescente por data de vencimento)
+  // Filtrar e ordenar contas (mostra conciliadas também, com cor distinta)
   const contasFiltradas = contas
     .filter(conta => {
     const isQuitada = conta.status === "quitada" || conta.status === "recebida";
     
     // Filtro por centro de custo
     if (selectedCentroCusto && selectedCentroCusto !== "todos") {
-      // Buscar o nome do centro de custo selecionado
       const centroCustoSelecionado = centrosCusto.find(cc => cc.id === selectedCentroCusto);
       if (centroCustoSelecionado) {
         if (conta.centro_custo !== centroCustoSelecionado.nome) return false;
@@ -457,9 +521,18 @@ export default function ConciliacaoPage() {
       const descricao = (conta.descricao || conta.favorecido || "").toLowerCase();
       if (!descricao.includes(termo)) return false;
     }
-    
-    if (conta.conciliado) return false; // Ocultar já conciliados
-    
+
+    // Filtro por período (por vencimento OU pagamento, via toggle)
+    if (filtroContaDataInicio || filtroContaDataFim) {
+      const campo = filtroContaTipoData === "pagamento"
+        ? (conta.tipo === "receber" ? "data_recebimento" : "data_pagamento")
+        : "data_vencimento";
+      const d = conta[campo];
+      if (!d) return false;
+      if (filtroContaDataInicio && d < filtroContaDataInicio) return false;
+      if (filtroContaDataFim && d > filtroContaDataFim) return false;
+    }
+
     return true;
     })
     .sort((a, b) => {
@@ -704,35 +777,61 @@ export default function ConciliacaoPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {extratosFiltrados.map((item) => (
-                    <TableRow 
-                      key={item.id}
-                      className={`cursor-pointer transition-colors ${
-                        selectedExtratoItem?.id === item.id 
-                          ? 'bg-yellow-100 border-l-4 border-l-yellow-500' 
-                          : 'hover:bg-yellow-50'
-                      }`}
-                      onClick={() => setSelectedExtratoItem(item)}
-                    >
-                      <TableCell>
-                        <Checkbox 
-                          checked={selectedExtratoItem?.id === item.id}
-                          onCheckedChange={() => setSelectedExtratoItem(
-                            selectedExtratoItem?.id === item.id ? null : item
+                  {extratosFiltrados.map((item) => {
+                    const isSelected = selectedExtratoIds.includes(item.id);
+                    const isConciliado = !!item.conciliado;
+                    const isSugerido = sugestaoExtratoIds.has(item.id);
+                    let rowColor = "hover:bg-yellow-50";
+                    if (isConciliado) rowColor = "bg-green-50 hover:bg-green-100";
+                    else if (isSelected) rowColor = "bg-yellow-100 border-l-4 border-l-yellow-500";
+                    else if (isSugerido) rowColor = "bg-sky-50 hover:bg-sky-100 border-l-4 border-l-sky-400";
+                    return (
+                      <TableRow
+                        key={item.id}
+                        className={`cursor-pointer transition-colors ${rowColor}`}
+                        onClick={() => {
+                          if (isConciliado) return;
+                          setSelectedExtratoIds((prev) =>
+                            prev.includes(item.id) ? prev.filter((x) => x !== item.id) : [...prev, item.id]
+                          );
+                        }}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={isConciliado}
+                            onCheckedChange={() => {
+                              if (isConciliado) return;
+                              setSelectedExtratoIds((prev) =>
+                                prev.includes(item.id) ? prev.filter((x) => x !== item.id) : [...prev, item.id]
+                              );
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-sm">{formatDate(item.data)}</TableCell>
+                        <TableCell className="text-sm max-w-[200px] truncate" title={item.descricao}>
+                          {item.descricao}
+                          {isConciliado && (
+                            <Badge className="ml-2 bg-green-100 text-green-700 border-green-200 text-[10px]">
+                              Conciliado
+                            </Badge>
                           )}
-                        />
-                      </TableCell>
-                      <TableCell className="text-sm">{formatDate(item.data)}</TableCell>
-                      <TableCell className="text-sm max-w-[200px] truncate" title={item.descricao}>
-                        {item.descricao}
-                      </TableCell>
-                      <TableCell className={`text-right font-mono font-medium ${
-                        item.tipo === "entrada" ? "text-green-600" : "text-red-600"
-                      }`}>
-                        {item.tipo === "entrada" ? "+" : "-"}{formatCurrency(item.valor)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          {isSugerido && !isConciliado && (
+                            <Badge className="ml-2 bg-sky-100 text-sky-700 border-sky-200 text-[10px]">
+                              Sugerido
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-mono font-medium ${
+                            item.tipo === "entrada" ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {item.tipo === "entrada" ? "+" : "-"}{formatCurrency(item.valor)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -766,7 +865,7 @@ export default function ConciliacaoPage() {
                 </SelectContent>
               </Select>
               
-              <div className="relative flex-1">
+              <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                 <Input 
                   placeholder="Buscar conta..."
@@ -775,6 +874,45 @@ export default function ConciliacaoPage() {
                   className="pl-8 h-8"
                 />
               </div>
+            </div>
+            {/* Período */}
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Select value={filtroContaTipoData} onValueChange={setFiltroContaTipoData}>
+                <SelectTrigger className="w-36 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vencimento">Por Vencimento</SelectItem>
+                  <SelectItem value="pagamento">Por Pagamento</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="date"
+                value={filtroContaDataInicio}
+                onChange={(e) => setFiltroContaDataInicio(e.target.value)}
+                className="w-36 h-8 text-xs"
+                data-testid="conta-data-inicio"
+              />
+              <Input
+                type="date"
+                value={filtroContaDataFim}
+                onChange={(e) => setFiltroContaDataFim(e.target.value)}
+                className="w-36 h-8 text-xs"
+                data-testid="conta-data-fim"
+              />
+              {(filtroContaDataInicio || filtroContaDataFim) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFiltroContaDataInicio("");
+                    setFiltroContaDataFim("");
+                  }}
+                  className="h-8 text-xs text-gray-500"
+                >
+                  Limpar
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-0 max-h-[500px] overflow-y-auto">
@@ -798,43 +936,68 @@ export default function ConciliacaoPage() {
                 <TableBody>
                   {contasFiltradas.map((conta) => {
                     const isQuitada = conta.status === "quitada" || conta.status === "recebida";
+                    const key = `${conta.tipo}-${conta.id}`;
+                    const isSelected = selectedContaKeys.includes(key);
+                    const isConciliado = !!conta.conciliado;
+                    const isSugerido = sugestaoContaKeys.has(key);
+                    let rowColor = "hover:bg-blue-50";
+                    if (isConciliado) rowColor = "bg-green-50 hover:bg-green-100";
+                    else if (isSelected) rowColor = "bg-yellow-100 border-l-4 border-l-yellow-500";
+                    else if (isSugerido) rowColor = "bg-sky-50 hover:bg-sky-100 border-l-4 border-l-sky-400";
                     return (
-                      <TableRow 
-                        key={`${conta.tipo}-${conta.id}`}
-                        className={`cursor-pointer transition-colors ${
-                          selectedConta?.id === conta.id && selectedConta?.tipo === conta.tipo
-                            ? 'bg-blue-100 border-l-4 border-l-blue-500' 
-                            : 'hover:bg-blue-50'
-                        }`}
-                        onClick={() => setSelectedConta(
-                          selectedConta?.id === conta.id && selectedConta?.tipo === conta.tipo ? null : conta
-                        )}
+                      <TableRow
+                        key={key}
+                        className={`cursor-pointer transition-colors ${rowColor}`}
+                        onClick={() => {
+                          if (isConciliado) return;
+                          setSelectedContaKeys((prev) =>
+                            prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]
+                          );
+                        }}
                       >
-                        <TableCell>
-                          <Checkbox 
-                            checked={selectedConta?.id === conta.id && selectedConta?.tipo === conta.tipo}
-                            onCheckedChange={() => setSelectedConta(
-                              selectedConta?.id === conta.id ? null : conta
-                            )}
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={isConciliado}
+                            onCheckedChange={() => {
+                              if (isConciliado) return;
+                              setSelectedContaKeys((prev) =>
+                                prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]
+                              );
+                            }}
                           />
                         </TableCell>
                         <TableCell>
-                          <Badge className={
-                            conta.tipo === "pagar" 
-                              ? "bg-red-100 text-red-700 border-red-200" 
-                              : "bg-green-100 text-green-700 border-green-200"
-                          }>
+                          <Badge
+                            className={
+                              conta.tipo === "pagar"
+                                ? "bg-red-100 text-red-700 border-red-200"
+                                : "bg-green-100 text-green-700 border-green-200"
+                            }
+                          >
                             {conta.tipo === "pagar" ? "Pagar" : "Receber"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm">{formatDate(conta.data_vencimento)}</TableCell>
                         <TableCell className="text-sm max-w-[150px] truncate" title={conta.descricao || conta.favorecido}>
                           {conta.descricao || conta.favorecido || "-"}
+                          {isConciliado && (
+                            <Badge className="ml-2 bg-green-100 text-green-700 border-green-200 text-[10px]">
+                              Conciliado
+                            </Badge>
+                          )}
+                          {isSugerido && !isConciliado && (
+                            <Badge className="ml-2 bg-sky-100 text-sky-700 border-sky-200 text-[10px]">
+                              Sugerido
+                            </Badge>
+                          )}
                         </TableCell>
-                        <TableCell className={`text-right font-mono font-medium ${
-                          conta.tipo === "receber" ? "text-green-600" : "text-red-600"
-                        }`}>
-                          {formatCurrency(conta.valor)}
+                        <TableCell
+                          className={`text-right font-mono font-medium ${
+                            conta.tipo === "receber" ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {formatCurrency(conta.valor_final ?? conta.valor)}
                         </TableCell>
                       </TableRow>
                     );
@@ -846,11 +1009,12 @@ export default function ConciliacaoPage() {
         </Card>
       </div>
 
-      {/* Botão de Conciliar e Sugestões */}
-      <div className="flex flex-col sm:flex-row justify-center gap-4">
+      {/* Botão de Conciliar, Sugestões e Exportação */}
+      <div className="flex flex-col sm:flex-row justify-center flex-wrap gap-4">
         <Button
-          onClick={handleConciliar}
-          disabled={!selectedExtratoItem || !selectedConta || conciliando}
+          data-testid="btn-conciliar-lote"
+          onClick={handleConciliarLote}
+          disabled={selectedExtratoIds.length === 0 || selectedContaKeys.length === 0 || conciliando}
           size="lg"
           className="bg-green-600 hover:bg-green-700 px-8"
         >
@@ -860,9 +1024,14 @@ export default function ConciliacaoPage() {
             <Link2 className="mr-2" size={20} />
           )}
           Conciliar Selecionados
+          {(selectedExtratoIds.length > 0 || selectedContaKeys.length > 0) && (
+            <Badge className="ml-2 bg-white text-green-700 border-0">
+              {selectedExtratoIds.length} ↔ {selectedContaKeys.length}
+            </Badge>
+          )}
         </Button>
         
-        {/* Botão de Sugestões Automáticas */}
+        {/* Sugestões Automáticas */}
         <div className="flex items-center gap-2">
           <Select value={tolerancia.toString()} onValueChange={(v) => setTolerancia(parseInt(v))}>
             <SelectTrigger className="w-40">
@@ -890,6 +1059,52 @@ export default function ConciliacaoPage() {
             )}
             Sugerir Automático
           </Button>
+        </div>
+
+        {/* Exportação PDF */}
+        <div className="flex items-center gap-2">
+          <Button
+            data-testid="btn-export-pdf-conciliacao"
+            onClick={() => handleExportarPDF(false)}
+            disabled={exportando}
+            size="lg"
+            variant="outline"
+            className="border-red-300 text-red-700 hover:bg-red-50"
+          >
+            {exportando ? <Loader2 className="animate-spin mr-2" size={20} /> : <FileText className="mr-2" size={20} />}
+            Exportar Conciliadas
+          </Button>
+          <Button
+            data-testid="btn-export-pdf-completo"
+            onClick={() => handleExportarPDF(true)}
+            disabled={exportando}
+            size="lg"
+            variant="outline"
+            className="border-gray-300 hover:bg-gray-50"
+          >
+            <FileText className="mr-2" size={20} />
+            PDF Completo
+          </Button>
+        </div>
+      </div>
+
+      {/* Legenda de cores */}
+      <div className="flex flex-wrap gap-3 text-xs text-gray-600 justify-center mt-2">
+        <div className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-300"></span>
+          Conciliado
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-sky-100 border border-sky-400"></span>
+          Sugerido (auto)
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-yellow-100 border border-yellow-500"></span>
+          Selecionado
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded bg-white border border-gray-300"></span>
+          Pendente
         </div>
       </div>
 

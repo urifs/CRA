@@ -37,6 +37,7 @@ export default function ContasPagarPage() {
   const [contas, setContas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [valorBusca, setValorBusca] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterVencimento, setFilterVencimento] = useState("");
   const [filterFormaPag, setFilterFormaPag] = useState("");
@@ -79,7 +80,7 @@ export default function ContasPagarPage() {
     forma_pagamento: "boleto", conta_movimento: "", observacoes: ""
   });
 
-  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); fetchFrotas(); fetchContasBancarias(); }, [filterStatus, filterVencimento, filterFormaPag]);
+  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); fetchFrotas(); fetchContasBancarias(); }, [filterStatus, filterVencimento, filterFormaPag, valorBusca]);
 
   const fetchContas = async () => {
     try {
@@ -88,6 +89,7 @@ export default function ContasPagarPage() {
       if (filterStatus) params.append("status", filterStatus);
       if (filterVencimento) params.append("vencimento", filterVencimento);
       if (filterFormaPag) params.append("forma_pagamento", filterFormaPag);
+      if (valorBusca && !isNaN(parseFloat(valorBusca))) params.append("valor", parseFloat(valorBusca));
       if (params.toString()) url += `?${params.toString()}`;
       const response = await axios.get(url);
       setContas(response.data);
@@ -448,6 +450,15 @@ export default function ContasPagarPage() {
             {formasPagamento.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="Buscar por valor"
+          value={valorBusca}
+          onChange={(e) => setValorBusca(e.target.value)}
+          className="h-11"
+          data-testid="contas-pagar-busca-valor"
+        />
         <Button className="h-11 bg-[#D4A000] hover:bg-[#b38900] text-black">
           <Search size={16} className="mr-2" />
           Buscar

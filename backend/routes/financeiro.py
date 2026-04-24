@@ -175,6 +175,8 @@ async def get_contas_pagar(
     plano_conta_id: Optional[str] = None,
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
+    tipo_data: Optional[str] = "vencimento",
+    valor: Optional[float] = None,
     search: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
@@ -191,6 +193,13 @@ async def get_contas_pagar(
             {"fornecedor_nome": {"$regex": search, "$options": "i"}},
             {"documento": {"$regex": search, "$options": "i"}},
         ]
+    if valor is not None:
+        # Busca por valor exato em valor bruto OU valor_final
+        epsilon = 0.005
+        query["$or"] = (query.get("$or") or []) + [
+            {"valor": {"$gte": valor - epsilon, "$lte": valor + epsilon}},
+            {"valor_final": {"$gte": valor - epsilon, "$lte": valor + epsilon}},
+        ]
 
     hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if vencimento == "vencidas":
@@ -203,16 +212,17 @@ async def get_contas_pagar(
         query["status"] = "em_aberto"
 
     if data_inicio and data_fim:
-        query["data_vencimento"] = {"$gte": data_inicio, "$lte": data_fim}
+        campo_data = "data_pagamento" if tipo_data == "pagamento" else "data_vencimento"
+        query[campo_data] = {"$gte": data_inicio, "$lte": data_fim}
 
     contas = await db.contas_pagar.find(query, {"_id": 0}).sort("data_vencimento", 1).to_list(1000)
 
     for conta in contas:
-        valor = conta.get("valor", 0)
+        v = conta.get("valor", 0)
         desconto = conta.get("valor_desconto", 0)
         juros = conta.get("valor_juros", 0)
         multa = conta.get("valor_multa", 0)
-        conta["valor_final"] = valor - desconto + juros + multa
+        conta["valor_final"] = v - desconto + juros + multa
 
     return contas
 
@@ -454,6 +464,8 @@ async def get_contas_receber(
     plano_conta_id: Optional[str] = None,
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
+    tipo_data: Optional[str] = "vencimento",
+    valor: Optional[float] = None,
     search: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
@@ -470,6 +482,12 @@ async def get_contas_receber(
             {"cliente_nome": {"$regex": search, "$options": "i"}},
             {"documento": {"$regex": search, "$options": "i"}},
         ]
+    if valor is not None:
+        epsilon = 0.005
+        query["$or"] = (query.get("$or") or []) + [
+            {"valor": {"$gte": valor - epsilon, "$lte": valor + epsilon}},
+            {"valor_final": {"$gte": valor - epsilon, "$lte": valor + epsilon}},
+        ]
 
     hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if vencimento == "vencidas":
@@ -482,16 +500,17 @@ async def get_contas_receber(
         query["status"] = "em_aberto"
 
     if data_inicio and data_fim:
-        query["data_vencimento"] = {"$gte": data_inicio, "$lte": data_fim}
+        campo_data = "data_recebimento" if tipo_data == "pagamento" else "data_vencimento"
+        query[campo_data] = {"$gte": data_inicio, "$lte": data_fim}
 
     contas = await db.contas_receber.find(query, {"_id": 0}).sort("data_vencimento", 1).to_list(1000)
 
     for conta in contas:
-        valor = conta.get("valor", 0)
+        v = conta.get("valor", 0)
         desconto = conta.get("valor_desconto", 0)
         juros = conta.get("valor_juros", 0)
         multa = conta.get("valor_multa", 0)
-        conta["valor_final"] = valor - desconto + juros + multa
+        conta["valor_final"] = v - desconto + juros + multa
 
     return contas
 

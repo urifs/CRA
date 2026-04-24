@@ -393,15 +393,23 @@ async def desfazer_conciliacao(
     if not conciliacao:
         raise HTTPException(status_code=404, detail="Conciliação não encontrada")
 
-    await db.extratos_bancarios.update_one(
-        {"id": conciliacao["extrato_id"]},
-        {"$set": {"conciliado": False}, "$unset": {"conciliacao_id": ""}},
-    )
-    collection = db.contas_pagar if conciliacao["conta_tipo"] == "pagar" else db.contas_receber
-    await collection.update_one(
-        {"id": conciliacao["conta_id"]},
-        {"$set": {"conciliado": False}, "$unset": {"conciliacao_id": ""}},
-    )
+    # Legado: extrato_id único OU nova estrutura: extrato_ids: []
+    extrato_ids = conciliacao.get("extrato_ids") or ([conciliacao["extrato_id"]] if conciliacao.get("extrato_id") else [])
+    if extrato_ids:
+        await db.extratos_bancarios.update_many(
+            {"id": {"$in": extrato_ids}},
+            {"$set": {"conciliado": False}, "$unset": {"conciliacao_id": ""}},
+        )
+
+    # Contas vinculadas (legado: conta_id+conta_tipo / novo: contas: [{id,tipo}])
+    contas_vinc = conciliacao.get("contas") or ([{"id": conciliacao["conta_id"], "tipo": conciliacao["conta_tipo"]}] if conciliacao.get("conta_id") else [])
+    for c in contas_vinc:
+        coll = db.contas_pagar if c.get("tipo") == "pagar" else db.contas_receber
+        await coll.update_one(
+            {"id": c["id"]},
+            {"$set": {"conciliado": False}, "$unset": {"conciliacao_id": ""}},
+        )
+
     await db.conciliacoes.delete_one({"id": conciliacao_id})
 
     await create_audit_log(
@@ -413,3 +421,357 @@ async def desfazer_conciliacao(
         module="Financeiro",
     )
     return {"message": "Conciliação desfeita com sucesso"}
+
+
+# ============================================================================
+# MULTI-CONCILIAÇÃO (N extratos ↔ M contas)
+# ============================================================================
+
+@conciliacao_router.post("/conciliar-lote")
+async def conciliar_lote(
+    extrato_ids: list = Body(..., description="Lista de IDs de extratos bancários"),
+    contas: list = Body(..., description="Lista de {id, tipo: 'pagar'|'receber'}"),
+    observacao: str = Body("", description="Observação opcional"),
+    tolerancia: float = Body(0.10, description="Tolerância de diferença absoluta entre totais"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Concilia N extratos com M contas do sistema em uma única operação.
+    Valida que a soma dos valores bate (com tolerância configurável)."""
+    if not extrato_ids or not contas:
+        raise HTTPException(status_code=400, detail="Selecione ao menos 1 extrato e 1 conta")
+
+    # Carrega extratos
+    extratos = await db.extratos_bancarios.find(
+        {"id": {"$in": extrato_ids}}, {"_id": 0}
+    ).to_list(100)
+    if len(extratos) != len(extrato_ids):
+        raise HTTPException(status_code=404, detail="Um ou mais extratos não foram encontrados")
+    if any(e.get("conciliado") for e in extratos):
+        raise HTTPException(status_code=400, detail="Um ou mais extratos já foram conciliados")
+
+    # Carrega contas
+    contas_carregadas = []
+    for c in contas:
+        cid = c.get("id")
+        ctipo = c.get("tipo")
+        if ctipo not in ("pagar", "receber"):
+            raise HTTPException(status_code=400, detail=f"Tipo inválido: {ctipo}")
+        coll = db.contas_pagar if ctipo == "pagar" else db.contas_receber
+        doc = await coll.find_one({"id": cid}, {"_id": 0})
+        if not doc:
+            raise HTTPException(status_code=404, detail=f"Conta {ctipo} {cid} não encontrada")
+        if doc.get("conciliado"):
+            raise HTTPException(status_code=400, detail=f"Conta {ctipo} {cid} já foi conciliada")
+        doc["_tipo"] = ctipo
+        contas_carregadas.append(doc)
+
+    total_extratos = sum(e.get("valor", 0) for e in extratos)
+    total_contas = sum(
+        c.get("valor_final") or c.get("valor", 0) for c in contas_carregadas
+    )
+    diferenca = abs(total_extratos - total_contas)
+    if diferenca > tolerancia:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Os totais não batem: extratos R$ {total_extratos:,.2f} vs contas R$ {total_contas:,.2f} "
+                f"(diferença R$ {diferenca:,.2f})."
+            ),
+        )
+
+    conciliacao_id = str(uuid.uuid4())
+    conciliacao_doc = {
+        "id": conciliacao_id,
+        "tipo": "lote",
+        "extrato_ids": extrato_ids,
+        "extratos_descricao": [e.get("descricao", "") for e in extratos],
+        "contas": [{"id": c["id"], "tipo": c["_tipo"]} for c in contas_carregadas],
+        "contas_descricao": [c.get("descricao", c.get("favorecido", "")) for c in contas_carregadas],
+        "valor_extratos": total_extratos,
+        "valor_contas": total_contas,
+        "diferenca": diferenca,
+        "observacao": observacao,
+        "data_conciliacao": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "created_by": current_user["id"],
+        "created_by_name": current_user.get("name"),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.conciliacoes.insert_one(conciliacao_doc)
+
+    await db.extratos_bancarios.update_many(
+        {"id": {"$in": extrato_ids}},
+        {"$set": {"conciliado": True, "conciliacao_id": conciliacao_id}},
+    )
+    for c in contas_carregadas:
+        coll = db.contas_pagar if c["_tipo"] == "pagar" else db.contas_receber
+        await coll.update_one(
+            {"id": c["id"]},
+            {"$set": {"conciliado": True, "conciliacao_id": conciliacao_id}},
+        )
+
+    await create_audit_log(
+        user=current_user,
+        action="conciliar",
+        entity_type="conciliacao",
+        entity_id=conciliacao_id,
+        entity_name=f"Lote: {len(extrato_ids)} extrato(s) ↔ {len(contas_carregadas)} conta(s)",
+        details=f"Total R$ {total_extratos:,.2f}",
+        module="Financeiro",
+    )
+    return {
+        "message": "Conciliação em lote realizada com sucesso",
+        "id": conciliacao_id,
+        "valor_extratos": total_extratos,
+        "valor_contas": total_contas,
+        "diferenca": diferenca,
+    }
+
+
+# ============================================================================
+# EXPORTAÇÃO PDF
+# ============================================================================
+
+@conciliacao_router.get("/export-pdf")
+async def export_conciliacao_pdf(
+    conta_bancaria_id: str = None,
+    data_inicio: str = None,
+    data_fim: str = None,
+    completo: bool = False,
+    current_user: dict = Depends(get_current_user),
+):
+    """Exporta relatório de conciliação em PDF.
+    - completo=False: apenas conciliações realizadas
+    - completo=True: inclui extratos e contas pendentes"""
+    from fastapi.responses import Response
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    # Busca conta bancária (se informada)
+    conta_banco = None
+    if conta_bancaria_id:
+        conta_banco = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
+
+    # Filtros de conciliações
+    conc_filter: dict = {}
+    if conta_bancaria_id:
+        # Busca conciliações que usaram extratos daquela conta
+        extratos_conta = await db.extratos_bancarios.find(
+            {"conta_bancaria_id": conta_bancaria_id},
+            {"_id": 0, "id": 1},
+        ).to_list(5000)
+        ids_ext_conta = [e["id"] for e in extratos_conta]
+        conc_filter["$or"] = [
+            {"extrato_id": {"$in": ids_ext_conta}},
+            {"extrato_ids": {"$in": ids_ext_conta}},
+        ]
+    if data_inicio and data_fim:
+        conc_filter["data_conciliacao"] = {"$gte": data_inicio, "$lte": data_fim}
+
+    conciliacoes = await db.conciliacoes.find(conc_filter, {"_id": 0}).sort("created_at", -1).to_list(2000)
+
+    # Pendentes (se modo completo)
+    extratos_pend = []
+    contas_pend_pagar = []
+    contas_pend_receber = []
+    if completo:
+        ext_filter = {"conciliado": {"$ne": True}}
+        if conta_bancaria_id:
+            ext_filter["conta_bancaria_id"] = conta_bancaria_id
+        extratos_pend = await db.extratos_bancarios.find(ext_filter, {"_id": 0}).sort("data", 1).to_list(2000)
+        contas_pend_pagar = await db.contas_pagar.find(
+            {"conciliado": {"$ne": True}, "status": "em_aberto"}, {"_id": 0}
+        ).sort("data_vencimento", 1).to_list(2000)
+        contas_pend_receber = await db.contas_receber.find(
+            {"conciliado": {"$ne": True}, "status": "em_aberto"}, {"_id": 0}
+        ).sort("data_vencimento", 1).to_list(2000)
+
+    # Construir PDF
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=landscape(A4),
+        leftMargin=1.2 * cm, rightMargin=1.2 * cm,
+        topMargin=1.2 * cm, bottomMargin=1.2 * cm,
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle("T", parent=styles["Heading1"], fontSize=14, alignment=1, textColor=colors.HexColor("#C62828"), spaceAfter=6)
+    sub_style = ParagraphStyle("S", parent=styles["Normal"], fontSize=9, alignment=1, textColor=colors.grey, spaceAfter=12)
+    section_style = ParagraphStyle("Sec", parent=styles["Heading2"], fontSize=11, textColor=colors.HexColor("#C62828"), spaceBefore=12, spaceAfter=6)
+    normal_style = ParagraphStyle("N", parent=styles["Normal"], fontSize=8)
+
+    def _fmt_date(s):
+        if not s:
+            return "—"
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+        except Exception:
+            return s
+
+    def _fmt_brl(v):
+        try:
+            return f"R$ {float(v or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except Exception:
+            return "R$ 0,00"
+
+    elements = [Paragraph("CRA Construtora", title_style)]
+    banco_info = ""
+    if conta_banco:
+        banco_info = f"Banco: {conta_banco.get('banco', '')} · Agência {conta_banco.get('agencia', '')} · Conta {conta_banco.get('conta', '')}"
+    periodo_info = ""
+    if data_inicio and data_fim:
+        periodo_info = f" · Período: {_fmt_date(data_inicio)} a {_fmt_date(data_fim)}"
+    elements.append(Paragraph("Relatório de Conciliação Bancária", section_style))
+    if banco_info or periodo_info:
+        elements.append(Paragraph(banco_info + periodo_info, sub_style))
+    elements.append(Paragraph(f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}", sub_style))
+
+    # Totais
+    total_conc = sum(
+        c.get("valor_extratos") or c.get("valor", 0) for c in conciliacoes
+    )
+    total_pend_ext = sum(e.get("valor", 0) for e in extratos_pend)
+    total_pend_pagar = sum((c.get("valor_final") or c.get("valor", 0)) for c in contas_pend_pagar)
+    total_pend_receber = sum((c.get("valor_final") or c.get("valor", 0)) for c in contas_pend_receber)
+
+    resumo_data = [
+        ["Conciliações Realizadas", str(len(conciliacoes)), _fmt_brl(total_conc)],
+    ]
+    if completo:
+        resumo_data += [
+            ["Extratos Pendentes", str(len(extratos_pend)), _fmt_brl(total_pend_ext)],
+            ["Contas a Pagar Pendentes", str(len(contas_pend_pagar)), _fmt_brl(total_pend_pagar)],
+            ["Contas a Receber Pendentes", str(len(contas_pend_receber)), _fmt_brl(total_pend_receber)],
+        ]
+    resumo_tbl = Table([["Indicador", "Qtd.", "Valor"]] + resumo_data, colWidths=[10 * cm, 3 * cm, 6 * cm])
+    resumo_tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(resumo_tbl)
+
+    # Detalhe conciliações
+    elements.append(Paragraph("Conciliações Realizadas", section_style))
+    if conciliacoes:
+        data_tbl = [["Data", "Extrato(s)", "Conta(s) do Sistema", "Valor Extrato", "Valor Conta", "Diferença"]]
+        for c in conciliacoes:
+            data_c = c.get("data_conciliacao") or (c.get("created_at") or "")[:10]
+            ext_desc = c.get("extratos_descricao") or ([c.get("extrato_descricao", "")] if c.get("extrato_descricao") else [])
+            cont_desc = c.get("contas_descricao") or ([c.get("conta_descricao", "")] if c.get("conta_descricao") else [])
+            v_ext = c.get("valor_extratos") if c.get("valor_extratos") is not None else c.get("valor", 0)
+            v_cont = c.get("valor_contas") if c.get("valor_contas") is not None else c.get("valor", 0)
+            diff = c.get("diferenca", 0) or 0
+            data_tbl.append([
+                _fmt_date(data_c),
+                Paragraph("<br/>".join(ext_desc)[:200], normal_style),
+                Paragraph("<br/>".join(cont_desc)[:200], normal_style),
+                _fmt_brl(v_ext),
+                _fmt_brl(v_cont),
+                _fmt_brl(diff),
+            ])
+        t = Table(data_tbl, colWidths=[2 * cm, 7 * cm, 7 * cm, 3 * cm, 3 * cm, 2 * cm])
+        t.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+            ("ALIGN", (0, 0), (0, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        elements.append(t)
+    else:
+        elements.append(Paragraph("<i>Nenhuma conciliação no período selecionado.</i>", normal_style))
+
+    if completo:
+        if extratos_pend:
+            elements.append(Paragraph("Extratos Pendentes de Conciliação", section_style))
+            rows = [["Data", "Descrição", "Tipo", "Valor"]]
+            for e in extratos_pend[:200]:
+                rows.append([
+                    _fmt_date(e.get("data")),
+                    Paragraph((e.get("descricao", "") or "")[:200], normal_style),
+                    (e.get("tipo", "") or "").upper(),
+                    _fmt_brl(e.get("valor", 0)),
+                ])
+            t = Table(rows, colWidths=[2 * cm, 15 * cm, 2.5 * cm, 3 * cm])
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+                ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]))
+            elements.append(t)
+
+        if contas_pend_pagar:
+            elements.append(Paragraph("Contas a Pagar Pendentes", section_style))
+            rows = [["Vencimento", "Fornecedor", "Descrição", "Valor"]]
+            for c in contas_pend_pagar[:200]:
+                rows.append([
+                    _fmt_date(c.get("data_vencimento")),
+                    Paragraph((c.get("fornecedor_nome") or "")[:80], normal_style),
+                    Paragraph((c.get("descricao") or "")[:200], normal_style),
+                    _fmt_brl(c.get("valor_final") or c.get("valor", 0)),
+                ])
+            t = Table(rows, colWidths=[2.5 * cm, 5 * cm, 11 * cm, 3 * cm])
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+                ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]))
+            elements.append(t)
+
+        if contas_pend_receber:
+            elements.append(Paragraph("Contas a Receber Pendentes", section_style))
+            rows = [["Vencimento", "Cliente", "Descrição", "Valor"]]
+            for c in contas_pend_receber[:200]:
+                rows.append([
+                    _fmt_date(c.get("data_vencimento")),
+                    Paragraph((c.get("cliente_nome") or "")[:80], normal_style),
+                    Paragraph((c.get("descricao") or "")[:200], normal_style),
+                    _fmt_brl(c.get("valor_final") or c.get("valor", 0)),
+                ])
+            t = Table(rows, colWidths=[2.5 * cm, 5 * cm, 11 * cm, 3 * cm])
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+                ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]))
+            elements.append(t)
+
+    doc.build(elements)
+    buf.seek(0)
+
+    filename = f"Conciliacao_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
