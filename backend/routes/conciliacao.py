@@ -660,34 +660,73 @@ async def export_conciliacao_pdf(
     # Detalhe conciliações
     elements.append(Paragraph("Conciliações Realizadas", section_style))
     if conciliacoes:
-        data_tbl = [["Data", "Extrato(s)", "Conta(s) do Sistema", "Valor Extrato", "Valor Conta", "Diferença"]]
+        # Pré-carrega tipos de todos os extratos envolvidos (evita N+1)
+        all_ext_ids = set()
         for c in conciliacoes:
+            for eid in (c.get("extrato_ids") or ([c.get("extrato_id")] if c.get("extrato_id") else [])):
+                if eid:
+                    all_ext_ids.add(eid)
+        tipo_por_ext = {}
+        if all_ext_ids:
+            rows_ext = await db.extratos_bancarios.find(
+                {"id": {"$in": list(all_ext_ids)}},
+                {"_id": 0, "id": 1, "tipo": 1},
+            ).to_list(5000)
+            tipo_por_ext = {r["id"]: (r.get("tipo") or "").lower() for r in rows_ext}
+
+        elements.append(Paragraph(
+            "<font color='#2E7D32'>Verde</font> = Entrada (+) &nbsp;&nbsp; "
+            "<font color='#C62828'>Vermelho</font> = Saída (-) &nbsp;&nbsp; "
+            "<font color='#616161'>Cinza</font> = Misto",
+            normal_style,
+        ))
+        data_tbl = [["Data", "Tipo", "Extrato(s)", "Conta(s) do Sistema", "Valor Extrato", "Valor Conta", "Diferença"]]
+        row_styles = []
+        for idx, c in enumerate(conciliacoes, start=1):
             data_c = c.get("data_conciliacao") or (c.get("created_at") or "")[:10]
             ext_desc = c.get("extratos_descricao") or ([c.get("extrato_descricao", "")] if c.get("extrato_descricao") else [])
             cont_desc = c.get("contas_descricao") or ([c.get("conta_descricao", "")] if c.get("conta_descricao") else [])
             v_ext = c.get("valor_extratos") if c.get("valor_extratos") is not None else c.get("valor", 0)
             v_cont = c.get("valor_contas") if c.get("valor_contas") is not None else c.get("valor", 0)
             diff = c.get("diferenca", 0) or 0
+
+            # Deriva tipo a partir dos extratos envolvidos
+            ext_ids = c.get("extrato_ids") or ([c.get("extrato_id")] if c.get("extrato_id") else [])
+            tipos = {tipo_por_ext.get(eid, "") for eid in ext_ids if eid}
+            tipos.discard("")
+            if tipos == {"entrada"}:
+                tipo_label, sinal, cor = "ENTRADA", "+", colors.HexColor("#2E7D32")
+            elif tipos == {"saida"}:
+                tipo_label, sinal, cor = "SAÍDA", "-", colors.HexColor("#C62828")
+            else:
+                tipo_label, sinal, cor = "MISTO", "", colors.HexColor("#616161")
+
             data_tbl.append([
                 _fmt_date(data_c),
+                tipo_label,
                 Paragraph("<br/>".join(ext_desc)[:200], normal_style),
                 Paragraph("<br/>".join(cont_desc)[:200], normal_style),
-                _fmt_brl(v_ext),
-                _fmt_brl(v_cont),
+                f"{sinal} {_fmt_brl(v_ext)}" if sinal else _fmt_brl(v_ext),
+                f"{sinal} {_fmt_brl(v_cont)}" if sinal else _fmt_brl(v_cont),
                 _fmt_brl(diff),
             ])
-        t = Table(data_tbl, colWidths=[2 * cm, 7 * cm, 7 * cm, 3 * cm, 3 * cm, 2 * cm])
+            row_styles.append(("TEXTCOLOR", (1, idx), (1, idx), cor))
+            row_styles.append(("FONTNAME", (1, idx), (1, idx), "Helvetica-Bold"))
+            row_styles.append(("TEXTCOLOR", (4, idx), (5, idx), cor))
+            row_styles.append(("FONTNAME", (4, idx), (5, idx), "Helvetica-Bold"))
+        t = Table(data_tbl, colWidths=[2 * cm, 2 * cm, 6.5 * cm, 6.5 * cm, 2.7 * cm, 2.7 * cm, 2 * cm])
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
-            ("ALIGN", (0, 0), (0, -1), "CENTER"),
+            ("ALIGN", (4, 0), (-1, -1), "RIGHT"),
+            ("ALIGN", (0, 0), (1, -1), "CENTER"),
             ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ("TOPPADDING", (0, 0), (-1, -1), 3),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            *row_styles,
         ]))
         elements.append(t)
     else:
@@ -696,38 +735,59 @@ async def export_conciliacao_pdf(
     if completo:
         if extratos_pend:
             elements.append(Paragraph("Extratos Pendentes de Conciliação", section_style))
+            elements.append(Paragraph(
+                "<font color='#2E7D32'>Verde</font> = Entrada &nbsp;&nbsp; "
+                "<font color='#C62828'>Vermelho</font> = Saída",
+                normal_style,
+            ))
             rows = [["Data", "Descrição", "Tipo", "Valor"]]
-            for e in extratos_pend[:200]:
+            row_styles = []
+            for idx, e in enumerate(extratos_pend[:200], start=1):
+                is_entrada = (e.get("tipo", "") or "").lower() == "entrada"
+                tipo_label = "ENTRADA" if is_entrada else "SAÍDA"
+                sinal = "+" if is_entrada else "-"
+                cor = colors.HexColor("#2E7D32") if is_entrada else colors.HexColor("#C62828")
                 rows.append([
                     _fmt_date(e.get("data")),
                     Paragraph((e.get("descricao", "") or "")[:200], normal_style),
-                    (e.get("tipo", "") or "").upper(),
-                    _fmt_brl(e.get("valor", 0)),
+                    tipo_label,
+                    f"{sinal} {_fmt_brl(e.get('valor', 0))}",
                 ])
+                # Cor do tipo e do valor
+                row_styles.append(("TEXTCOLOR", (2, idx), (3, idx), cor))
+                row_styles.append(("FONTNAME", (2, idx), (3, idx), "Helvetica-Bold"))
             t = Table(rows, colWidths=[2 * cm, 15 * cm, 2.5 * cm, 3 * cm])
             t.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("ALIGN", (2, 0), (2, -1), "CENTER"),
                 ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
                 ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
                 ("TOPPADDING", (0, 0), (-1, -1), 3),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                *row_styles,
             ]))
             elements.append(t)
 
         if contas_pend_pagar:
             elements.append(Paragraph("Contas a Pagar Pendentes", section_style))
+            elements.append(Paragraph(
+                "<font color='#C62828'>Valor em vermelho</font> = saída financeira",
+                normal_style,
+            ))
             rows = [["Vencimento", "Fornecedor", "Descrição", "Valor"]]
+            n_rows = 0
             for c in contas_pend_pagar[:200]:
                 rows.append([
                     _fmt_date(c.get("data_vencimento")),
                     Paragraph((c.get("fornecedor_nome") or "")[:80], normal_style),
                     Paragraph((c.get("descricao") or "")[:200], normal_style),
-                    _fmt_brl(c.get("valor_final") or c.get("valor", 0)),
+                    f"- {_fmt_brl(c.get('valor_final') or c.get('valor', 0))}",
                 ])
+                n_rows += 1
             t = Table(rows, colWidths=[2.5 * cm, 5 * cm, 11 * cm, 3 * cm])
             t.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
@@ -735,6 +795,8 @@ async def export_conciliacao_pdf(
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+                ("TEXTCOLOR", (3, 1), (3, n_rows), colors.HexColor("#C62828")),
+                ("FONTNAME", (3, 1), (3, n_rows), "Helvetica-Bold"),
                 ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
                 ("TOPPADDING", (0, 0), (-1, -1), 3),
@@ -744,14 +806,20 @@ async def export_conciliacao_pdf(
 
         if contas_pend_receber:
             elements.append(Paragraph("Contas a Receber Pendentes", section_style))
+            elements.append(Paragraph(
+                "<font color='#2E7D32'>Valor em verde</font> = entrada financeira",
+                normal_style,
+            ))
             rows = [["Vencimento", "Cliente", "Descrição", "Valor"]]
+            n_rows = 0
             for c in contas_pend_receber[:200]:
                 rows.append([
                     _fmt_date(c.get("data_vencimento")),
                     Paragraph((c.get("cliente_nome") or "")[:80], normal_style),
                     Paragraph((c.get("descricao") or "")[:200], normal_style),
-                    _fmt_brl(c.get("valor_final") or c.get("valor", 0)),
+                    f"+ {_fmt_brl(c.get('valor_final') or c.get('valor', 0))}",
                 ])
+                n_rows += 1
             t = Table(rows, colWidths=[2.5 * cm, 5 * cm, 11 * cm, 3 * cm])
             t.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#C62828")),
@@ -759,6 +827,8 @@ async def export_conciliacao_pdf(
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+                ("TEXTCOLOR", (3, 1), (3, n_rows), colors.HexColor("#2E7D32")),
+                ("FONTNAME", (3, 1), (3, n_rows), "Helvetica-Bold"),
                 ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
                 ("TOPPADDING", (0, 0), (-1, -1), 3),

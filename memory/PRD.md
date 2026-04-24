@@ -1,5 +1,26 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Padrão de Cores Completo (Extrato + PDF)
+
+### ✅ Padrão de cores aplicado no lado do Extrato
+- Adicionada coluna **"Tipo"** na tabela de extratos com badge colorido:
+  - **Entrada** → verde (bg-green-100, ícone TrendingUp)
+  - **Saída** → vermelho (bg-red-100, ícone TrendingDown)
+- Agora o extrato tem identificação visual igualitária ao lado das Contas do Sistema (que já tinha badge Pagar/Receber colorido).
+
+### ✅ Padrão de cores no PDF exportado (`/api/conciliacao/export-pdf`)
+- **Extratos Pendentes**: cor verde em ENTRADA (+), vermelho em SAÍDA (-), com legenda no topo da seção.
+- **Contas a Pagar Pendentes**: valor em **vermelho negrito** com sinal "-", legenda explicativa.
+- **Contas a Receber Pendentes**: valor em **verde negrito** com sinal "+", legenda explicativa.
+- **Conciliações Realizadas**: nova coluna **Tipo** (ENTRADA/SAÍDA/MISTO) + cores aplicadas em Valor Extrato e Valor Conta. Inclui legenda no topo. Tipos derivados dos extratos vinculados (batch fetch, sem N+1).
+
+### Testing
+- PDF validado via análise IA (`analyze_file_tool`) confirmando cores aplicadas corretamente, legendas presentes e tabelas bem estruturadas. Tamanho 4KB, magic `%PDF` OK, status 200.
+- Lint Python e JavaScript passaram sem issues.
+
+---
+
+
 ## Changelog - 23/04/2026 (Sessão 33) — Conciliação N:M Frontend + Fix Race Condition
 
 ### ✅ Finalização da migração singular→plural em ConciliacaoPage.jsx

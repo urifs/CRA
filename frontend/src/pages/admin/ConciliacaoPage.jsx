@@ -774,6 +774,7 @@ export default function ConciliacaoPage() {
                 <TableHeader>
                   <TableRow className="bg-yellow-50/50">
                     <TableHead className="w-10"></TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
@@ -810,6 +811,21 @@ export default function ConciliacaoPage() {
                               );
                             }}
                           />
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              item.tipo === "entrada"
+                                ? "bg-green-100 text-green-700 border-green-200"
+                                : "bg-red-100 text-red-700 border-red-200"
+                            }
+                          >
+                            {item.tipo === "entrada" ? (
+                              <><TrendingUp size={10} className="mr-1" />Entrada</>
+                            ) : (
+                              <><TrendingDown size={10} className="mr-1" />Saída</>
+                            )}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-sm">{formatDate(item.data)}</TableCell>
                         <TableCell className="text-sm max-w-[200px] truncate" title={item.descricao}>
