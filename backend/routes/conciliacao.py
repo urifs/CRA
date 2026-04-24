@@ -349,17 +349,27 @@ async def conciliar_itens(
         raise HTTPException(status_code=400, detail="Esta conta já foi conciliada")
 
     conciliacao_id = str(uuid.uuid4())
+    _now_iso = datetime.now(timezone.utc).isoformat()
     conciliacao_doc = {
         "id": conciliacao_id,
         "extrato_id": extrato_id,
+        "extrato_ids": [extrato_id],
         "extrato_descricao": extrato.get("descricao", ""),
+        "extratos_descricao": [extrato.get("descricao", "")],
         "conta_id": conta_id,
         "conta_tipo": conta_tipo,
         "conta_descricao": conta.get("descricao", conta.get("favorecido", "")),
+        "contas_ids": [conta_id],
+        "contas_tipos": [conta_tipo],
+        "contas_descricao": [f"[{conta_tipo.capitalize()}] {conta.get('descricao', conta.get('favorecido', ''))}"],
         "valor": extrato.get("valor", 0),
+        "valor_extratos": extrato.get("valor", 0),
+        "valor_contas": conta.get("valor_final") or conta.get("valor", 0),
+        "diferenca": abs((extrato.get("valor", 0) or 0) - ((conta.get("valor_final") or conta.get("valor", 0)) or 0)),
         "data_extrato": extrato.get("data"),
+        "data_conciliacao": _now_iso[:10],
         "created_by": current_user["id"],
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": _now_iso,
     }
     await db.conciliacoes.insert_one(conciliacao_doc)
 
@@ -556,6 +566,7 @@ async def export_conciliacao_pdf(
 
     # Filtros de conciliações
     conc_filter: dict = {}
+    conta_filter_or = None
     if conta_bancaria_id:
         # Busca conciliações que usaram extratos daquela conta
         extratos_conta = await db.extratos_bancarios.find(
@@ -563,12 +574,31 @@ async def export_conciliacao_pdf(
             {"_id": 0, "id": 1},
         ).to_list(5000)
         ids_ext_conta = [e["id"] for e in extratos_conta]
-        conc_filter["$or"] = [
+        conta_filter_or = [
             {"extrato_id": {"$in": ids_ext_conta}},
             {"extrato_ids": {"$in": ids_ext_conta}},
         ]
+
+    # Filtro de período: considera data_conciliacao (nova) OU created_at (legado).
+    # Conciliações antigas do endpoint /conciliar singular não têm data_conciliacao.
+    date_filter_or = None
     if data_inicio and data_fim:
-        conc_filter["data_conciliacao"] = {"$gte": data_inicio, "$lte": data_fim}
+        date_filter_or = [
+            {"data_conciliacao": {"$gte": data_inicio, "$lte": data_fim}},
+            {
+                "data_conciliacao": {"$exists": False},
+                "created_at": {"$gte": data_inicio, "$lte": data_fim + "T23:59:59"},
+            },
+        ]
+
+    # Combina filtros via $and para permitir múltiplos $or
+    and_clauses = []
+    if conta_filter_or:
+        and_clauses.append({"$or": conta_filter_or})
+    if date_filter_or:
+        and_clauses.append({"$or": date_filter_or})
+    if and_clauses:
+        conc_filter["$and"] = and_clauses
 
     conciliacoes = await db.conciliacoes.find(conc_filter, {"_id": 0}).sort("created_at", -1).to_list(2000)
 

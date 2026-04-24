@@ -1,5 +1,27 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Fix: Lista de Conciliações sumindo no PDF
+
+### 🐛 Bug identificado
+O filtro de período no export PDF (`/api/conciliacao/export-pdf?data_inicio=...&data_fim=...`) consultava apenas o campo `data_conciliacao` no MongoDB. Porém, **conciliações criadas pelo endpoint singular `/conciliar` (legacy, ainda ativo) não salvavam `data_conciliacao`** — apenas `created_at`. Resultado: toda vez que o usuário aplicava filtro de período, as conciliações antigas eram excluídas do resultado e o PDF saía sem a lista.
+
+### ✅ Correções
+1. **Filtro de período resiliente a formato legado** (`routes/conciliacao.py` — export_pdf):
+   - Agora o filtro usa `$or`:
+     - `{data_conciliacao: {$gte, $lte}}` — conciliações novas
+     - `{data_conciliacao: {$exists: false}, created_at: {$gte, $lte}}` — conciliações legadas
+   - Combinado com o filtro de conta bancária via `$and` para evitar conflito de múltiplos `$or` no MongoDB.
+
+2. **Endpoint `/conciliar` (singular) agora salva todos os campos modernos**:
+   - `data_conciliacao`, `extrato_ids`, `contas_ids`, `contas_tipos`, `extratos_descricao`, `contas_descricao`, `valor_extratos`, `valor_contas`, `diferenca`
+   - Preserva também os campos antigos para retrocompatibilidade.
+
+### Testing via `analyze_file_tool`
+- Gerado PDF com filtro abril/2026 incluindo conciliação **sem data_conciliacao** (simulando bug do usuário): 3 conciliações aparecem (antes: apenas 2 com data_conciliacao). Tabela renderizada corretamente com Tipo ENTRADA/SAÍDA/MISTO e cores.
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Correções Recibo e Duplicata
 
 ### ✅ Recibo de Pagamento (`/api/export/recibo/...`)
