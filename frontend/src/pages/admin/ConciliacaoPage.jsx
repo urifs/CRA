@@ -227,7 +227,10 @@ export default function ConciliacaoPage() {
       });
       toast.success(response.data.message || "Extrato limpo com sucesso!");
       setExtratoItems([]);
-      setSelectedExtratoItem(null);
+      setSelectedExtratoIds([]);
+      setSelectedContaKeys([]);
+      setSugestaoExtratoIds(new Set());
+      setSugestaoContaKeys(new Set());
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao limpar extrato");
     }
@@ -1239,36 +1242,106 @@ export default function ConciliacaoPage() {
         </Card>
       )}
 
-      {/* Detalhes da Seleção */}
-      {(selectedExtratoItem || selectedConta) && (
-        <Card className="border-2 border-dashed border-gray-300">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {selectedExtratoItem && (
-                <div className="p-3 bg-yellow-50 rounded-lg">
-                  <p className="text-xs font-medium text-yellow-600 mb-1">EXTRATO SELECIONADO</p>
-                  <p className="font-medium">{selectedExtratoItem.descricao}</p>
-                  <p className="text-sm text-gray-600">{formatDate(selectedExtratoItem.data)}</p>
-                  <p className={`text-lg font-bold ${selectedExtratoItem.tipo === "entrada" ? "text-green-600" : "text-red-600"}`}>
-                    {selectedExtratoItem.tipo === "entrada" ? "+" : "-"}{formatCurrency(selectedExtratoItem.valor)}
-                  </p>
+      {/* Detalhes da Seleção (Lote N:M) */}
+      {(selectedExtratoIds.length > 0 || selectedContaKeys.length > 0) && (() => {
+        const extratosSel = extratoItems.filter((e) => selectedExtratoIds.includes(e.id));
+        const contasSel = contas.filter((c) => selectedContaKeys.includes(`${c.tipo}-${c.id}`));
+        const totalExtratoSaidas = extratosSel.filter(e => e.tipo === "saida").reduce((s, e) => s + (e.valor || 0), 0);
+        const totalExtratoEntradas = extratosSel.filter(e => e.tipo === "entrada").reduce((s, e) => s + (e.valor || 0), 0);
+        const totalContasPagar = contasSel.filter(c => c.tipo === "pagar").reduce((s, c) => s + (c.valor_final ?? c.valor ?? 0), 0);
+        const totalContasReceber = contasSel.filter(c => c.tipo === "receber").reduce((s, c) => s + (c.valor_final ?? c.valor ?? 0), 0);
+        const somaExtrato = totalExtratoEntradas - totalExtratoSaidas;
+        const somaContas = totalContasReceber - totalContasPagar;
+        const diferenca = Math.abs(somaExtrato - somaContas);
+        return (
+          <Card className="border-2 border-dashed border-gray-300" data-testid="painel-selecao-lote">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {extratosSel.length > 0 && (
+                  <div className="p-3 bg-yellow-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-yellow-700">
+                        EXTRATOS SELECIONADOS ({extratosSel.length})
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-yellow-700 hover:bg-yellow-100"
+                        onClick={() => setSelectedExtratoIds([])}
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {extratosSel.map((e) => (
+                        <div key={e.id} className="flex items-center justify-between text-xs gap-2 border-b border-yellow-100 pb-1">
+                          <span className="truncate flex-1" title={e.descricao}>{formatDate(e.data)} — {e.descricao}</span>
+                          <span className={`font-mono font-medium ${e.tipo === "entrada" ? "text-green-600" : "text-red-600"}`}>
+                            {e.tipo === "entrada" ? "+" : "-"}{formatCurrency(e.valor)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-yellow-200 flex items-center justify-between">
+                      <span className="text-xs font-medium text-yellow-700">Saldo</span>
+                      <span className={`text-base font-bold ${somaExtrato >= 0 ? "text-green-700" : "text-red-700"}`}>
+                        {formatCurrency(somaExtrato)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {contasSel.length > 0 && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-blue-700">
+                        CONTAS SELECIONADAS ({contasSel.length})
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-blue-700 hover:bg-blue-100"
+                        onClick={() => setSelectedContaKeys([])}
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {contasSel.map((c) => (
+                        <div key={`${c.tipo}-${c.id}`} className="flex items-center justify-between text-xs gap-2 border-b border-blue-100 pb-1">
+                          <span className="truncate flex-1" title={c.descricao || c.favorecido}>
+                            {formatDate(c.data_vencimento)} — {c.descricao || c.favorecido || "-"}
+                            <Badge className={`ml-1 text-[9px] ${c.tipo === "pagar" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                              {c.tipo === "pagar" ? "Pagar" : "Receber"}
+                            </Badge>
+                          </span>
+                          <span className={`font-mono font-medium ${c.tipo === "receber" ? "text-green-600" : "text-red-600"}`}>
+                            {formatCurrency(c.valor_final ?? c.valor)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-blue-200 flex items-center justify-between">
+                      <span className="text-xs font-medium text-blue-700">Saldo</span>
+                      <span className={`text-base font-bold ${somaContas >= 0 ? "text-green-700" : "text-red-700"}`}>
+                        {formatCurrency(somaContas)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {extratosSel.length > 0 && contasSel.length > 0 && (
+                <div className={`mt-3 p-2 rounded-lg text-center text-sm font-medium ${diferenca < 0.01 ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                  {diferenca < 0.01
+                    ? "Saldos conferem — pronto para conciliar em lote"
+                    : `Diferença: ${formatCurrency(diferenca)} entre extrato e contas`}
                 </div>
               )}
-              
-              {selectedConta && (
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs font-medium text-blue-600 mb-1">CONTA SELECIONADA</p>
-                  <p className="font-medium">{selectedConta.descricao || selectedConta.favorecido}</p>
-                  <p className="text-sm text-gray-600">Vencimento: {formatDate(selectedConta.data_vencimento)}</p>
-                  <p className={`text-lg font-bold ${selectedConta.tipo === "receber" ? "text-green-600" : "text-red-600"}`}>
-                    {formatCurrency(selectedConta.valor)}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Lista de Conciliações Realizadas */}
       {conciliacoes.length > 0 && (
