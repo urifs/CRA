@@ -161,10 +161,10 @@ export default function SystemSelectPage() {
               Gerenciamento
             </h1>
           </div>
-          <p className="text-gray-400 text-sm sm:text-base flex flex-wrap items-center justify-center gap-2">
+          <div className="text-gray-400 text-sm sm:text-base flex flex-wrap items-center justify-center gap-2">
             <span>Olá, <span className="text-white font-medium">{user?.name}</span>!</span>
             {getRoleBadge()}
-          </p>
+          </div>
           <p className="text-gray-500 text-xs sm:text-sm mt-2">
             Selecione o sistema que deseja acessar:
           </p>

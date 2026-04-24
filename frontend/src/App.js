@@ -70,6 +70,13 @@ import RHMorePage from "@/pages/rh/RHMorePage";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
+// Apply token synchronously on module load to avoid race condition
+// between the AuthProvider useEffect and children components' initial fetch.
+const _boot_token = (typeof localStorage !== "undefined") ? localStorage.getItem("token") : null;
+if (_boot_token) {
+  axios.defaults.headers.common["Authorization"] = `Bearer ${_boot_token}`;
+}
+
 // Auth Context
 export const AuthContext = createContext(null);
 

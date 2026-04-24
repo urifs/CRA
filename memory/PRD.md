@@ -1,5 +1,35 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 23/04/2026 (Sessão 33) — Conciliação N:M Frontend + Fix Race Condition
+
+### ✅ Finalização da migração singular→plural em ConciliacaoPage.jsx
+- **Fix 1**: `handleLimparExtrato` chamava `setSelectedExtratoItem(null)` (variável extinta). Corrigido para limpar `selectedExtratoIds`, `selectedContaKeys` e os sets de sugestões.
+- **Fix 2**: Painel "Detalhes da Seleção" foi reescrito do singular para lote N:M:
+  - Lista iterável dos extratos selecionados (com data, descrição e valor colorido)
+  - Lista iterável das contas selecionadas (com badge Pagar/Receber)
+  - **Totais somados** (saldo extrato e saldo contas)
+  - **Indicador de diferença** (verde se saldos batem, laranja caso contrário)
+  - Botão "Limpar" por coluna
+  - `data-testid="painel-selecao-lote"` para testes automatizados
+- **Bônus**: Corrigido hydration warning em `SystemSelectPage.jsx:164` (Badge dentro de `<p>` → `<div>`)
+- **Bônus**: Eliminada race condition do axios Authorization header em `App.js` — token agora é aplicado sincronamente no boot do módulo, antes do primeiro render. Elimina o toast "Erro ao carregar contas" que aparecia brevemente na entrada das páginas.
+
+### Testing Agent Report — iteration_32.json
+- **Resultado**: 13/14 pontos OK — 0 crashes, 0 bugs funcionais
+- **34 checkboxes** role=checkbox renderizados na conciliação
+- **Multi-seleção funcional**: contador do botão atualiza corretamente (`0 ↔ 3`)
+- **painel-selecao-lote** aparece quando há ≥1 seleção
+- **Legenda de cores completa** (Conciliado verde / Sugerido sky / Selecionado yellow / Pendente branco)
+- **Botões PDF** presentes: `btn-export-pdf-conciliacao` e `btn-export-pdf-completo`
+- **Sugerir Automático** popula 36 elementos sky/blue
+
+### ⚠️ Nota do testing agent
+- Rota correta é `/administrativo/conciliacao` (não `/admin/conciliacao`). Não é bug.
+- Busca por valor em Contas a Pagar/Receber implementada como **campo único** (não range min/max). Decisão de produto necessária se o cliente preferir range.
+
+---
+
+
 
 ## Changelog - 22/04/2026 (Sessão 32) — PARTE 5: Refatoração Fase 2 COMPLETA 🚀
 
