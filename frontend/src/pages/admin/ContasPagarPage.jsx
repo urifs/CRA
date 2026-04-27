@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, Search, CreditCard, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Filter, Paperclip, UserPlus, Landmark, History, DollarSign, CircleDot, FileDown
+  Plus, Search, CreditCard, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Filter, Paperclip, UserPlus, Landmark, History, DollarSign, CircleDot, FileDown, TrendingUp, TrendingDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -61,6 +61,9 @@ export default function ContasPagarPage() {
   const [valorPagamento, setValorPagamento] = useState("");
   const [tipoPagamento, setTipoPagamento] = useState("total"); // "total" ou "parcial"
   const [observacaoPagamento, setObservacaoPagamento] = useState("");
+  const [valorJuros, setValorJuros] = useState("");
+  const [valorMulta, setValorMulta] = useState("");
+  const [valorDesconto, setValorDesconto] = useState("");
   const [showHistoricoPagamentos, setShowHistoricoPagamentos] = useState(false);
   
   // Estados para parcelamento
@@ -225,6 +228,9 @@ export default function ContasPagarPage() {
     setValorPagamento(formatCurrencyInput(saldoRestante.toFixed(2)));
     setTipoPagamento("total");
     setObservacaoPagamento("");
+    setValorJuros("");
+    setValorMulta("");
+    setValorDesconto("");
     setShowHistoricoPagamentos(false);
     setShowQuitarModal(true);
   };
@@ -258,6 +264,9 @@ export default function ContasPagarPage() {
         data_pagamento: dataPagamento,
         conta_bancaria_id: quitarContaBancaria,
         valor_pago: tipoPagamento === "parcial" ? valorPagar : null,
+        valor_juros: parseCurrency(valorJuros) || 0,
+        valor_multa: parseCurrency(valorMulta) || 0,
+        valor_desconto: parseCurrency(valorDesconto) || 0,
         observacao: observacaoPagamento || null
       });
       
@@ -273,6 +282,9 @@ export default function ContasPagarPage() {
       setValorPagamento("");
       setTipoPagamento("total");
       setObservacaoPagamento("");
+      setValorJuros("");
+      setValorMulta("");
+      setValorDesconto("");
       fetchContas();
     } catch (error) { 
       toast.error(error.response?.data?.detail || "Erro ao processar pagamento"); 
@@ -636,7 +648,7 @@ export default function ContasPagarPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="z-[9999]">
-                          {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24, 36, 48, 60].map(n => (
+                          {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24, 36, 48, 60, 72, 84, 96, 108, 120].map(n => (
                             <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
                           ))}
                         </SelectContent>
@@ -929,6 +941,67 @@ export default function ContasPagarPage() {
                   placeholder="Ex: Pagamento referente a parcela 1/3"
                   rows={2}
                 />
+              </div>
+
+              {/* Juros / Multa / Desconto (todos opcionais) */}
+              <div className="space-y-2 border-t pt-3">
+                <p className="text-xs uppercase font-semibold text-gray-500 tracking-wide">
+                  Ajustes (opcionais)
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+                      <TrendingUp size={12} /> Juros
+                    </label>
+                    <Input
+                      value={valorJuros}
+                      onChange={(e) => setValorJuros(formatCurrencyInput(e.target.value))}
+                      placeholder="R$ 0,00"
+                      className="text-sm"
+                      data-testid="input-juros-pagamento"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-red-700 flex items-center gap-1">
+                      <AlertCircle size={12} /> Multa
+                    </label>
+                    <Input
+                      value={valorMulta}
+                      onChange={(e) => setValorMulta(formatCurrencyInput(e.target.value))}
+                      placeholder="R$ 0,00"
+                      className="text-sm"
+                      data-testid="input-multa-pagamento"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-green-700 flex items-center gap-1">
+                      <TrendingDown size={12} /> Desconto
+                    </label>
+                    <Input
+                      value={valorDesconto}
+                      onChange={(e) => setValorDesconto(formatCurrencyInput(e.target.value))}
+                      placeholder="R$ 0,00"
+                      className="text-sm"
+                      data-testid="input-desconto-pagamento"
+                    />
+                  </div>
+                </div>
+                {(parseCurrency(valorJuros) + parseCurrency(valorMulta) + parseCurrency(valorDesconto) > 0) && (() => {
+                  const j = parseCurrency(valorJuros) || 0;
+                  const m = parseCurrency(valorMulta) || 0;
+                  const d = parseCurrency(valorDesconto) || 0;
+                  const base = tipoPagamento === "parcial" ? (parseCurrency(valorPagamento) || 0) : (quitarContaInfo.valor_final || quitarContaInfo.valor || 0) - (quitarContaInfo.valor_pago || 0);
+                  const liquido = base + j + m - d;
+                  return (
+                    <div className="bg-blue-50 p-2 rounded text-xs space-y-0.5 mt-1">
+                      <div className="flex justify-between"><span>Base:</span><span className="font-mono">{formatCurrency(base)}</span></div>
+                      {j > 0 && <div className="flex justify-between text-orange-700"><span>+ Juros:</span><span className="font-mono">{formatCurrency(j)}</span></div>}
+                      {m > 0 && <div className="flex justify-between text-red-700"><span>+ Multa:</span><span className="font-mono">{formatCurrency(m)}</span></div>}
+                      {d > 0 && <div className="flex justify-between text-green-700"><span>- Desconto:</span><span className="font-mono">{formatCurrency(d)}</span></div>}
+                      <div className="flex justify-between border-t pt-1 font-bold"><span>Valor Líquido:</span><span className="font-mono">{formatCurrency(liquido)}</span></div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="flex gap-3 pt-2">

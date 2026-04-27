@@ -2421,6 +2421,31 @@ async def export_recibo(
         def _brl(v):
             return f"R$ {(v or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         resumo_style = ParagraphStyle('DetailValueHL', fontSize=10, leading=13, fontName='Helvetica-Bold')
+        # Ajustes opcionais do pagamento: juros, multa, desconto
+        vj = float(pagamento_sel.get("valor_juros") or 0)
+        vm = float(pagamento_sel.get("valor_multa") or 0)
+        vd = float(pagamento_sel.get("valor_desconto") or 0)
+        if vj > 0:
+            detail_data.append([
+                Paragraph("Juros", detail_label_style),
+                Paragraph(f"<font color='#EF6C00'>+ {_brl(vj)}</font>", resumo_style),
+            ])
+        if vm > 0:
+            detail_data.append([
+                Paragraph("Multa", detail_label_style),
+                Paragraph(f"<font color='#C62828'>+ {_brl(vm)}</font>", resumo_style),
+            ])
+        if vd > 0:
+            detail_data.append([
+                Paragraph("Desconto", detail_label_style),
+                Paragraph(f"<font color='#2E7D32'>- {_brl(vd)}</font>", resumo_style),
+            ])
+        if vj + vm + vd > 0:
+            liquido_parcela = valor + vj + vm - vd
+            detail_data.append([
+                Paragraph("Valor Líquido da Parcela", detail_label_style),
+                Paragraph(_brl(liquido_parcela), resumo_style),
+            ])
         detail_data.append([Paragraph("Valor Total da Conta", detail_label_style), Paragraph(_brl(valor_total_conta), resumo_style)])
         detail_data.append([Paragraph("Total Pago (com este)", detail_label_style), Paragraph(_brl(valor_ja_pago_ate_aqui), resumo_style)])
         detail_data.append([
@@ -2627,6 +2652,23 @@ async def export_duplicata(category: str, item_id: str, empresa: str = "locadora
         [Paragraph(descricao if descricao else "-", desc_value_style)],
         [Paragraph(f"<b>Plano de Contas:</b> {plano_contas if plano_contas else '-'} | <b>Centro de Custo:</b> {centro_custo if centro_custo else '-'} | <b>Forma Pagamento:</b> {forma_pag if forma_pag else '-'}", desc_info_style)],
     ]
+
+    # Ajustes da conta (juros/multa/desconto) — só aparecem se presentes
+    conta_juros = float(item.get("valor_juros") or 0)
+    conta_multa = float(item.get("valor_multa") or 0)
+    conta_desconto = float(item.get("valor_desconto") or 0)
+    if conta_juros + conta_multa + conta_desconto > 0:
+        def _brl_dup(v):
+            return f"R$ {(v or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        partes_ajuste = []
+        if conta_juros > 0:
+            partes_ajuste.append(f"<b>Juros:</b> <font color='#EF6C00'>+ {_brl_dup(conta_juros)}</font>")
+        if conta_multa > 0:
+            partes_ajuste.append(f"<b>Multa:</b> <font color='#C62828'>+ {_brl_dup(conta_multa)}</font>")
+        if conta_desconto > 0:
+            partes_ajuste.append(f"<b>Desconto:</b> <font color='#2E7D32'>- {_brl_dup(conta_desconto)}</font>")
+        desc_data.append([Paragraph(" | ".join(partes_ajuste), desc_info_style)])
+
     if obs:
         desc_data.append([Paragraph(f"<b>Obs:</b> {obs}", ParagraphStyle('Obs', fontSize=8, textColor=colors.gray, leading=11, wordWrap='CJK'))])
     

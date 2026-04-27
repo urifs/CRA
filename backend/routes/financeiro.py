@@ -87,6 +87,9 @@ class QuitarContaRequest(BaseModel):
     data_pagamento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None
     valor_pago: Optional[float] = None
+    valor_juros: Optional[float] = 0
+    valor_multa: Optional[float] = 0
+    valor_desconto: Optional[float] = 0
     observacao: Optional[str] = None
 
 
@@ -158,8 +161,13 @@ class ContaReceberParceladaCreate(BaseModel):
 
 class QuitarContaReceberRequest(BaseModel):
     data_recebimento: Optional[str] = None
+    data_pagamento: Optional[str] = None  # alias aceito pelo frontend
     conta_bancaria_id: Optional[str] = None
     valor_recebido: Optional[float] = None
+    valor_pago: Optional[float] = None  # alias
+    valor_juros: Optional[float] = 0
+    valor_multa: Optional[float] = 0
+    valor_desconto: Optional[float] = 0
     observacao: Optional[str] = None
 
 
@@ -381,11 +389,18 @@ async def quitar_conta_pagar(
         "id": str(uuid.uuid4()),
         "data": data_pagamento,
         "valor": valor_pago_agora,
+        "valor_juros": (data.valor_juros or 0) if data else 0,
+        "valor_multa": (data.valor_multa or 0) if data else 0,
+        "valor_desconto": (data.valor_desconto or 0) if data else 0,
         "conta_bancaria_id": conta_bancaria_id,
         "observacao": data.observacao if data else None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.get("name", current_user.get("email", "")),
     }
+
+    # Valor líquido realmente movimentado no banco (incluindo juros/multa/desconto)
+    ajuste_liquido = ((data.valor_juros or 0) + (data.valor_multa or 0) - (data.valor_desconto or 0)) if data else 0
+    valor_liquido_movimentado = valor_pago_agora + ajuste_liquido
 
     pagamentos_historico = conta.get("pagamentos", []) or []
     pagamentos_historico.append(pagamento_registro)
@@ -404,7 +419,7 @@ async def quitar_conta_pagar(
         update_data["conta_bancaria_id"] = conta_bancaria_id
         conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
         if conta_bancaria:
-            novo_saldo_banco = (conta_bancaria.get("saldo_atual", 0) or 0) - valor_pago_agora
+            novo_saldo_banco = (conta_bancaria.get("saldo_atual", 0) or 0) - valor_liquido_movimentado
             await db.contas_bancarias.update_one(
                 {"id": conta_bancaria_id},
                 {"$set": {"saldo_atual": novo_saldo_banco, "updated_at": datetime.now(timezone.utc).isoformat()}},
@@ -640,14 +655,22 @@ async def quitar_conta_receber(
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
 
-    data_recebimento = data.data_recebimento if data and data.data_recebimento else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Frontend pode mandar data_pagamento/valor_pago (alias) — aceitar ambos
+    data_recebimento = (
+        (data.data_recebimento if data and data.data_recebimento else None)
+        or (data.data_pagamento if data and data.data_pagamento else None)
+        or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    )
     conta_bancaria_id = data.conta_bancaria_id if data else None
 
     valor_total = conta.get("valor_final") or conta.get("valor", 0)
     valor_ja_recebido = conta.get("valor_recebido", 0) or 0
     saldo_restante_atual = valor_total - valor_ja_recebido
 
-    valor_recebido_agora = data.valor_recebido if data and data.valor_recebido is not None else saldo_restante_atual
+    valor_recebido_input = None
+    if data:
+        valor_recebido_input = data.valor_recebido if data.valor_recebido is not None else data.valor_pago
+    valor_recebido_agora = valor_recebido_input if valor_recebido_input is not None else saldo_restante_atual
 
     if valor_recebido_agora > saldo_restante_atual + 0.01:
         raise HTTPException(
@@ -668,11 +691,18 @@ async def quitar_conta_receber(
         "id": str(uuid.uuid4()),
         "data": data_recebimento,
         "valor": valor_recebido_agora,
+        "valor_juros": (data.valor_juros or 0) if data else 0,
+        "valor_multa": (data.valor_multa or 0) if data else 0,
+        "valor_desconto": (data.valor_desconto or 0) if data else 0,
         "conta_bancaria_id": conta_bancaria_id,
         "observacao": data.observacao if data else None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.get("name", current_user.get("email", "")),
     }
+
+    # Valor líquido que entra na conta bancária (base + juros + multa - desconto)
+    ajuste_liquido = ((data.valor_juros or 0) + (data.valor_multa or 0) - (data.valor_desconto or 0)) if data else 0
+    valor_liquido_recebido = valor_recebido_agora + ajuste_liquido
 
     recebimentos_historico = conta.get("recebimentos", []) or []
     recebimentos_historico.append(recebimento_registro)
@@ -691,7 +721,7 @@ async def quitar_conta_receber(
         update_data["conta_bancaria_id"] = conta_bancaria_id
         conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
         if conta_bancaria:
-            novo_saldo_banco = (conta_bancaria.get("saldo_atual", 0) or 0) + valor_recebido_agora
+            novo_saldo_banco = (conta_bancaria.get("saldo_atual", 0) or 0) + valor_liquido_recebido
             await db.contas_bancarias.update_one(
                 {"id": conta_bancaria_id},
                 {"$set": {"saldo_atual": novo_saldo_banco, "updated_at": datetime.now(timezone.utc).isoformat()}},

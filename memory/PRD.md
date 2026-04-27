@@ -1,5 +1,46 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Juros/Multa/Desconto + Parcelas até 120x
+
+### ✅ Juros, Multa e Desconto opcionais no formulário de Pagamento/Recebimento
+**Frontend** (`ContasPagarPage.jsx` e `ContasReceberPage.jsx`):
+- Nova seção "Ajustes (opcionais)" no modal de pagamento/recebimento com 3 inputs grid 3 colunas:
+  - 🟠 **Juros** (ícone TrendingUp, laranja)
+  - 🔴 **Multa** (ícone AlertCircle, vermelho)
+  - 🟢 **Desconto** (ícone TrendingDown, verde)
+- **Mini-resumo automático** aparece quando qualquer valor é preenchido: mostra Base + Juros + Multa - Desconto = Valor Líquido.
+- `data-testid`: `input-juros-pagamento`, `input-multa-pagamento`, `input-desconto-pagamento` (e -recebimento).
+
+**Backend** (`routes/financeiro.py`):
+- Models `QuitarContaRequest` e `QuitarContaReceberRequest` ganharam campos `valor_juros`, `valor_multa`, `valor_desconto` (opcionais, default 0).
+- Valores são persistidos em cada registro de `pagamentos[]` / `recebimentos[]`.
+- **Saldo da conta bancária** agora considera ajuste líquido: Pagar debita (valor + juros + multa - desconto); Receber credita a mesma fórmula.
+- `QuitarContaReceberRequest` aceita também aliases `data_pagamento` e `valor_pago` (usados pelo frontend) para retrocompatibilidade.
+
+### ✅ Ajustes aparecem no Recibo exportado
+**Endpoint** `/api/export/recibo/{category}/{item_id}?pagamento_id=...`:
+- Nova lógica: se o pagamento parcial tem `valor_juros`/`valor_multa`/`valor_desconto` > 0, o recibo adiciona linhas coloridas ao "Referente a":
+  - **Juros**: `+ R$ X,XX` em laranja
+  - **Multa**: `+ R$ X,XX` em vermelho
+  - **Desconto**: `- R$ X,XX` em verde
+  - **Valor Líquido da Parcela**: total ajustado, em negrito
+
+### ✅ Ajustes aparecem na Duplicata exportada
+**Endpoint** `/api/export/duplicata/...`:
+- Se a conta tem `valor_juros`/`valor_multa`/`valor_desconto`, uma linha adicional na seção "Descrição / Referência" mostra os valores coloridos inline.
+
+### ✅ Parcelas ampliadas até 120x
+Em ambos os formulários de criação de conta (Pagar e Receber), o dropdown "Número de Parcelas" agora oferece: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24, 36, 48, **60, 72, 84, 96, 108, 120**.
+
+### Validação real
+- Pagamento parcial criado com juros R$ 5, multa R$ 3, desconto R$ 2 sobre valor base R$ 100.
+- Recibo exportado mostra: "Juros: + R$ 5,00 | Multa: + R$ 3,00 | Desconto: - R$ 2,00 | Valor Líquido da Parcela: R$ 106,00" ✅
+- Validado via `analyze_file_tool` (IA confirmou todas as 4 linhas e cores).
+- Lint Python + JS limpos nos 4 arquivos editados.
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — 🎉 Importação NFS-e WebISS FUNCIONAL
 
 ### 🐛 Problema real identificado
