@@ -694,3 +694,170 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
         "novas_nfses": novas_importadas,
         "erros": erros
     }
+
+
+
+@importacao_router.post("/nfse/testar-conexao/{certificado_id}")
+async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(get_current_user)):
+    """Testa a conectividade e autenticação do certificado contra o webservice NFS-e.
+    Faz uma chamada leve (últimos 7 dias) e interpreta a resposta, retornando diagnóstico.
+    NÃO importa notas — apenas valida URL + certificado + inscrição municipal."""
+    certificado = await db.nfe_certificados.find_one({"id": certificado_id}, {"_id": 0})
+    if not certificado:
+        raise HTTPException(status_code=404, detail="Certificado não encontrado")
+
+    if not certificado.get("ativo"):
+        return {"ok": False, "etapa": "certificado", "mensagem": "Certificado inativo. Ative-o antes de testar."}
+
+    url_nfse = (certificado.get("url_nfse") or "").strip()
+    if not url_nfse:
+        return {"ok": False, "etapa": "configuracao", "mensagem": "URL do webservice NFS-e não configurada. Preencha o campo 'URL Webservice' no cadastro do certificado."}
+
+    cnpj_limpo = (certificado.get("cnpj") or "").replace(".", "").replace("/", "").replace("-", "")
+    inscricao_municipal = (certificado.get("inscricao_municipal") or "").strip()
+
+    try:
+        import tempfile
+        import requests as req_sync
+        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        # Etapa 1: carregar certificado A1
+        try:
+            cert_data = base64.b64decode(certificado.get("certificado_base64") or "")
+            senha = certificado.get("senha_certificado", "")
+            private_key, certificate_obj, _ = pkcs12.load_key_and_certificates(
+                cert_data, senha.encode() if senha else None
+            )
+        except Exception as ce:
+            return {
+                "ok": False,
+                "etapa": "certificado",
+                "mensagem": f"Falha ao abrir certificado A1: {str(ce)[:200]}. Verifique arquivo .pfx e senha.",
+            }
+
+        key_pem = private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        cert_pem_bytes = certificate_obj.public_bytes(Encoding.PEM)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pem') as f:
+            f.write(cert_pem_bytes)
+            cert_pem_path = f.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pem') as f:
+            f.write(key_pem)
+            key_pem_path = f.name
+
+        # Etapa 2: montar requisição curta (últimos 7 dias)
+        data_final = datetime.now()
+        data_inicial = data_final - timedelta(days=7)
+        cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
+        im_tag = f"<InscricaoMunicipal>{inscricao_municipal}</InscricaoMunicipal>" if inscricao_municipal else ""
+        dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<ConsultarNfseRecebidosEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
+  <Consulente>
+    <CpfCnpj><Cnpj>{cnpj_limpo}</Cnpj></CpfCnpj>
+    {im_tag}
+  </Consulente>
+  <PeriodoEmissao>
+    <DataInicial>{data_inicial.strftime('%Y-%m-%d')}</DataInicial>
+    <DataFinal>{data_final.strftime('%Y-%m-%d')}</DataFinal>
+  </PeriodoEmissao>
+</ConsultarNfseRecebidosEnvio>"""
+        soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://www.abrasf.org.br/nfse.xsd">
+  <soap:Header/>
+  <soap:Body>
+    <nfse:ConsultarNfseRecebidos>
+      <nfse:nfseCabecMsg><![CDATA[{cabecalho_xml}]]></nfse:nfseCabecMsg>
+      <nfse:nfseDadosMsg><![CDATA[{dados_xml}]]></nfse:nfseDadosMsg>
+    </nfse:ConsultarNfseRecebidos>
+  </soap:Body>
+</soap:Envelope>"""
+        headers_soap = {
+            "Content-Type": "text/xml; charset=utf-8",
+            "SOAPAction": "http://www.abrasf.org.br/nfse.xsd/ConsultarNfseRecebidos",
+        }
+
+        # Etapa 3: chamada HTTP
+        response = None
+        try:
+            response = req_sync.post(
+                url_nfse,
+                data=soap_envelope.encode("utf-8"),
+                headers=headers_soap,
+                cert=(cert_pem_path, key_pem_path),
+                verify=False,
+                timeout=15,
+            )
+        except req_sync.exceptions.SSLError as e:
+            return {"ok": False, "etapa": "ssl",
+                    "mensagem": f"Erro SSL ao conectar. Certificado pode estar expirado ou URL incorreta. Detalhes: {str(e)[:200]}"}
+        except req_sync.exceptions.ConnectTimeout:
+            return {"ok": False, "etapa": "timeout",
+                    "mensagem": f"Timeout ao conectar em {url_nfse}. Verifique se o endpoint está online."}
+        except req_sync.exceptions.ConnectionError as e:
+            return {"ok": False, "etapa": "conexao",
+                    "mensagem": f"Falha ao conectar em {url_nfse}: {str(e)[:200]}"}
+        finally:
+            for p in [cert_pem_path, key_pem_path]:
+                try:
+                    os.unlink(p)
+                except Exception:
+                    pass
+
+        # Etapa 4: interpretar resposta
+        body_lower = (response.text or "").lower()
+        if response.status_code != 200:
+            return {
+                "ok": False,
+                "etapa": "http",
+                "mensagem": f"HTTP {response.status_code}: {_parse_nfse_soap_error(response.text)}",
+            }
+
+        if "<soap:fault" in body_lower or "<s:fault" in body_lower or "<faultstring" in body_lower:
+            return {
+                "ok": False,
+                "etapa": "soap_fault",
+                "mensagem": f"SOAP Fault: {_parse_nfse_soap_error(response.text)}",
+            }
+
+        try:
+            root = ET.fromstring(response.text)
+            msgs_with_error = []
+            total_nfses = 0
+            for msg in root.iter():
+                tag = msg.tag.split('}')[-1] if '}' in msg.tag else msg.tag
+                if tag == "MensagemRetorno":
+                    codigo = ""
+                    descricao = ""
+                    for c in msg.iter():
+                        ctag = c.tag.split('}')[-1] if '}' in c.tag else c.tag
+                        if ctag == "Codigo" and c.text:
+                            codigo = c.text.strip()
+                        elif ctag == "Descricao" and c.text:
+                            descricao = c.text.strip()
+                    if codigo and codigo not in ("0", "S") and descricao:
+                        msgs_with_error.append(f"[Cód {codigo}] {descricao}")
+                elif tag == "CompNfse":
+                    total_nfses += 1
+            if msgs_with_error:
+                return {
+                    "ok": False,
+                    "etapa": "negocio",
+                    "mensagem": "Conexão e certificado OK, mas o webservice rejeitou a consulta: "
+                                + " | ".join(msgs_with_error[:3]),
+                }
+            return {
+                "ok": True,
+                "etapa": "sucesso",
+                "mensagem": f"Conexão OK! Certificado válido e webservice respondendo. {total_nfses} NFS-e encontrada(s) nos últimos 7 dias.",
+            }
+        except ET.ParseError:
+            return {
+                "ok": False,
+                "etapa": "parse",
+                "mensagem": f"Resposta não é XML válido. Verifique se a URL aponta para o endpoint correto. Amostra: {_parse_nfse_soap_error(response.text)}",
+            }
+
+    except Exception as e:
+        logger.error(f"Erro em testar_conexao_nfse: {e}")
+        return {"ok": False, "etapa": "inesperado", "mensagem": f"Erro inesperado: {str(e)[:300]}"}

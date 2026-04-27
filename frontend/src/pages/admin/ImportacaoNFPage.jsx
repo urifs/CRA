@@ -47,7 +47,8 @@ import {
   Clock,
   Timer,
   Ban,
-  Pencil
+  Pencil,
+  Plug
 } from "lucide-react";
 import { formatCPFouCNPJ } from "@/utils/masks";
 
@@ -126,6 +127,7 @@ export default function ImportacaoNFPage() {
   });
   const [editLoading, setEditLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [testandoConexaoId, setTestandoConexaoId] = useState(null);
   const [selectedCertificado, setSelectedCertificado] = useState("todos");
   const [selectedStatus, setSelectedStatus] = useState("todos");
   
@@ -461,6 +463,34 @@ export default function ImportacaoNFPage() {
     } finally {
       setImportando(false);
       setImportandoCertId(null);
+    }
+  };
+
+  const handleTestarConexaoNfse = async (certificadoId) => {
+    setTestandoConexaoId(certificadoId);
+    try {
+      const { data } = await axios.post(`${API}/nfse/testar-conexao/${certificadoId}`);
+      if (data.ok) {
+        toast.success(data.mensagem, { duration: 8000 });
+      } else {
+        const prefix = {
+          configuracao: "Configuração",
+          certificado: "Certificado",
+          ssl: "SSL",
+          timeout: "Timeout",
+          conexao: "Conexão",
+          http: "HTTP",
+          soap_fault: "SOAP Fault",
+          negocio: "Regra de Negócio",
+          parse: "Resposta Inválida",
+          inesperado: "Erro",
+        }[data.etapa] || "Erro";
+        toast.error(`${prefix}: ${data.mensagem}`, { duration: 12000 });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Falha ao testar conexão NFS-e");
+    } finally {
+      setTestandoConexaoId(null);
     }
   };
 
@@ -1506,6 +1536,21 @@ export default function ImportacaoNFPage() {
                         title="Editar dados fiscais (Inscrição Municipal, URL NFS-e)"
                       >
                         <Pencil size={14} />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-purple-600 hover:bg-purple-50"
+                        onClick={() => handleTestarConexaoNfse(cert.id)}
+                        disabled={testandoConexaoId === cert.id || !cert.url_nfse}
+                        data-testid={`test-nfse-${cert.id}`}
+                        title={cert.url_nfse ? "Testar conexão NFS-e" : "Configure a URL do webservice NFS-e primeiro"}
+                      >
+                        {testandoConexaoId === cert.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Plug size={14} />
+                        )}
                       </Button>
                       <Button 
                         variant="outline" 

@@ -1,5 +1,41 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Botão "Testar Conexão NFS-e"
+
+### ✅ Novo botão nos cards dos CNPJs cadastrados
+Adicionado ícone 🔌 (Plug) em cada card de certificado na aba **CNPJs** de `/administrativo/importacao-nf`:
+- Dispara uma chamada leve ao webservice NFS-e (últimos 7 dias) **sem importar nada**.
+- Diagnostica em etapas: configuração, certificado A1, SSL, conexão, HTTP, SOAP Fault, regras de negócio, parse, timeout.
+- Botão fica **desabilitado** quando não há URL NFS-e cadastrada (com tooltip explicativo).
+
+### Backend (`routes/importacao_nf.py`)
+Novo endpoint `POST /api/nfse/testar-conexao/{certificado_id}` retorna JSON:
+```json
+{
+  "ok": true/false,
+  "etapa": "sucesso|configuracao|certificado|ssl|timeout|conexao|http|soap_fault|negocio|parse|inesperado",
+  "mensagem": "texto legível para o usuário"
+}
+```
+
+Reaproveita a função `_parse_nfse_soap_error()` criada anteriormente para extrair mensagens legíveis de SOAP Faults, ListaMensagemRetorno (ABRASF) e HTML genérico.
+
+### Frontend (`ImportacaoNFPage.jsx`)
+- Import do ícone `Plug` do lucide-react.
+- State `testandoConexaoId` para desabilitar botão durante teste.
+- Handler `handleTestarConexaoNfse` traduz `etapa` em prefixo amigável (Configuração / Certificado / SSL / Timeout etc).
+- Toast de sucesso (8s) ou erro (12s) conforme resultado.
+- `data-testid="test-nfse-{id}"`.
+
+### Validação real
+Testado contra WebISS Palmas com certificado real:
+- **Antes**: usuário via XML cru confuso.
+- **Agora**: `HTTP 500: [soap:Client] | System.Web.Services.Protocols.SoapException: Server did not recognize the value of HTTP Header SOAPAction: http://www.abrasf.org.br/nfse.xsd/ConsultarNfseRecebidos`
+- Isso revela **o bug real** de importação NFS-e: o SOAPAction atual não é o aceito pelo WebISS Palmas. Próximo passo sugerido ao usuário: ajustar o SOAPAction (provavelmente sem o namespace `http://www.abrasf.org.br/nfse.xsd/`).
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Fix: Mensagem de erro NFS-e ininteligível
 
 ### 🐛 Problema reportado pelo usuário
