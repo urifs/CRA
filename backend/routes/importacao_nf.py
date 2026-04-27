@@ -32,6 +32,81 @@ logger = logging.getLogger(__name__)
 importacao_router = APIRouter(tags=["Importação NF-e/NFS-e"])
 
 
+def _parse_nfse_soap_error(response_text: str) -> str:
+    """Extrai mensagem legível de uma resposta SOAP de erro/falha do webservice NFS-e.
+    Lida com SOAP Fault (faultstring/faultcode), ListaMensagemRetorno (ABRASF) e
+    HTML/texto puro como fallback.
+    Retorna string curta amigável ao usuário, sem XML cru."""
+    if not response_text:
+        return "Resposta vazia do webservice"
+
+    text = response_text.strip()
+    # Tentar parsear como XML
+    try:
+        # Limpar BOM e caracteres iniciais não-XML
+        if text.lstrip().startswith("<"):
+            root = ET.fromstring(text)
+        else:
+            return text[:300]
+
+        partes: list[str] = []
+
+        # 1) SOAP Fault (qualquer namespace)
+        for el in root.iter():
+            tag = el.tag.split('}')[-1] if '}' in el.tag else el.tag
+            if tag in ("faultstring", "Reason", "Text"):
+                if el.text and el.text.strip():
+                    partes.append(el.text.strip())
+            elif tag == "faultcode":
+                if el.text and el.text.strip():
+                    partes.append(f"[{el.text.strip()}]")
+            elif tag == "Detail" or tag == "detail":
+                # Detail às vezes contém mensagens estruturadas
+                inner = "".join(
+                    (c.text or "").strip()
+                    for c in el.iter()
+                    if (c.text or "").strip()
+                )
+                if inner:
+                    partes.append(inner[:200])
+
+        # 2) ListaMensagemRetorno (padrão ABRASF) — códigos de erro de negócio
+        codigo = None
+        descricao = None
+        for el in root.iter():
+            tag = el.tag.split('}')[-1] if '}' in el.tag else el.tag
+            if tag == "Codigo" and el.text:
+                codigo = el.text.strip()
+            elif tag == "Descricao" and el.text:
+                descricao = el.text.strip()
+            elif tag == "Correcao" and el.text:
+                if descricao:
+                    descricao = f"{descricao} — {el.text.strip()}"
+
+        if codigo and descricao:
+            partes.append(f"[Cód {codigo}] {descricao}")
+        elif descricao:
+            partes.append(descricao)
+
+        if partes:
+            # Deduplica preservando ordem
+            seen = set()
+            unique = []
+            for p in partes:
+                if p not in seen:
+                    seen.add(p)
+                    unique.append(p)
+            return " | ".join(unique)[:400]
+
+    except ET.ParseError:
+        pass
+
+    # Fallback: HTML ou texto plano
+    plain = re.sub(r"<[^>]+>", " ", text)
+    plain = re.sub(r"\s+", " ", plain).strip()
+    return plain[:300] if plain else text[:300]
+
+
 @importacao_router.post("/nfe/importar/{certificado_id}")
 async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_current_user)):
     """Consulta e importa NF-e da SEFAZ para o CNPJ especificado"""
@@ -479,10 +554,23 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
                 pass
 
         if response.status_code != 200:
+            # Tenta extrair mensagem útil do SOAP Fault / ListaMensagemRetorno
+            erro_legivel = _parse_nfse_soap_error(response.text)
             return {
                 "message": f"Webservice NFS-e retornou erro HTTP {response.status_code}",
                 "novas_nfses": 0,
-                "aviso": f"Verifique a URL NFS-e configurada. Resposta: {response.text[:200]}"
+                "aviso": f"Detalhes do servidor: {erro_legivel}"
+            }
+
+        # Mesmo com status 200, resposta pode conter SOAP Fault ou erros de negócio:
+        # detecta antes de tentar o parser de NFS-e e dá erro amigável.
+        body_lower = response.text.lower()
+        if "<soap:fault" in body_lower or "<s:fault" in body_lower or "<faultstring" in body_lower:
+            erro_legivel = _parse_nfse_soap_error(response.text)
+            return {
+                "message": "Webservice NFS-e retornou um erro (SOAP Fault)",
+                "novas_nfses": 0,
+                "aviso": erro_legivel
             }
 
         # Parsear resposta XML
@@ -496,7 +584,7 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
                 root = ET.fromstring(inner.group())
             else:
                 return {"message": "Resposta XML inválida do webservice NFS-e", "novas_nfses": 0,
-                        "aviso": f"Resposta: {response.text[:300]}"}
+                        "aviso": _parse_nfse_soap_error(response.text)}
 
         # Namespace ABRASF
         NFSE_NS = "http://www.abrasf.org.br/nfse.xsd"

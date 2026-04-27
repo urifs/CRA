@@ -1,5 +1,41 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Fix: Mensagem de erro NFS-e ininteligível
+
+### 🐛 Problema reportado pelo usuário
+Ao importar NFS-e, o sistema mostrava um aviso confuso com **XML SOAP cru** dos primeiros 200 caracteres:
+> "Verifique a URL NFS-e configurada. Resposta: <?xml version='1.0' encoding='utf-8'?><soap:Envelope xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/' xmlns:xsi=..."
+
+Isso acontecia quando a prefeitura retornava SOAP Fault (HTTP 500) — comportamento padrão de webservices SOAP.
+
+### ✅ Correção
+Criada função `_parse_nfse_soap_error()` em `routes/importacao_nf.py` que extrai mensagens legíveis de:
+- **SOAP 1.1 Fault** → `faultcode` + `faultstring`
+- **SOAP 1.2 Fault** → `Reason/Text`, `Code/Value`
+- **ListaMensagemRetorno (ABRASF)** → `Codigo` + `Descricao` + `Correcao`
+- **HTML/404** → texto plano (tags removidas)
+- **Fallback**: primeiros 300 caracteres legíveis
+
+### Onde foi aplicada
+1. Resposta com status HTTP != 200 (caso original do bug).
+2. Resposta com status 200 mas contendo SOAP Fault embutido (detecta `<soap:fault>` no body).
+3. Resposta com XML inválido (parse error).
+
+### Resultado para o usuário
+Antes: `Resposta: <?xml version="1.0"...<soap:Envelope...` (XML cru, ininteligível)
+
+Depois (exemplos):
+- `[soap:Server] | Inscrição Municipal não cadastrada para o CNPJ informado`
+- `[Cód E001] CNPJ do consulente não autorizado — Verifique o cadastro municipal`
+- `Certificado digital inválido`
+- `404 Not Found nginx`
+
+### Validação
+Testes unitários da função com 5 cenários (SOAP 1.1, SOAP 1.2, ListaMensagemRetorno, HTML, vazio) — todos retornam mensagens limpas.
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Fix: Lista de Conciliações sumindo no PDF
 
 ### 🐛 Bug identificado
