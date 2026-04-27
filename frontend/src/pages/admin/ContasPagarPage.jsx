@@ -957,28 +957,64 @@ export default function ContasPagarPage() {
               Histórico de Pagamentos
             </DialogTitle>
           </DialogHeader>
-          {quitarContaInfo && (
+          {quitarContaInfo && (() => {
+            const valorTotal = quitarContaInfo.valor_final || quitarContaInfo.valor || 0;
+            const valorPago = quitarContaInfo.valor_pago || 0;
+            const saldo = Math.max(0, valorTotal - valorPago);
+            const pct = valorTotal > 0 ? Math.min(100, (valorPago / valorTotal) * 100) : 0;
+            const nParcelas = (quitarContaInfo.pagamentos || []).length;
+            let barColor = "bg-orange-500";
+            if (pct >= 100) barColor = "bg-green-500";
+            else if (pct >= 75) barColor = "bg-blue-500";
+            else if (pct < 25) barColor = "bg-red-500";
+            return (
             <div className="space-y-4">
-              {/* Resumo */}
-              <div className="bg-gray-50 p-3 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Descrição:</span>
-                  <span className="font-medium truncate max-w-[250px]">{quitarContaInfo.descricao}</span>
+              {/* Cronograma visual */}
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg space-y-3 border border-blue-100">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">
+                    {quitarContaInfo.descricao}
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Valor Total:</span>
-                  <span className="font-bold">{formatCurrency(quitarContaInfo.valor_final || quitarContaInfo.valor)}</span>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-2xl font-bold text-gray-800">{pct.toFixed(0)}%</span>
+                    <span className="text-xs text-gray-500">
+                      {formatCurrency(valorPago)} de {formatCurrency(valorTotal)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden" data-testid="progress-pagamento">
+                    <div
+                      className={`h-full ${barColor} transition-all duration-700 ease-out rounded-full relative`}
+                      style={{ width: `${pct}%` }}
+                    >
+                      {pct > 10 && (
+                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Total Pago:</span>
-                  <span className="font-bold text-green-600">{formatCurrency(quitarContaInfo.valor_pago || 0)}</span>
+                <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500 tracking-wide">Parcelas</p>
+                    <p className="text-sm font-bold text-blue-700">{nParcelas}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500 tracking-wide">Pago</p>
+                    <p className="text-sm font-bold text-green-600">{formatCurrency(valorPago)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-500 tracking-wide">Saldo</p>
+                    <p className={`text-sm font-bold ${saldo < 0.01 ? "text-green-600" : "text-red-600"}`}>
+                      {formatCurrency(saldo)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-gray-500 font-medium">Saldo Restante:</span>
-                  <span className="font-bold text-red-600">
-                    {formatCurrency((quitarContaInfo.valor_final || quitarContaInfo.valor) - (quitarContaInfo.valor_pago || 0))}
-                  </span>
-                </div>
+                {saldo < 0.01 && (
+                  <div className="bg-green-100 text-green-800 text-xs text-center py-1.5 rounded font-medium">
+                    ✓ Conta quitada!
+                  </div>
+                )}
               </div>
 
               {/* Lista de Pagamentos */}
@@ -1049,7 +1085,8 @@ export default function ContasPagarPage() {
                 Fechar
               </Button>
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

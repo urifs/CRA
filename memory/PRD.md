@@ -1,5 +1,35 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Busca na Exportação + Cronograma Visual
+
+### ✅ Barra de pesquisa na ferramenta de Exportação (`ExportPage.jsx`)
+- Quando o usuário expande uma subcategoria (ex: "Contas a Pagar Pendentes") para ver itens individuais, agora aparece **input de busca** com ícone lupa e botão "X" para limpar.
+- Busca textual case-insensitive pelos campos: **descrição**, **fornecedor_nome**, **cliente_nome**, **model**, **plate**, **banco**, **data_vencimento**, **valor** (raw e formatado em pt-BR).
+- Contador dinâmico "Mostrando N de M itens" enquanto filtra.
+- Mensagem "Nenhum item encontrado para '{termo}'" quando o filtro não bate.
+- State `itemSearch` mantém o termo por subcategoria (cada categoria independente).
+- `data-testid="search-{sub.id}"`.
+
+### ✅ Cronograma visual no modal de histórico (Contas a Pagar e Contas a Receber)
+Substituído o bloco "Resumo" textual por um card gradiente com:
+- **Percentual grande** (text-2xl bold) — ex: "71%"
+- **Barra de progresso animada** (`h-3 bg-gray-200 rounded-full`) com cor dinâmica:
+  - 🟢 Verde = 100% (quitado)
+  - 🔵 Azul = 75-99%
+  - 🟠 Laranja = 25-74%
+  - 🔴 Vermelho = < 25%
+- Animação pulse sutil na barra quando >10% preenchido.
+- Grid 3 colunas de métricas: **Parcelas / Pago (ou Recebido) / Saldo**.
+- Badge verde de parabéns "✓ Conta quitada!" / "✓ Conta totalmente recebida!" quando saldo zera.
+- `data-testid="progress-pagamento"` e `progress-recebimento"`.
+
+### Validação
+- Lint JS limpo nos 3 arquivos editados.
+- Estruturas JSX validadas (IIFE `(() => { ... })()` fechada corretamente em ambos os modais).
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Recibos por Pagamento Parcial
 
 ### ✅ Novo: emitir recibo para cada pagamento/recebimento parcial

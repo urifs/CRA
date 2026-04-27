@@ -39,8 +39,11 @@ import {
   FileCheck,
   CheckSquare,
   HardHat,
-  Landmark
+  Landmark,
+  Search,
+  X as XIcon
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const ICONS = {
   truck: Truck,
@@ -76,6 +79,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [expandedSubcategories, setExpandedSubcategories] = useState({});
   const [subcategoryItems, setSubcategoryItems] = useState({});
   const [loadingSubcategory, setLoadingSubcategory] = useState({});
+  const [itemSearch, setItemSearch] = useState({});
   
   // Estado para seleção múltipla de itens individuais
   const [selectedIndividualItems, setSelectedIndividualItems] = useState({});  // {subcategoryId: [itemIds]}
@@ -1026,6 +1030,38 @@ export default function ExportPage({ module = "gerenciamento" }) {
                         {/* Lista de itens individuais expandida */}
                         {isSubExpanded && (
                           <div className="bg-purple-50 border-t border-purple-100 px-4 py-3 pl-20">
+                            {/* Barra de pesquisa */}
+                            {items.length > 0 && (
+                              <div className="relative mb-3">
+                                <Search
+                                  size={14}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                />
+                                <Input
+                                  type="text"
+                                  placeholder="Buscar por descrição, fornecedor, cliente, valor, placa..."
+                                  value={itemSearch[sub.id] || ""}
+                                  onChange={(e) =>
+                                    setItemSearch({ ...itemSearch, [sub.id]: e.target.value })
+                                  }
+                                  className="pl-9 pr-9 h-9 text-sm bg-white"
+                                  data-testid={`search-${sub.id}`}
+                                />
+                                {itemSearch[sub.id] && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setItemSearch({ ...itemSearch, [sub.id]: "" })
+                                    }
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    aria-label="Limpar busca"
+                                  >
+                                    <XIcon size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
                             {/* Header com ações em lote */}
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2">
@@ -1061,8 +1097,48 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                 <span className="text-sm">Carregando itens...</span>
                               </div>
                             ) : items.length > 0 ? (
-                              <div className="space-y-2 max-h-80 overflow-y-auto">
-                                {items.map(item => {
+                              (() => {
+                                // Filtra itens pelo termo de busca
+                                const searchTerm = (itemSearch[sub.id] || "").trim().toLowerCase();
+                                const filteredItems = !searchTerm
+                                  ? items
+                                  : items.filter((item) => {
+                                      const haystack = [
+                                        item.name,
+                                        item.fornecedor_nome,
+                                        item.cliente_nome,
+                                        item.model,
+                                        item.plate,
+                                        item.banco,
+                                        item.data_vencimento,
+                                        item.valor !== undefined ? String(item.valor) : "",
+                                        item.valor !== undefined
+                                          ? Number(item.valor).toLocaleString("pt-BR", {
+                                              minimumFractionDigits: 2,
+                                            })
+                                          : "",
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")
+                                        .toLowerCase();
+                                      return haystack.includes(searchTerm);
+                                    });
+                                if (filteredItems.length === 0) {
+                                  return (
+                                    <p className="text-sm text-gray-500 py-3 text-center">
+                                      Nenhum item encontrado para "{searchTerm}"
+                                    </p>
+                                  );
+                                }
+                                return (
+                                  <>
+                                    {searchTerm && (
+                                      <p className="text-xs text-purple-600 mb-2">
+                                        Mostrando {filteredItems.length} de {items.length} itens
+                                      </p>
+                                    )}
+                                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                                      {filteredItems.map(item => {
                                   const isItemSelected = (selectedIndividualItems[sub.id] || []).includes(item.id);
                                   const supportsReceipt = RECEIPT_CATEGORIES.includes(sub.id);
                                   
@@ -1162,7 +1238,10 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                     </div>
                                   );
                                 })}
-                              </div>
+                                    </div>
+                                  </>
+                                );
+                              })()
                             ) : (
                               <p className="text-sm text-gray-500">Nenhum item cadastrado nesta categoria</p>
                             )}
