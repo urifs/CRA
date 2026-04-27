@@ -2202,8 +2202,16 @@ EMPRESAS_CRA = {
 
 # Endpoint para gerar Recibo
 @exports_all_router.get("/export/recibo/{category}/{item_id}")
-async def export_recibo(category: str, item_id: str, empresa: str = "locadora", current_user: dict = Depends(get_current_user)):
-    """Gera um recibo de pagamento em PDF"""
+async def export_recibo(
+    category: str,
+    item_id: str,
+    empresa: str = "locadora",
+    pagamento_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Gera um recibo de pagamento em PDF.
+    Se `pagamento_id` for informado, emite recibo do pagamento parcial específico
+    (valor individual, data do pagamento parcial, saldo restante)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
@@ -2301,10 +2309,52 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     elements.append(client_table)
     elements.append(Spacer(1, 0.4*cm))
     
-    # Valor
-    valor = item.get("valor_final") or item.get("valor") or item.get("valor_aluguel") or 0
+    # Valor / Pagamento parcial
+    valor_total_conta = item.get("valor_final") or item.get("valor") or item.get("valor_aluguel") or 0
+
+    # Busca o pagamento parcial específico se pagamento_id foi informado.
+    # Contas a pagar usam array `pagamentos`; contas a receber usam `recebimentos`.
+    pagamento_sel = None
+    lista_pagamentos = (item.get("pagamentos") or item.get("recebimentos") or [])
+    if pagamento_id:
+        for p in lista_pagamentos:
+            if p.get("id") == pagamento_id:
+                pagamento_sel = p
+                break
+        if not pagamento_sel:
+            raise HTTPException(status_code=404, detail="Pagamento parcial não encontrado")
+
+    if pagamento_sel:
+        valor = pagamento_sel.get("valor", 0) or 0
+        # Soma dos pagamentos feitos até este (inclusive)
+        valor_ja_pago_ate_aqui = 0
+        encontrou = False
+        for p in lista_pagamentos:
+            valor_ja_pago_ate_aqui += p.get("valor", 0) or 0
+            if p.get("id") == pagamento_id:
+                encontrou = True
+                break
+        if not encontrou:
+            valor_ja_pago_ate_aqui = valor
+        saldo_restante = max(0, valor_total_conta - valor_ja_pago_ate_aqui)
+        tipo_recibo = "RECIBO - PAGAMENTO PARCIAL" if saldo_restante > 0.01 else "RECIBO - PAGAMENTO FINAL (QUITAÇÃO)"
+    else:
+        valor = valor_total_conta
+        valor_ja_pago_ate_aqui = valor_total_conta
+        saldo_restante = 0
+        tipo_recibo = "RECIBO"
+
     valor_str = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    
+
+    # Atualiza o título do recibo caso seja parcial
+    # (o Paragraph de "RECIBO" já foi adicionado — adicionamos um subtítulo complementar)
+    if pagamento_sel:
+        elements.append(Paragraph(
+            f"<i>{tipo_recibo}</i>",
+            ParagraphStyle('SubTitulo', fontSize=11, alignment=1, spaceAfter=8, textColor=colors.HexColor("#C62828"))
+        ))
+        elements.append(Spacer(1, 0.2*cm))
+
     elements.append(Paragraph(f"Recebi(emos) de <b>{pagador_nome}</b> a importância de:", ParagraphStyle('Extenso', fontSize=10)))
     elements.append(Spacer(1, 0.2*cm))
     elements.append(Paragraph(f"<b>{valor_por_extenso(valor)}</b>", ParagraphStyle('ValorExtenso', fontSize=10)))
@@ -2340,12 +2390,18 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
                 if len(partes) == 3:
                     return f"{partes[2]}/{partes[1]}/{partes[0]}"
             return data_str
-        except:
+        except Exception:
             return data_str
     
     data_venc = formatar_data_br(item.get("data_vencimento", "-"))
-    data_pag = formatar_data_br(item.get("data_pagamento") or item.get("data_recebimento") or "-")
-    obs = item.get("observacoes", "-")
+    if pagamento_sel:
+        data_pag = formatar_data_br(pagamento_sel.get("data", "-"))
+        obs_pagamento = pagamento_sel.get("observacao") or item.get("observacoes", "-")
+        forma_pag_recibo = pagamento_sel.get("forma_pagamento_nome") or forma_pag
+    else:
+        data_pag = formatar_data_br(item.get("data_pagamento") or item.get("data_recebimento") or "-")
+        obs_pagamento = item.get("observacoes", "-")
+        forma_pag_recibo = forma_pag
     
     # Estilo com word-wrap para textos longos
     detail_value_style = ParagraphStyle('DetailValue', fontSize=9, leading=12, wordWrap='CJK')
@@ -2355,11 +2411,27 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
         [Paragraph("Descrição", detail_label_style), Paragraph(descricao if descricao else "-", detail_value_style)],
         [Paragraph("Data de Vencimento", detail_label_style), Paragraph(data_venc if data_venc else "-", detail_value_style)],
         [Paragraph("Data de Pagamento", detail_label_style), Paragraph(data_pag if data_pag else "-", detail_value_style)],
-        [Paragraph("Forma de Pagamento", detail_label_style), Paragraph(forma_pag if forma_pag else "-", detail_value_style)],
+        [Paragraph("Forma de Pagamento", detail_label_style), Paragraph(forma_pag_recibo if forma_pag_recibo else "-", detail_value_style)],
         [Paragraph("Plano de Contas", detail_label_style), Paragraph(plano_contas if plano_contas else "-", detail_value_style)],
         [Paragraph("Centro de Custo", detail_label_style), Paragraph(centro_custo if centro_custo else "-", detail_value_style)],
-        [Paragraph("Observações", detail_label_style), Paragraph(obs if obs else "-", detail_value_style)],
+        [Paragraph("Observações", detail_label_style), Paragraph(obs_pagamento if obs_pagamento else "-", detail_value_style)],
     ]
+    # Se é pagamento parcial, adiciona linhas com resumo financeiro
+    if pagamento_sel:
+        def _brl(v):
+            return f"R$ {(v or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        resumo_style = ParagraphStyle('DetailValueHL', fontSize=10, leading=13, fontName='Helvetica-Bold')
+        detail_data.append([Paragraph("Valor Total da Conta", detail_label_style), Paragraph(_brl(valor_total_conta), resumo_style)])
+        detail_data.append([Paragraph("Total Pago (com este)", detail_label_style), Paragraph(_brl(valor_ja_pago_ate_aqui), resumo_style)])
+        detail_data.append([
+            Paragraph("Saldo Restante", detail_label_style),
+            Paragraph(
+                _brl(saldo_restante),
+                ParagraphStyle('Saldo', fontSize=10, leading=13, fontName='Helvetica-Bold',
+                               textColor=colors.HexColor("#C62828") if saldo_restante > 0.01 else colors.HexColor("#2E7D32")),
+            ),
+        ])
+
     detail_table = Table(detail_data, colWidths=[4*cm, 13.5*cm])
     detail_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
@@ -2380,12 +2452,16 @@ async def export_recibo(category: str, item_id: str, empresa: str = "locadora", 
     doc.build(elements)
     buffer.seek(0)
     
-    await create_audit_log(current_user, "export", "recibo", item_id, f"Recibo: {item.get('descricao', item_id)}")
+    audit_detail = f"Recibo: {item.get('descricao', item_id)}"
+    if pagamento_sel:
+        audit_detail += f" — parcial R$ {valor:,.2f} em {pagamento_sel.get('data', '')}"
+    await create_audit_log(current_user, "export", "recibo", item_id, audit_detail)
     
+    filename_suffix = f"_parcial_{pagamento_id[:8]}" if pagamento_id else ""
     return Response(
         content=buffer.getvalue(),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=CRA_Recibo_{item_id[:8]}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=CRA_Recibo_{item_id[:8]}{filename_suffix}.pdf"}
     )
 
 

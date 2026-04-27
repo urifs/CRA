@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, Search, Wallet, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Paperclip, UserPlus, Landmark, History, DollarSign, CircleDot
+  Plus, Search, Wallet, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Paperclip, UserPlus, Landmark, History, DollarSign, CircleDot, FileDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -985,11 +985,43 @@ export default function ContasReceberPage() {
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {quitarContaInfo.recebimentos.map((r, idx) => (
                       <div key={r.id || idx} className="bg-white border rounded-lg p-3 space-y-1">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center gap-2">
                           <span className="text-sm text-gray-500">
                             {new Date(r.data).toLocaleDateString('pt-BR')}
                           </span>
-                          <span className="font-bold text-green-600">{formatCurrency(r.valor)}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-green-600">{formatCurrency(r.valor)}</span>
+                            {r.id && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-xs text-blue-600 hover:bg-blue-50"
+                                title="Baixar recibo deste recebimento parcial"
+                                data-testid={`btn-recibo-parcial-${r.id}`}
+                                onClick={async () => {
+                                  try {
+                                    const resp = await axios.get(
+                                      `${API}/export/recibo/contas_receber/${quitarContaInfo.id}?pagamento_id=${r.id}`,
+                                      { responseType: 'blob' }
+                                    );
+                                    const url = window.URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }));
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.setAttribute('download', `Recibo_Parcial_${r.id.substring(0,8)}.pdf`);
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    link.remove();
+                                    window.URL.revokeObjectURL(url);
+                                    toast.success("Recibo baixado");
+                                  } catch (err) {
+                                    toast.error("Erro ao baixar recibo");
+                                  }
+                                }}
+                              >
+                                <FileDown size={12} className="mr-1" /> Recibo
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         {r.observacao && (
                           <p className="text-xs text-gray-500">{r.observacao}</p>

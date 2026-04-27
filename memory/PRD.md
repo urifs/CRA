@@ -1,5 +1,37 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Recibos por Pagamento Parcial
+
+### ✅ Novo: emitir recibo para cada pagamento/recebimento parcial
+**Cenário**: conta de R$ 35.000 paga em parcelas de R$ 2.500 por semana → agora é possível gerar **um recibo para cada parcela**, com saldo restante calculado automaticamente.
+
+### Backend — endpoint existente estendido
+`GET /api/export/recibo/{category}/{item_id}` agora aceita query param opcional `?pagamento_id={uuid}`:
+- Sem `pagamento_id`: comportamento atual (recibo do valor total).
+- Com `pagamento_id`: busca o pagamento parcial específico em `item.pagamentos` (contas_pagar) ou `item.recebimentos` (contas_receber). Retorna 404 se não encontrado.
+
+Recibo parcial inclui:
+- Subtítulo **"RECIBO - PAGAMENTO PARCIAL"** ou **"RECIBO - PAGAMENTO FINAL (QUITAÇÃO)"** se saldo zerar.
+- Valor principal = valor da parcela (não o valor total da conta).
+- Data de pagamento = data do pagamento parcial (não a data do último pagamento).
+- Forma de pagamento e observação específicas daquela parcela.
+- **Nova seção no final** com resumo financeiro: Valor Total da Conta / Total Pago (com este) / Saldo Restante (cores verde/vermelho).
+- Filename `.pdf` inclui sufixo `_parcial_{id}` para diferenciação.
+
+### Frontend — botão "Recibo" por parcela
+**ContasPagarPage.jsx** (Dialog "Histórico de Pagamentos") e **ContasReceberPage.jsx** (Dialog "Histórico de Recebimentos"):
+- Cada linha do histórico agora tem botão azul **"Recibo"** (ícone FileDown) ao lado do valor.
+- Ao clicar, baixa o PDF com `?pagamento_id={id}`.
+- `data-testid="btn-recibo-parcial-{id}"`.
+
+### Validação via `analyze_file_tool`
+- Recibo parcial Contas a Pagar: R$ 222,22 de R$ 322,78 total, saldo R$ 100,56 ✅
+- Recibo parcial Contas a Receber: R$ 1.800,00 com saldo zero → "RECIBO - PAGAMENTO FINAL (QUITAÇÃO)" ✅
+- Subtítulo, valores e linhas de resumo confirmadas em ambos os PDFs.
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Botão "Testar Conexão NFS-e"
 
 ### ✅ Novo botão nos cards dos CNPJs cadastrados
