@@ -107,6 +107,82 @@ def _parse_nfse_soap_error(response_text: str) -> str:
     return plain[:300] if plain else text[:300]
 
 
+# Lista ordenada de SOAPActions comuns em webservices NFS-e brasileiros.
+# Quando o primeiro falha com "Server did not recognize SOAPAction",
+# tentamos os seguintes. Cobre WebISS (Palmas, Araguaína...), Ginfes,
+# ISSNet, Betha, Governa, ABRASF strict e variações "vazio"/sem namespace.
+# O placeholder {OP} é substituído dinamicamente pela operação em uso.
+NFSE_SOAPACTIONS_TEMPLATES = [
+    "http://nfse.abrasf.org.br/{OP}",                              # ABRASF v2 (WebISS Palmas, maioria dos WebISS)
+    "http://www.abrasf.org.br/nfse.xsd/{OP}",                       # ABRASF strict (padrão original)
+    "{OP}",                                                         # WebISS e similares (só nome)
+    '"{OP}"',                                                       # WebISS com aspas
+    "",                                                             # vazio (alguns provedores aceitam)
+    '""',                                                           # vazio com aspas
+    "http://tempuri.org/{OP}",                                      # .NET default
+]
+
+# Lista de operações que o sistema pode usar. Ordenadas por preferência:
+# ConsultarNfseServicoTomado é o nome ABRASF v2 para notas recebidas pelo tomador.
+# ConsultarNfseRecebidos é um alias legado usado por alguns provedores.
+NFSE_OPERACOES_CONSULTA = [
+    "ConsultarNfseServicoTomado",   # ABRASF v2 — notas recebidas como TOMADOR
+    "ConsultarNfseRecebidos",        # alias antigo
+]
+
+
+def _post_nfse_com_fallback_soapaction(
+    url_nfse: str,
+    soap_envelope_bytes: bytes,
+    cert_tuple: tuple,
+    base_headers: dict,
+    timeout: int = 30,
+    operation: str = "ConsultarNfseServicoTomado",
+    preferred_soapaction: str = None,
+):
+    """Faz POST SOAP tentando múltiplos SOAPActions até o servidor aceitar.
+    Se `preferred_soapaction` for fornecido (salvo de uma conexão bem-sucedida
+    anterior), ele é testado primeiro, evitando retries.
+    Retorna (response, soapaction_que_funcionou, tentativas)."""
+    import requests as req_sync
+    tentativas = []
+    last_response = None
+
+    soapactions = [tmpl.replace("{OP}", operation) for tmpl in NFSE_SOAPACTIONS_TEMPLATES]
+    if preferred_soapaction is not None and preferred_soapaction in soapactions:
+        soapactions = [preferred_soapaction] + [sa for sa in soapactions if sa != preferred_soapaction]
+    elif preferred_soapaction is not None:
+        soapactions = [preferred_soapaction] + soapactions
+
+    for sa in soapactions:
+        hdrs = dict(base_headers)
+        hdrs["SOAPAction"] = sa
+        try:
+            r = req_sync.post(
+                url_nfse,
+                data=soap_envelope_bytes,
+                headers=hdrs,
+                cert=cert_tuple,
+                verify=False,
+                timeout=timeout,
+            )
+        except Exception as e:
+            tentativas.append({"soapaction": sa, "erro": str(e)[:120]})
+            continue
+
+        last_response = r
+        body_lower = (r.text or "").lower()
+        # Se a resposta contém erro de SOAPAction, tenta o próximo
+        if r.status_code == 500 and "soapaction" in body_lower and ("did not recognize" in body_lower or "não reconheceu" in body_lower):
+            tentativas.append({"soapaction": sa, "erro": "SOAPAction não reconhecido (HTTP 500)"})
+            continue
+        # Sucesso aparente (HTTP 200) ou outro tipo de falha — para aqui
+        tentativas.append({"soapaction": sa, "status": r.status_code, "ok": r.status_code == 200})
+        return r, sa, tentativas
+
+    return last_response, None, tentativas
+
+
 @importacao_router.post("/nfe/importar/{certificado_id}")
 async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_current_user)):
     """Consulta e importa NF-e da SEFAZ para o CNPJ especificado"""
@@ -502,12 +578,14 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
         data_final = datetime.now()
         data_inicial = data_final - timedelta(days=90)
 
-        # Montar SOAP envelope ABRASF v2.01
+        # Montar SOAP envelope ABRASF v2 usado pelo WebISS (Palmas, Araguaína...)
+        # Namespace do WSDL: http://nfse.abrasf.org.br
+        # Operação: ConsultarNfseServicoTomado (notas recebidas como tomador)
         cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
         
         im_tag = f"<InscricaoMunicipal>{inscricao_municipal}</InscricaoMunicipal>" if inscricao_municipal else ""
         dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<ConsultarNfseRecebidosEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
+<ConsultarNfseServicoTomadoEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
   <Consulente>
     <CpfCnpj><Cnpj>{cnpj_limpo}</Cnpj></CpfCnpj>
     {im_tag}
@@ -516,34 +594,34 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
     <DataInicial>{data_inicial.strftime('%Y-%m-%d')}</DataInicial>
     <DataFinal>{data_final.strftime('%Y-%m-%d')}</DataFinal>
   </PeriodoEmissao>
-</ConsultarNfseRecebidosEnvio>"""
+</ConsultarNfseServicoTomadoEnvio>"""
 
         soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://www.abrasf.org.br/nfse.xsd">
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://nfse.abrasf.org.br">
   <soap:Header/>
   <soap:Body>
-    <nfse:ConsultarNfseRecebidos>
-      <nfse:nfseCabecMsg><![CDATA[{cabecalho_xml}]]></nfse:nfseCabecMsg>
-      <nfse:nfseDadosMsg><![CDATA[{dados_xml}]]></nfse:nfseDadosMsg>
-    </nfse:ConsultarNfseRecebidos>
+    <nfse:ConsultarNfseServicoTomadoRequest>
+      <nfseCabecMsg>{cabecalho_xml.replace('<','&lt;').replace('>','&gt;')}</nfseCabecMsg>
+      <nfseDadosMsg>{dados_xml.replace('<','&lt;').replace('>','&gt;')}</nfseDadosMsg>
+    </nfse:ConsultarNfseServicoTomadoRequest>
   </soap:Body>
 </soap:Envelope>"""
 
-        headers_soap = {
+        headers_soap_base = {
             "Content-Type": "text/xml; charset=utf-8",
-            "SOAPAction": "http://www.abrasf.org.br/nfse.xsd/ConsultarNfseRecebidos"
         }
 
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-        response = req_sync.post(
-            url_nfse,
-            data=soap_envelope.encode("utf-8"),
-            headers=headers_soap,
-            cert=(cert_pem_path, key_pem_path),
-            verify=False,
-            timeout=30
+        response, soapaction_usado, tentativas_sa = _post_nfse_com_fallback_soapaction(
+            url_nfse=url_nfse,
+            soap_envelope_bytes=soap_envelope.encode("utf-8"),
+            cert_tuple=(cert_pem_path, key_pem_path),
+            base_headers=headers_soap_base,
+            timeout=30,
+            operation="ConsultarNfseServicoTomado",
+            preferred_soapaction=certificado.get("soapaction_nfse"),
         )
 
         # Limpar temporários
@@ -553,9 +631,23 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
             except Exception:
                 pass
 
+        if response is None:
+            return {
+                "message": "Falha de conexão com o webservice NFS-e",
+                "novas_nfses": 0,
+                "aviso": f"Nenhum SOAPAction foi aceito pelo servidor. Tentativas: {len(tentativas_sa)}. Última mensagem: {tentativas_sa[-1] if tentativas_sa else 'sem resposta'}",
+            }
+
         if response.status_code != 200:
-            # Tenta extrair mensagem útil do SOAP Fault / ListaMensagemRetorno
             erro_legivel = _parse_nfse_soap_error(response.text)
+            # Se todas as tentativas de SOAPAction falharam com 500 "did not recognize", informa claramente
+            todas_falharam_sa = all("SOAPAction não reconhecido" in (t.get("erro", "") or "") for t in tentativas_sa if "erro" in t)
+            if todas_falharam_sa and len(tentativas_sa) >= 3:
+                return {
+                    "message": "Nenhum SOAPAction reconhecido pelo webservice",
+                    "novas_nfses": 0,
+                    "aviso": f"O webservice rejeitou todos os SOAPActions padrão. Verifique a URL e a versão do webservice. Última resposta: {erro_legivel}",
+                }
             return {
                 "message": f"Webservice NFS-e retornou erro HTTP {response.status_code}",
                 "novas_nfses": 0,
@@ -585,6 +677,16 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
             else:
                 return {"message": "Resposta XML inválida do webservice NFS-e", "novas_nfses": 0,
                         "aviso": _parse_nfse_soap_error(response.text)}
+
+        # SOAPAction funcionou → persiste para acelerar próximas importações
+        if soapaction_usado is not None and certificado.get("soapaction_nfse") != soapaction_usado:
+            try:
+                await db.nfe_certificados.update_one(
+                    {"id": certificado_id},
+                    {"$set": {"soapaction_nfse": soapaction_usado}},
+                )
+            except Exception:
+                pass
 
         # Namespace ABRASF
         NFSE_NS = "http://www.abrasf.org.br/nfse.xsd"
@@ -746,13 +848,14 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
             f.write(key_pem)
             key_pem_path = f.name
 
-        # Etapa 2: montar requisição curta (últimos 7 dias)
+        # Etapa 2: montar requisição curta (últimos 7 dias) no formato ABRASF v2.
+        # WebISS (Palmas, Araguaína, etc.) usa namespace http://nfse.abrasf.org.br
+        # e a operação ConsultarNfseServicoTomado para consultar notas recebidas.
         data_final = datetime.now()
         data_inicial = data_final - timedelta(days=7)
-        cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
         im_tag = f"<InscricaoMunicipal>{inscricao_municipal}</InscricaoMunicipal>" if inscricao_municipal else ""
         dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<ConsultarNfseRecebidosEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
+<ConsultarNfseServicoTomadoEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
   <Consulente>
     <CpfCnpj><Cnpj>{cnpj_limpo}</Cnpj></CpfCnpj>
     {im_tag}
@@ -761,32 +864,35 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
     <DataInicial>{data_inicial.strftime('%Y-%m-%d')}</DataInicial>
     <DataFinal>{data_final.strftime('%Y-%m-%d')}</DataFinal>
   </PeriodoEmissao>
-</ConsultarNfseRecebidosEnvio>"""
+</ConsultarNfseServicoTomadoEnvio>"""
+        cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
         soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://www.abrasf.org.br/nfse.xsd">
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://nfse.abrasf.org.br">
   <soap:Header/>
   <soap:Body>
-    <nfse:ConsultarNfseRecebidos>
-      <nfse:nfseCabecMsg><![CDATA[{cabecalho_xml}]]></nfse:nfseCabecMsg>
-      <nfse:nfseDadosMsg><![CDATA[{dados_xml}]]></nfse:nfseDadosMsg>
-    </nfse:ConsultarNfseRecebidos>
+    <nfse:ConsultarNfseServicoTomadoRequest>
+      <nfseCabecMsg>{cabecalho_xml.replace('<','&lt;').replace('>','&gt;')}</nfseCabecMsg>
+      <nfseDadosMsg>{dados_xml.replace('<','&lt;').replace('>','&gt;')}</nfseDadosMsg>
+    </nfse:ConsultarNfseServicoTomadoRequest>
   </soap:Body>
 </soap:Envelope>"""
-        headers_soap = {
+        headers_soap_base = {
             "Content-Type": "text/xml; charset=utf-8",
-            "SOAPAction": "http://www.abrasf.org.br/nfse.xsd/ConsultarNfseRecebidos",
         }
 
-        # Etapa 3: chamada HTTP
+        # Etapa 3: chamada HTTP com fallback de SOAPAction
         response = None
+        soapaction_usado = None
+        tentativas_sa = []
         try:
-            response = req_sync.post(
-                url_nfse,
-                data=soap_envelope.encode("utf-8"),
-                headers=headers_soap,
-                cert=(cert_pem_path, key_pem_path),
-                verify=False,
+            response, soapaction_usado, tentativas_sa = _post_nfse_com_fallback_soapaction(
+                url_nfse=url_nfse,
+                soap_envelope_bytes=soap_envelope.encode("utf-8"),
+                cert_tuple=(cert_pem_path, key_pem_path),
+                base_headers=headers_soap_base,
                 timeout=15,
+                operation="ConsultarNfseServicoTomado",
+                preferred_soapaction=certificado.get("soapaction_nfse"),
             )
         except req_sync.exceptions.SSLError as e:
             return {"ok": False, "etapa": "ssl",
@@ -803,6 +909,13 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
                     os.unlink(p)
                 except Exception:
                     pass
+
+        if response is None:
+            return {
+                "ok": False,
+                "etapa": "conexao",
+                "mensagem": f"Nenhum SOAPAction aceito em {len(tentativas_sa)} tentativas",
+            }
 
         # Etapa 4: interpretar resposta
         body_lower = (response.text or "").lower()
@@ -840,16 +953,33 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
                 elif tag == "CompNfse":
                     total_nfses += 1
             if msgs_with_error:
+                # Mesmo com mensagens de negócio, o SOAPAction funcionou — salva pra próxima importação
+                if soapaction_usado is not None:
+                    await db.nfe_certificados.update_one(
+                        {"id": certificado_id},
+                        {"$set": {"soapaction_nfse": soapaction_usado}},
+                    )
                 return {
                     "ok": False,
                     "etapa": "negocio",
                     "mensagem": "Conexão e certificado OK, mas o webservice rejeitou a consulta: "
                                 + " | ".join(msgs_with_error[:3]),
+                    "soapaction_usado": soapaction_usado,
                 }
+
+            # Persiste o SOAPAction que funcionou pra evitar retries em futuras importações
+            if soapaction_usado is not None:
+                await db.nfe_certificados.update_one(
+                    {"id": certificado_id},
+                    {"$set": {"soapaction_nfse": soapaction_usado}},
+                )
+
             return {
                 "ok": True,
                 "etapa": "sucesso",
-                "mensagem": f"Conexão OK! Certificado válido e webservice respondendo. {total_nfses} NFS-e encontrada(s) nos últimos 7 dias.",
+                "mensagem": f"Conexão OK! Certificado válido e webservice respondendo. {total_nfses} NFS-e encontrada(s) nos últimos 7 dias."
+                            + (f" SOAPAction aceito: '{soapaction_usado}'" if soapaction_usado and soapaction_usado != "http://www.abrasf.org.br/nfse.xsd/ConsultarNfseRecebidos" else ""),
+                "soapaction_usado": soapaction_usado,
             }
         except ET.ParseError:
             return {

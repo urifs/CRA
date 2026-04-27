@@ -1,5 +1,48 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — 🎉 Importação NFS-e WebISS FUNCIONAL
+
+### 🐛 Problema real identificado
+O código estava enviando requisições NFS-e com:
+- **Namespace errado**: `http://www.abrasf.org.br/nfse.xsd`
+- **Operação errada**: `ConsultarNfseRecebidos`
+- **SOAPAction errado**: derivado dos dois acima
+
+Análise do WSDL de `https://palmasto.webiss.com.br/ws/nfse.asmx?wsdl` revelou que o WebISS (Palmas e similares) usa:
+- **Namespace**: `http://nfse.abrasf.org.br` (ABRASF v2)
+- **Operação**: `ConsultarNfseServicoTomado` (não Recebidos!)
+- **SOAPAction**: `http://nfse.abrasf.org.br/ConsultarNfseServicoTomado`
+
+### ✅ Correções aplicadas
+1. **Envelope SOAP reescrito** em 2 endpoints (`importar_nfse` e `testar_conexao_nfse`):
+   - `xmlns:nfse="http://nfse.abrasf.org.br"`
+   - Tag `<nfse:ConsultarNfseServicoTomadoRequest>`
+   - `ConsultarNfseServicoTomadoEnvio` (em vez de `ConsultarNfseRecebidosEnvio`)
+   - Conteúdo XML escapado com `&lt;`/`&gt;` (WebISS rejeita CDATA em alguns casos)
+
+2. **Sistema de fallback inteligente** — função `_post_nfse_com_fallback_soapaction()`:
+   - Tenta até 7 SOAPActions conhecidos de provedores brasileiros (WebISS, Ginfes, ISSNet, ABRASF strict, .NET default).
+   - Detecta HTTP 500 + "did not recognize" e avança para o próximo automaticamente.
+   - Primeiro da lista agora é `http://nfse.abrasf.org.br/{OP}` (WebISS).
+   - Retorna o SOAPAction que funcionou para persistência.
+
+3. **Persistência do SOAPAction descoberto**:
+   - Campo `soapaction_nfse` salvo no certificado após primeiro sucesso.
+   - Em chamadas seguintes, o SOAPAction preferido é tentado primeiro — evita retries desnecessários.
+
+4. **Suporte a múltiplas operações**: lista `NFSE_OPERACOES_CONSULTA` inclui `ConsultarNfseServicoTomado` (v2, primeiro) e `ConsultarNfseRecebidos` (legado).
+
+### Validação real com WebISS Palmas
+- **Teste conexão**: ✅ `{"ok": true, "etapa": "sucesso", "soapaction_usado": "http://nfse.abrasf.org.br/ConsultarNfseServicoTomado"}`
+- **Importação real**: ✅ `"0 nova(s) NFS-e importada(s)"` (sem erro, conexão íntegra — zero notas porque o período não tem NFS-e recebidas)
+
+### Próximos passos sugeridos ao usuário
+- Tentar importar NFS-e pela UI agora — deve funcionar.
+- Para trazer notas reais, ampliar o período (código usa 90 dias por padrão).
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Busca na Exportação + Cronograma Visual
 
 ### ✅ Barra de pesquisa na ferramenta de Exportação (`ExportPage.jsx`)
