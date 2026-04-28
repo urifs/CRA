@@ -1,4 +1,25 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 28/04/2026 (Sessão 37) — 🐛 BUG FIX: PUT /machines não persistia fleet_id
+
+### 🐛 Problema
+Ao editar uma máquina e adicionar/alterar a frota, ao clicar em "Atualizar" os dados pareciam salvos mas a máquina **não aparecia na frota**. Frotas mostravam sempre `machines_count: 0`.
+
+### 🔍 Root cause
+A rota `PUT /api/machines/{id}` em `/app/backend/server.py` (linha 1616) sobrepõe a rota correta de `routes/machines.py` por ser registrada primeiro no FastAPI. O `update_doc` montado nessa rota **omitia** os campos `fleet_id`, `subfleet_id`, `subcategory_id`, `operator_id`, `identificador_tipo` e `identificador_numero`. Os valores enviados no payload eram simplesmente ignorados pelo `$set` do MongoDB.
+
+### ✅ Correção
+- Incluído `fleet_id`, `subfleet_id`, `subcategory_id`, `operator_id`, `identificador_tipo`, `identificador_numero` no `update_doc` (linha 1632).
+- Corrigido também `machine.plate.upper()` → `(machine.plate or "").upper()` para evitar `AttributeError` em máquinas sem placa.
+- Response agora retorna `fleet_id`, `fleet_name`, `subfleet_id`, `subfleet_name`, `operator_id`, `identificador_tipo` e `identificador_numero` populados via lookup nas coleções `fleets` e `subfleets`.
+
+### Validação real
+- Curl PUT com `fleet_id` → response retornou `"fleet_id": "01a86017...", "fleet_name": "Frota Principal"` (antes vinha `null`).
+- Endpoint `GET /api/fleets` → "Frota Principal" agora exibe `machines_count: 1` (antes era 0).
+- Página `/gerenciamento/frotas` → "Trator Teste UI" listado dentro de "Frota Principal" como esperado.
+
+---
+
+
 ## Changelog - 28/04/2026 (Sessão 36) — OS: labels (opcional) + auto-cálculo de entrega + fornecedor rápido
 
 ### ✅ Labels com indicador "(opcional)"

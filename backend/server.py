@@ -1631,13 +1631,19 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
     
     update_doc = {
         "name": machine.name,
-        "plate": machine.plate.upper(),
+        "plate": (machine.plate or "").upper(),
         "category_id": machine.category_id,
+        "subcategory_id": machine.subcategory_id,
         "brand": machine.brand or "",
         "model": machine.model or "",
         "year": machine.year,
         "notes": machine.notes or "",
-        "obra_id": machine.obra_id
+        "obra_id": machine.obra_id,
+        "fleet_id": machine.fleet_id,
+        "subfleet_id": machine.subfleet_id,
+        "operator_id": machine.operator_id,
+        "identificador_tipo": machine.identificador_tipo,
+        "identificador_numero": machine.identificador_numero,
     }
     await db.machines.update_one({"id": machine_id}, {"$set": update_doc})
     
@@ -1647,16 +1653,27 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
         action="editar",
         entity_type="máquina",
         entity_id=machine_id,
-        entity_name=f"{machine.name} ({machine.plate.upper()})",
-        details=f"Dados anteriores: {existing['name']} ({existing['plate']})"
+        entity_name=f"{machine.name} ({(machine.plate or '').upper()})",
+        details=f"Dados anteriores: {existing['name']} ({existing.get('plate','')})"
     )
     
+    # Buscar nomes para o response
+    fleet_name = ""
+    if machine.fleet_id:
+        f = await db.fleets.find_one({"id": machine.fleet_id}, {"_id": 0, "name": 1})
+        fleet_name = f["name"] if f else ""
+    subfleet_name = ""
+    if machine.subfleet_id:
+        sf = await db.subfleets.find_one({"id": machine.subfleet_id}, {"_id": 0, "name": 1})
+        subfleet_name = sf["name"] if sf else ""
+
     return MachineResponse(
         id=machine_id,
         name=machine.name,
-        plate=machine.plate.upper(),
+        plate=(machine.plate or "").upper(),
         category_id=machine.category_id,
         category_name=category_name,
+        subcategory_id=machine.subcategory_id,
         brand=machine.brand or "",
         model=machine.model or "",
         year=machine.year,
@@ -1664,6 +1681,13 @@ async def update_machine(machine_id: str, machine: MachineCreate, current_user: 
         status=existing.get("status", "operational"),
         obra_id=machine.obra_id,
         obra_name=obra_name,
+        fleet_id=machine.fleet_id,
+        fleet_name=fleet_name,
+        subfleet_id=machine.subfleet_id,
+        subfleet_name=subfleet_name,
+        operator_id=machine.operator_id,
+        identificador_tipo=machine.identificador_tipo,
+        identificador_numero=machine.identificador_numero,
         created_at=existing["created_at"]
     )
 
