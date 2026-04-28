@@ -164,6 +164,11 @@ export default function ContasReceberPage() {
       
       // Se for parcelado e não for edição
       if (isParcelado && !editingConta && parseInt(totalParcelas) > 1) {
+        const numParcelas = parseInt(totalParcelas);
+        if (!Number.isFinite(numParcelas) || numParcelas < 2 || numParcelas > 360) {
+          toast.error("Número de parcelas deve ser entre 2 e 360");
+          return;
+        }
         const dataParcelado = {
           cliente_id: formData.cliente_id,
           cliente_nome: formData.cliente_nome,
@@ -640,16 +645,17 @@ export default function ContasReceberPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="form-label">Número de Parcelas *</label>
-                      <Select value={totalParcelas} onValueChange={setTotalParcelas}>
-                        <SelectTrigger className="w-full h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="z-[9999]">
-                          {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24, 36, 48, 60, 72, 84, 96, 108, 120].map(n => (
-                            <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        type="number"
+                        min="2"
+                        max="360"
+                        value={totalParcelas}
+                        onChange={(e) => setTotalParcelas(e.target.value)}
+                        placeholder="Ex: 12"
+                        className="h-11"
+                        data-testid="input-total-parcelas"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Mínimo 2, máximo 360 parcelas</p>
                     </div>
                     <div>
                       <label className="form-label">Intervalo entre Parcelas</label>

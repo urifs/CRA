@@ -1,5 +1,23 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 24/04/2026 (Sessão 33) — Parcelas com entrada manual
+
+### ✅ Número de parcelas agora é input livre (não dropdown fixo)
+**Frontend** (`ContasPagarPage.jsx` e `ContasReceberPage.jsx`):
+- Substituído o `<Select>` com 21 valores fixos por um `<Input type="number">` com:
+  - `min=2`, `max=360`, `placeholder="Ex: 12"`
+  - Hint: "Mínimo 2, máximo 360 parcelas"
+  - `data-testid="input-total-parcelas"`
+- Validação no submit: rejeita valores fora do range 2-360 com toast de erro.
+- Permite agora parcelar em qualquer número (ex: 17x, 23x, 42x, 240x...) sem limite arbitrário do dropdown.
+
+### Validação
+- Lint JS limpo nos 2 arquivos.
+- Limite máximo 360 (= 30 anos mensais) cobre cenários reais de financiamento de longo prazo sem expor o sistema a inputs absurdos.
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Juros/Multa/Desconto + Parcelas até 120x
 
 ### ✅ Juros, Multa e Desconto opcionais no formulário de Pagamento/Recebimento
