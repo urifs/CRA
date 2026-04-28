@@ -1,4 +1,36 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 28/04/2026 (Sessão 39) — 🧹 Auditoria total: zero duplicatas restantes
+
+### Auditoria executada
+Script Python varreu todas as rotas de `routes/*.py` cruzando com `server.py` (com normalização de path params). Antes da limpeza: **28 duplicatas** distribuídas em 4 arquivos. Após a limpeza: **0**.
+
+### Arquivos REMOVIDOS (100% duplicados / nem incluídos)
+- `routes/auth.py` (118 linhas) — 5 rotas `/auth/*` todas duplicadas em server.py
+- `routes/categories.py` (97 linhas) — 4 rotas `/categories/*` todas duplicadas
+
+### Arquivos COMPACTADOS (mantidas apenas as rotas únicas)
+- `routes/admin.py`: 963 → **453 linhas** (-510 linhas)
+  - Removidas 20 rotas duplicadas (CRUD de cadastros, ordens-servico, plano-contas, centros-custo, dashboard, notificacoes)
+  - Preservadas 2 únicas: `PUT /admin/ordens-servico/{id}/concluir` e `GET /admin/ordens-servico/{id}/export-pdf` (404 linhas de geração de PDF DAV-OS)
+- `routes/storage.py`: 463 → **138 linhas** (-325 linhas)
+  - Removidas 9 rotas duplicadas (list, folder, upload, download, delete, move, etc.)
+  - Preservadas 2 únicas: `POST /storage/rename` e `GET /storage/search`
+
+### Validação real (curl)
+- `/api/admin/cadastros`, `/admin/ordens-servico`, `/admin/plano-contas`, `/admin/centros-custo`, `/admin/notificacoes`, `/admin/dashboard` → 200 OK
+- `/api/storage/list`, `/api/storage/search` → 200 OK
+- POST OS + GET export-pdf → 200 OK, PDF de 3855 bytes (rota preservada funcionando)
+- PUT `/concluir` → `{"message": "Ordem concluída"}`
+- Lint Python (ruff): **All checks passed!**
+
+### Acumulado desde início da limpeza (sessões 38+39)
+- **1690 linhas de código morto removidas** (640 de machines.py + 1050 desta sessão)
+- 4 arquivos sem propósito (machines.py, auth.py, categories.py + compactações em admin.py e storage.py)
+- Risco de regressões similares ao bug do `fleet_id` ELIMINADO
+
+---
+
+
 ## Changelog - 28/04/2026 (Sessão 38) — 🧹 Limpeza: remoção de rotas duplicadas mortas
 
 ### 🐛 Causa raiz dos bugs sutis em máquinas
