@@ -64,7 +64,6 @@ load_dotenv(ROOT_DIR / '.env')
 # Import modular routes
 from routes.rh import rh_router
 from routes.admin import admin_router
-from routes.machines import machines_router
 from routes.chatbot import chatbot_router
 from routes.storage import storage_router
 from routes.exports import export_router
@@ -7809,7 +7808,6 @@ async def rename_storage_item(
 # Include modular routers first
 api_router.include_router(rh_router)
 api_router.include_router(admin_router)
-api_router.include_router(machines_router)
 api_router.include_router(chatbot_router)
 api_router.include_router(storage_router)
 api_router.include_router(export_router)

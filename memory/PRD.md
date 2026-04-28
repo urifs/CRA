@@ -1,4 +1,27 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 28/04/2026 (Sessão 38) — 🧹 Limpeza: remoção de rotas duplicadas mortas
+
+### 🐛 Causa raiz dos bugs sutis em máquinas
+O arquivo `/app/backend/routes/machines.py` (640 linhas) continha **20 rotas idênticas** às do `server.py` (POST/GET/PUT/DELETE para `/categories`, `/subcategories`, `/fleets`, `/machines`, `/maintenances`). Como `server.py` registra suas rotas via `@api_router.decorator` antes do `api_router.include_router(machines_router)`, **o FastAPI sempre executa a versão do `server.py`** — o `routes/machines.py` era código morto que nunca executava. Mantê-lo confundia manutenção e levou ao bug do `fleet_id` da sessão anterior (devs editavam a versão errada).
+
+### ✅ Correções aplicadas
+- **Removido** `from routes.machines import machines_router` em `server.py` (linha 67)
+- **Removido** `api_router.include_router(machines_router)` em `server.py` (linha 7812)
+- **Removido** `from .machines import machines_router` em `routes/__init__.py` e do `__all__`
+- **Deletado** `/app/backend/routes/machines.py` (640 linhas de código morto)
+
+### Validação real
+- Backend reiniciou sem erros (verificado em `/var/log/supervisor/backend.err.log`)
+- Smoke tests via curl: `/api/machines`, `/api/fleets`, `/api/categories`, `/api/maintenances`, `/api/subfleets` todos respondendo normalmente
+- "Frota Principal" mantém `machines_count: 1` (bug anterior continua corrigido)
+
+### Impacto
+- 640 linhas de código morto removidas
+- Reduz risco de regressões: agora só há 1 fonte de verdade para as rotas de máquinas/frotas/categorias
+
+---
+
+
 ## Changelog - 28/04/2026 (Sessão 37) — 🐛 BUG FIX: PUT /machines não persistia fleet_id
 
 ### 🐛 Problema
