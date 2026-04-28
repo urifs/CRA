@@ -421,27 +421,42 @@ async def export_ordem_servico_pdf(ordem_id: str):
     if emp in empresas_conhecidas:
         info = empresas_conhecidas[emp]
         emp_nome, emp_fantasia, emp_cnpj = info["nome"], info["fantasia"], info["cnpj"]
+        emp_telefone = "(63) 3214-9999"
+        emp_endereco = "712 SUL AV. LO 15, 01 PLANO DIRETOR SUL"
+        emp_cidade = "PALMAS-TO"
     elif centro_emp:
-        # Tenta inferir uma empresa conhecida pelo nome do centro (case-insensitive)
-        nome_upper = (centro_emp.get("nome") or "").upper()
-        if "CONSTRUC" in nome_upper:
-            info = empresas_conhecidas["construtora"]
-            emp_nome, emp_fantasia, emp_cnpj = info["nome"], info["fantasia"], info["cnpj"]
-        elif "LOCA" in nome_upper:
-            info = empresas_conhecidas["locadora"]
-            emp_nome, emp_fantasia, emp_cnpj = info["nome"], info["fantasia"], info["cnpj"]
-        else:
-            emp_nome = centro_emp.get("nome") or "-"
-            emp_fantasia = centro_emp.get("codigo") or ""
-            emp_cnpj = centro_emp.get("descricao") or "-"
+        # Prioriza campos novos do centro (razao_social, cnpj, etc.)
+        emp_nome = centro_emp.get("razao_social") or centro_emp.get("nome") or "-"
+        emp_fantasia = centro_emp.get("fantasia") or centro_emp.get("codigo") or ""
+        emp_cnpj = centro_emp.get("cnpj") or "-"
+        emp_telefone = centro_emp.get("telefone") or centro_emp.get("celular") or ""
+        endereco_partes = [
+            centro_emp.get("endereco"),
+            centro_emp.get("bairro"),
+        ]
+        emp_endereco = ", ".join([p for p in endereco_partes if p]) or "-"
+        cidade_uf = []
+        if centro_emp.get("cidade"):
+            cidade_uf.append(centro_emp["cidade"])
+        if centro_emp.get("uf"):
+            cidade_uf.append(centro_emp["uf"])
+        emp_cidade = "-".join(cidade_uf) if cidade_uf else "-"
+
+        # Fallback: se nada no centro, infere por nome
+        if emp_cnpj == "-":
+            nome_upper = (centro_emp.get("nome") or "").upper()
+            if "CONSTRUC" in nome_upper:
+                emp_cnpj = empresas_conhecidas["construtora"]["cnpj"]
+            elif "LOCA" in nome_upper:
+                emp_cnpj = empresas_conhecidas["locadora"]["cnpj"]
     else:
         # Texto livre — usa como nome
         emp_nome = emp
         emp_fantasia = ""
         emp_cnpj = "-"
-    emp_telefone = "(63) 3214-9999"
-    emp_endereco = "712 SUL AV. LO 15, 01 PLANO DIRETOR SUL"
-    emp_cidade = "PALMAS-TO"
+        emp_telefone = ""
+        emp_endereco = "-"
+        emp_cidade = "-"
 
     def _brl(v):
         try:
@@ -574,6 +589,67 @@ async def export_ordem_servico_pdf(ordem_id: str):
     ]))
     elements.append(t_obra)
     elements.append(Spacer(1, 0.15 * cm))
+
+    # Vínculos opcionais — Máquinas / Frotas / Fornecedores
+    vinculos_data = []
+    maq_ids = ordem.get("maquinas_ids") or []
+    fro_ids = ordem.get("frotas_ids") or []
+    forn_ids = ordem.get("fornecedores_ids") or []
+    if maq_ids:
+        maquinas = await db.machines.find(
+            {"id": {"$in": maq_ids}},
+            {"_id": 0, "name": 1, "plate": 1, "model": 1, "type": 1},
+        ).to_list(50)
+        if maquinas:
+            txt = "; ".join(
+                [f"{m.get('name','')} {('(' + m.get('plate') + ')') if m.get('plate') else ''}".strip()
+                 for m in maquinas]
+            )
+            vinculos_data.append([Paragraph("MÁQUINAS", style_label), Paragraph(txt, style_value)])
+    if fro_ids:
+        frotas = await db.machines.find(
+            {"id": {"$in": fro_ids}},
+            {"_id": 0, "name": 1, "plate": 1, "model": 1},
+        ).to_list(50)
+        if frotas:
+            txt = "; ".join(
+                [f"{m.get('name','')} {('(' + m.get('plate') + ')') if m.get('plate') else ''}".strip()
+                 for m in frotas]
+            )
+            vinculos_data.append([Paragraph("FROTAS", style_label), Paragraph(txt, style_value)])
+    if forn_ids:
+        fornecs = await db.cadastros.find(
+            {"id": {"$in": forn_ids}},
+            {"_id": 0, "nome": 1, "nome_razao": 1, "razao_social": 1, "fantasia": 1, "cpf_cnpj": 1},
+        ).to_list(50)
+        if fornecs:
+            txt = "; ".join(
+                [f"{(f.get('nome_razao') or f.get('razao_social') or f.get('nome') or '-')} "
+                 f"{('(' + f.get('cpf_cnpj') + ')') if f.get('cpf_cnpj') else ''}".strip()
+                 for f in fornecs]
+            )
+            vinculos_data.append([Paragraph("FORNECEDORES", style_label), Paragraph(txt, style_value)])
+
+    if vinculos_data:
+        elements.append(Table(
+            [[Paragraph("VÍNCULOS", style_section)]],
+            colWidths=[19.4 * cm],
+            style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#444")),
+                              ("LEFTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
+                              ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]),
+        ))
+        t_v = Table(vinculos_data, colWidths=[2.8 * cm, 16.6 * cm])
+        t_v.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#bbb")),
+            ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        elements.append(t_v)
+        elements.append(Spacer(1, 0.15 * cm))
 
     # Tabela de serviços
     elements.append(Table(

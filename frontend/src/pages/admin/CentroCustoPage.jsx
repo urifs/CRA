@@ -24,7 +24,12 @@ export default function CentroCustoPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCentro, setEditingCentro] = useState(null);
   const [formData, setFormData] = useState({
-    codigo: "", nome: "", descricao: "", status: "ativo"
+    codigo: "", nome: "", descricao: "", status: "ativo",
+    eh_empresa_emissora: false,
+    razao_social: "", fantasia: "", cnpj: "",
+    inscricao_estadual: "", inscricao_municipal: "",
+    telefone: "", celular: "", email: "",
+    endereco: "", bairro: "", cidade: "", uf: "", cep: "",
   });
 
   useEffect(() => { fetchCentros(); }, []);
@@ -60,17 +65,23 @@ export default function CentroCustoPage() {
   };
 
   const openModal = (centro = null) => {
+    const empty = {
+      codigo: "", nome: "", descricao: "", status: "ativo",
+      eh_empresa_emissora: false,
+      razao_social: "", fantasia: "", cnpj: "",
+      inscricao_estadual: "", inscricao_municipal: "",
+      telefone: "", celular: "", email: "",
+      endereco: "", bairro: "", cidade: "", uf: "", cep: "",
+    };
     if (centro) {
       setEditingCentro(centro);
       setFormData({
-        codigo: centro.codigo || "",
-        nome: centro.nome || "",
-        descricao: centro.descricao || "",
-        status: centro.status || "ativo"
+        ...empty,
+        ...Object.fromEntries(Object.keys(empty).map((k) => [k, centro[k] != null ? centro[k] : empty[k]])),
       });
     } else {
       setEditingCentro(null);
-      setFormData({ codigo: "", nome: "", descricao: "", status: "ativo" });
+      setFormData(empty);
     }
     setIsModalOpen(true);
   };
@@ -199,7 +210,7 @@ export default function CentroCustoPage() {
 
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCentro ? "Editar Centro de Custo" : "Novo Centro de Custo"}</DialogTitle>
           </DialogHeader>
@@ -230,6 +241,85 @@ export default function CentroCustoPage() {
               <label className="form-label">Descrição</label>
               <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} placeholder="Descrição opcional" />
             </div>
+
+            {/* Toggle de empresa emissora */}
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <input
+                type="checkbox"
+                id="eh_empresa_emissora"
+                checked={formData.eh_empresa_emissora}
+                onChange={(e) => setFormData({...formData, eh_empresa_emissora: e.target.checked})}
+                className="w-4 h-4"
+                data-testid="checkbox-empresa-emissora"
+              />
+              <label htmlFor="eh_empresa_emissora" className="text-sm font-medium cursor-pointer">
+                Este centro é uma <b>empresa emissora</b> (aparece no dropdown de Ordens de Serviço)
+              </label>
+            </div>
+
+            {/* Campos de empresa — só aparecem quando flag ligada */}
+            {formData.eh_empresa_emissora && (
+              <fieldset className="border rounded p-3 space-y-3 bg-amber-50/30">
+                <legend className="text-xs font-semibold uppercase px-1">Dados da Empresa</legend>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="form-label">Razão Social</label>
+                    <Input value={formData.razao_social} onChange={(e) => setFormData({...formData, razao_social: e.target.value})} placeholder="Nome jurídico completo" />
+                  </div>
+                  <div>
+                    <label className="form-label">Nome Fantasia</label>
+                    <Input value={formData.fantasia} onChange={(e) => setFormData({...formData, fantasia: e.target.value})} placeholder="Nome comercial" />
+                  </div>
+                  <div>
+                    <label className="form-label">CNPJ</label>
+                    <Input value={formData.cnpj} onChange={(e) => setFormData({...formData, cnpj: e.target.value})} placeholder="00.000.000/0000-00" />
+                  </div>
+                  <div>
+                    <label className="form-label">Inscrição Estadual</label>
+                    <Input value={formData.inscricao_estadual} onChange={(e) => setFormData({...formData, inscricao_estadual: e.target.value})} placeholder="ISENTO" />
+                  </div>
+                  <div>
+                    <label className="form-label">Inscrição Municipal</label>
+                    <Input value={formData.inscricao_municipal} onChange={(e) => setFormData({...formData, inscricao_municipal: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="form-label">E-mail</label>
+                    <Input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="contato@empresa.com" />
+                  </div>
+                  <div>
+                    <label className="form-label">Telefone</label>
+                    <Input value={formData.telefone} onChange={(e) => setFormData({...formData, telefone: e.target.value})} placeholder="(63) 0000-0000" />
+                  </div>
+                  <div>
+                    <label className="form-label">Celular</label>
+                    <Input value={formData.celular} onChange={(e) => setFormData({...formData, celular: e.target.value})} placeholder="(63) 90000-0000" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="form-label">Endereço</label>
+                    <Input value={formData.endereco} onChange={(e) => setFormData({...formData, endereco: e.target.value})} placeholder="Rua, número, complemento" />
+                  </div>
+                  <div>
+                    <label className="form-label">Bairro</label>
+                    <Input value={formData.bairro} onChange={(e) => setFormData({...formData, bairro: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="form-label">Cidade</label>
+                      <Input value={formData.cidade} onChange={(e) => setFormData({...formData, cidade: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="form-label">UF</label>
+                      <Input value={formData.uf} onChange={(e) => setFormData({...formData, uf: e.target.value.toUpperCase().slice(0,2)})} maxLength={2} placeholder="TO" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label">CEP</label>
+                    <Input value={formData.cep} onChange={(e) => setFormData({...formData, cep: e.target.value})} placeholder="77000-000" />
+                  </div>
+                </div>
+              </fieldset>
+            )}
+
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingCentro ? "Atualizar" : "Cadastrar"}</Button>

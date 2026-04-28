@@ -39,6 +39,8 @@ import {
 export default function OrdensServicoPage() {
   const [ordens, setOrdens] = useState([]);
   const [centrosCusto, setCentrosCusto] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [fornecedores, setFornecedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("todas");
@@ -77,6 +79,9 @@ export default function OrdensServicoPage() {
     atendente_nome: "",
     empresa_emissora: "locadora",
     tipo_financeiro: "nenhum",
+    frotas_ids: [],
+    maquinas_ids: [],
+    fornecedores_ids: [],
     observacoes: ""
   });
 
@@ -102,14 +107,38 @@ export default function OrdensServicoPage() {
   useEffect(() => {
     fetchOrdens();
     fetchCentrosCusto();
+    fetchMachines();
+    fetchFornecedores();
   }, []);
 
   const fetchCentrosCusto = async () => {
     try {
       const response = await axios.get(`${API}/admin/centros-custo`);
-      setCentrosCusto((response.data || []).filter(c => c.status === "ativo"));
+      // Apenas centros ativos. Se algum tem flag eh_empresa_emissora, filtra só esses;
+      // caso contrário, mostra todos (retrocompatibilidade).
+      const ativos = (response.data || []).filter(c => c.status === "ativo");
+      const emissoras = ativos.filter(c => c.eh_empresa_emissora);
+      setCentrosCusto(emissoras.length > 0 ? emissoras : ativos);
     } catch (error) {
       console.error("Erro ao carregar centros de custo:", error);
+    }
+  };
+
+  const fetchMachines = async () => {
+    try {
+      const response = await axios.get(`${API}/machines`);
+      setMachines(response.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar máquinas:", error);
+    }
+  };
+
+  const fetchFornecedores = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/cadastros?tipo=fornecedor`);
+      setFornecedores(response.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar fornecedores:", error);
     }
   };
 
@@ -187,6 +216,7 @@ export default function OrdensServicoPage() {
       observacao_servicos: "", notas_gerais: "",
       atendente_nome: "", empresa_emissora: "locadora",
       tipo_financeiro: "nenhum", observacoes: "",
+      frotas_ids: [], maquinas_ids: [], fornecedores_ids: [],
     };
     if (ordem) {
       setEditingOrdem(ordem);
@@ -198,6 +228,7 @@ export default function OrdensServicoPage() {
             if (v == null) return [k, baseEmpty[k]];
             if (k.startsWith("data_")) return [k, String(v).split("T")[0]];
             if (k.startsWith("valor_")) return [k, String(v)];
+            if (k.endsWith("_ids")) return [k, Array.isArray(v) ? v : []];
             return [k, v];
           })
         ),
@@ -664,6 +695,115 @@ export default function OrdensServicoPage() {
                       <SelectItem value="a_receber">A Receber (Receita)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </fieldset>
+
+            {/* Vínculos: Máquinas / Frotas / Fornecedores */}
+            <fieldset className="border rounded p-3">
+              <legend className="text-xs font-semibold uppercase px-1">Vínculos (opcional)</legend>
+              <div className="grid grid-cols-1 gap-3">
+                {/* Máquinas */}
+                <div>
+                  <label className="form-label">Máquinas</label>
+                  <div className="border rounded p-2 max-h-32 overflow-y-auto bg-white">
+                    {machines.length === 0 && (
+                      <p className="text-xs text-gray-400">Nenhuma máquina cadastrada</p>
+                    )}
+                    {machines.map((m) => {
+                      const checked = (formData.maquinas_ids || []).includes(m.id);
+                      return (
+                        <label key={m.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              const arr = formData.maquinas_ids || [];
+                              setFormData({
+                                ...formData,
+                                maquinas_ids: checked ? arr.filter((x) => x !== m.id) : [...arr, m.id],
+                              });
+                            }}
+                            data-testid={`checkbox-maquina-${m.id}`}
+                          />
+                          <span>{m.name} {m.plate && <span className="text-gray-500">({m.plate})</span>}</span>
+                          {m.type && <span className="text-xs text-gray-400 ml-auto">{m.type}</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {formData.maquinas_ids?.length > 0 && (
+                    <p className="text-xs text-blue-600 mt-1">{formData.maquinas_ids.length} selecionada(s)</p>
+                  )}
+                </div>
+
+                {/* Frotas */}
+                <div>
+                  <label className="form-label">Frotas (Veículos)</label>
+                  <div className="border rounded p-2 max-h-32 overflow-y-auto bg-white">
+                    {machines.filter(m => m.plate).length === 0 && (
+                      <p className="text-xs text-gray-400">Nenhuma frota com placa cadastrada</p>
+                    )}
+                    {machines.filter(m => m.plate).map((m) => {
+                      const checked = (formData.frotas_ids || []).includes(m.id);
+                      return (
+                        <label key={m.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              const arr = formData.frotas_ids || [];
+                              setFormData({
+                                ...formData,
+                                frotas_ids: checked ? arr.filter((x) => x !== m.id) : [...arr, m.id],
+                              });
+                            }}
+                            data-testid={`checkbox-frota-${m.id}`}
+                          />
+                          <span>{m.name} <span className="text-gray-500">({m.plate})</span></span>
+                          {m.model && <span className="text-xs text-gray-400 ml-auto">{m.model}</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {formData.frotas_ids?.length > 0 && (
+                    <p className="text-xs text-blue-600 mt-1">{formData.frotas_ids.length} selecionada(s)</p>
+                  )}
+                </div>
+
+                {/* Fornecedores */}
+                <div>
+                  <label className="form-label">Fornecedores</label>
+                  <div className="border rounded p-2 max-h-32 overflow-y-auto bg-white">
+                    {fornecedores.length === 0 && (
+                      <p className="text-xs text-gray-400">Nenhum fornecedor cadastrado — cadastre em Cadastros &gt; Fornecedores</p>
+                    )}
+                    {fornecedores.map((f) => {
+                      const checked = (formData.fornecedores_ids || []).includes(f.id);
+                      const label = f.nome_razao || f.razao_social || f.nome || "Sem nome";
+                      return (
+                        <label key={f.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              const arr = formData.fornecedores_ids || [];
+                              setFormData({
+                                ...formData,
+                                fornecedores_ids: checked ? arr.filter((x) => x !== f.id) : [...arr, f.id],
+                              });
+                            }}
+                            data-testid={`checkbox-fornecedor-${f.id}`}
+                          />
+                          <span>{label}</span>
+                          {f.cpf_cnpj && <span className="text-xs text-gray-400 ml-auto">{f.cpf_cnpj}</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {formData.fornecedores_ids?.length > 0 && (
+                    <p className="text-xs text-blue-600 mt-1">{formData.fornecedores_ids.length} selecionado(s)</p>
+                  )}
                 </div>
               </div>
             </fieldset>

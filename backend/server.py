@@ -3396,6 +3396,11 @@ class OrdemServicoCreate(BaseModel):
     # Itens da OS (opcional — pode ser populado direto na criação)
     itens: Optional[List[dict]] = None
 
+    # Vínculos opcionais (multi-seleção)
+    frotas_ids: Optional[List[str]] = None
+    maquinas_ids: Optional[List[str]] = None
+    fornecedores_ids: Optional[List[str]] = None
+
     # Valores
     valor_total: Optional[float] = 0
     valor_desconto: Optional[float] = 0
@@ -3481,13 +3486,31 @@ class PlanoContaResponse(BaseModel):
 
 # --- Centro de Custo ---
 class CentroCustoCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")
     codigo: Optional[str] = None
     nome: str
     descricao: Optional[str] = None
     status: str = "ativo"
+    # Dados de empresa (opcionais — usados quando o centro for emissor de OS/notas)
+    eh_empresa_emissora: bool = False
+    cnpj: Optional[str] = None
+    razao_social: Optional[str] = None
+    fantasia: Optional[str] = None
+    inscricao_estadual: Optional[str] = None
+    inscricao_municipal: Optional[str] = None
+    telefone: Optional[str] = None
+    celular: Optional[str] = None
+    email: Optional[str] = None
+    endereco: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    uf: Optional[str] = None
+    cep: Optional[str] = None
+    logo_base64: Optional[str] = None  # Logo em base64 para uso em PDFs
+
 
 class CentroCustoResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
     id: str
     codigo: Optional[str] = None
     nome: str

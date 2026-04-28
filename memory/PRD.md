@@ -1,5 +1,50 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 28/04/2026 (Sessão 33) — Centro de Custo expandido + Vínculos na OS
+
+### ✅ Centro de Custo agora suporta dados de Empresa Emissora
+**Backend** (`server.py`): model `CentroCustoCreate` expandido com:
+- Flag `eh_empresa_emissora: bool` (controla se aparece no dropdown da OS)
+- 14 campos opcionais: razao_social, fantasia, cnpj, IE, IM, telefone, celular, email, endereço completo (rua, bairro, cidade, UF, CEP), logo_base64
+- `model_config = ConfigDict(extra="allow")` para futuras expansões
+
+**Frontend** (`CentroCustoPage.jsx`): modal expandido para 2xl com:
+- Toggle "Este centro é uma empresa emissora" (checkbox em destaque)
+- Quando ligado, aparece fieldset amarelo "Dados da Empresa" com todos os 14 campos
+- `data-testid="checkbox-empresa-emissora"`
+
+### ✅ Ordem de Serviço: vínculos a Máquinas, Frotas e Fornecedores
+**Backend**: model `OrdemServicoCreate` ganhou 3 novos campos:
+- `frotas_ids: List[str]`
+- `maquinas_ids: List[str]`
+- `fornecedores_ids: List[str]`
+
+**Frontend** (`OrdensServicoPage.jsx`):
+- Carrega 4 fontes: ordens, centros_custo, machines, fornecedores
+- Novo fieldset "Vínculos (opcional)" com 3 listas multi-select (checkbox):
+  - **Máquinas**: todas de `GET /api/machines`
+  - **Frotas**: somente máquinas com `plate` (placa) cadastrada
+  - **Fornecedores**: `GET /api/admin/cadastros?tipo=fornecedor`
+- Cada lista é scroll-fixa (max-h-32) com hover, contador de selecionados
+- `data-testid` para cada checkbox
+- Dropdown "Empresa Emissora" agora **filtra inteligentemente**: se há centros marcados com `eh_empresa_emissora=true`, mostra só esses; senão mostra todos os centros ativos (retrocompatibilidade).
+
+### ✅ PDF da OS aprimorado
+- Cabeçalho usa **dados completos do centro de custo** (razão social, CNPJ, telefone, endereço, cidade/UF) em vez do hardcode.
+- Nova seção **VÍNCULOS** entre dados da obra e itens, mostrando MÁQUINAS / FROTAS / FORNECEDORES vinculados com nome + placa/CNPJ.
+- Fallback para empresas conhecidas (locadora/construtora) quando o centro não tem CNPJ preenchido.
+- Suporta `nome_razao` (formato real do collection cadastros) além de `razao_social` e `nome`.
+
+### Validação real (IA confidence 100%)
+PDF gerado com:
+- Centro CRA Construções (com todos os dados) → cabeçalho "RODRIGUES ALMEIDA CONSTRUCOES LTDA", CNPJ 39.543.761/0002-06, endereço/telefone corretos
+- 2 máquinas vinculadas → seção VÍNCULOS mostra "Trator Teste UI (TST1234); Trator Photo Test (PHT1234)"
+- 1 frota → "Trator Teste UI (TST1234)"
+- 1 fornecedor → "Aço Forte Comercio LTDA (11.222.333/0001-44)"
+
+---
+
+
 ## Changelog - 28/04/2026 (Sessão 33) — Empresa Emissora dinâmica via Centro de Custo
 
 ### ✅ Dropdown agora carrega Centros de Custo cadastrados
