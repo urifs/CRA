@@ -93,6 +93,7 @@ export default function OrdensServicoPage() {
   });
   const [cadastros, setCadastros] = useState([]);
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
+  const [showNovoFornecedor, setShowNovoFornecedor] = useState(false);
   const [consultandoCep, setConsultandoCep] = useState(false);
 
   const handleExportPdf = async (ordem) => {
@@ -184,6 +185,58 @@ export default function OrdensServicoPage() {
     setCadastros((prev) => [...prev, novoCadastro]);
     handleSelectCliente(novoCadastro.id);
     fetchCadastros();
+  };
+
+  const handleNovoFornecedorSuccess = (novoFornecedor) => {
+    // Recarrega lista de fornecedores e marca o novo como selecionado
+    fetchFornecedores();
+    setFormData((prev) => ({
+      ...prev,
+      fornecedores_ids: [...(prev.fornecedores_ids || []), novoFornecedor.id],
+    }));
+    toast.success(`Fornecedor "${novoFornecedor.nome_razao}" vinculado à OS`);
+  };
+
+  // Calcula data de entrega/fechamento a partir da data de abertura + periodicidade
+  const PERIODICIDADE_DIAS = {
+    diaria: 1,
+    semanal: 7,
+    quinzenal: 15,
+    mensal: 30,
+    semestral: 180,
+    anual: 365,
+  };
+
+  const calcularDataEntrega = (dataAberturaIso, periodicidade) => {
+    if (!dataAberturaIso || !periodicidade) return "";
+    const dias = PERIODICIDADE_DIAS[periodicidade];
+    if (!dias) return "";
+    const d = new Date(`${dataAberturaIso}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return "";
+    d.setDate(d.getDate() + dias);
+    return d.toISOString().split("T")[0];
+  };
+
+  const handlePeriodicidadeChange = (periodicidade) => {
+    const novaPrevisao = calcularDataEntrega(formData.data_abertura, periodicidade);
+    setFormData((prev) => ({
+      ...prev,
+      periodicidade,
+      data_previsao_entrega: novaPrevisao || prev.data_previsao_entrega,
+    }));
+  };
+
+  const handleDataAberturaChange = (novaData) => {
+    setFormData((prev) => {
+      const novaPrevisao = prev.periodicidade
+        ? calcularDataEntrega(novaData, prev.periodicidade)
+        : prev.data_previsao_entrega;
+      return {
+        ...prev,
+        data_abertura: novaData,
+        data_previsao_entrega: novaPrevisao || prev.data_previsao_entrega,
+      };
+    });
   };
 
   // Consulta endereço a partir do CEP via ViaCEP
@@ -612,7 +665,7 @@ export default function OrdensServicoPage() {
             {/* Identificação */}
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="form-label">Nº Contrato</label>
+                <label className="form-label">Nº Contrato <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
                 <Input
                   value={formData.numero_contrato}
                   onChange={(e) => setFormData({...formData, numero_contrato: e.target.value})}
@@ -620,7 +673,7 @@ export default function OrdensServicoPage() {
                 />
               </div>
               <div>
-                <label className="form-label">Nº Doc Fiscal</label>
+                <label className="form-label">Nº Doc Fiscal <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
                 <Input
                   value={formData.numero_documento_fiscal}
                   onChange={(e) => setFormData({...formData, numero_documento_fiscal: e.target.value})}
@@ -709,11 +762,11 @@ export default function OrdensServicoPage() {
                   />
                 </div>
                 <div>
-                  <label className="form-label">IE / RG</label>
+                  <label className="form-label">IE / RG <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
                   <Input value={formData.cliente_ie} onChange={(e) => setFormData({...formData, cliente_ie: e.target.value})} placeholder="Inscrição Estadual" />
                 </div>
                 <div>
-                  <label className="form-label">E-mail</label>
+                  <label className="form-label">E-mail <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
                   <Input type="email" value={formData.cliente_email} onChange={(e) => setFormData({...formData, cliente_email: e.target.value})} placeholder="cliente@email.com" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -807,24 +860,27 @@ export default function OrdensServicoPage() {
                   <label className="form-label">Periodicidade</label>
                   <Select 
                     value={formData.periodicidade || "nenhuma"} 
-                    onValueChange={(v) => setFormData({...formData, periodicidade: v === "nenhuma" ? "" : v})}
+                    onValueChange={(v) => handlePeriodicidadeChange(v === "nenhuma" ? "" : v)}
                   >
                     <SelectTrigger className="w-full" data-testid="select-periodicidade">
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent className="z-[9999]">
                       <SelectItem value="nenhuma">Nenhuma</SelectItem>
-                      <SelectItem value="diaria">Diária</SelectItem>
-                      <SelectItem value="semanal">Semanal</SelectItem>
-                      <SelectItem value="quinzenal">Quinzenal</SelectItem>
-                      <SelectItem value="mensal">Mensal</SelectItem>
-                      <SelectItem value="semestral">Semestral</SelectItem>
-                      <SelectItem value="anual">Anual</SelectItem>
+                      <SelectItem value="diaria">Diária (+1 dia)</SelectItem>
+                      <SelectItem value="semanal">Semanal (+7 dias)</SelectItem>
+                      <SelectItem value="quinzenal">Quinzenal (+15 dias)</SelectItem>
+                      <SelectItem value="mensal">Mensal (+30 dias)</SelectItem>
+                      <SelectItem value="semestral">Semestral (+180 dias)</SelectItem>
+                      <SelectItem value="anual">Anual (+365 dias)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formData.periodicidade && (
+                    <p className="text-[10px] text-blue-600 mt-1">📅 Previsão de entrega calculada automaticamente</p>
+                  )}
                 </div>
                 <div>
-                  <label className="form-label">KM (opcional)</label>
+                  <label className="form-label">KM <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
                   <Input 
                     value={formData.km} 
                     onChange={(e) => setFormData({...formData, km: e.target.value.replace(/[^\d.,]/g, "")})} 
@@ -834,7 +890,7 @@ export default function OrdensServicoPage() {
                 </div>
                 <div>
                   <label className="form-label">Data Abertura *</label>
-                  <MaskedDateInput value={formData.data_abertura} onChange={(v) => setFormData({...formData, data_abertura: v})} required />
+                  <MaskedDateInput value={formData.data_abertura} onChange={(v) => handleDataAberturaChange(v)} required />
                 </div>
                 <div>
                   <label className="form-label">Data Fechamento</label>
@@ -977,10 +1033,23 @@ export default function OrdensServicoPage() {
 
                 {/* Fornecedores */}
                 <div>
-                  <label className="form-label">Fornecedores</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="form-label mb-0">Fornecedores</label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setShowNovoFornecedor(true)}
+                      data-testid="btn-novo-fornecedor-os"
+                    >
+                      <UserPlus size={12} className="mr-1" />
+                      Cadastrar novo
+                    </Button>
+                  </div>
                   <div className="border rounded p-2 max-h-32 overflow-y-auto bg-white">
                     {fornecedores.length === 0 && (
-                      <p className="text-xs text-gray-400">Nenhum fornecedor cadastrado — cadastre em Cadastros &gt; Fornecedores</p>
+                      <p className="text-xs text-gray-400">Nenhum fornecedor cadastrado — use o botão "Cadastrar novo" acima</p>
                     )}
                     {fornecedores.map((f) => {
                       const checked = (formData.fornecedores_ids || []).includes(f.id);
@@ -1049,6 +1118,14 @@ export default function OrdensServicoPage() {
         onOpenChange={setShowNovoCadastro}
         defaultTipo="cliente"
         onSuccess={handleNovoCadastroSuccess}
+      />
+
+      {/* Modal de Cadastro Rápido de Fornecedor */}
+      <CadastroFormModal
+        open={showNovoFornecedor}
+        onOpenChange={setShowNovoFornecedor}
+        defaultTipo="fornecedor"
+        onSuccess={handleNovoFornecedorSuccess}
       />
     </div>
   );

@@ -1,4 +1,30 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 28/04/2026 (Sessão 36) — OS: labels (opcional) + auto-cálculo de entrega + fornecedor rápido
+
+### ✅ Labels com indicador "(opcional)"
+- Adicionado tag visual "(opcional)" cinza-claro ao lado dos labels: **Nº Contrato**, **Nº Doc Fiscal**, **IE/RG**, **E-mail**, **KM** (`text-gray-400 text-xs font-normal`).
+- Total de 6 indicadores visíveis no formulário (validado via screenshot).
+
+### ✅ Auto-cálculo de Data de Previsão de Entrega
+- Mapa de dias por periodicidade: Diária = +1, Semanal = +7, Quinzenal = +15, Mensal = +30, Semestral = +180, Anual = +365.
+- Quando o usuário muda **Periodicidade** ou **Data de Abertura**, a **Data de Previsão de Entrega** é recalculada automaticamente.
+- O dropdown agora mostra os dias entre parênteses ("Semanal (+7 dias)") para clareza.
+- Pequena dica em azul abaixo do select: "📅 Previsão de entrega calculada automaticamente".
+- Validado: Abertura 28/04/2026 + Semanal → 05/05/2026; + Mensal → 28/05/2026.
+
+### ✅ Fornecedores agora com cadastro rápido
+- Adicionado botão "**Cadastrar novo**" (`<UserPlus />`) ao lado do label "Fornecedores" na seção de Vínculos.
+- Abre o `CadastroFormModal` com `defaultTipo="fornecedor"`.
+- Após cadastrar, o fornecedor é automaticamente vinculado à OS sendo criada (marcado no checkbox).
+- Mensagem do estado vazio atualizada para apontar para o botão.
+
+### Notas
+- Mantida a UX multi-select (checkbox) para vincular múltiplos fornecedores simultaneamente.
+- Bug rápido durante implementação: estado `showNovoFornecedor` não estava declarado → corrigido na mesma sessão.
+
+---
+
+
 ## Changelog - 28/04/2026 (Sessão 35) — Ordem de Serviço: cliente inteligente + ViaCEP + Periodicidade + KM
 
 ### ✅ Cliente (Razão Social) na OS agora é dropdown com cadastro rápido
