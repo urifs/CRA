@@ -24,8 +24,10 @@ import {
   Trash2,
   TrendingDown,
   TrendingUp,
-  Minus
+  Minus,
+  FileDown
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -45,15 +47,56 @@ export default function OrdensServicoPage() {
     numero_contrato: "",
     cliente_nome: "",
     cliente_fantasia: "",
+    cliente_documento: "",
+    cliente_email: "",
+    cliente_telefone: "",
+    cliente_celular: "",
+    cliente_ie: "",
+    cliente_endereco: "",
+    cliente_bairro: "",
+    cliente_cidade: "",
+    cliente_uf: "",
+    cliente_cep: "",
+    endereco_entrega: "",
     obra: "",
     descricao: "",
+    tipo_atendimento: "",
+    periodo: "",
+    numero_documento_fiscal: "",
     data_abertura: new Date().toISOString().split("T")[0],
+    data_fechamento: "",
     data_previsao_entrega: "",
     valor_total: "",
+    valor_desconto: "",
     valor_antecipado: "",
+    forma_pagamento: "",
+    condicao_pagamento: "",
+    observacao_servicos: "",
+    notas_gerais: "",
+    atendente_nome: "",
+    empresa_emissora: "locadora",
     tipo_financeiro: "nenhum",
     observacoes: ""
   });
+
+  const handleExportPdf = async (ordem) => {
+    try {
+      const r = await axios.get(`${API}/admin/ordens-servico/${ordem.id}/export-pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', `OS_${ordem.numero || ordem.id.substring(0,8)}.pdf`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("OS exportada");
+    } catch (err) {
+      toast.error("Erro ao exportar OS");
+    }
+  };
 
   useEffect(() => {
     fetchOrdens();
@@ -116,36 +159,41 @@ export default function OrdensServicoPage() {
   };
 
   const openModal = (ordem = null) => {
+    const baseEmpty = {
+      numero_contrato: "",
+      cliente_nome: "", cliente_fantasia: "", cliente_documento: "",
+      cliente_email: "", cliente_telefone: "", cliente_celular: "",
+      cliente_ie: "", cliente_endereco: "", cliente_bairro: "",
+      cliente_cidade: "", cliente_uf: "", cliente_cep: "",
+      endereco_entrega: "", obra: "",
+      tipo_atendimento: "", periodo: "",
+      numero_documento_fiscal: "",
+      descricao: "",
+      data_abertura: new Date().toISOString().split("T")[0],
+      data_fechamento: "", data_previsao_entrega: "",
+      valor_total: "", valor_desconto: "", valor_antecipado: "",
+      forma_pagamento: "", condicao_pagamento: "",
+      observacao_servicos: "", notas_gerais: "",
+      atendente_nome: "", empresa_emissora: "locadora",
+      tipo_financeiro: "nenhum", observacoes: "",
+    };
     if (ordem) {
       setEditingOrdem(ordem);
       setFormData({
-        numero_contrato: ordem.numero_contrato || "",
-        cliente_nome: ordem.cliente_nome || "",
-        cliente_fantasia: ordem.cliente_fantasia || "",
-        obra: ordem.obra || "",
-        descricao: ordem.descricao || "",
-        data_abertura: ordem.data_abertura?.split("T")[0] || "",
-        data_previsao_entrega: ordem.data_previsao_entrega?.split("T")[0] || "",
-        valor_total: ordem.valor_total?.toString() || "",
-        valor_antecipado: ordem.valor_antecipado?.toString() || "",
-        tipo_financeiro: ordem.tipo_financeiro || "nenhum",
-        observacoes: ordem.observacoes || ""
+        ...baseEmpty,
+        ...Object.fromEntries(
+          Object.keys(baseEmpty).map((k) => {
+            const v = ordem[k];
+            if (v == null) return [k, baseEmpty[k]];
+            if (k.startsWith("data_")) return [k, String(v).split("T")[0]];
+            if (k.startsWith("valor_")) return [k, String(v)];
+            return [k, v];
+          })
+        ),
       });
     } else {
       setEditingOrdem(null);
-      setFormData({
-        numero_contrato: "",
-        cliente_nome: "",
-        cliente_fantasia: "",
-        obra: "",
-        descricao: "",
-        data_abertura: new Date().toISOString().split("T")[0],
-        data_previsao_entrega: "",
-        valor_total: "",
-        valor_antecipado: "",
-        tipo_financeiro: "nenhum",
-        observacoes: ""
-      });
+      setFormData(baseEmpty);
     }
     setIsModalOpen(true);
   };
@@ -367,7 +415,7 @@ export default function OrdensServicoPage() {
                             size="sm"
                             variant="outline"
                             className="text-[#E31A1A]"
-                            onClick={() => handleUpdateStatus(ordem.id, "em_andamento")}
+                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(ordem.id, "em_andamento"); }}
                             title="Iniciar"
                           >
                             <Clock size={16} />
@@ -378,20 +426,23 @@ export default function OrdensServicoPage() {
                             size="sm"
                             variant="outline"
                             className="text-green-600"
-                            onClick={() => handleUpdateStatus(ordem.id, "concluida")}
+                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(ordem.id, "concluida"); }}
                             title="Concluir"
                           >
                             <CheckCircle2 size={16} />
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" onClick={() => openModal(ordem)}>
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleExportPdf(ordem); }} title="Exportar PDF" data-testid={`btn-export-os-${ordem.id}`}>
+                          <FileDown size={16} />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openModal(ordem); }}>
                           <Edit size={16} />
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
                           className="text-red-600 hover:bg-red-50"
-                          onClick={() => handleDelete(ordem.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(ordem.id); }}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -407,117 +458,210 @@ export default function OrdensServicoPage() {
 
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingOrdem ? "Editar Ordem de Serviço" : "Nova Ordem de Serviço"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            {/* Identificação */}
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="form-label">Nº Contrato</label>
                 <Input
                   value={formData.numero_contrato}
                   onChange={(e) => setFormData({...formData, numero_contrato: e.target.value})}
-                  placeholder="Ex: CONT-2024-001"
+                  placeholder="CONT-2024-001"
                 />
               </div>
               <div>
-                <label className="form-label">Tipo Financeiro *</label>
-                <Select value={formData.tipo_financeiro} onValueChange={(value) => setFormData({...formData, tipo_financeiro: value})}>
-                  <SelectTrigger className="w-full h-11">
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
+                <label className="form-label">Nº Doc Fiscal</label>
+                <Input
+                  value={formData.numero_documento_fiscal}
+                  onChange={(e) => setFormData({...formData, numero_documento_fiscal: e.target.value})}
+                  placeholder="NF nº"
+                />
+              </div>
+              <div>
+                <label className="form-label">Empresa Emissora *</label>
+                <Select value={formData.empresa_emissora} onValueChange={(v) => setFormData({...formData, empresa_emissora: v})}>
+                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
                   <SelectContent className="z-[9999]">
-                    <SelectItem value="nenhum">Nenhum</SelectItem>
-                    <SelectItem value="a_pagar">A Pagar (Despesa)</SelectItem>
-                    <SelectItem value="a_receber">A Receber (Receita)</SelectItem>
+                    <SelectItem value="locadora">CRA Locações</SelectItem>
+                    <SelectItem value="construtora">CRA Construções</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">Cliente (Razão Social)</label>
-                <Input
-                  value={formData.cliente_nome}
-                  onChange={(e) => setFormData({...formData, cliente_nome: e.target.value})}
-                  placeholder="Nome do cliente"
-                />
+
+            {/* Cliente */}
+            <fieldset className="border rounded p-3">
+              <legend className="text-xs font-semibold uppercase px-1">Cliente</legend>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label">Cliente (Razão Social)</label>
+                  <Input value={formData.cliente_nome} onChange={(e) => setFormData({...formData, cliente_nome: e.target.value})} placeholder="Nome / Razão social" />
+                </div>
+                <div>
+                  <label className="form-label">Fantasia</label>
+                  <Input value={formData.cliente_fantasia} onChange={(e) => setFormData({...formData, cliente_fantasia: e.target.value})} placeholder="Nome fantasia" />
+                </div>
+                <div>
+                  <label className="form-label">CPF/CNPJ</label>
+                  <Input value={formData.cliente_documento} onChange={(e) => setFormData({...formData, cliente_documento: e.target.value})} placeholder="000.000.000-00" />
+                </div>
+                <div>
+                  <label className="form-label">IE / RG</label>
+                  <Input value={formData.cliente_ie} onChange={(e) => setFormData({...formData, cliente_ie: e.target.value})} placeholder="Inscrição Estadual" />
+                </div>
+                <div>
+                  <label className="form-label">E-mail</label>
+                  <Input type="email" value={formData.cliente_email} onChange={(e) => setFormData({...formData, cliente_email: e.target.value})} placeholder="cliente@email.com" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="form-label">Fone</label>
+                    <Input value={formData.cliente_telefone} onChange={(e) => setFormData({...formData, cliente_telefone: e.target.value})} placeholder="(63) 0000-0000" />
+                  </div>
+                  <div>
+                    <label className="form-label">Celular</label>
+                    <Input value={formData.cliente_celular} onChange={(e) => setFormData({...formData, cliente_celular: e.target.value})} placeholder="(63) 90000-0000" />
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <label className="form-label">Endereço</label>
+                  <Input value={formData.cliente_endereco} onChange={(e) => setFormData({...formData, cliente_endereco: e.target.value})} placeholder="Rua, número, complemento" />
+                </div>
+                <div>
+                  <label className="form-label">Bairro</label>
+                  <Input value={formData.cliente_bairro} onChange={(e) => setFormData({...formData, cliente_bairro: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <label className="form-label">Cidade</label>
+                    <Input value={formData.cliente_cidade} onChange={(e) => setFormData({...formData, cliente_cidade: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="form-label">UF</label>
+                    <Input value={formData.cliente_uf} onChange={(e) => setFormData({...formData, cliente_uf: e.target.value.toUpperCase().slice(0,2)})} maxLength={2} placeholder="TO" />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">CEP</label>
+                  <Input value={formData.cliente_cep} onChange={(e) => setFormData({...formData, cliente_cep: e.target.value})} placeholder="77000-000" />
+                </div>
               </div>
-              <div>
-                <label className="form-label">Cliente (Nome Fantasia)</label>
-                <Input
-                  value={formData.cliente_fantasia}
-                  onChange={(e) => setFormData({...formData, cliente_fantasia: e.target.value})}
-                  placeholder="Nome fantasia"
-                />
+            </fieldset>
+
+            {/* Obra / Atendimento */}
+            <fieldset className="border rounded p-3">
+              <legend className="text-xs font-semibold uppercase px-1">Obra / Atendimento</legend>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label">Obra</label>
+                  <Input value={formData.obra} onChange={(e) => setFormData({...formData, obra: e.target.value})} placeholder="Nome da obra/projeto" />
+                </div>
+                <div>
+                  <label className="form-label">Endereço de Entrega</label>
+                  <Input value={formData.endereco_entrega} onChange={(e) => setFormData({...formData, endereco_entrega: e.target.value})} placeholder="Local de entrega/serviço" />
+                </div>
+                <div>
+                  <label className="form-label">Tipo Atendimento</label>
+                  <Input value={formData.tipo_atendimento} onChange={(e) => setFormData({...formData, tipo_atendimento: e.target.value})} placeholder="Locação / Serviço / Venda..." />
+                </div>
+                <div>
+                  <label className="form-label">Período</label>
+                  <Input value={formData.periodo} onChange={(e) => setFormData({...formData, periodo: e.target.value})} placeholder="Ex: 30 dias / Mensal" />
+                </div>
+                <div>
+                  <label className="form-label">Data Abertura *</label>
+                  <Input type="date" value={formData.data_abertura} onChange={(e) => setFormData({...formData, data_abertura: e.target.value})} required />
+                </div>
+                <div>
+                  <label className="form-label">Data Fechamento</label>
+                  <Input type="date" value={formData.data_fechamento} onChange={(e) => setFormData({...formData, data_fechamento: e.target.value})} />
+                </div>
+                <div>
+                  <label className="form-label">Previsão Entrega</label>
+                  <Input type="date" value={formData.data_previsao_entrega} onChange={(e) => setFormData({...formData, data_previsao_entrega: e.target.value})} />
+                </div>
+                <div>
+                  <label className="form-label">Atendente</label>
+                  <Input value={formData.atendente_nome} onChange={(e) => setFormData({...formData, atendente_nome: e.target.value})} placeholder="Nome do atendente" />
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="form-label">Obra/Projeto</label>
-              <Input
-                value={formData.obra}
-                onChange={(e) => setFormData({...formData, obra: e.target.value})}
-                placeholder="Nome da obra ou projeto"
-              />
-            </div>
-            <div>
-              <label className="form-label">Descrição do Serviço *</label>
-              <Input
-                value={formData.descricao}
-                onChange={(e) => setFormData({...formData, descricao: e.target.value})}
-                placeholder="Descreva o serviço a ser realizado"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">Data de Abertura</label>
-                <Input
-                  type="date"
-                  value={formData.data_abertura}
-                  onChange={(e) => setFormData({...formData, data_abertura: e.target.value})}
-                />
+            </fieldset>
+
+            {/* Descrição e financeiro */}
+            <fieldset className="border rounded p-3">
+              <legend className="text-xs font-semibold uppercase px-1">Descrição & Financeiro</legend>
+              <div className="space-y-3">
+                <div>
+                  <label className="form-label">Descrição do Serviço *</label>
+                  <Textarea
+                    value={formData.descricao}
+                    onChange={(e) => setFormData({...formData, descricao: e.target.value})}
+                    placeholder="Descreva os serviços / produtos da OS"
+                    required
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="form-label">Valor Total</label>
+                    <Input type="number" step="0.01" value={formData.valor_total} onChange={(e) => setFormData({...formData, valor_total: e.target.value})} placeholder="0,00" />
+                  </div>
+                  <div>
+                    <label className="form-label">Valor Desconto</label>
+                    <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: e.target.value})} placeholder="0,00" />
+                  </div>
+                  <div>
+                    <label className="form-label">Valor Antecipado</label>
+                    <Input type="number" step="0.01" value={formData.valor_antecipado} onChange={(e) => setFormData({...formData, valor_antecipado: e.target.value})} placeholder="0,00" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="form-label">Forma de Pagamento</label>
+                    <Input value={formData.forma_pagamento} onChange={(e) => setFormData({...formData, forma_pagamento: e.target.value})} placeholder="Boleto / PIX / Dinheiro..." />
+                  </div>
+                  <div>
+                    <label className="form-label">Condição de Pagamento</label>
+                    <Input value={formData.condicao_pagamento} onChange={(e) => setFormData({...formData, condicao_pagamento: e.target.value})} placeholder="Ex: 30/60/90 dias" />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Tipo Financeiro *</label>
+                  <Select value={formData.tipo_financeiro} onValueChange={(v) => setFormData({...formData, tipo_financeiro: v})}>
+                    <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="nenhum">Nenhum</SelectItem>
+                      <SelectItem value="a_pagar">A Pagar (Despesa)</SelectItem>
+                      <SelectItem value="a_receber">A Receber (Receita)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <label className="form-label">Previsão de Entrega</label>
-                <Input
-                  type="date"
-                  value={formData.data_previsao_entrega}
-                  onChange={(e) => setFormData({...formData, data_previsao_entrega: e.target.value})}
-                />
+            </fieldset>
+
+            {/* Observações */}
+            <fieldset className="border rounded p-3">
+              <legend className="text-xs font-semibold uppercase px-1">Observações</legend>
+              <div className="space-y-3">
+                <div>
+                  <label className="form-label">Observação dos Serviços</label>
+                  <Textarea value={formData.observacao_servicos} onChange={(e) => setFormData({...formData, observacao_servicos: e.target.value})} rows={2} placeholder="Detalhes específicos sobre os serviços executados" />
+                </div>
+                <div>
+                  <label className="form-label">Notas Gerais (rodapé)</label>
+                  <Textarea value={formData.notas_gerais} onChange={(e) => setFormData({...formData, notas_gerais: e.target.value})} rows={2} placeholder="Cláusulas, garantias, condições gerais..." />
+                </div>
+                <div>
+                  <label className="form-label">Observações Internas</label>
+                  <Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} placeholder="Notas para uso interno (não saem no PDF)" />
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="form-label">Valor Total</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.valor_total}
-                  onChange={(e) => setFormData({...formData, valor_total: e.target.value})}
-                  placeholder="0,00"
-                />
-              </div>
-              <div>
-                <label className="form-label">Valor Antecipado</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.valor_antecipado}
-                  onChange={(e) => setFormData({...formData, valor_antecipado: e.target.value})}
-                  placeholder="0,00"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="form-label">Observações</label>
-              <Input
-                value={formData.observacoes}
-                onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
-                placeholder="Observações adicionais"
-              />
-            </div>
+            </fieldset>
+
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">
                 Cancelar

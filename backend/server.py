@@ -3347,42 +3347,78 @@ class ProdutoResponse(BaseModel):
 
 # --- Ordem de Serviço (Completo) ---
 class OrdemServicoCreate(BaseModel):
+    model_config = ConfigDict(extra="allow")  # aceita campos extras sem reclamar
+
     # Identificação
     numero_contrato: Optional[str] = None
-    
-    # Cliente
+    numero_documento_fiscal: Optional[str] = None
+
+    # Cliente (todos opcionais)
     cliente_id: Optional[str] = None
     cliente_nome: Optional[str] = None
     cliente_fantasia: Optional[str] = None
-    
-    # Obra/Projeto
+    cliente_documento: Optional[str] = None
+    cliente_email: Optional[str] = None
+    cliente_telefone: Optional[str] = None
+    cliente_celular: Optional[str] = None
+    cliente_ie: Optional[str] = None
+    cliente_endereco: Optional[str] = None
+    cliente_bairro: Optional[str] = None
+    cliente_cidade: Optional[str] = None
+    cliente_uf: Optional[str] = None
+    cliente_cep: Optional[str] = None
+
+    # Obra / endereço de entrega
     obra: Optional[str] = None
+    obra_id: Optional[str] = None
+    endereco_entrega: Optional[str] = None
     prisma: Optional[str] = None
-    
+    periodo: Optional[str] = None
+
     # Datas
     data_abertura: Optional[str] = None
+    data_fechamento: Optional[str] = None
     data_previsao_entrega: Optional[str] = None
     data_conclusao: Optional[str] = None
-    
+
     # Atendimento
+    tipo: Optional[str] = "servico"
     tipo_atendimento: Optional[str] = None
     atendente: Optional[str] = None
+    atendente_nome: Optional[str] = None
     empresa: Optional[str] = None
-    
+    empresa_emissora: Optional[str] = None  # "locadora" | "construtora"
+    responsavel_id: Optional[str] = None
+    responsavel_nome: Optional[str] = None
+    maquina_id: Optional[str] = None
+    maquina_nome: Optional[str] = None
+
+    # Itens da OS (opcional — pode ser populado direto na criação)
+    itens: Optional[List[dict]] = None
+
     # Valores
     valor_total: Optional[float] = 0
+    valor_desconto: Optional[float] = 0
+    valor_subtotal: Optional[float] = 0
     valor_antecipado: Optional[float] = 0
-    
+
+    # Pagamento
+    forma_pagamento: Optional[str] = None
+    condicao_pagamento: Optional[str] = None
+
     # Status
     status: str = "em_aberto"  # em_aberto, em_andamento, concluida, cancelada
     confirmada: bool = False
-    
-    # Tipo Financeiro (novo campo para refletir no dashboard)
+    prioridade: Optional[str] = "media"
+
+    # Tipo Financeiro (refletir no dashboard)
     tipo_financeiro: Optional[str] = None  # a_pagar, a_receber, nenhum
-    
-    # Descrição
+
+    # Descrição / observações / notas
     descricao: Optional[str] = None
+    observacao_servicos: Optional[str] = None
     observacoes: Optional[str] = None
+    notas_gerais: Optional[str] = None
 
 class OrdemServicoItemCreate(BaseModel):
     produto_id: Optional[str] = None
@@ -4347,14 +4383,18 @@ async def get_ordens_servico(
 @api_router.post("/admin/ordens-servico")
 async def create_ordem_servico(data: OrdemServicoCreate, current_user: dict = Depends(get_current_user)):
     numero = await get_next_sequence("ordens_servico")
-    
+
+    payload = data.model_dump()
+    # Garante itens como lista (preserva caso já tenha vindo no payload)
+    if not isinstance(payload.get("itens"), list):
+        payload["itens"] = []
+
     ordem = {
         "id": str(uuid.uuid4()),
         "numero": numero,
-        **data.model_dump(),
+        **payload,
         "data_abertura": data.data_abertura or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "valor_restante": (data.valor_total or 0) - (data.valor_antecipado or 0),
-        "itens": [],
         "created_by": current_user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }

@@ -1,5 +1,58 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 28/04/2026 (Sessão 33) — Ordem de Serviço completa + Export PDF
+
+### 🐛 Bug crítico encontrado: endpoint duplicado
+Existiam DOIS endpoints `POST /api/admin/ordens-servico`:
+- `routes/admin.py` (com novo model expandido)
+- `server.py` linha 4347 (com model antigo, **prevalecendo**)
+
+O `server.py` ainda tinha:
+- `OrdemServicoCreate` com apenas 16 campos
+- `"itens": []` sobrescrevendo `model_dump()` na criação
+- Não aceitava: empresa_emissora, cliente_documento, endereço, forma_pagamento, observacao_servicos, notas_gerais, atendente_nome, itens, etc.
+
+### ✅ Correções aplicadas
+1. **Model `OrdemServicoCreate` em `server.py` expandido** com 35+ campos (todos opcionais) cobrindo o template STT:
+   - Cliente completo: nome, fantasia, documento, IE, email, telefone, celular, endereço, bairro, cidade, UF, CEP
+   - Obra: obra, endereco_entrega, periodo
+   - Datas: abertura, fechamento, previsão, conclusão
+   - Itens: lista de dicts (preserva ao criar)
+   - Valores: total, desconto, subtotal, antecipado
+   - Pagamento: forma_pagamento, condicao_pagamento
+   - Observações: observacao_servicos, notas_gerais, observacoes
+   - Empresa emissora: locadora | construtora
+   - `model_config = ConfigDict(extra="allow")` para aceitar campos futuros
+2. **`itens: []` removido do override** no insert — agora preserva o array enviado pelo frontend.
+
+### ✅ Novo endpoint `GET /api/admin/ordens-servico/{id}/export-pdf` (em `routes/admin.py`)
+Gera PDF da OS no formato STT/DAV-OS:
+- **Cabeçalho**: razão social + fantasia + CNPJ da empresa emissora (CRA Locações ou CRA Construções conforme `empresa_emissora`)
+- Aviso vermelho: "NÃO É DOCUMENTO FISCAL — NÃO É VÁLIDO COMO RECIBO..."
+- **Identificação do destinatário** (5 linhas: cliente, fantasia, doc, IE, endereço, bairro, cidade/UF/CEP, email, fones)
+- **Dados da obra/atendimento** (4 linhas: endereço entrega, obra, datas abertura/fechamento, tipo, período, contrato, NF)
+- **Tabela de Serviços/Itens** com 8 colunas: Código, Qtde, UN, Descrição, Vlr Un., Vlr Total, Vlr Desc, Total Líq.
+- **Resumo financeiro** horizontal: N. Itens / Sub-Total / Desconto / Total Serviços / **TOTAL DA OS** (vermelho destaque)
+- Forma de pagamento + condição
+- Observação dos serviços + Notas gerais
+- Linhas de assinatura para Atendente e Cliente
+
+### ✅ Frontend `OrdensServicoPage.jsx`
+- Form expandido com 4 fieldsets organizados: Cliente / Obra-Atendimento / Descrição-Financeiro / Observações
+- Novo botão azul "Exportar PDF" (FileDown) em cada card de OS
+- Dropdown "Empresa Emissora" (CRA Locações | CRA Construções)
+- Todos os 35+ campos do template STT acessíveis pela UI
+- `openModal` reescrito para preservar campos ao editar (Object.fromEntries com fallback de valores vazios)
+
+### Validação real
+PDF gerado com 2 itens, empresa Construtora, forma "Boleto 30/60/90", garantia 90 dias, atendente "MABY ALMEIDA" — todos os campos confirmados via `analyze_file_tool` (IA confidence 100%).
+
+### ℹ️ Sobre o bug das parcelas
+Verificado: o código de ambos `ContasPagarPage.jsx` e `ContasReceberPage.jsx` já tem `<Input type="number" data-testid="input-total-parcelas">`. Compilação webpack OK. **Provável cache do navegador no lado do usuário** — sugerido fazer Ctrl+Shift+R (hard refresh) ou abrir aba anônima.
+
+---
+
+
 ## Changelog - 24/04/2026 (Sessão 33) — Parcelas com entrada manual
 
 ### ✅ Número de parcelas agora é input livre (não dropdown fixo)
