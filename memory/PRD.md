@@ -1,5 +1,34 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+## Changelog - 28/04/2026 (Sessão 33) — Empresa Emissora dinâmica via Centro de Custo
+
+### ✅ Dropdown agora carrega Centros de Custo cadastrados
+**Frontend** (`OrdensServicoPage.jsx`):
+- Adicionado state `centrosCusto` populado via `GET /api/admin/centros-custo`.
+- Filtra apenas centros com `status === "ativo"`.
+- O `<Select>` Empresa Emissora mostra: `{codigo} — {nome}` para cada centro.
+- Se NÃO houver nenhum centro ativo cadastrado, mostra opções padrão "CRA Locações" e "CRA Construções" + dica amarela "💡 Cadastre empresas em Centro de Custo para aparecerem aqui".
+- `data-testid="select-empresa-emissora"`.
+
+### ✅ Backend export-pdf inteligente
+`GET /api/admin/ordens-servico/{id}/export-pdf` agora aceita 3 formatos para `empresa_emissora`:
+1. `"locadora"` / `"construtora"` (legado, mapeado para CNPJs hardcoded)
+2. **ID de centro de custo** → busca em `centros_custo` por `id` ou `nome`
+3. Texto livre → usa como nome
+
+Se for um centro de custo, faz **inferência inteligente** pelo nome (case-insensitive):
+- Nome contém "CONSTRUC" → usa CNPJ + razão social da CRA Construções
+- Nome contém "LOCA" → usa CNPJ + razão social da CRA Locações
+- Outro → usa o nome do centro como razão social, código como fantasia
+
+### Validação real
+- Cadastrado centro "CRA Construções LTDA" (código CC-CONSTR).
+- OS criada com `empresa_emissora` = ID desse centro.
+- PDF gerado: cabeçalho mostra **"CRA Construções LTDA"** (nome do centro de custo). ✅
+
+---
+
+
 ## Changelog - 28/04/2026 (Sessão 33) — Ordem de Serviço completa + Export PDF
 
 ### 🐛 Bug crítico encontrado: endpoint duplicado

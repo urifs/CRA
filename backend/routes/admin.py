@@ -390,16 +390,55 @@ async def export_ordem_servico_pdf(ordem_id: str):
     if not ordem:
         raise HTTPException(status_code=404, detail="Ordem não encontrada")
 
-    # Dados da empresa emissora
+    # Dados da empresa emissora.
+    # `empresa_emissora` pode ser:
+    #   - "locadora" / "construtora" (legado, mapeado para CNPJs conhecidos)
+    #   - ID de um centro de custo cadastrado
+    #   - Nome textual livre
     emp = ordem.get("empresa_emissora") or "locadora"
-    if emp == "construtora":
-        emp_nome = "RODRIGUES ALMEIDA CONSTRUCOES LTDA"
-        emp_fantasia = "CRA CONSTRUCOES"
-        emp_cnpj = "39.543.761/0002-06"
+
+    centro_emp = None
+    if emp not in ("locadora", "construtora"):
+        # Busca por ID ou nome no centros_custo
+        centro_emp = await db.centros_custo.find_one(
+            {"$or": [{"id": emp}, {"nome": emp}]},
+            {"_id": 0},
+        )
+
+    # Mapeamento de empresas conhecidas (com CNPJ/telefone/endereço)
+    empresas_conhecidas = {
+        "construtora": {
+            "nome": "RODRIGUES ALMEIDA CONSTRUCOES LTDA",
+            "fantasia": "CRA CONSTRUCOES",
+            "cnpj": "39.543.761/0002-06",
+        },
+        "locadora": {
+            "nome": "RODRIGUES ALMEIDA LOCACOES LTDA",
+            "fantasia": "CRA LOCACOES",
+            "cnpj": "39.543.761/0001-25",
+        },
+    }
+    if emp in empresas_conhecidas:
+        info = empresas_conhecidas[emp]
+        emp_nome, emp_fantasia, emp_cnpj = info["nome"], info["fantasia"], info["cnpj"]
+    elif centro_emp:
+        # Tenta inferir uma empresa conhecida pelo nome do centro (case-insensitive)
+        nome_upper = (centro_emp.get("nome") or "").upper()
+        if "CONSTRUC" in nome_upper:
+            info = empresas_conhecidas["construtora"]
+            emp_nome, emp_fantasia, emp_cnpj = info["nome"], info["fantasia"], info["cnpj"]
+        elif "LOCA" in nome_upper:
+            info = empresas_conhecidas["locadora"]
+            emp_nome, emp_fantasia, emp_cnpj = info["nome"], info["fantasia"], info["cnpj"]
+        else:
+            emp_nome = centro_emp.get("nome") or "-"
+            emp_fantasia = centro_emp.get("codigo") or ""
+            emp_cnpj = centro_emp.get("descricao") or "-"
     else:
-        emp_nome = "RODRIGUES ALMEIDA LOCACOES LTDA"
-        emp_fantasia = "CRA LOCACOES"
-        emp_cnpj = "39.543.761/0001-25"
+        # Texto livre — usa como nome
+        emp_nome = emp
+        emp_fantasia = ""
+        emp_cnpj = "-"
     emp_telefone = "(63) 3214-9999"
     emp_endereco = "712 SUL AV. LO 15, 01 PLANO DIRETOR SUL"
     emp_cidade = "PALMAS-TO"

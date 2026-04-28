@@ -38,6 +38,7 @@ import {
 
 export default function OrdensServicoPage() {
   const [ordens, setOrdens] = useState([]);
+  const [centrosCusto, setCentrosCusto] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("todas");
@@ -100,7 +101,17 @@ export default function OrdensServicoPage() {
 
   useEffect(() => {
     fetchOrdens();
+    fetchCentrosCusto();
   }, []);
+
+  const fetchCentrosCusto = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/centros-custo`);
+      setCentrosCusto((response.data || []).filter(c => c.status === "ativo"));
+    } catch (error) {
+      console.error("Erro ao carregar centros de custo:", error);
+    }
+  };
 
   const fetchOrdens = async () => {
     try {
@@ -484,12 +495,26 @@ export default function OrdensServicoPage() {
               <div>
                 <label className="form-label">Empresa Emissora *</label>
                 <Select value={formData.empresa_emissora} onValueChange={(v) => setFormData({...formData, empresa_emissora: v})}>
-                  <SelectTrigger className="w-full h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full h-11" data-testid="select-empresa-emissora"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="z-[9999]">
-                    <SelectItem value="locadora">CRA Locações</SelectItem>
-                    <SelectItem value="construtora">CRA Construções</SelectItem>
+                    {centrosCusto.length === 0 && (
+                      <>
+                        <SelectItem value="locadora">CRA Locações (padrão)</SelectItem>
+                        <SelectItem value="construtora">CRA Construções (padrão)</SelectItem>
+                      </>
+                    )}
+                    {centrosCusto.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.codigo ? `${c.codigo} — ${c.nome}` : c.nome}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {centrosCusto.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    💡 Cadastre empresas em Centro de Custo para aparecerem aqui
+                  </p>
+                )}
               </div>
             </div>
 
