@@ -4,6 +4,7 @@ import { API, useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedDateInput } from "@/components/MaskedDateInput";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Select,
@@ -615,8 +616,8 @@ export default function ContasReceberPage() {
               <span className="text-lg font-semibold text-gray-900">{formatCurrency(calcularValorFinal())}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="form-label">Data Emissão</label><Input type="date" value={formData.data_emissao} onChange={(e) => setFormData({...formData, data_emissao: e.target.value})} /></div>
-              <div><label className="form-label">{isParcelado ? "Data 1º Vencimento *" : "Data Vencimento *"}</label><Input type="date" value={formData.data_vencimento} onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})} required /></div>
+              <div><label className="form-label">Data Emissão</label><MaskedDateInput value={formData.data_emissao} onChange={(v) => setFormData({...formData, data_emissao: v})} /></div>
+              <div><label className="form-label">{isParcelado ? "Data 1º Vencimento *" : "Data Vencimento *"}</label><MaskedDateInput value={formData.data_vencimento} onChange={(v) => setFormData({...formData, data_vencimento: v})} required /></div>
             </div>
             
             {/* Seção de Parcelamento - apenas para novas contas */}
@@ -908,10 +909,9 @@ export default function ContasReceberPage() {
                   <Calendar size={16} className="text-green-600" />
                   Data do Recebimento *
                 </label>
-                <Input
-                  type="date"
+                <MaskedDateInput
                   value={dataRecebimento}
-                  onChange={(e) => setDataRecebimento(e.target.value)}
+                  onChange={(v) => setDataRecebimento(v)}
                   className="w-full"
                 />
               </div>

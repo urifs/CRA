@@ -4,6 +4,7 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedDateInput } from "@/components/MaskedDateInput";
 import { 
   Select,
   SelectContent,
@@ -648,19 +649,17 @@ export default function AlugueisPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Data de Entrega *</label>
-                <Input 
-                  type="date" 
+                <MaskedDateInput 
                   value={formData.data_entrega} 
-                  onChange={(e) => setFormData({...formData, data_entrega: e.target.value})} 
+                  onChange={(v) => setFormData({...formData, data_entrega: v})} 
                   required 
                 />
               </div>
               <div>
                 <label className="form-label">Data de Vencimento *</label>
-                <Input 
-                  type="date" 
+                <MaskedDateInput 
                   value={formData.data_vencimento} 
-                  onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})} 
+                  onChange={(v) => setFormData({...formData, data_vencimento: v})} 
                   required 
                 />
               </div>

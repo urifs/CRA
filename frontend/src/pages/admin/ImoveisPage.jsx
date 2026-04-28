@@ -4,6 +4,7 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedDateInput } from "@/components/MaskedDateInput";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Select,
@@ -748,18 +749,16 @@ export default function ImoveisPage() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">Data Início</label>
-                  <Input
-                    type="date"
+                  <MaskedDateInput
                     value={formData.data_inicio}
-                    onChange={(e) => setFormData({...formData, data_inicio: e.target.value})}
+                    onChange={(v) => setFormData({...formData, data_inicio: v})}
                   />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">Data Término</label>
-                  <Input
-                    type="date"
+                  <MaskedDateInput
                     value={formData.data_vencimento}
-                    onChange={(e) => setFormData({...formData, data_vencimento: e.target.value})}
+                    onChange={(v) => setFormData({...formData, data_vencimento: v})}
                   />
                 </div>
               </div>

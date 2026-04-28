@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedDateInput } from "@/components/MaskedDateInput";
 import { Label } from "@/components/ui/label";
 import { 
   Select,
@@ -738,16 +739,14 @@ export default function ConciliacaoPage() {
                 </SelectContent>
               </Select>
               
-              <Input 
-                type="date" 
+              <MaskedDateInput 
                 value={filtroDataInicio}
-                onChange={(e) => setFiltroDataInicio(e.target.value)}
+                onChange={(v) => setFiltroDataInicio(v)}
                 className="w-36 h-8"
               />
-              <Input 
-                type="date" 
+              <MaskedDateInput 
                 value={filtroDataFim}
-                onChange={(e) => setFiltroDataFim(e.target.value)}
+                onChange={(v) => setFiltroDataFim(v)}
                 className="w-36 h-8"
               />
             </div>
@@ -905,17 +904,15 @@ export default function ConciliacaoPage() {
                   <SelectItem value="pagamento">Por Pagamento</SelectItem>
                 </SelectContent>
               </Select>
-              <Input
-                type="date"
+              <MaskedDateInput
                 value={filtroContaDataInicio}
-                onChange={(e) => setFiltroContaDataInicio(e.target.value)}
+                onChange={(v) => setFiltroContaDataInicio(v)}
                 className="w-36 h-8 text-xs"
                 data-testid="conta-data-inicio"
               />
-              <Input
-                type="date"
+              <MaskedDateInput
                 value={filtroContaDataFim}
-                onChange={(e) => setFiltroContaDataFim(e.target.value)}
+                onChange={(v) => setFiltroContaDataFim(v)}
                 className="w-36 h-8 text-xs"
                 data-testid="conta-data-fim"
               />

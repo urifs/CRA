@@ -1,4 +1,33 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 28/04/2026 (Sessão 34) — Máscaras de data dd/mm/aaaa + verificação de parcelas
+
+### ✅ Verificação visual: campo de Parcelas (P1)
+- Validado via screenshot que `<Input type="number" min="2" max="360" />` está funcional em `ContasPagarPage.jsx` e `ContasReceberPage.jsx`. Comportamento de free-input correto. Issue era cache do navegador.
+
+### ✅ Máscara dd/mm/aaaa em todos os inputs de data administrativos
+**Novo componente**: `/app/frontend/src/components/MaskedDateInput.jsx`
+- Wrapper de `<Input />` com máscara automática dd/mm/aaaa via utils/`masks.js`
+- Aceita value em ISO (`yyyy-mm-dd`) ou já formatado
+- Expõe `onChange(isoString)` — totalmente compatível com o estado existente
+- `inputMode="numeric"`, `maxLength=10`, `placeholder="dd/mm/aaaa"`
+
+**Páginas atualizadas (8 arquivos, 19 inputs convertidos):**
+- ContasPagarPage.jsx (3): Data Emissão, Data Vencimento, Data Pagamento
+- ContasReceberPage.jsx (3): Data Emissão, Data Vencimento, Data Recebimento
+- OrdensServicoPage.jsx (3): Data Abertura, Fechamento, Previsão
+- ConciliacaoPage.jsx (4): Filtros de extrato e contas (início/fim)
+- AlugueisPage.jsx (2): Data Entrega, Data Vencimento
+- ImoveisPage.jsx (2): Data Início, Data Término
+- MovimentacoesPage.jsx (1): Data Movimentação
+- ImportacaoNFPage.jsx (1): Data Emissão (NF manual)
+
+### Validação visual
+- Modal "Nova Conta a Pagar" → digitando `15032027` no campo Data 1º Vencimento exibe `15/03/2027` automaticamente.
+- Datas pré-preenchidas (edição) exibem corretamente em dd/mm/aaaa a partir do ISO armazenado.
+
+---
+
+
 
 ## Changelog - 28/04/2026 (Sessão 33) — Centro de Custo expandido + Vínculos na OS
 

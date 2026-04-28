@@ -4,6 +4,7 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedDateInput } from "@/components/MaskedDateInput";
 import { 
   Select,
   SelectContent,
@@ -630,15 +631,15 @@ export default function OrdensServicoPage() {
                 </div>
                 <div>
                   <label className="form-label">Data Abertura *</label>
-                  <Input type="date" value={formData.data_abertura} onChange={(e) => setFormData({...formData, data_abertura: e.target.value})} required />
+                  <MaskedDateInput value={formData.data_abertura} onChange={(v) => setFormData({...formData, data_abertura: v})} required />
                 </div>
                 <div>
                   <label className="form-label">Data Fechamento</label>
-                  <Input type="date" value={formData.data_fechamento} onChange={(e) => setFormData({...formData, data_fechamento: e.target.value})} />
+                  <MaskedDateInput value={formData.data_fechamento} onChange={(v) => setFormData({...formData, data_fechamento: v})} />
                 </div>
                 <div>
                   <label className="form-label">Previsão Entrega</label>
-                  <Input type="date" value={formData.data_previsao_entrega} onChange={(e) => setFormData({...formData, data_previsao_entrega: e.target.value})} />
+                  <MaskedDateInput value={formData.data_previsao_entrega} onChange={(v) => setFormData({...formData, data_previsao_entrega: v})} />
                 </div>
                 <div>
                   <label className="form-label">Atendente</label>

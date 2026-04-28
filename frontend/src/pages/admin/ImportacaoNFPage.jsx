@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedDateInput } from "@/components/MaskedDateInput";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -1152,10 +1153,9 @@ export default function ImportacaoNFPage() {
                 </div>
                 <div>
                   <Label>Data de Emissão *</Label>
-                  <Input
-                    type="date"
+                  <MaskedDateInput
                     value={manualForm.data_emissao}
-                    onChange={(e) => setManualForm({...manualForm, data_emissao: e.target.value})}
+                    onChange={(v) => setManualForm({...manualForm, data_emissao: v})}
                   />
                 </div>
               </div>

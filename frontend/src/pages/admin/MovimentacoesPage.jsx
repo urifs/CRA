@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MaskedDateInput } from "@/components/MaskedDateInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -488,10 +489,9 @@ export default function MovimentacoesPage() {
               </div>
               <div>
                 <Label>Data da Movimentação *</Label>
-                <Input
-                  type="date"
+                <MaskedDateInput
                   value={formData.data_movimentacao}
-                  onChange={(e) => setFormData({...formData, data_movimentacao: e.target.value})}
+                  onChange={(v) => setFormData({...formData, data_movimentacao: v})}
                 />
               </div>
             </div>
