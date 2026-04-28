@@ -1,4 +1,41 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 28/04/2026 (Sessão 35) — Ordem de Serviço: cliente inteligente + ViaCEP + Periodicidade + KM
+
+### ✅ Cliente (Razão Social) na OS agora é dropdown com cadastro rápido
+- **Antes**: campo livre apenas
+- **Agora**: dropdown com clientes cadastrados (`tipo_cadastro = cliente | cli_forn`) + botão `[+]` para abrir o `CadastroFormModal` (mesmo modal usado em Contas a Receber/Pagar)
+- Ao selecionar um cliente do dropdown, **todos os campos são auto-preenchidos**: razão social, fantasia, CPF/CNPJ, IE/RG, e-mail, fone, celular, endereço completo, bairro, cidade, UF, CEP
+- Mantém input livre alternativo ("Ou digite o nome/razão social manualmente") quando nenhum cadastro é escolhido
+- Após cadastrar um novo cliente via botão `[+]`, ele é selecionado automaticamente
+
+### ✅ ViaCEP automático na OS
+- Digitando 8 dígitos no campo CEP, dispara busca via `https://viacep.com.br/ws/{cep}/json/`
+- Preenche automaticamente Endereço, Bairro, Cidade e UF
+- Loader spinning visual durante a consulta
+- Dispara também no onBlur (caso o usuário cole o CEP)
+
+### ✅ Novos campos na OS
+- **Periodicidade**: dropdown com Nenhuma / Diária / Semanal / Quinzenal / Mensal / Semestral / Anual
+- **KM (opcional)**: input livre numérico
+- Backend (`server.py` model `OrdemServicoCreate`): campos opcionais `periodicidade: str` e `km: str` adicionados explicitamente
+- PDF da OS (`routes/admin.py`): nova linha na seção "Dados da Obra/Atendimento" mostrando "Periodicidade" e "KM"
+
+### ✅ Máscaras automáticas nos campos do cliente da OS
+- CPF/CNPJ via `formatCPFouCNPJ()` (auto-detecta tamanho)
+- Telefone e Celular via `formatTelefone()`
+- CEP via `formatCEP()`
+
+### ✅ Confirmação dos campos opcionais
+- **Nº Contrato**, **Nº Doc Fiscal**, **IE/RG** e **E-mail** seguem opcionais (sem asterisco)
+
+### Validação real
+- Backend: POST OS com `periodicidade=mensal, km=15750` → persistido corretamente
+- PDF (gerado e analisado por IA, confidence 100%): mostra "Periodicidade: Mensal", "KM: 15750", "Cliente: Cliente Teste OS Periodicidade", "Endereço: Avenida Paulista, 1000"
+- Frontend (screenshot): autocomplete via dropdown preencheu email e telefone do cadastro; ViaCEP preencheu Avenida Paulista / Bela Vista / São Paulo / SP
+
+---
+
+
 ## Changelog - 28/04/2026 (Sessão 34) — Máscaras de data dd/mm/aaaa + verificação de parcelas
 
 ### ✅ Verificação visual: campo de Parcelas (P1)

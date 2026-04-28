@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedDateInput } from "@/components/MaskedDateInput";
+import CadastroFormModal from "@/components/CadastroFormModal";
+import { formatCEP, formatTelefone, formatCPFouCNPJ } from "@/utils/masks";
 import { 
   Select,
   SelectContent,
@@ -26,7 +28,9 @@ import {
   TrendingDown,
   TrendingUp,
   Minus,
-  FileDown
+  FileDown,
+  UserPlus,
+  Loader2
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -83,8 +87,13 @@ export default function OrdensServicoPage() {
     frotas_ids: [],
     maquinas_ids: [],
     fornecedores_ids: [],
-    observacoes: ""
+    observacoes: "",
+    periodicidade: "",
+    km: ""
   });
+  const [cadastros, setCadastros] = useState([]);
+  const [showNovoCadastro, setShowNovoCadastro] = useState(false);
+  const [consultandoCep, setConsultandoCep] = useState(false);
 
   const handleExportPdf = async (ordem) => {
     try {
@@ -110,7 +119,98 @@ export default function OrdensServicoPage() {
     fetchCentrosCusto();
     fetchMachines();
     fetchFornecedores();
+    fetchCadastros();
   }, []);
+
+  const fetchCadastros = async () => {
+    try {
+      // Carrega clientes (e cli_forn) para o dropdown de Cliente da OS
+      const response = await axios.get(`${API}/admin/cadastros`);
+      const lista = (response.data || []).filter(
+        (c) => c.tipo_cadastro === "cliente" || c.tipo_cadastro === "cli_forn"
+      );
+      setCadastros(lista);
+    } catch (error) {
+      console.error("Erro ao carregar cadastros:", error);
+    }
+  };
+
+  // Auto-preenche todos os campos do cliente a partir do cadastro selecionado
+  const handleSelectCliente = (clienteId) => {
+    if (!clienteId || clienteId === "none") {
+      setFormData((prev) => ({
+        ...prev,
+        cliente_id: "",
+        cliente_nome: "",
+        cliente_fantasia: "",
+        cliente_documento: "",
+        cliente_ie: "",
+        cliente_email: "",
+        cliente_telefone: "",
+        cliente_celular: "",
+        cliente_endereco: "",
+        cliente_bairro: "",
+        cliente_cidade: "",
+        cliente_uf: "",
+        cliente_cep: ""
+      }));
+      return;
+    }
+    const c = cadastros.find((x) => x.id === clienteId);
+    if (!c) return;
+    const enderecoCompleto = [c.endereco, c.numero, c.complemento]
+      .filter(Boolean)
+      .join(", ");
+    setFormData((prev) => ({
+      ...prev,
+      cliente_id: c.id,
+      cliente_nome: c.nome_razao || prev.cliente_nome || "",
+      cliente_fantasia: c.apelido_fantasia || "",
+      cliente_documento: c.cpf_cnpj || "",
+      cliente_ie: c.rg_ie || "",
+      cliente_email: c.email || "",
+      cliente_telefone: c.telefone || "",
+      cliente_celular: c.celular || "",
+      cliente_endereco: enderecoCompleto || c.endereco || "",
+      cliente_bairro: c.bairro || "",
+      cliente_cidade: c.cidade || "",
+      cliente_uf: c.uf || "",
+      cliente_cep: c.cep || ""
+    }));
+  };
+
+  const handleNovoCadastroSuccess = (novoCadastro) => {
+    // Adiciona o novo cadastro à lista e seleciona automaticamente
+    setCadastros((prev) => [...prev, novoCadastro]);
+    handleSelectCliente(novoCadastro.id);
+    fetchCadastros();
+  };
+
+  // Consulta endereço a partir do CEP via ViaCEP
+  const handleConsultaCep = async (cepValue) => {
+    const cep = (cepValue || formData.cliente_cep || "").replace(/\D/g, "");
+    if (cep.length !== 8) return;
+    setConsultandoCep(true);
+    try {
+      const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+      if (response.data.erro) {
+        toast.error("CEP não encontrado");
+        return;
+      }
+      setFormData((prev) => ({
+        ...prev,
+        cliente_endereco: response.data.logradouro || prev.cliente_endereco,
+        cliente_bairro: response.data.bairro || prev.cliente_bairro,
+        cliente_cidade: response.data.localidade || prev.cliente_cidade,
+        cliente_uf: response.data.uf || prev.cliente_uf
+      }));
+      toast.success("Endereço preenchido!");
+    } catch (error) {
+      toast.error("Erro ao consultar CEP");
+    } finally {
+      setConsultandoCep(false);
+    }
+  };
 
   const fetchCentrosCusto = async () => {
     try {
@@ -218,6 +318,9 @@ export default function OrdensServicoPage() {
       atendente_nome: "", empresa_emissora: "locadora",
       tipo_financeiro: "nenhum", observacoes: "",
       frotas_ids: [], maquinas_ids: [], fornecedores_ids: [],
+      cliente_id: "",
+      periodicidade: "",
+      km: "",
     };
     if (ordem) {
       setEditingOrdem(ordem);
@@ -554,9 +657,44 @@ export default function OrdensServicoPage() {
             <fieldset className="border rounded p-3">
               <legend className="text-xs font-semibold uppercase px-1">Cliente</legend>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="col-span-2">
                   <label className="form-label">Cliente (Razão Social)</label>
-                  <Input value={formData.cliente_nome} onChange={(e) => setFormData({...formData, cliente_nome: e.target.value})} placeholder="Nome / Razão social" />
+                  <div className="flex gap-2">
+                    <Select 
+                      value={formData.cliente_id || "none"} 
+                      onValueChange={(v) => handleSelectCliente(v)}
+                    >
+                      <SelectTrigger className="w-full" data-testid="select-cliente-os">
+                        <SelectValue placeholder="Selecione um cliente cadastrado..." />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999]">
+                        <SelectItem value="none">Selecione...</SelectItem>
+                        {cadastros.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nome_razao || c.apelido_fantasia} {c.cpf_cnpj ? `(${c.cpf_cnpj})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="px-3 shrink-0"
+                      onClick={() => setShowNovoCadastro(true)}
+                      title="Cadastrar novo cliente"
+                      data-testid="btn-novo-cliente-os"
+                    >
+                      <UserPlus size={18} />
+                    </Button>
+                  </div>
+                  {!formData.cliente_id && (
+                    <Input 
+                      className="mt-2" 
+                      value={formData.cliente_nome} 
+                      onChange={(e) => setFormData({...formData, cliente_nome: e.target.value})} 
+                      placeholder="Ou digite o nome/razão social manualmente" 
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="form-label">Fantasia</label>
@@ -564,7 +702,11 @@ export default function OrdensServicoPage() {
                 </div>
                 <div>
                   <label className="form-label">CPF/CNPJ</label>
-                  <Input value={formData.cliente_documento} onChange={(e) => setFormData({...formData, cliente_documento: e.target.value})} placeholder="000.000.000-00" />
+                  <Input 
+                    value={formData.cliente_documento} 
+                    onChange={(e) => setFormData({...formData, cliente_documento: formatCPFouCNPJ(e.target.value)})} 
+                    placeholder="000.000.000-00" 
+                  />
                 </div>
                 <div>
                   <label className="form-label">IE / RG</label>
@@ -577,12 +719,48 @@ export default function OrdensServicoPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="form-label">Fone</label>
-                    <Input value={formData.cliente_telefone} onChange={(e) => setFormData({...formData, cliente_telefone: e.target.value})} placeholder="(63) 0000-0000" />
+                    <Input 
+                      value={formData.cliente_telefone} 
+                      onChange={(e) => setFormData({...formData, cliente_telefone: formatTelefone(e.target.value)})} 
+                      placeholder="(63) 0000-0000" 
+                    />
                   </div>
                   <div>
                     <label className="form-label">Celular</label>
-                    <Input value={formData.cliente_celular} onChange={(e) => setFormData({...formData, cliente_celular: e.target.value})} placeholder="(63) 90000-0000" />
+                    <Input 
+                      value={formData.cliente_celular} 
+                      onChange={(e) => setFormData({...formData, cliente_celular: formatTelefone(e.target.value)})} 
+                      placeholder="(63) 90000-0000" 
+                    />
                   </div>
+                </div>
+                <div>
+                  <label className="form-label">CEP</label>
+                  <div className="relative">
+                    <Input 
+                      value={formData.cliente_cep} 
+                      onChange={(e) => {
+                        const formatted = formatCEP(e.target.value);
+                        setFormData({...formData, cliente_cep: formatted});
+                        // Quando o CEP estiver completo, dispara busca automática
+                        if (formatted.replace(/\D/g, "").length === 8) {
+                          handleConsultaCep(formatted);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value.replace(/\D/g, "").length === 8) {
+                          handleConsultaCep(e.target.value);
+                        }
+                      }}
+                      placeholder="77000-000" 
+                      maxLength={9}
+                      data-testid="input-cep-cliente"
+                    />
+                    {consultandoCep && (
+                      <Loader2 size={16} className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-blue-500" />
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">Endereço é preenchido automaticamente</p>
                 </div>
                 <div className="col-span-2">
                   <label className="form-label">Endereço</label>
@@ -601,10 +779,6 @@ export default function OrdensServicoPage() {
                     <label className="form-label">UF</label>
                     <Input value={formData.cliente_uf} onChange={(e) => setFormData({...formData, cliente_uf: e.target.value.toUpperCase().slice(0,2)})} maxLength={2} placeholder="TO" />
                   </div>
-                </div>
-                <div>
-                  <label className="form-label">CEP</label>
-                  <Input value={formData.cliente_cep} onChange={(e) => setFormData({...formData, cliente_cep: e.target.value})} placeholder="77000-000" />
                 </div>
               </div>
             </fieldset>
@@ -628,6 +802,35 @@ export default function OrdensServicoPage() {
                 <div>
                   <label className="form-label">Período</label>
                   <Input value={formData.periodo} onChange={(e) => setFormData({...formData, periodo: e.target.value})} placeholder="Ex: 30 dias / Mensal" />
+                </div>
+                <div>
+                  <label className="form-label">Periodicidade</label>
+                  <Select 
+                    value={formData.periodicidade || "nenhuma"} 
+                    onValueChange={(v) => setFormData({...formData, periodicidade: v === "nenhuma" ? "" : v})}
+                  >
+                    <SelectTrigger className="w-full" data-testid="select-periodicidade">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                      <SelectItem value="diaria">Diária</SelectItem>
+                      <SelectItem value="semanal">Semanal</SelectItem>
+                      <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                      <SelectItem value="mensal">Mensal</SelectItem>
+                      <SelectItem value="semestral">Semestral</SelectItem>
+                      <SelectItem value="anual">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="form-label">KM (opcional)</label>
+                  <Input 
+                    value={formData.km} 
+                    onChange={(e) => setFormData({...formData, km: e.target.value.replace(/[^\d.,]/g, "")})} 
+                    placeholder="Ex: 12500"
+                    data-testid="input-km-os"
+                  />
                 </div>
                 <div>
                   <label className="form-label">Data Abertura *</label>
@@ -839,6 +1042,14 @@ export default function OrdensServicoPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Cadastro Rápido de Cliente (reutilizado de Contas a Receber) */}
+      <CadastroFormModal
+        open={showNovoCadastro}
+        onOpenChange={setShowNovoCadastro}
+        defaultTipo="cliente"
+        onSuccess={handleNovoCadastroSuccess}
+      />
     </div>
   );
 }

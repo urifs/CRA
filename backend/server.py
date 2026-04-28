@@ -3374,6 +3374,8 @@ class OrdemServicoCreate(BaseModel):
     endereco_entrega: Optional[str] = None
     prisma: Optional[str] = None
     periodo: Optional[str] = None
+    periodicidade: Optional[str] = None  # diaria, semanal, quinzenal, mensal, semestral, anual
+    km: Optional[str] = None  # KM rodado (opcional)
 
     # Datas
     data_abertura: Optional[str] = None
