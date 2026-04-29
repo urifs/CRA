@@ -349,20 +349,24 @@ async def export_ordem_servico_pdf(ordem_id: str):
             Paragraph((it.get("descricao") or "")[:200], style_value),
             _brl(vu), _brl(vt), _brl(vd), _brl(liq),
         ])
-    if not itens:
+    if not itens and not (ordem.get("valores_extras") or []):
+        # Caso não exista nenhum item nem valor adicional, exibe a descrição geral
         rows.append(["-", "1", "UN", Paragraph(ordem.get("descricao") or "-", style_value),
-                     _brl(ordem.get("valor_principal") or ordem.get("valor_total")),
-                     _brl(ordem.get("valor_principal") or ordem.get("valor_total")),
-                     _brl(0), _brl(ordem.get("valor_principal") or ordem.get("valor_total"))])
-        sub_total = float(ordem.get("valor_principal") or ordem.get("valor_total") or 0)
+                     _brl(ordem.get("valor_total")), _brl(ordem.get("valor_total")),
+                     _brl(0), _brl(ordem.get("valor_total"))])
+        sub_total = float(ordem.get("valor_total") or 0)
 
-    # Valores extras adicionais (compostos)
+    # Valores extras adicionais (compostos) — cada item compõe o Total da OS.
+    # Quando vinculado a uma máquina, exibimos "Descrição — Máquina (placa)".
     for ve in (ordem.get("valores_extras") or []):
         try:
             v_val = float(ve.get("valor") or 0)
         except (TypeError, ValueError):
             v_val = 0
         v_desc = ve.get("descricao") or "Adicional"
+        v_maq = ve.get("maquina_nome") or ""
+        if v_maq:
+            v_desc = f"{v_desc}<br/><font size='6' color='#666'>Máquina: {v_maq}</font>"
         rows.append(["-", "1", "UN", Paragraph(v_desc, style_value),
                      _brl(v_val), _brl(v_val), _brl(0), _brl(v_val)])
         sub_total += v_val

@@ -312,19 +312,22 @@ export default function OrdensServicoPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Soma valor principal + extras - desconto = valor final automático
-      const valorPrincipal = parseFloat(formData.valor_total) || 0;
+      // Total = soma de TODOS os valores adicionais − desconto
       const valorDesconto = parseFloat(formData.valor_desconto) || 0;
       const valorAntecipado = parseFloat(formData.valor_antecipado) || 0;
       const extras = (formData.valores_extras || [])
-        .map((v) => ({ descricao: v.descricao || "", valor: parseFloat(v.valor) || 0 }));
+        .map((v) => ({
+          descricao: v.descricao || "",
+          maquina_id: v.maquina_id || "",
+          maquina_nome: v.maquina_nome || "",
+          valor: parseFloat(v.valor) || 0,
+        }));
       const totalExtras = extras.reduce((s, v) => s + v.valor, 0);
-      const valorFinal = valorPrincipal + totalExtras - valorDesconto;
+      const valorFinal = totalExtras - valorDesconto;
 
       const dataToSend = {
         ...formData,
         valor_total: valorFinal,
-        valor_principal: valorPrincipal,
         valor_desconto: valorDesconto,
         valor_antecipado: valorAntecipado,
         valores_extras: extras,
@@ -949,25 +952,14 @@ export default function OrdensServicoPage() {
                     rows={3}
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="form-label">Valor Principal</label>
-                    <Input type="number" step="0.01" value={formData.valor_total} onChange={(e) => setFormData({...formData, valor_total: e.target.value})} placeholder="0,00" data-testid="input-valor-principal" />
-                  </div>
-                  <div>
-                    <label className="form-label">Valor Desconto</label>
-                    <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: e.target.value})} placeholder="0,00" />
-                  </div>
-                  <div>
-                    <label className="form-label">Valor Antecipado</label>
-                    <Input type="number" step="0.01" value={formData.valor_antecipado} onChange={(e) => setFormData({...formData, valor_antecipado: e.target.value})} placeholder="0,00" />
-                  </div>
-                </div>
-
-                {/* Valores Adicionais (compostos) */}
+                {/* Valores Adicionais (compostos) — cada item tem descrição, máquina vinculada e valor.
+                    O Valor Total é calculado automaticamente como soma destes valores − desconto. */}
                 <div className="border rounded p-3 bg-amber-50/50">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="form-label mb-0">Valores Adicionais <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                    <div>
+                      <label className="form-label mb-0">Valores Adicionais</label>
+                      <p className="text-[11px] text-gray-500">Cadastre cada item de cobrança (mão de obra, deslocamento, hora-máquina, etc.). O total é somado automaticamente.</p>
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
@@ -975,7 +967,7 @@ export default function OrdensServicoPage() {
                       className="h-7 px-2 text-xs"
                       onClick={() => setFormData({
                         ...formData,
-                        valores_extras: [...(formData.valores_extras || []), { descricao: "", valor: "" }]
+                        valores_extras: [...(formData.valores_extras || []), { descricao: "", maquina_id: "", maquina_nome: "", valor: "" }]
                       })}
                       data-testid="btn-add-valor-extra"
                     >
@@ -984,12 +976,12 @@ export default function OrdensServicoPage() {
                     </Button>
                   </div>
                   {(formData.valores_extras || []).length === 0 && (
-                    <p className="text-xs text-gray-400">Use para somar deslocamento, hora extra, materiais, taxas, etc.</p>
+                    <p className="text-xs text-gray-400 mt-2">Nenhum item ainda — clique em "Adicionar valor" para começar.</p>
                   )}
                   {(formData.valores_extras || []).map((v, idx) => (
-                    <div key={idx} className="grid grid-cols-12 gap-2 mt-2 items-end">
-                      <div className="col-span-7">
-                        <label className="text-xs text-gray-500">Descrição</label>
+                    <div key={idx} className="grid grid-cols-12 gap-2 mt-2 items-end border-b border-amber-200/60 pb-2 last:border-b-0">
+                      <div className="col-span-4">
+                        <label className="text-[11px] text-gray-500">Descrição</label>
                         <Input
                           value={v.descricao}
                           onChange={(e) => {
@@ -997,12 +989,44 @@ export default function OrdensServicoPage() {
                             arr[idx] = { ...arr[idx], descricao: e.target.value };
                             setFormData({ ...formData, valores_extras: arr });
                           }}
-                          placeholder="Ex: Deslocamento, Hora extra..."
+                          placeholder="Ex: Mão de obra, Deslocamento..."
                           data-testid={`input-valor-extra-desc-${idx}`}
                         />
                       </div>
                       <div className="col-span-4">
-                        <label className="text-xs text-gray-500">Valor</label>
+                        <label className="text-[11px] text-gray-500">Máquina vinculada <span className="text-gray-400">(opcional)</span></label>
+                        <Select
+                          value={v.maquina_id || "none"}
+                          onValueChange={(val) => {
+                            const arr = [...formData.valores_extras];
+                            if (val === "none") {
+                              arr[idx] = { ...arr[idx], maquina_id: "", maquina_nome: "" };
+                            } else {
+                              const m = machines.find((x) => x.id === val);
+                              arr[idx] = {
+                                ...arr[idx],
+                                maquina_id: val,
+                                maquina_nome: m ? `${m.name}${m.plate ? ` (${m.plate})` : ""}` : "",
+                              };
+                            }
+                            setFormData({ ...formData, valores_extras: arr });
+                          }}
+                        >
+                          <SelectTrigger className="w-full" data-testid={`select-valor-extra-maquina-${idx}`}>
+                            <SelectValue placeholder="Sem vínculo" />
+                          </SelectTrigger>
+                          <SelectContent className="z-[9999]">
+                            <SelectItem value="none">Sem vínculo</SelectItem>
+                            {machines.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.name}{m.plate ? ` (${m.plate})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-3">
+                        <label className="text-[11px] text-gray-500">Valor</label>
                         <Input
                           type="number"
                           step="0.01"
@@ -1027,6 +1051,7 @@ export default function OrdensServicoPage() {
                             setFormData({ ...formData, valores_extras: arr });
                           }}
                           data-testid={`btn-remove-valor-extra-${idx}`}
+                          title="Remover este item"
                         >
                           <Trash2 size={14} />
                         </Button>
@@ -1035,16 +1060,31 @@ export default function OrdensServicoPage() {
                   ))}
                 </div>
 
-                {/* Total calculado automaticamente */}
-                <div className="bg-gray-100 border rounded-lg p-3 flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Valor Total (Principal + Adicionais − Desconto):</span>
-                  <span className="text-lg font-bold text-[#D4A000]" data-testid="os-valor-total-calc">
-                    {formatCurrency(
-                      (parseFloat(formData.valor_total) || 0)
-                      + (formData.valores_extras || []).reduce((s, v) => s + (parseFloat(v.valor) || 0), 0)
-                      - (parseFloat(formData.valor_desconto) || 0)
-                    )}
-                  </span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="form-label">Valor Desconto</label>
+                    <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: e.target.value})} placeholder="0,00" data-testid="input-valor-desconto" />
+                  </div>
+                  <div>
+                    <label className="form-label">Valor Antecipado</label>
+                    <Input type="number" step="0.01" value={formData.valor_antecipado} onChange={(e) => setFormData({...formData, valor_antecipado: e.target.value})} placeholder="0,00" />
+                  </div>
+                </div>
+
+                {/* VALOR TOTAL — campo principal e destacado, calculado automaticamente */}
+                <div className="bg-gradient-to-r from-[#D4A000]/10 to-[#D4A000]/5 border-2 border-[#D4A000] rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-gray-600 uppercase tracking-wide font-semibold">Valor Total da OS</span>
+                      <p className="text-[11px] text-gray-500">Soma dos valores adicionais − desconto</p>
+                    </div>
+                    <span className="text-2xl font-bold text-[#D4A000]" data-testid="os-valor-total-calc">
+                      {formatCurrency(
+                        (formData.valores_extras || []).reduce((s, v) => s + (parseFloat(v.valor) || 0), 0)
+                        - (parseFloat(formData.valor_desconto) || 0)
+                      )}
+                    </span>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
