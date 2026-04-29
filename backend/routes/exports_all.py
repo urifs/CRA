@@ -2278,11 +2278,58 @@ async def export_recibo(
     elements.append(Paragraph(f"Data: {datetime.now().strftime('%d/%m/%Y')}", ParagraphStyle('Data', fontSize=10, alignment=2)))
     elements.append(Spacer(1, 0.5*cm))
     
-    # Dados do cliente/fornecedor
-    pessoa_nome = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
-    pessoa_doc = item.get("fornecedor_cnpj") or item.get("cliente_documento") or item.get("cliente_cnpj") or "-"
-    pessoa_telefone = item.get("fornecedor_telefone") or item.get("cliente_telefone") or "-"
-    pessoa_endereco = item.get("fornecedor_endereco") or item.get("cliente_endereco") or "-"
+    # Dados do cliente/fornecedor — enriquecer buscando o cadastro completo
+    # quando o conta_pagar/receber só tiver fornecedor_id/cliente_id mas faltarem
+    # CPF/CNPJ, telefone e endereço.
+    cadastro_doc = None
+    cadastro_id = item.get("fornecedor_id") or item.get("cliente_id")
+    if cadastro_id:
+        cadastro_doc = await db.cadastros.find_one({"id": cadastro_id}, {"_id": 0})
+
+    def _pick(*vals):
+        for v in vals:
+            if v not in (None, "", "-"):
+                return v
+        return "-"
+
+    pessoa_nome = _pick(
+        item.get("fornecedor_nome"),
+        item.get("cliente_nome"),
+        (cadastro_doc or {}).get("nome_razao"),
+        (cadastro_doc or {}).get("apelido_fantasia"),
+    )
+    pessoa_doc = _pick(
+        item.get("fornecedor_cnpj"),
+        item.get("fornecedor_documento"),
+        item.get("cliente_documento"),
+        item.get("cliente_cnpj"),
+        (cadastro_doc or {}).get("cpf_cnpj"),
+    )
+    pessoa_telefone = _pick(
+        item.get("fornecedor_telefone"),
+        item.get("cliente_telefone"),
+        (cadastro_doc or {}).get("telefone"),
+        (cadastro_doc or {}).get("celular"),
+    )
+    # Endereço: se vier estruturado no cadastro, montar string completa
+    end_cad = ""
+    if cadastro_doc:
+        partes_end = [
+            cadastro_doc.get("endereco"),
+            cadastro_doc.get("numero"),
+            cadastro_doc.get("complemento"),
+            cadastro_doc.get("bairro"),
+            cadastro_doc.get("cidade"),
+            cadastro_doc.get("uf"),
+        ]
+        end_cad = ", ".join([p for p in partes_end if p]) or ""
+        if cadastro_doc.get("cep") and end_cad:
+            end_cad = f"{end_cad} - CEP {cadastro_doc.get('cep')}"
+    pessoa_endereco = _pick(
+        item.get("fornecedor_endereco"),
+        item.get("cliente_endereco"),
+        end_cad,
+    )
 
     # Determina PAGADOR (quem pagou) para o "Recebi(emos) de":
     # - contas_pagar.*  → a empresa CRA pagou o fornecedor (pagador = empresa)
@@ -3682,3 +3729,270 @@ async def export_relatorio_conta_bancaria(
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+
+
+# ============ EXTRATO DO PLANO DE CONTAS ============
+@exports_all_router.get("/export/extrato-plano-contas")
+async def export_extrato_plano_contas(
+    plano_conta_id: Optional[str] = None,  # vazio = todos os planos
+    data_inicio: Optional[str] = None,     # YYYY-MM-DD
+    data_fim: Optional[str] = None,        # YYYY-MM-DD
+    tipo: str = "ambos",                   # "pagar", "receber" ou "ambos"
+    incluir_detalhes: bool = True,
+    current_user: dict = Depends(get_current_user),
+):
+    """Gera PDF do extrato do plano de contas no padrão da plataforma.
+
+    - Resumo consolidado por plano/subconta no período (saldo a pagar / a receber)
+    - Detalhamento de cada lançamento (Contas a Pagar e Contas a Receber) no período
+    - Filtros: plano_conta_id (opcional), data_inicio, data_fim, tipo
+    """
+    # Filtro de período por data_vencimento (padrão financeiro)
+    period_filter = {}
+    if data_inicio:
+        period_filter.setdefault("data_vencimento", {})["$gte"] = data_inicio
+    if data_fim:
+        period_filter.setdefault("data_vencimento", {})["$lte"] = data_fim
+
+    plano_filter = {}
+    plano_doc = None
+    if plano_conta_id:
+        plano_doc = await db.plano_contas.find_one({"id": plano_conta_id}, {"_id": 0})
+        if not plano_doc:
+            raise HTTPException(status_code=404, detail="Plano de contas não encontrado")
+        plano_filter = {"$or": [{"plano_conta_id": plano_conta_id}, {"subconta_id": plano_conta_id}]}
+
+    base_filter = {**period_filter, **plano_filter}
+
+    contas_pagar_data: List[dict] = []
+    contas_receber_data: List[dict] = []
+    if tipo in ("pagar", "ambos"):
+        contas_pagar_data = await db.contas_pagar.find(base_filter, {"_id": 0}).sort("data_vencimento", 1).to_list(5000)
+    if tipo in ("receber", "ambos"):
+        contas_receber_data = await db.contas_receber.find(base_filter, {"_id": 0}).sort("data_vencimento", 1).to_list(5000)
+
+    # Resumo agregado por plano/subconta
+    resumo: dict = {}
+
+    def _key(item):
+        plano_nome = item.get("plano_conta_nome") or "(Sem plano)"
+        subconta_nome = item.get("subconta_nome") or "—"
+        return (plano_nome, subconta_nome)
+
+    for c in contas_pagar_data:
+        k = _key(c)
+        r = resumo.setdefault(k, {"qtd_pagar": 0, "valor_pagar": 0.0, "qtd_receber": 0, "valor_receber": 0.0})
+        r["qtd_pagar"] += 1
+        r["valor_pagar"] += float(c.get("valor_final") or c.get("valor") or 0)
+    for c in contas_receber_data:
+        k = _key(c)
+        r = resumo.setdefault(k, {"qtd_pagar": 0, "valor_pagar": 0.0, "qtd_receber": 0, "valor_receber": 0.0})
+        r["qtd_receber"] += 1
+        r["valor_receber"] += float(c.get("valor_final") or c.get("valor") or 0)
+
+    # ====== Geração do PDF ======
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm, leftMargin=1.5*cm, rightMargin=1.5*cm)
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, textColor=colors.black, alignment=TA_CENTER, spaceAfter=10)
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=TA_CENTER, spaceAfter=10)
+    section_style = ParagraphStyle('Section', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor("#444"), spaceBefore=10, spaceAfter=8)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=9, textColor=colors.black, spaceAfter=5)
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, textColor=colors.black, wordWrap='LTR', leading=10)
+    header_cell_style = ParagraphStyle('HeaderCellStyle', parent=styles['Normal'], fontSize=8, textColor=colors.white, fontName='Helvetica-Bold', wordWrap='LTR', leading=10)
+
+    def _cell(text, header=False):
+        if text is None:
+            text = "-"
+        return Paragraph(str(text), header_cell_style if header else cell_style)
+
+    def _brl(v):
+        try:
+            return f"R$ {float(v or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except Exception:
+            return "R$ 0,00"
+
+    def _fmt_data(d):
+        if not d:
+            return "-"
+        s = str(d)[:10]
+        if "-" in s and len(s) == 10:
+            try:
+                y, m, dd = s.split("-")
+                return f"{dd}/{m}/{y}"
+            except Exception:
+                return s
+        return s
+
+    elements = []
+
+    # Logo + cabeçalho padrão
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            elements.append(RLImage(logo_path, width=2.5*cm, height=2.5*cm, kind='proportional'))
+            elements.append(Spacer(1, 8))
+    except Exception:
+        pass
+
+    elements.append(Paragraph("CRA Construtora", title_style))
+    elements.append(Paragraph("Extrato do Plano de Contas", title_style))
+
+    # Subtítulos com filtros
+    if plano_doc:
+        elements.append(Paragraph(
+            f"Plano: {plano_doc.get('codigo', '')} {('-' if plano_doc.get('codigo') else '')} {plano_doc.get('nome', '')}",
+            subtitle_style,
+        ))
+    else:
+        elements.append(Paragraph("Plano: Todos os planos cadastrados", subtitle_style))
+
+    periodo_txt = "Período: "
+    periodo_txt += _fmt_data(data_inicio) if data_inicio else "início dos registros"
+    periodo_txt += " até "
+    periodo_txt += _fmt_data(data_fim) if data_fim else "data atual"
+    elements.append(Paragraph(periodo_txt, subtitle_style))
+    elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
+    elements.append(Spacer(1, 12))
+
+    # ===== Resumo consolidado =====
+    elements.append(Paragraph("Resumo por Plano / Subconta", section_style))
+    if not resumo:
+        elements.append(Paragraph("Nenhum lançamento encontrado para os filtros selecionados.", normal_style))
+    else:
+        cab = [
+            _cell("Plano", True), _cell("Subconta", True),
+            _cell("Qtd. a Pagar", True), _cell("Total a Pagar", True),
+            _cell("Qtd. a Receber", True), _cell("Total a Receber", True),
+            _cell("Saldo (R - P)", True),
+        ]
+        rows_resumo = [cab]
+        total_p = total_r = 0.0
+        qtd_p = qtd_r = 0
+        for (plano_nome, subconta_nome), v in sorted(resumo.items()):
+            saldo = (v["valor_receber"] or 0) - (v["valor_pagar"] or 0)
+            rows_resumo.append([
+                _cell(plano_nome[:30]),
+                _cell(subconta_nome[:25]),
+                _cell(str(v["qtd_pagar"])),
+                _cell(_brl(v["valor_pagar"])),
+                _cell(str(v["qtd_receber"])),
+                _cell(_brl(v["valor_receber"])),
+                _cell(_brl(saldo)),
+            ])
+            total_p += v["valor_pagar"]; total_r += v["valor_receber"]
+            qtd_p += v["qtd_pagar"]; qtd_r += v["qtd_receber"]
+        rows_resumo.append([
+            _cell("TOTAL", True), _cell("", True),
+            _cell(str(qtd_p), True), _cell(_brl(total_p), True),
+            _cell(str(qtd_r), True), _cell(_brl(total_r), True),
+            _cell(_brl(total_r - total_p), True),
+        ])
+        t_resumo = Table(rows_resumo, colWidths=[3.5*cm, 2.6*cm, 1.6*cm, 2.4*cm, 1.6*cm, 2.4*cm, 2.6*cm], repeatRows=1)
+        t_resumo.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#D4A000')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f5f5f5')]),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#FFE6A1')),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ]))
+        elements.append(t_resumo)
+        elements.append(Spacer(1, 12))
+
+    # ===== Detalhamento (lançamentos) =====
+    if incluir_detalhes:
+        if contas_pagar_data:
+            elements.append(Paragraph("Lançamentos — Contas a Pagar", section_style))
+            cab_p = [
+                _cell("Vencimento", True), _cell("Fornecedor", True),
+                _cell("Descrição", True), _cell("Plano / Sub", True),
+                _cell("Doc.", True), _cell("Valor", True), _cell("Status", True),
+            ]
+            rows_p = [cab_p]
+            for c in contas_pagar_data:
+                rows_p.append([
+                    _cell(_fmt_data(c.get("data_vencimento"))),
+                    _cell((c.get("fornecedor_nome") or "-")[:25]),
+                    _cell((c.get("descricao") or "-")[:32]),
+                    _cell(((c.get("plano_conta_nome") or "-") + (" / " + c.get("subconta_nome") if c.get("subconta_nome") else ""))[:25]),
+                    _cell(c.get("numero_doc") or c.get("documento") or "-"),
+                    _cell(_brl(c.get("valor_final") or c.get("valor"))),
+                    _cell(c.get("status") or "-"),
+                ])
+            t_p = Table(rows_p, colWidths=[2.0*cm, 3.0*cm, 3.5*cm, 3.0*cm, 1.8*cm, 2.3*cm, 1.5*cm], repeatRows=1)
+            t_p.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#C62828')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('ALIGN', (5, 1), (5, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.4, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#fdecec')]),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ]))
+            elements.append(t_p)
+            elements.append(Spacer(1, 10))
+
+        if contas_receber_data:
+            elements.append(Paragraph("Lançamentos — Contas a Receber", section_style))
+            cab_r = [
+                _cell("Vencimento", True), _cell("Cliente", True),
+                _cell("Descrição", True), _cell("Plano / Sub", True),
+                _cell("Doc.", True), _cell("Valor", True), _cell("Status", True),
+            ]
+            rows_r = [cab_r]
+            for c in contas_receber_data:
+                rows_r.append([
+                    _cell(_fmt_data(c.get("data_vencimento"))),
+                    _cell((c.get("cliente_nome") or "-")[:25]),
+                    _cell((c.get("descricao") or "-")[:32]),
+                    _cell(((c.get("plano_conta_nome") or "-") + (" / " + c.get("subconta_nome") if c.get("subconta_nome") else ""))[:25]),
+                    _cell(c.get("numero_doc") or c.get("documento") or "-"),
+                    _cell(_brl(c.get("valor_final") or c.get("valor"))),
+                    _cell(c.get("status") or "-"),
+                ])
+            t_r = Table(rows_r, colWidths=[2.0*cm, 3.0*cm, 3.5*cm, 3.0*cm, 1.8*cm, 2.3*cm, 1.5*cm], repeatRows=1)
+            t_r.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E7D32')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('ALIGN', (5, 1), (5, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.4, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#e8f5e9')]),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ]))
+            elements.append(t_r)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    await create_audit_log(
+        user=current_user,
+        action="exportar PDF",
+        entity_type="extrato plano de contas",
+        entity_id=plano_conta_id or "todos",
+        entity_name=(plano_doc or {}).get("nome", "Todos os planos"),
+        details=f"Pagar:{len(contas_pagar_data)} Receber:{len(contas_receber_data)} Período:{data_inicio or '-'}|{data_fim or '-'}",
+        module="Exportação",
+    )
+
+    plano_label = (plano_doc or {}).get("nome", "Todos").replace(" ", "_")[:30]
+    filename = f"CRA_Extrato_PlanoContas_{plano_label}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )

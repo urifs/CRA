@@ -351,9 +351,21 @@ async def export_ordem_servico_pdf(ordem_id: str):
         ])
     if not itens:
         rows.append(["-", "1", "UN", Paragraph(ordem.get("descricao") or "-", style_value),
-                     _brl(ordem.get("valor_total")), _brl(ordem.get("valor_total")),
-                     _brl(0), _brl(ordem.get("valor_total"))])
-        sub_total = float(ordem.get("valor_total") or 0)
+                     _brl(ordem.get("valor_principal") or ordem.get("valor_total")),
+                     _brl(ordem.get("valor_principal") or ordem.get("valor_total")),
+                     _brl(0), _brl(ordem.get("valor_principal") or ordem.get("valor_total"))])
+        sub_total = float(ordem.get("valor_principal") or ordem.get("valor_total") or 0)
+
+    # Valores extras adicionais (compostos)
+    for ve in (ordem.get("valores_extras") or []):
+        try:
+            v_val = float(ve.get("valor") or 0)
+        except (TypeError, ValueError):
+            v_val = 0
+        v_desc = ve.get("descricao") or "Adicional"
+        rows.append(["-", "1", "UN", Paragraph(v_desc, style_value),
+                     _brl(v_val), _brl(v_val), _brl(0), _brl(v_val)])
+        sub_total += v_val
 
     t_itens = Table(rows, colWidths=[1.8 * cm, 1.2 * cm, 1.0 * cm, 6.4 * cm, 2.0 * cm, 2.0 * cm, 2.0 * cm, 3.0 * cm])
     t_itens.setStyle(TableStyle([

@@ -89,7 +89,8 @@ export default function OrdensServicoPage() {
     fornecedores_ids: [],
     observacoes: "",
     periodicidade: "",
-    km: ""
+    km: "",
+    valores_extras: []
   });
   const [cadastros, setCadastros] = useState([]);
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
@@ -311,10 +312,22 @@ export default function OrdensServicoPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Soma valor principal + extras - desconto = valor final automático
+      const valorPrincipal = parseFloat(formData.valor_total) || 0;
+      const valorDesconto = parseFloat(formData.valor_desconto) || 0;
+      const valorAntecipado = parseFloat(formData.valor_antecipado) || 0;
+      const extras = (formData.valores_extras || [])
+        .map((v) => ({ descricao: v.descricao || "", valor: parseFloat(v.valor) || 0 }));
+      const totalExtras = extras.reduce((s, v) => s + v.valor, 0);
+      const valorFinal = valorPrincipal + totalExtras - valorDesconto;
+
       const dataToSend = {
         ...formData,
-        valor_total: parseFloat(formData.valor_total) || 0,
-        valor_antecipado: parseFloat(formData.valor_antecipado) || 0
+        valor_total: valorFinal,
+        valor_principal: valorPrincipal,
+        valor_desconto: valorDesconto,
+        valor_antecipado: valorAntecipado,
+        valores_extras: extras,
       };
       
       if (editingOrdem) {
@@ -327,7 +340,20 @@ export default function OrdensServicoPage() {
       fetchOrdens();
       closeModal();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao salvar ordem");
+      // Backend pode retornar `detail` como array de validação Pydantic.
+      // Converter para string para evitar crash do React ao renderizar no toast.
+      let msg = "Erro ao salvar ordem";
+      const detail = error.response?.data?.detail;
+      if (typeof detail === "string") {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail
+          .map((d) => `${(d.loc || []).slice(-1)[0] || "campo"}: ${d.msg || d.message || ""}`)
+          .join("; ");
+      } else if (detail) {
+        msg = JSON.stringify(detail);
+      }
+      toast.error(msg);
     }
   };
 
@@ -374,6 +400,7 @@ export default function OrdensServicoPage() {
       cliente_id: "",
       periodicidade: "",
       km: "",
+      valores_extras: [],
     };
     if (ordem) {
       setEditingOrdem(ordem);
@@ -384,7 +411,8 @@ export default function OrdensServicoPage() {
             const v = ordem[k];
             if (v == null) return [k, baseEmpty[k]];
             if (k.startsWith("data_")) return [k, String(v).split("T")[0]];
-            if (k.startsWith("valor_")) return [k, String(v)];
+            if (k.startsWith("valor_") && k !== "valores_extras") return [k, String(v)];
+            if (k === "valores_extras") return [k, Array.isArray(v) ? v : []];
             if (k.endsWith("_ids")) return [k, Array.isArray(v) ? v : []];
             return [k, v];
           })
@@ -923,8 +951,8 @@ export default function OrdensServicoPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="form-label">Valor Total</label>
-                    <Input type="number" step="0.01" value={formData.valor_total} onChange={(e) => setFormData({...formData, valor_total: e.target.value})} placeholder="0,00" />
+                    <label className="form-label">Valor Principal</label>
+                    <Input type="number" step="0.01" value={formData.valor_total} onChange={(e) => setFormData({...formData, valor_total: e.target.value})} placeholder="0,00" data-testid="input-valor-principal" />
                   </div>
                   <div>
                     <label className="form-label">Valor Desconto</label>
@@ -934,6 +962,89 @@ export default function OrdensServicoPage() {
                     <label className="form-label">Valor Antecipado</label>
                     <Input type="number" step="0.01" value={formData.valor_antecipado} onChange={(e) => setFormData({...formData, valor_antecipado: e.target.value})} placeholder="0,00" />
                   </div>
+                </div>
+
+                {/* Valores Adicionais (compostos) */}
+                <div className="border rounded p-3 bg-amber-50/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="form-label mb-0">Valores Adicionais <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setFormData({
+                        ...formData,
+                        valores_extras: [...(formData.valores_extras || []), { descricao: "", valor: "" }]
+                      })}
+                      data-testid="btn-add-valor-extra"
+                    >
+                      <Plus size={12} className="mr-1" />
+                      Adicionar valor
+                    </Button>
+                  </div>
+                  {(formData.valores_extras || []).length === 0 && (
+                    <p className="text-xs text-gray-400">Use para somar deslocamento, hora extra, materiais, taxas, etc.</p>
+                  )}
+                  {(formData.valores_extras || []).map((v, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-2 mt-2 items-end">
+                      <div className="col-span-7">
+                        <label className="text-xs text-gray-500">Descrição</label>
+                        <Input
+                          value={v.descricao}
+                          onChange={(e) => {
+                            const arr = [...formData.valores_extras];
+                            arr[idx] = { ...arr[idx], descricao: e.target.value };
+                            setFormData({ ...formData, valores_extras: arr });
+                          }}
+                          placeholder="Ex: Deslocamento, Hora extra..."
+                          data-testid={`input-valor-extra-desc-${idx}`}
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <label className="text-xs text-gray-500">Valor</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={v.valor}
+                          onChange={(e) => {
+                            const arr = [...formData.valores_extras];
+                            arr[idx] = { ...arr[idx], valor: e.target.value };
+                            setFormData({ ...formData, valores_extras: arr });
+                          }}
+                          placeholder="0,00"
+                          data-testid={`input-valor-extra-val-${idx}`}
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 h-9 w-full px-0"
+                          onClick={() => {
+                            const arr = formData.valores_extras.filter((_, i) => i !== idx);
+                            setFormData({ ...formData, valores_extras: arr });
+                          }}
+                          data-testid={`btn-remove-valor-extra-${idx}`}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total calculado automaticamente */}
+                <div className="bg-gray-100 border rounded-lg p-3 flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Valor Total (Principal + Adicionais − Desconto):</span>
+                  <span className="text-lg font-bold text-[#D4A000]" data-testid="os-valor-total-calc">
+                    {formatCurrency(
+                      (parseFloat(formData.valor_total) || 0)
+                      + (formData.valores_extras || []).reduce((s, v) => s + (parseFloat(v.valor) || 0), 0)
+                      - (parseFloat(formData.valor_desconto) || 0)
+                    )}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

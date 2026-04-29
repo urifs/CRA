@@ -115,13 +115,71 @@ export default function ExportPage({ module = "gerenciamento" }) {
     itemName: null
   });
 
+  // State para extrato plano de contas (export por período)
+  const [planosContas, setPlanosContas] = useState([]);
+  const [extratoPlanoConta, setExtratoPlanoConta] = useState("todos");
+  const [extratoDataInicio, setExtratoDataInicio] = useState("");
+  const [extratoDataFim, setExtratoDataFim] = useState("");
+  const [extratoTipo, setExtratoTipo] = useState("ambos");
+  const [exportingExtratoPC, setExportingExtratoPC] = useState(false);
+
   useEffect(() => {
     fetchCategories();
     if (module === "administrativo") {
       fetchContasBancarias();
       fetchCentrosCusto();
+      fetchPlanosContas();
     }
   }, [module]);
+
+  const fetchPlanosContas = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/plano-contas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPlanosContas(response.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar planos de contas:", error);
+    }
+  };
+
+  const exportExtratoPlanoContas = async () => {
+    setExportingExtratoPC(true);
+    try {
+      const params = new URLSearchParams();
+      if (extratoPlanoConta && extratoPlanoConta !== "todos") {
+        params.append("plano_conta_id", extratoPlanoConta);
+      }
+      if (extratoDataInicio) params.append("data_inicio", extratoDataInicio);
+      if (extratoDataFim) params.append("data_fim", extratoDataFim);
+      params.append("tipo", extratoTipo);
+      params.append("incluir_detalhes", "true");
+
+      const response = await axios.get(
+        `${API}/export/extrato-plano-contas?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CRA_Extrato_PlanoContas_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Extrato do plano de contas exportado!");
+    } catch (error) {
+      console.error("Erro ao exportar extrato:", error);
+      toast.error("Erro ao exportar extrato do plano de contas");
+    } finally {
+      setExportingExtratoPC(false);
+    }
+  };
 
   const fetchCentrosCusto = async () => {
     try {
@@ -1357,6 +1415,127 @@ export default function ExportPage({ module = "gerenciamento" }) {
                 <FileDown size={18} className="mr-2" />
               )}
               Exportar Relatório PDF
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Extrato do Plano de Contas — apenas no módulo administrativo */}
+      {module === "administrativo" && (
+        <Card className="mt-6 border-2 border-emerald-200" data-testid="export-extrato-plano-contas-card">
+          <CardHeader className="bg-emerald-50 border-b border-emerald-200 pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <List className="text-emerald-600" size={20} />
+              Extrato do Plano de Contas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Gere o extrato consolidado e detalhado de movimentações por plano de contas em um período específico.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              {/* Plano de Contas */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <FileText size={14} className="text-gray-500" />
+                  Plano de Contas
+                </label>
+                <Select value={extratoPlanoConta} onValueChange={setExtratoPlanoConta}>
+                  <SelectTrigger data-testid="select-plano-extrato">
+                    <SelectValue placeholder="Todos os planos" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="todos">Todos os planos</SelectItem>
+                    {planosContas.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.codigo ? `${p.codigo} - ` : ""}{p.nome}
+                        {p.nivel === 2 ? "  (subconta)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Data Início */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Clock size={14} className="text-gray-500" />
+                  Data Início
+                </label>
+                <Input
+                  type="date"
+                  value={extratoDataInicio}
+                  onChange={(e) => setExtratoDataInicio(e.target.value)}
+                  data-testid="input-data-inicio-extrato"
+                />
+              </div>
+
+              {/* Data Fim */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Clock size={14} className="text-gray-500" />
+                  Data Fim
+                </label>
+                <Input
+                  type="date"
+                  value={extratoDataFim}
+                  onChange={(e) => setExtratoDataFim(e.target.value)}
+                  data-testid="input-data-fim-extrato"
+                />
+              </div>
+
+              {/* Tipo */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Filter size={14} className="text-gray-500" />
+                  Tipo
+                </label>
+                <Select value={extratoTipo} onValueChange={setExtratoTipo}>
+                  <SelectTrigger data-testid="select-tipo-extrato">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="ambos">
+                      <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-blue-500" />
+                        Pagar e Receber
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="pagar">
+                      <div className="flex items-center gap-2">
+                        <TrendingDown size={14} className="text-red-500" />
+                        Apenas a Pagar
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="receber">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp size={14} className="text-green-500" />
+                        Apenas a Receber
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-3">
+              📅 Sem filtro de período → traz todos os lançamentos cadastrados.<br/>
+              📋 O PDF inclui o resumo consolidado por plano e o detalhamento de cada lançamento.
+            </p>
+
+            <Button
+              onClick={exportExtratoPlanoContas}
+              disabled={exportingExtratoPC}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              data-testid="btn-exportar-extrato-plano-contas"
+            >
+              {exportingExtratoPC ? (
+                <Loader2 size={18} className="animate-spin mr-2" />
+              ) : (
+                <FileDown size={18} className="mr-2" />
+              )}
+              Exportar Extrato PDF
             </Button>
           </CardContent>
         </Card>

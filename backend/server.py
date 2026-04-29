@@ -3428,6 +3428,8 @@ class OrdemServicoCreate(BaseModel):
 
     # Valores
     valor_total: Optional[float] = 0
+    valor_principal: Optional[float] = 0  # Valor base antes dos extras
+    valores_extras: Optional[List[dict]] = None  # [{descricao, valor}]
     valor_desconto: Optional[float] = 0
     valor_subtotal: Optional[float] = 0
     valor_antecipado: Optional[float] = 0

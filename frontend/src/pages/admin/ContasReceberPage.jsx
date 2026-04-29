@@ -81,7 +81,8 @@ export default function ContasReceberPage() {
     centro_custo: "",
     frota_id: "", frota_nome: "",
     conta_bancaria_id: "", conta_bancaria_nome: "",
-    forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: ""
+    forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: "",
+    numero_parcela: "", total_parcelas: ""
   });
 
   useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); fetchFrotas(); fetchContasBancarias(); }, [filterStatus, filterVencimento, filterFormaPag, valorBusca]);
@@ -209,6 +210,8 @@ export default function ContasReceberPage() {
           valor_desconto: parseCurrency(formData.valor_desconto) || 0,
           valor_juros: parseCurrency(formData.valor_juros) || 0,
           valor_multa: parseCurrency(formData.valor_multa) || 0,
+          numero_parcela: parseInt(formData.numero_parcela) || 1,
+          total_parcelas: parseInt(formData.total_parcelas) || 1,
         };
         
         if (editingConta) {
@@ -336,7 +339,9 @@ export default function ContasReceberPage() {
         forma_pagamento: conta.forma_pagamento || "boleto",
         conta_movimento: conta.conta_movimento || "",
         faturamento: conta.faturamento || "",
-        observacoes: conta.observacoes || ""
+        observacoes: conta.observacoes || "",
+        numero_parcela: conta.numero_parcela ? String(conta.numero_parcela) : "",
+        total_parcelas: conta.total_parcelas ? String(conta.total_parcelas) : ""
       });
     } else {
       setEditingConta(null);
@@ -347,7 +352,8 @@ export default function ContasReceberPage() {
         plano_conta_id: "", plano_conta_nome: "", 
         subconta_id: "", subconta_nome: "",
         centro_custo: "",
-        forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: ""
+        forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: "",
+        numero_parcela: "", total_parcelas: ""
       });
     }
     setIsModalOpen(true);
@@ -383,9 +389,13 @@ export default function ContasReceberPage() {
   };
 
   const filteredContas = contas.filter(c => {
-    const matchSearch = c.descricao?.toLowerCase().includes(search.toLowerCase()) ||
-      c.cliente_nome?.toLowerCase().includes(search.toLowerCase()) ||
-      c.documento?.toLowerCase().includes(search.toLowerCase());
+    const s = search.toLowerCase();
+    const matchSearch = c.descricao?.toLowerCase().includes(s) ||
+      c.cliente_nome?.toLowerCase().includes(s) ||
+      c.documento?.toLowerCase().includes(s) ||
+      c.numero_doc?.toLowerCase?.().includes(s) ||
+      String(c.numero_doc || "").includes(s) ||
+      String(c.numero || "").includes(s);
     
     if (!matchSearch) return false;
     if (filterStatus && filterStatus !== "all" && c.status !== filterStatus) return false;
@@ -436,7 +446,7 @@ export default function ContasReceberPage() {
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         <div className="relative md:col-span-2">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input placeholder="Buscar por descrição, cliente, NF, nº doc..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" data-testid="contas-receber-search" />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="h-11"><SelectValue placeholder="Todos Status" /></SelectTrigger>
@@ -596,9 +606,34 @@ export default function ContasReceberPage() {
             </div>
             <div className="grid grid-cols-4 gap-4">
               <div><label className="form-label">Documento (NF)</label><Input value={formData.documento} onChange={(e) => setFormData({...formData, documento: e.target.value})} /></div>
-              <div><label className="form-label">Nº Doc.</label><Input value={formData.numero_doc} onChange={(e) => setFormData({...formData, numero_doc: e.target.value})} /></div>
+              <div><label className="form-label">Nº Doc.</label><Input value={formData.numero_doc} onChange={(e) => setFormData({...formData, numero_doc: e.target.value})} data-testid="input-numero-doc-cr" /></div>
               <div><label className="form-label">Conta Movimento</label><Input value={formData.conta_movimento} onChange={(e) => setFormData({...formData, conta_movimento: e.target.value})} /></div>
               <div><label className="form-label">Faturamento</label><Input value={formData.faturamento} onChange={(e) => setFormData({...formData, faturamento: e.target.value})} /></div>
+            </div>
+            {/* Nº da Parcela e Total de Parcelas — editável também após lançado */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Nº da Parcela <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={formData.numero_parcela}
+                  onChange={(e) => setFormData({...formData, numero_parcela: e.target.value})}
+                  placeholder="Ex: 3"
+                  data-testid="input-numero-parcela-cr"
+                />
+              </div>
+              <div>
+                <label className="form-label">Total de Parcelas <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={formData.total_parcelas}
+                  onChange={(e) => setFormData({...formData, total_parcelas: e.target.value})}
+                  placeholder="Ex: 12"
+                  data-testid="input-total-parcelas-cr"
+                />
+              </div>
             </div>
             <div>
               <label className="form-label">Descrição *</label>
