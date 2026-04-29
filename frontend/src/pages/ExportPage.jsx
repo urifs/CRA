@@ -121,6 +121,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [extratoDataInicio, setExtratoDataInicio] = useState("");
   const [extratoDataFim, setExtratoDataFim] = useState("");
   const [extratoTipo, setExtratoTipo] = useState("ambos");
+  const [extratoStatus, setExtratoStatus] = useState("todas");
   const [exportingExtratoPC, setExportingExtratoPC] = useState(false);
 
   useEffect(() => {
@@ -153,6 +154,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
       if (extratoDataInicio) params.append("data_inicio", extratoDataInicio);
       if (extratoDataFim) params.append("data_fim", extratoDataFim);
       params.append("tipo", extratoTipo);
+      params.append("status", extratoStatus);
       params.append("incluir_detalhes", "true");
 
       const response = await axios.get(
@@ -1434,7 +1436,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
               Gere o extrato consolidado e detalhado de movimentações por plano de contas em um período específico.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
               {/* Plano de Contas */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -1514,6 +1516,25 @@ export default function ExportPage({ module = "gerenciamento" }) {
                         Apenas a Receber
                       </div>
                     </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <CheckSquare size={14} className="text-gray-500" />
+                  Status
+                </label>
+                <Select value={extratoStatus} onValueChange={setExtratoStatus}>
+                  <SelectTrigger data-testid="select-status-extrato">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="em_aberto">Em Aberto</SelectItem>
+                    <SelectItem value="quitada">Quitadas</SelectItem>
+                    <SelectItem value="parcial">Parcialmente Pagas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

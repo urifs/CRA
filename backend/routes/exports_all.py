@@ -3738,6 +3738,7 @@ async def export_extrato_plano_contas(
     data_inicio: Optional[str] = None,     # YYYY-MM-DD
     data_fim: Optional[str] = None,        # YYYY-MM-DD
     tipo: str = "ambos",                   # "pagar", "receber" ou "ambos"
+    status: str = "todas",                 # "todas", "em_aberto", "quitada", "parcial"
     incluir_detalhes: bool = True,
     current_user: dict = Depends(get_current_user),
 ):
@@ -3745,7 +3746,7 @@ async def export_extrato_plano_contas(
 
     - Resumo consolidado por plano/subconta no período (saldo a pagar / a receber)
     - Detalhamento de cada lançamento (Contas a Pagar e Contas a Receber) no período
-    - Filtros: plano_conta_id (opcional), data_inicio, data_fim, tipo
+    - Filtros: plano_conta_id (opcional), data_inicio, data_fim, tipo, status
     """
     # Filtro de período por data_vencimento (padrão financeiro)
     period_filter = {}
@@ -3753,6 +3754,15 @@ async def export_extrato_plano_contas(
         period_filter.setdefault("data_vencimento", {})["$gte"] = data_inicio
     if data_fim:
         period_filter.setdefault("data_vencimento", {})["$lte"] = data_fim
+
+    # Filtro de status
+    status_filter = {}
+    if status == "em_aberto":
+        status_filter["status"] = {"$in": ["em_aberto", "pendente"]}
+    elif status == "quitada":
+        status_filter["status"] = "quitada"
+    elif status == "parcial":
+        status_filter["status"] = "parcial"
 
     plano_filter = {}
     plano_doc = None
@@ -3762,7 +3772,7 @@ async def export_extrato_plano_contas(
             raise HTTPException(status_code=404, detail="Plano de contas não encontrado")
         plano_filter = {"$or": [{"plano_conta_id": plano_conta_id}, {"subconta_id": plano_conta_id}]}
 
-    base_filter = {**period_filter, **plano_filter}
+    base_filter = {**period_filter, **status_filter, **plano_filter}
 
     contas_pagar_data: List[dict] = []
     contas_receber_data: List[dict] = []
@@ -3853,6 +3863,13 @@ async def export_extrato_plano_contas(
     periodo_txt += " até "
     periodo_txt += _fmt_data(data_fim) if data_fim else "data atual"
     elements.append(Paragraph(periodo_txt, subtitle_style))
+
+    status_label = {
+        "em_aberto": "Apenas em aberto",
+        "quitada": "Apenas quitadas",
+        "parcial": "Apenas parcialmente pagas",
+    }.get(status, "Todas (em aberto + quitadas + parciais)")
+    elements.append(Paragraph(f"Status: {status_label}", subtitle_style))
     elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
     elements.append(Spacer(1, 12))
 
