@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/MoneyInput";
+import { DecimalInput } from "@/components/DecimalInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -1674,12 +1676,9 @@ export default function EmissaoNFPage() {
               </div>
               <div>
                 <Label>Quantidade *</Label>
-                <Input
-                  type="number"
+                <DecimalInput
                   value={itemForm.quantidade}
-                  onChange={(e) => setItemForm(prev => ({ ...prev, quantidade: e.target.value }))}
-                  min="0.01"
-                  step="0.01"
+                  onChange={(v) => setItemForm(prev => ({ ...prev, quantidade: v }))}
                 />
               </div>
             </div>
@@ -1687,16 +1686,15 @@ export default function EmissaoNFPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Valor Unitário *</Label>
-                <Input
+                <MoneyInput
                   value={itemForm.valor_unitario}
-                  onChange={(e) => setItemForm(prev => ({ ...prev, valor_unitario: e.target.value }))}
-                  placeholder="R$ 0,00"
+                  onChange={(v) => setItemForm(prev => ({ ...prev, valor_unitario: v }))}
                 />
               </div>
               <div className="flex flex-col justify-end">
                 <Label className="text-xs text-gray-500">Valor Total</Label>
                 <div className="text-lg font-bold">
-                  {formatCurrency(parseCurrency(itemForm.valor_unitario) * (parseFloat(itemForm.quantidade) || 0))}
+                  {formatCurrency((Number(itemForm.valor_unitario) || 0) * (Number(itemForm.quantidade) || 0))}
                 </div>
               </div>
             </div>
@@ -1706,30 +1704,30 @@ export default function EmissaoNFPage() {
               <div className="grid grid-cols-4 gap-4">
                 <div>
                   <Label className="text-xs">ICMS (%)</Label>
-                  <Input
+                  <DecimalInput
                     value={itemForm.aliquota_icms}
-                    onChange={(e) => setItemForm(prev => ({ ...prev, aliquota_icms: e.target.value }))}
+                    onChange={(v) => setItemForm(prev => ({ ...prev, aliquota_icms: v }))}
                   />
                 </div>
                 <div>
                   <Label className="text-xs">PIS (%)</Label>
-                  <Input
+                  <DecimalInput
                     value={itemForm.aliquota_pis}
-                    onChange={(e) => setItemForm(prev => ({ ...prev, aliquota_pis: e.target.value }))}
+                    onChange={(v) => setItemForm(prev => ({ ...prev, aliquota_pis: v }))}
                   />
                 </div>
                 <div>
                   <Label className="text-xs">COFINS (%)</Label>
-                  <Input
+                  <DecimalInput
                     value={itemForm.aliquota_cofins}
-                    onChange={(e) => setItemForm(prev => ({ ...prev, aliquota_cofins: e.target.value }))}
+                    onChange={(v) => setItemForm(prev => ({ ...prev, aliquota_cofins: v }))}
                   />
                 </div>
                 <div>
                   <Label className="text-xs">IPI (%)</Label>
-                  <Input
+                  <DecimalInput
                     value={itemForm.aliquota_ipi}
-                    onChange={(e) => setItemForm(prev => ({ ...prev, aliquota_ipi: e.target.value }))}
+                    onChange={(v) => setItemForm(prev => ({ ...prev, aliquota_ipi: v }))}
                   />
                 </div>
               </div>

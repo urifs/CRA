@@ -4,6 +4,7 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/DecimalInput";
 import { 
   Select,
   SelectContent,
@@ -272,7 +273,7 @@ export default function FormasPagamentoPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="form-label">Taxa (%)</label>
-                <Input type="number" step="0.01" value={formData.taxa} onChange={(e) => setFormData({...formData, taxa: e.target.value})} placeholder="0.00" />
+                <DecimalInput value={formData.taxa} onChange={(v) => setFormData({...formData, taxa: v})} placeholder="0,00" />
               </div>
               <div>
                 <label className="form-label">Prazo Recebimento (dias)</label>

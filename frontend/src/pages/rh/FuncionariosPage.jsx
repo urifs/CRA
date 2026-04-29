@@ -4,6 +4,7 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/MoneyInput";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { 
@@ -581,7 +582,7 @@ export default function FuncionariosPage() {
                 </div>
                 <div>
                   <Label>Salário *</Label>
-                  <Input type="number" step="0.01" value={formData.salario} onChange={(e) => setFormData({...formData, salario: e.target.value})} required />
+                  <MoneyInput value={formData.salario} onChange={(v) => setFormData({...formData, salario: v})} required />
                 </div>
                 <div>
                   <Label>Data de Admissão *</Label>

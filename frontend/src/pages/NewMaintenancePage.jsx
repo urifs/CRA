@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/MoneyInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
@@ -415,13 +416,9 @@ export default function NewMaintenancePage() {
               {/* Mão de Obra */}
               <div className="space-y-2">
                 <Label className="form-label">Valor Mão de Obra (opcional)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <MoneyInput
                   value={laborCost}
-                  onChange={(e) => setLaborCost(e.target.value)}
-                  placeholder="0,00"
+                  onChange={(v) => setLaborCost(v)}
                   className="form-input font-mono"
                   data-testid="maintenance-labor-input"
                 />
@@ -486,13 +483,9 @@ export default function NewMaintenancePage() {
                       <span className="text-xs text-green-600 ml-2 font-normal">(calculado automaticamente)</span>
                     )}
                   </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <MoneyInput
                     value={formData.part_value}
-                    onChange={(e) => setFormData({...formData, part_value: e.target.value})}
-                    placeholder="0,00"
+                    onChange={(v) => setFormData({...formData, part_value: v})}
                     required
                     className={`form-input font-mono ${(selectedParts.length > 0 || (laborCost && parseFloat(laborCost) > 0)) ? 'bg-green-50 border-green-300' : ''}`}
                     data-testid="maintenance-value-input"

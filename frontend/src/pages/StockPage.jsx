@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/MoneyInput";
+import { DecimalInput } from "@/components/DecimalInput";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -1085,26 +1087,20 @@ export default function StockPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="form-label">Quantidade Inicial</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <DecimalInput
                     value={itemForm.quantity}
-                    onChange={(e) => setItemForm({...itemForm, quantity: e.target.value})}
-                    placeholder="0"
+                    onChange={(v) => setItemForm({...itemForm, quantity: v})}
+                    placeholder="0,00"
                     className="form-input font-mono"
                     data-testid="item-quantity-input"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="form-label">Estoque Mínimo</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <DecimalInput
                     value={itemForm.min_quantity}
-                    onChange={(e) => setItemForm({...itemForm, min_quantity: e.target.value})}
-                    placeholder="0"
+                    onChange={(v) => setItemForm({...itemForm, min_quantity: v})}
+                    placeholder="0,00"
                     className="form-input font-mono"
                     data-testid="item-min-quantity-input"
                   />
@@ -1115,13 +1111,10 @@ export default function StockPage() {
             {editingItem && (
               <div className="space-y-2">
                 <Label className="form-label">Estoque Mínimo</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <DecimalInput
                   value={itemForm.min_quantity}
-                  onChange={(e) => setItemForm({...itemForm, min_quantity: e.target.value})}
-                  placeholder="0"
+                  onChange={(v) => setItemForm({...itemForm, min_quantity: v})}
+                  placeholder="0,00"
                   className="form-input font-mono"
                   data-testid="item-min-quantity-input"
                 />
@@ -1131,13 +1124,9 @@ export default function StockPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="form-label">Preço Unitário (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <MoneyInput
                   value={itemForm.unit_price}
-                  onChange={(e) => setItemForm({...itemForm, unit_price: e.target.value})}
-                  placeholder="0,00"
+                  onChange={(v) => setItemForm({...itemForm, unit_price: v})}
                   className="form-input font-mono"
                   data-testid="item-price-input"
                 />
@@ -1271,13 +1260,10 @@ export default function StockPage() {
           <form onSubmit={handleMovementSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label className="form-label">Quantidade *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0.01"
+              <DecimalInput
                 value={movementForm.quantity}
-                onChange={(e) => setMovementForm({...movementForm, quantity: e.target.value})}
-                placeholder="0"
+                onChange={(v) => setMovementForm({...movementForm, quantity: v})}
+                placeholder="0,00"
                 required
                 className="form-input font-mono text-lg"
                 data-testid="movement-quantity-input"

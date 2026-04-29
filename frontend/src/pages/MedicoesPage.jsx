@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/DecimalInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { 
@@ -603,22 +604,18 @@ export default function MedicoesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Valor Anterior</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <DecimalInput
                   value={formData.valor_anterior}
-                  onChange={(e) => setFormData({...formData, valor_anterior: e.target.value})}
-                  placeholder="0"
+                  onChange={(v) => setFormData({...formData, valor_anterior: v})}
+                  placeholder="0,00"
                 />
               </div>
               <div>
                 <Label>Valor Atual *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <DecimalInput
                   value={formData.valor_atual}
-                  onChange={(e) => setFormData({...formData, valor_atual: e.target.value})}
-                  placeholder="0"
+                  onChange={(v) => setFormData({...formData, valor_atual: v})}
+                  placeholder="0,00"
                   required
                 />
               </div>

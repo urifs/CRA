@@ -4,6 +4,8 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/MoneyInput";
+import { DecimalInput } from "@/components/DecimalInput";
 import { Label } from "@/components/ui/label";
 import { 
   Select,
@@ -503,23 +505,23 @@ export default function FolhaPagamentoPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Salário Base</Label>
-                  <Input type="number" step="0.01" value={formData.salario_base} onChange={(e) => setFormData({...formData, salario_base: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.salario_base} onChange={(v) => setFormData({...formData, salario_base: v})} />
                 </div>
                 <div>
                   <Label>Horas Extras (qtd)</Label>
-                  <Input type="number" value={formData.horas_extras} onChange={(e) => setFormData({...formData, horas_extras: parseFloat(e.target.value) || 0})} />
+                  <DecimalInput value={formData.horas_extras} onChange={(v) => setFormData({...formData, horas_extras: v})} />
                 </div>
                 <div>
                   <Label>Valor Hora Extra (50%)</Label>
-                  <Input type="number" step="0.01" value={formData.valor_hora_extra} onChange={(e) => setFormData({...formData, valor_hora_extra: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.valor_hora_extra} onChange={(v) => setFormData({...formData, valor_hora_extra: v})} />
                 </div>
                 <div>
                   <Label>Adicional Noturno</Label>
-                  <Input type="number" step="0.01" value={formData.adicional_noturno} onChange={(e) => setFormData({...formData, adicional_noturno: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.adicional_noturno} onChange={(v) => setFormData({...formData, adicional_noturno: v})} />
                 </div>
                 <div>
                   <Label>Comissões</Label>
-                  <Input type="number" step="0.01" value={formData.comissoes} onChange={(e) => setFormData({...formData, comissoes: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.comissoes} onChange={(v) => setFormData({...formData, comissoes: v})} />
                 </div>
               </div>
             </div>
@@ -529,19 +531,19 @@ export default function FolhaPagamentoPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Vale Transporte (6%)</Label>
-                  <Input type="number" step="0.01" value={formData.vale_transporte} onChange={(e) => setFormData({...formData, vale_transporte: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.vale_transporte} onChange={(v) => setFormData({...formData, vale_transporte: v})} />
                 </div>
                 <div>
                   <Label>Vale Alimentação</Label>
-                  <Input type="number" step="0.01" value={formData.vale_alimentacao} onChange={(e) => setFormData({...formData, vale_alimentacao: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.vale_alimentacao} onChange={(v) => setFormData({...formData, vale_alimentacao: v})} />
                 </div>
                 <div>
                   <Label>Plano de Saúde</Label>
-                  <Input type="number" step="0.01" value={formData.plano_saude} onChange={(e) => setFormData({...formData, plano_saude: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.plano_saude} onChange={(v) => setFormData({...formData, plano_saude: v})} />
                 </div>
                 <div>
                   <Label>Outros Descontos</Label>
-                  <Input type="number" step="0.01" value={formData.outros_descontos} onChange={(e) => setFormData({...formData, outros_descontos: parseFloat(e.target.value) || 0})} />
+                  <MoneyInput value={formData.outros_descontos} onChange={(v) => setFormData({...formData, outros_descontos: v})} />
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/DecimalInput";
 import { Label } from "@/components/ui/label";
 import { 
   Select,
@@ -267,13 +268,10 @@ export default function CustosPage() {
           <div className="space-y-4">
             <div>
               <Label>Percentual de Aumento (%)</Label>
-              <Input 
-                type="number" 
-                min="0" 
-                max="100"
-                step="0.5"
-                value={percentualDissidio} 
-                onChange={(e) => setPercentualDissidio(parseFloat(e.target.value) || 0)} 
+              <DecimalInput
+                value={percentualDissidio}
+                onChange={(v) => setPercentualDissidio(v)}
+                placeholder="0,00"
               />
             </div>
             

@@ -475,11 +475,11 @@ export default function ContasReceberPage() {
           </SelectContent>
         </Select>
         <Input
-          type="number"
-          step="0.01"
-          placeholder="Buscar por valor"
+          type="text"
+          inputMode="decimal"
+          placeholder="Buscar por valor (ex: 1500,50)"
           value={valorBusca}
-          onChange={(e) => setValorBusca(e.target.value)}
+          onChange={(e) => setValorBusca(e.target.value.replace(",", "."))}
           className="h-11"
           data-testid="contas-receber-busca-valor"
         />

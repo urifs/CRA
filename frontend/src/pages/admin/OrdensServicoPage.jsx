@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedDateInput } from "@/components/MaskedDateInput";
 import CadastroFormModal from "@/components/CadastroFormModal";
+import { MoneyInput } from "@/components/MoneyInput";
+import { DecimalInput } from "@/components/DecimalInput";
 import { formatCEP, formatTelefone, formatCPFouCNPJ } from "@/utils/masks";
 import { 
   Select,
@@ -313,14 +315,14 @@ export default function OrdensServicoPage() {
     e.preventDefault();
     try {
       // Total = soma de TODOS os valores adicionais − desconto
-      const valorDesconto = parseFloat(formData.valor_desconto) || 0;
-      const valorAntecipado = parseFloat(formData.valor_antecipado) || 0;
+      const valorDesconto = Number(formData.valor_desconto) || 0;
+      const valorAntecipado = Number(formData.valor_antecipado) || 0;
       const extras = (formData.valores_extras || [])
         .map((v) => ({
           descricao: v.descricao || "",
           maquina_id: v.maquina_id || "",
           maquina_nome: v.maquina_nome || "",
-          valor: parseFloat(v.valor) || 0,
+          valor: Number(v.valor) || 0,
         }));
       const totalExtras = extras.reduce((s, v) => s + v.valor, 0);
       const valorFinal = totalExtras - valorDesconto;
@@ -912,10 +914,10 @@ export default function OrdensServicoPage() {
                 </div>
                 <div>
                   <label className="form-label">KM <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
-                  <Input 
-                    value={formData.km} 
-                    onChange={(e) => setFormData({...formData, km: e.target.value.replace(/[^\d.,]/g, "")})} 
-                    placeholder="Ex: 12500"
+                  <DecimalInput
+                    value={formData.km}
+                    onChange={(v) => setFormData({...formData, km: v})}
+                    placeholder="Ex: 12.500,00"
                     data-testid="input-km-os"
                   />
                 </div>
@@ -1027,16 +1029,13 @@ export default function OrdensServicoPage() {
                       </div>
                       <div className="col-span-3">
                         <label className="text-[11px] text-gray-500">Valor</label>
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <MoneyInput
                           value={v.valor}
-                          onChange={(e) => {
+                          onChange={(num) => {
                             const arr = [...formData.valores_extras];
-                            arr[idx] = { ...arr[idx], valor: e.target.value };
+                            arr[idx] = { ...arr[idx], valor: num };
                             setFormData({ ...formData, valores_extras: arr });
                           }}
-                          placeholder="0,00"
                           data-testid={`input-valor-extra-val-${idx}`}
                         />
                       </div>
@@ -1063,11 +1062,11 @@ export default function OrdensServicoPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="form-label">Valor Desconto</label>
-                    <Input type="number" step="0.01" value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: e.target.value})} placeholder="0,00" data-testid="input-valor-desconto" />
+                    <MoneyInput value={formData.valor_desconto} onChange={(v) => setFormData({...formData, valor_desconto: v})} data-testid="input-valor-desconto" />
                   </div>
                   <div>
                     <label className="form-label">Valor Antecipado</label>
-                    <Input type="number" step="0.01" value={formData.valor_antecipado} onChange={(e) => setFormData({...formData, valor_antecipado: e.target.value})} placeholder="0,00" />
+                    <MoneyInput value={formData.valor_antecipado} onChange={(v) => setFormData({...formData, valor_antecipado: v})} />
                   </div>
                 </div>
 
@@ -1080,8 +1079,8 @@ export default function OrdensServicoPage() {
                     </div>
                     <span className="text-2xl font-bold text-[#D4A000]" data-testid="os-valor-total-calc">
                       {formatCurrency(
-                        (formData.valores_extras || []).reduce((s, v) => s + (parseFloat(v.valor) || 0), 0)
-                        - (parseFloat(formData.valor_desconto) || 0)
+                        (formData.valores_extras || []).reduce((s, v) => s + (Number(v.valor) || 0), 0)
+                        - (Number(formData.valor_desconto) || 0)
                       )}
                     </span>
                   </div>

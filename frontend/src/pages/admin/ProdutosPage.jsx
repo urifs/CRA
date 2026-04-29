@@ -4,6 +4,8 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/MoneyInput";
+import { DecimalInput } from "@/components/DecimalInput";
 import { 
   Select,
   SelectContent,
@@ -405,18 +407,18 @@ export default function ProdutosPage() {
                 </Select>
               </div>
               <div><label className="form-label">Un. Tributada</label><Input value={formData.unidade_tributada} onChange={(e) => setFormData({...formData, unidade_tributada: e.target.value})} /></div>
-              <div><label className="form-label">Múltiplo</label><Input type="number" step="0.01" value={formData.multiplo} onChange={(e) => setFormData({...formData, multiplo: e.target.value})} /></div>
-              <div><label className="form-label">Preço Custo</label><Input type="number" step="0.01" value={formData.preco_custo} onChange={(e) => setFormData({...formData, preco_custo: e.target.value})} /></div>
-              <div><label className="form-label">Preço Venda</label><Input type="number" step="0.01" value={formData.preco_venda} onChange={(e) => setFormData({...formData, preco_venda: e.target.value})} /></div>
+              <div><label className="form-label">Múltiplo</label><DecimalInput value={formData.multiplo} onChange={(v) => setFormData({...formData, multiplo: v})} /></div>
+              <div><label className="form-label">Preço Custo</label><MoneyInput value={formData.preco_custo} onChange={(v) => setFormData({...formData, preco_custo: v})} /></div>
+              <div><label className="form-label">Preço Venda</label><MoneyInput value={formData.preco_venda} onChange={(v) => setFormData({...formData, preco_venda: v})} /></div>
               <div><label className="form-label">Localização</label><Input value={formData.localizacao} onChange={(e) => setFormData({...formData, localizacao: e.target.value})} placeholder="Prateleira" /></div>
             </div>
 
             {/* Estoque */}
             <div className="border-b pb-2 mb-2 mt-4"><h3 className="font-medium text-gray-700">Estoque</h3></div>
             <div className="grid grid-cols-3 gap-4">
-              <div><label className="form-label">Estoque Atual</label><Input type="number" step="0.01" value={formData.estoque_atual} onChange={(e) => setFormData({...formData, estoque_atual: e.target.value})} /></div>
-              <div><label className="form-label">Estoque Mínimo</label><Input type="number" step="0.01" value={formData.estoque_minimo} onChange={(e) => setFormData({...formData, estoque_minimo: e.target.value})} /></div>
-              <div><label className="form-label">Estoque Máximo</label><Input type="number" step="0.01" value={formData.estoque_maximo} onChange={(e) => setFormData({...formData, estoque_maximo: e.target.value})} /></div>
+              <div><label className="form-label">Estoque Atual</label><DecimalInput value={formData.estoque_atual} onChange={(v) => setFormData({...formData, estoque_atual: v})} /></div>
+              <div><label className="form-label">Estoque Mínimo</label><DecimalInput value={formData.estoque_minimo} onChange={(v) => setFormData({...formData, estoque_minimo: v})} /></div>
+              <div><label className="form-label">Estoque Máximo</label><DecimalInput value={formData.estoque_maximo} onChange={(v) => setFormData({...formData, estoque_maximo: v})} /></div>
             </div>
 
             {/* Dados Fiscais */}
@@ -436,10 +438,10 @@ export default function ProdutosPage() {
               </div>
             </div>
             <div className="grid grid-cols-4 gap-4">
-              <div><label className="form-label">IPI %</label><Input type="number" step="0.01" value={formData.ipi} onChange={(e) => setFormData({...formData, ipi: e.target.value})} /></div>
-              <div><label className="form-label">ICMS %</label><Input type="number" step="0.01" value={formData.icms} onChange={(e) => setFormData({...formData, icms: e.target.value})} /></div>
-              <div><label className="form-label">PIS %</label><Input type="number" step="0.01" value={formData.pis} onChange={(e) => setFormData({...formData, pis: e.target.value})} /></div>
-              <div><label className="form-label">COFINS %</label><Input type="number" step="0.01" value={formData.cofins} onChange={(e) => setFormData({...formData, cofins: e.target.value})} /></div>
+              <div><label className="form-label">IPI %</label><DecimalInput value={formData.ipi} onChange={(v) => setFormData({...formData, ipi: v})} /></div>
+              <div><label className="form-label">ICMS %</label><DecimalInput value={formData.icms} onChange={(v) => setFormData({...formData, icms: v})} /></div>
+              <div><label className="form-label">PIS %</label><DecimalInput value={formData.pis} onChange={(v) => setFormData({...formData, pis: v})} /></div>
+              <div><label className="form-label">COFINS %</label><DecimalInput value={formData.cofins} onChange={(v) => setFormData({...formData, cofins: v})} /></div>
             </div>
 
             {/* Promoção */}
@@ -449,7 +451,7 @@ export default function ProdutosPage() {
                 <input type="checkbox" checked={formData.em_promocao} onChange={(e) => setFormData({...formData, em_promocao: e.target.checked})} className="rounded" />
                 <span>Em Promoção</span>
               </label>
-              <div><label className="form-label">Preço Promoção</label><Input type="number" step="0.01" value={formData.preco_promocao} onChange={(e) => setFormData({...formData, preco_promocao: e.target.value})} disabled={!formData.em_promocao} /></div>
+              <div><label className="form-label">Preço Promoção</label><MoneyInput value={formData.preco_promocao} onChange={(v) => setFormData({...formData, preco_promocao: v})} disabled={!formData.em_promocao} /></div>
             </div>
 
             <div><label className="form-label">Observações</label><Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} /></div>
