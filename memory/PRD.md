@@ -1,4 +1,30 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 29/04/2026 (Sessão 40) — 🐛 P0 bug fixes + 🟢 P1 features financeiras
+
+### Bugs P0 corrigidos
+- **OS "tela preta ao salvar"** — Frontend mandava `valor_desconto: ""` que falhava no Pydantic (`float_parsing`); o `detail` retornado era array de objetos e o React quebrava ao renderizar dentro do toast. Fix: parsear todos os campos numéricos no `handleSubmit` antes do POST/PUT e converter `detail` array em string legível antes de exibir no toast.
+- **Recibo PDF sem dados de cliente/fornecedor** — `/api/export/recibo` lia apenas campos da própria conta (que só armazenava `fornecedor_nome` + `id`). Fix: agora busca `db.cadastros` via `fornecedor_id`/`cliente_id` e enriquece o recibo com CPF/CNPJ, telefone, celular e endereço completo (rua, número, complemento, bairro, cidade, UF, CEP).
+
+### Features P1 implementadas
+- **Nº da Parcela editável após lançamento** — Campos `numero_parcela` e `total_parcelas` adicionados ao modal de Contas a Pagar e Contas a Receber, visíveis em ambos os modos Criação e Edição. testids: `input-numero-parcela-cp/cr`, `input-total-parcelas-cp/cr`.
+- **Busca por número do documento** — Filtro de search em Contas a Pagar/Receber agora inclui `numero_doc` além de `descricao`, `cliente_nome`/`fornecedor_nome` e `documento`. Placeholders atualizados.
+- **OS com múltiplos valores compostos** — Renomeado "Valor Total" para "Valor Principal" e adicionado painel "Valores Adicionais" com botão "+ Adicionar valor". Cada extra tem (descrição, valor) e é enviado em `valores_extras: [{descricao, valor}]`. O Valor Total final é calculado automaticamente: `valor_principal + Σ valores_extras − valor_desconto`. PDF da OS renderiza cada extra como linha separada na tabela de itens.
+- **Exportar Extrato do Plano de Contas com período** — Card NOVO em ExportPage (módulo administrativo) com filtros Plano de Contas, Data Início, Data Fim, Tipo (ambos/pagar/receber). Backend: `GET /api/export/extrato-plano-contas?plano_conta_id=&data_inicio=&data_fim=&tipo=&incluir_detalhes=true`. PDF gera resumo consolidado por plano + detalhamento de cada lançamento (Pagar em vermelho, Receber em verde) seguindo padrão visual existente.
+
+### Arquivos modificados
+- `frontend/src/pages/admin/OrdensServicoPage.jsx` — handleSubmit fix + UI valores_extras + total auto-calculado
+- `frontend/src/pages/admin/ContasPagarPage.jsx` — campos parcela + search por numero_doc
+- `frontend/src/pages/admin/ContasReceberPage.jsx` — idem
+- `frontend/src/pages/ExportPage.jsx` — card "Extrato do Plano de Contas"
+- `backend/server.py` — model `OrdemServicoCreate` aceita `valores_extras` + `valor_principal`
+- `backend/routes/admin.py` — PDF da OS renderiza valores extras
+- `backend/routes/exports_all.py` — `export_recibo` enriquece com cadastro + novo endpoint `/export/extrato-plano-contas`
+
+### Testes (Sessão 34 — testing_agent_v3_fork)
+- Backend: 8/8 pytest passou (`/app/backend/tests/test_sessao34_bugs_features.py`)
+- Frontend: 100% — Playwright validou modal OS sem black screen, testids dos campos parcela, card de extrato visível, recibo PDF extraído via pypdf confirmou CNPJ/endereço/telefone.
+
+
 ## Changelog - 28/04/2026 (Sessão 39) — 🧹 Auditoria total: zero duplicatas restantes
 
 ### Auditoria executada
