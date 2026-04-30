@@ -235,8 +235,12 @@ async def export_ordem_servico_pdf(ordem_id: str):
          _kv("Obra", ordem.get("obra"))[0], _kv("Obra", ordem.get("obra"))[1]],
         [_kv("Data Abertura", _data_br(ordem.get("data_abertura")))[0],
          _kv("Data Abertura", _data_br(ordem.get("data_abertura")))[1],
-         _kv("Data Fech.", _data_br(ordem.get("data_fechamento") or ordem.get("data_conclusao") or ordem.get("data_previsao")))[0],
-         _kv("Data Fech.", _data_br(ordem.get("data_fechamento") or ordem.get("data_conclusao") or ordem.get("data_previsao")))[1]],
+         _kv("Data Fech.", _data_br(ordem.get("data_fechamento") or ordem.get("data_conclusao")))[0],
+         _kv("Data Fech.", _data_br(ordem.get("data_fechamento") or ordem.get("data_conclusao")))[1]],
+        [_kv("Prev. Entrega", _data_br(ordem.get("data_previsao_entrega") or ordem.get("data_previsao")))[0],
+         _kv("Prev. Entrega", _data_br(ordem.get("data_previsao_entrega") or ordem.get("data_previsao")))[1],
+         _kv("Atendente", ordem.get("atendente_nome") or ordem.get("responsavel_nome"))[0],
+         _kv("Atendente", ordem.get("atendente_nome") or ordem.get("responsavel_nome"))[1]],
         [_kv("Tipo Atend.", ordem.get("tipo_atendimento") or ordem.get("tipo"))[0],
          _kv("Tipo Atend.", ordem.get("tipo_atendimento") or ordem.get("tipo"))[1],
          _kv("Período", ordem.get("periodo"))[0], _kv("Período", ordem.get("periodo"))[1]],
@@ -246,6 +250,18 @@ async def export_ordem_servico_pdf(ordem_id: str):
         [_kv("Nº Doc Fiscal", ordem.get("numero_documento_fiscal"))[0],
          _kv("Nº Doc Fiscal", ordem.get("numero_documento_fiscal"))[1],
          _kv("Nº Contrato", ordem.get("numero_contrato"))[0], _kv("Nº Contrato", ordem.get("numero_contrato"))[1]],
+        [_kv("Empresa Emissora", (ordem.get("empresa_emissora") or "").capitalize())[0],
+         _kv("Empresa Emissora", (ordem.get("empresa_emissora") or "").capitalize())[1],
+         _kv("Tipo Financeiro", (ordem.get("tipo_financeiro") or "nenhum").replace("_", " ").capitalize())[0],
+         _kv("Tipo Financeiro", (ordem.get("tipo_financeiro") or "nenhum").replace("_", " ").capitalize())[1]],
+        [_kv("Status", (ordem.get("status") or "aberta").capitalize())[0],
+         _kv("Status", (ordem.get("status") or "aberta").capitalize())[1],
+         _kv("Forma Pagto", ordem.get("forma_pagamento"))[0],
+         _kv("Forma Pagto", ordem.get("forma_pagamento"))[1]],
+        [_kv("Cond. Pagto", ordem.get("condicao_pagamento"))[0],
+         _kv("Cond. Pagto", ordem.get("condicao_pagamento"))[1],
+         _kv("Vlr Antecipado", _brl(ordem.get("valor_antecipado")))[0],
+         _kv("Vlr Antecipado", _brl(ordem.get("valor_antecipado")))[1]],
     ]
     t_obra = Table(obra_data, colWidths=[2.4 * cm, 7.0 * cm, 2.4 * cm, 7.6 * cm])
     t_obra.setStyle(TableStyle([
@@ -431,15 +447,18 @@ async def export_ordem_servico_pdf(ordem_id: str):
         ))
         elements.append(Spacer(1, 0.15 * cm))
 
-    # Observações de serviços / notas gerais
+    # Observações de serviços / notas gerais — exibir TODOS os campos preenchidos
     if ordem.get("observacao_servicos"):
-        elements.append(Paragraph("<b>OBSERVAÇÃO:</b>", style_value))
-        elements.append(Paragraph(ordem["observacao_servicos"].replace("\n", "<br/>"), style_value))
+        elements.append(Paragraph("<b>OBSERVAÇÃO DOS SERVIÇOS:</b>", style_value))
+        elements.append(Paragraph(str(ordem["observacao_servicos"]).replace("\n", "<br/>"), style_value))
         elements.append(Spacer(1, 0.15 * cm))
-    if ordem.get("notas_gerais") or ordem.get("observacoes"):
-        notas = ordem.get("notas_gerais") or ordem.get("observacoes")
-        elements.append(Paragraph("<b>NOTAS:</b>", style_value))
-        elements.append(Paragraph(notas.replace("\n", "<br/>"), style_value))
+    if ordem.get("notas_gerais"):
+        elements.append(Paragraph("<b>NOTAS GERAIS:</b>", style_value))
+        elements.append(Paragraph(str(ordem["notas_gerais"]).replace("\n", "<br/>"), style_value))
+        elements.append(Spacer(1, 0.15 * cm))
+    if ordem.get("observacoes"):
+        elements.append(Paragraph("<b>OBSERVAÇÕES:</b>", style_value))
+        elements.append(Paragraph(str(ordem["observacoes"]).replace("\n", "<br/>"), style_value))
         elements.append(Spacer(1, 0.3 * cm))
 
     # Assinaturas

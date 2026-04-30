@@ -75,8 +75,14 @@ export default function CadastroFormModal({
     }
     setConsultandoCnpj(true);
     try {
-      const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-      const data = response.data;
+      // Usa fetch nativo para evitar enviar o Authorization global do axios para a BrasilAPI
+      const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!resp.ok) {
+        if (resp.status === 404) toast.error("CNPJ não encontrado");
+        else toast.error(`Erro ao consultar CNPJ (${resp.status})`);
+        return;
+      }
+      const data = await resp.json();
       setFormData({
         ...formData,
         nome_razao: data.razao_social || formData.nome_razao,
@@ -93,7 +99,8 @@ export default function CadastroFormModal({
       });
       toast.success("Dados preenchidos automaticamente!");
     } catch (error) {
-      toast.error("Erro ao consultar CNPJ");
+      console.error("Erro ao consultar CNPJ:", error);
+      toast.error("Erro ao consultar CNPJ — verifique a conexão");
     } finally {
       setConsultandoCnpj(false);
     }
@@ -107,21 +114,28 @@ export default function CadastroFormModal({
     }
     setConsultandoCep(true);
     try {
-      const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
-      if (response.data.erro) {
+      // Usa fetch nativo para evitar enviar o Authorization global do axios para o ViaCEP
+      const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      if (!resp.ok) {
+        toast.error(`Erro ao consultar CEP (${resp.status})`);
+        return;
+      }
+      const data = await resp.json();
+      if (data.erro) {
         toast.error("CEP não encontrado");
         return;
       }
       setFormData({
         ...formData,
-        endereco: response.data.logradouro || formData.endereco,
-        bairro: response.data.bairro || formData.bairro,
-        cidade: response.data.localidade || formData.cidade,
-        uf: response.data.uf || formData.uf,
+        endereco: data.logradouro || formData.endereco,
+        bairro: data.bairro || formData.bairro,
+        cidade: data.localidade || formData.cidade,
+        uf: data.uf || formData.uf,
       });
       toast.success("Endereço preenchido!");
     } catch (error) {
-      toast.error("Erro ao consultar CEP");
+      console.error("Erro ao consultar CEP:", error);
+      toast.error("Erro ao consultar CEP — verifique a conexão");
     } finally {
       setConsultandoCep(false);
     }

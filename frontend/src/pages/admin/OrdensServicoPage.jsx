@@ -248,20 +248,27 @@ export default function OrdensServicoPage() {
     if (cep.length !== 8) return;
     setConsultandoCep(true);
     try {
-      const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
-      if (response.data.erro) {
+      // fetch nativo evita enviar Authorization global do axios para o ViaCEP
+      const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      if (!resp.ok) {
+        toast.error(`Erro ao consultar CEP (${resp.status})`);
+        return;
+      }
+      const data = await resp.json();
+      if (data.erro) {
         toast.error("CEP não encontrado");
         return;
       }
       setFormData((prev) => ({
         ...prev,
-        cliente_endereco: response.data.logradouro || prev.cliente_endereco,
-        cliente_bairro: response.data.bairro || prev.cliente_bairro,
-        cliente_cidade: response.data.localidade || prev.cliente_cidade,
-        cliente_uf: response.data.uf || prev.cliente_uf
+        cliente_endereco: data.logradouro || prev.cliente_endereco,
+        cliente_bairro: data.bairro || prev.cliente_bairro,
+        cliente_cidade: data.localidade || prev.cliente_cidade,
+        cliente_uf: data.uf || prev.cliente_uf
       }));
       toast.success("Endereço preenchido!");
     } catch (error) {
+      console.error("Erro ao consultar CEP:", error);
       toast.error("Erro ao consultar CEP");
     } finally {
       setConsultandoCep(false);

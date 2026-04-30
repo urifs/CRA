@@ -263,14 +263,16 @@ export default function ImoveisPage() {
     if (cepLimpo.length !== 8) return;
     
     try {
-      const response = await axios.get(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      if (!response.data.erro) {
+      const resp = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (!data.erro) {
         setFormData(prev => ({
           ...prev,
-          endereco: response.data.logradouro || prev.endereco,
-          bairro: response.data.bairro || prev.bairro,
-          cidade: response.data.localidade || prev.cidade,
-          estado: response.data.uf || prev.estado
+          endereco: data.logradouro || prev.endereco,
+          bairro: data.bairro || prev.bairro,
+          cidade: data.localidade || prev.cidade,
+          estado: data.uf || prev.estado
         }));
       }
     } catch (error) {

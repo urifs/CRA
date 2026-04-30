@@ -3143,6 +3143,8 @@ class ContaPagarCreate(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None  # Frota associada
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None  # Máquina específica da frota
+    maquina_nome: Optional[str] = None
     
     # Pagamento
     forma_pagamento: str = "dinheiro"  # dinheiro, pix, cartao_debito, cartao_credito, boleto, cheque, transferencia
@@ -3185,6 +3187,8 @@ class ContaPagarResponse(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None
+    maquina_nome: Optional[str] = None
     forma_pagamento: str
     conta_movimento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None
@@ -3225,6 +3229,8 @@ class ContaReceberCreate(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None  # Frota associada
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None  # Máquina específica da frota
+    maquina_nome: Optional[str] = None
     
     # Pagamento
     forma_pagamento: str = "dinheiro"
@@ -3270,6 +3276,8 @@ class ContaReceberResponse(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None
+    maquina_nome: Optional[str] = None
     forma_pagamento: str
     conta_movimento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None

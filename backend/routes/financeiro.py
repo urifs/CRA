@@ -47,6 +47,8 @@ class ContaPagarCreate(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None
+    maquina_nome: Optional[str] = None
     forma_pagamento: str = "dinheiro"
     conta_movimento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None
@@ -76,6 +78,8 @@ class ContaParceladaCreate(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None
+    maquina_nome: Optional[str] = None
     forma_pagamento: str = "boleto"
     conta_movimento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None
@@ -121,6 +125,8 @@ class ContaReceberCreate(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None
+    maquina_nome: Optional[str] = None
     forma_pagamento: str = "dinheiro"
     conta_movimento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None
@@ -151,6 +157,8 @@ class ContaReceberParceladaCreate(BaseModel):
     centro_custo: Optional[str] = None
     frota_id: Optional[str] = None
     frota_nome: Optional[str] = None
+    maquina_id: Optional[str] = None
+    maquina_nome: Optional[str] = None
     forma_pagamento: str = "boleto"
     conta_movimento: Optional[str] = None
     conta_bancaria_id: Optional[str] = None

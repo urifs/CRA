@@ -50,6 +50,7 @@ export default function ContasReceberPage() {
   const [formasPagamentoDB, setFormasPagamentoDB] = useState([]);
   const [cadastros, setCadastros] = useState([]);
   const [frotas, setFrotas] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [contasBancarias, setContasBancarias] = useState([]);
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
   
@@ -80,12 +81,13 @@ export default function ContasReceberPage() {
     subconta_id: "", subconta_nome: "",
     centro_custo: "",
     frota_id: "", frota_nome: "",
+    maquina_id: "", maquina_nome: "",
     conta_bancaria_id: "", conta_bancaria_nome: "",
     forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: "",
     numero_parcela: "", total_parcelas: ""
   });
 
-  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); fetchFrotas(); fetchContasBancarias(); }, [filterStatus, filterVencimento, filterFormaPag, valorBusca]);
+  useEffect(() => { fetchContas(); fetchPlanoContas(); fetchCentrosCusto(); fetchFormasPagamento(); fetchCadastros(); fetchFrotas(); fetchMachines(); fetchContasBancarias(); }, [filterStatus, filterVencimento, filterFormaPag, valorBusca]);
 
   const fetchContas = async () => {
     try {
@@ -145,6 +147,13 @@ export default function ContasReceberPage() {
     } catch (error) { console.error(error); }
   };
 
+  const fetchMachines = async () => {
+    try {
+      const response = await axios.get(`${API}/machines`);
+      setMachines(response.data || []);
+    } catch (error) { console.error(error); }
+  };
+
   const fetchContasBancarias = async () => {
     try {
       const response = await axios.get(`${API}/admin/contas-bancarias?ativo=true`);
@@ -192,6 +201,8 @@ export default function ContasReceberPage() {
           centro_custo: formData.centro_custo,
           frota_id: formData.frota_id,
           frota_nome: formData.frota_nome,
+          maquina_id: formData.maquina_id,
+          maquina_nome: formData.maquina_nome,
           forma_pagamento: formData.forma_pagamento,
           conta_movimento: formData.conta_movimento,
           conta_bancaria_id: formData.conta_bancaria_id,
@@ -336,6 +347,12 @@ export default function ContasReceberPage() {
         subconta_id: conta.subconta_id || "",
         subconta_nome: conta.subconta_nome || "",
         centro_custo: conta.centro_custo || "",
+        frota_id: conta.frota_id || "",
+        frota_nome: conta.frota_nome || "",
+        maquina_id: conta.maquina_id || "",
+        maquina_nome: conta.maquina_nome || "",
+        conta_bancaria_id: conta.conta_bancaria_id || "",
+        conta_bancaria_nome: conta.conta_bancaria_nome || "",
         forma_pagamento: conta.forma_pagamento || "boleto",
         conta_movimento: conta.conta_movimento || "",
         faturamento: conta.faturamento || "",
@@ -352,6 +369,9 @@ export default function ContasReceberPage() {
         plano_conta_id: "", plano_conta_nome: "", 
         subconta_id: "", subconta_nome: "",
         centro_custo: "",
+        frota_id: "", frota_nome: "",
+        maquina_id: "", maquina_nome: "",
+        conta_bancaria_id: "", conta_bancaria_nome: "",
         forma_pagamento: "boleto", conta_movimento: "", faturamento: "", observacoes: "",
         numero_parcela: "", total_parcelas: ""
       });
@@ -784,16 +804,45 @@ export default function ContasReceberPage() {
                 <label className="form-label">Frota (Opcional)</label>
                 <Select value={formData.frota_id || "none"} onValueChange={(value) => {
                   if (value === "none") {
-                    setFormData({...formData, frota_id: "", frota_nome: ""});
+                    setFormData({...formData, frota_id: "", frota_nome: "", maquina_id: "", maquina_nome: ""});
                   } else {
                     const frota = frotas.find(f => f.id === value);
-                    setFormData({...formData, frota_id: value, frota_nome: frota?.name || ""});
+                    setFormData({...formData, frota_id: value, frota_nome: frota?.name || "", maquina_id: "", maquina_nome: ""});
                   }
                 }}>
-                  <SelectTrigger className="w-full h-11"><SelectValue placeholder="Selecione uma frota..." /></SelectTrigger>
+                  <SelectTrigger className="w-full h-11" data-testid="cr-select-frota"><SelectValue placeholder="Selecione uma frota..." /></SelectTrigger>
                   <SelectContent className="z-[9999]">
                     <SelectItem value="none">Nenhuma</SelectItem>
                     {frotas.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Máquina (Opcional)</label>
+                <Select
+                  value={formData.maquina_id || "none"}
+                  onValueChange={(value) => {
+                    if (value === "none") {
+                      setFormData({...formData, maquina_id: "", maquina_nome: ""});
+                    } else {
+                      const m = machines.find(x => x.id === value);
+                      setFormData({...formData, maquina_id: value, maquina_nome: m ? `${m.name}${m.plate ? ` (${m.plate})` : ""}` : ""});
+                    }
+                  }}
+                  disabled={!formData.frota_id}
+                >
+                  <SelectTrigger className="w-full h-11" data-testid="cr-select-maquina">
+                    <SelectValue placeholder={formData.frota_id ? "Selecione uma máquina..." : "Selecione uma frota antes"} />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {machines.filter(m => m.fleet_id === formData.frota_id).map(m => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}{m.plate ? ` (${m.plate})` : ""}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

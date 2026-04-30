@@ -1,4 +1,17 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+
+### Bug P0 corrigido
+- **CNPJ/CEP retornavam erro nos formulários** — `axios.defaults.headers.common["Authorization"]` global era enviado também para BrasilAPI/ViaCEP, que rejeitavam a chamada. Substituído `axios.get` por `fetch()` nativo nos 4 arquivos: `CadastroFormModal.jsx`, `OrdensServicoPage.jsx`, `EmissaoNFPage.jsx`, `ImoveisPage.jsx`. Agora consulta CNPJ/CEP funciona em qualquer formulário do sistema.
+
+### Features P1
+- **OS PDF agora exporta TODOS os 30 campos do formulário** — adicionados ao PDF: Empresa Emissora, Tipo Financeiro, Status, Valor Antecipado, Previsão de Entrega como linha separada, Atendente. Observações tornaram-se 3 seções distintas (Observação dos Serviços, Notas Gerais, Observações). Verificado via extração de texto do PDF.
+- **Máquina vinculada à Frota em Contas a Pagar/Receber** — Quando o usuário seleciona uma Frota no modal, surge um segundo dropdown "Máquina (Opcional)" filtrado apenas com as máquinas dessa frota (filtro por `fleet_id`). Persiste `maquina_id`/`maquina_nome` no documento. Models Pydantic atualizados em `routes/financeiro.py` e `server.py`.
+
+### Padrão monetário brasileiro (sessão 40 — referência)
+Componentes `MoneyInput` e `DecimalInput` aplicados em 11 páginas para aceitar vírgula como separador decimal e formatar visualmente como R$ 1.234,56.
+
+
 ## Changelog - 29/04/2026 (Sessão 40) — 🐛 P0 bug fixes + 🟢 P1 features financeiras
 
 ### Bugs P0 corrigidos

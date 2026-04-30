@@ -249,9 +249,9 @@ export default function EmissaoNFPage() {
     
     setConsultandoCep(true);
     try {
-      const response = await axios.get(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      if (!response.data.erro) {
-        const data = response.data;
+      const resp = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = resp.ok ? await resp.json() : { erro: true };
+      if (!data.erro) {
         if (isNfse) {
           setNfseForm(prev => ({
             ...prev,
@@ -287,8 +287,13 @@ export default function EmissaoNFPage() {
     
     setConsultandoCnpj(true);
     try {
-      const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
-      const data = response.data;
+      const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+      if (!resp.ok) {
+        if (resp.status === 404) toast.error("CNPJ não encontrado");
+        else toast.error(`Erro ao consultar CNPJ (${resp.status})`);
+        return;
+      }
+      const data = await resp.json();
       
       if (isNfse) {
         setNfseForm(prev => ({
