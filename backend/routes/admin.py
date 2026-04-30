@@ -233,6 +233,9 @@ async def export_ordem_servico_pdf(ordem_id: str):
     obra_data = [
         [_kv("End. Entrega", ordem.get("endereco_entrega"))[0], _kv("End. Entrega", ordem.get("endereco_entrega"))[1],
          _kv("Obra", ordem.get("obra"))[0], _kv("Obra", ordem.get("obra"))[1]],
+        [_kv("Prisma", ordem.get("prisma"))[0], _kv("Prisma", ordem.get("prisma"))[1],
+         _kv("Prioridade", (ordem.get("prioridade") or "").capitalize())[0],
+         _kv("Prioridade", (ordem.get("prioridade") or "").capitalize())[1]],
         [_kv("Data Abertura", _data_br(ordem.get("data_abertura")))[0],
          _kv("Data Abertura", _data_br(ordem.get("data_abertura")))[1],
          _kv("Data Fech.", _data_br(ordem.get("data_fechamento") or ordem.get("data_conclusao")))[0],
@@ -336,6 +339,30 @@ async def export_ordem_servico_pdf(ordem_id: str):
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         elements.append(t_v)
+        elements.append(Spacer(1, 0.15 * cm))
+
+    # Descrição geral do serviço — SEMPRE exibida, mesmo quando há valores adicionais.
+    if ordem.get("descricao"):
+        elements.append(Table(
+            [[Paragraph("DESCRIÇÃO DO SERVIÇO", style_section)]],
+            colWidths=[19.4 * cm],
+            style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#444")),
+                              ("LEFTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
+                              ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]),
+        ))
+        desc_table = Table(
+            [[Paragraph(str(ordem.get("descricao")).replace("\n", "<br/>"), style_value)]],
+            colWidths=[19.4 * cm],
+        )
+        desc_table.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#bbb")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        elements.append(desc_table)
         elements.append(Spacer(1, 0.15 * cm))
 
     # Tabela de serviços
