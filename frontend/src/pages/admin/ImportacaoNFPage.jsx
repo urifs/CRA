@@ -1724,11 +1724,15 @@ export default function ImportacaoNFPage() {
                   <Input
                     value={certForm.url_nfse}
                     onChange={(e) => setCertForm({...certForm, url_nfse: e.target.value})}
-                    placeholder="https://prefeitura.cidade.gov.br/nfse/ws"
+                    placeholder="https://palmasto.webiss.com.br/ws/nfse.asmx"
+                    data-testid="cert-url-nfse"
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Preencha para habilitar a importação automática de NFS-e (padrão ABRASF). Consulte o portal da prefeitura do seu município.</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Preencha para habilitar a importação automática de NFS-e (padrão ABRASF v2 — WebISS).
+                Para Palmas-TO use: <code className="bg-gray-100 px-1 rounded">https://palmasto.webiss.com.br/ws/nfse.asmx</code>
+              </p>
             </div>
 
             <DialogFooter>
