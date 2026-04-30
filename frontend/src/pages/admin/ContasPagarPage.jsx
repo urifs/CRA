@@ -826,18 +826,42 @@ export default function ContasPagarPage() {
                       setFormData({...formData, maquina_id: value, maquina_nome: m ? `${m.name}${m.plate ? ` (${m.plate})` : ""}` : ""});
                     }
                   }}
-                  disabled={!formData.frota_id}
                 >
                   <SelectTrigger className="w-full h-11" data-testid="cp-select-maquina">
-                    <SelectValue placeholder={formData.frota_id ? "Selecione uma máquina..." : "Selecione uma frota antes"} />
+                    <SelectValue placeholder="Selecione uma máquina ou caminhão..." />
                   </SelectTrigger>
                   <SelectContent className="z-[9999]">
                     <SelectItem value="none">Nenhuma</SelectItem>
-                    {machines.filter(m => m.fleet_id === formData.frota_id).map(m => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}{m.plate ? ` (${m.plate})` : ""}
-                      </SelectItem>
-                    ))}
+                    {/* Quando uma frota está selecionada, mostramos PRIMEIRO as máquinas dela
+                        e depois as demais — mas TODAS aparecem para escolha. */}
+                    {(() => {
+                      const ofFleet = formData.frota_id
+                        ? machines.filter(m => m.fleet_id === formData.frota_id)
+                        : [];
+                      const others = machines.filter(m => !ofFleet.includes(m));
+                      const renderItem = (m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}{m.plate ? ` (${m.plate})` : ""}
+                          {m.fleet_id === formData.frota_id && formData.frota_id ? " ⭐" : ""}
+                        </SelectItem>
+                      );
+                      return (
+                        <>
+                          {ofFleet.length > 0 && (
+                            <>
+                              <div className="px-2 py-1 text-[11px] uppercase tracking-wide text-amber-700 bg-amber-50 font-semibold">
+                                Da frota selecionada
+                              </div>
+                              {ofFleet.map(renderItem)}
+                              <div className="px-2 py-1 text-[11px] uppercase tracking-wide text-gray-500 bg-gray-50 font-semibold">
+                                Outras máquinas
+                              </div>
+                            </>
+                          )}
+                          {others.map(renderItem)}
+                        </>
+                      );
+                    })()}
                   </SelectContent>
                 </Select>
               </div>
