@@ -1,5 +1,31 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Feature - 04/05/2026 (Sessão 43.2) — 🟢 PDF Espelho de Ponto Mensal
+
+### Implementado
+- **Endpoint** `GET /api/rh/ponto/relatorio-pdf?mes=&ano=&funcionario_id=` (parâmetro opcional). Sem `funcionario_id`, gera PDF consolidado com todos os funcionários (1 página por funcionário com PageBreak); com ID, gera apenas daquele.
+- **PDF profissional** usando ReportLab nativo com:
+  - Cabeçalho "ESPELHO DE PONTO ELETRÔNICO" + competência
+  - Bloco de identificação (nome, cargo, departamento, status cadastrado/não cadastrado)
+  - 4 KPIs do mês (trabalhadas / previstas / saldo / banco acumulado) com cores semafóricas (verde/vermelho/azul/laranja)
+  - 3 KPIs de dias (trabalhados / incompletos / faltas)
+  - Tabela detalhada dia-a-dia com batidas, trabalhado, previsto e saldo (saldo positivo verde, negativo vermelho)
+  - Linhas de assinatura (funcionário + responsável) e timestamp de geração
+
+- **Frontend** (`PontoQuadroTab.jsx`):
+  - Botão "PDF (todos)" no painel de filtros baixa o consolidado.
+  - Botão "Baixar PDF" no header do modal de detalhamento individual baixa o espelho daquele funcionário.
+
+### Validação
+- Curl: PDF de 1 funcionário (5,9KB) e consolidado (45KB) — ambos `HTTP 200` e magic bytes `%PDF` corretos.
+- Extração via pdfminer confirma estrutura completa: cabeçalho, KPIs, 30 linhas de dia, assinaturas e footer.
+- Visual via Playwright: ambos botões aparecem corretamente na UI.
+
+### Arquivos
+- `backend/routes/rh.py` — função `_build_espelho_ponto_pdf` + endpoint `/ponto/relatorio-pdf`.
+- `frontend/src/pages/rh/PontoQuadroTab.jsx` — função `baixarPdf` + 2 botões.
+
+
 ## Hotfix - 04/05/2026 (Sessão 43.1) — 🐛 Matching de nomes parciais na Importação de Ponto
 
 ### Bug reportado

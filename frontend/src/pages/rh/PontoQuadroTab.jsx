@@ -26,6 +26,7 @@ import {
   Users,
   Loader2,
   Briefcase,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,6 +60,29 @@ export default function PontoQuadroTab({ refreshKey }) {
       toast.error(e.response?.data?.detail || "Erro ao carregar quadro mensal");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const baixarPdf = async (funcionarioId, nome) => {
+    try {
+      const url = funcionarioId
+        ? `${API}/rh/ponto/relatorio-pdf?mes=${mes}&ano=${ano}&funcionario_id=${encodeURIComponent(funcionarioId)}`
+        : `${API}/rh/ponto/relatorio-pdf?mes=${mes}&ano=${ano}`;
+      const resp = await axios.get(url, { responseType: "blob" });
+      const blob = new Blob([resp.data], { type: "application/pdf" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      const nomeArq = nome
+        ? `EspelhoPonto_${nome.replace(/\s+/g, "_")}_${String(mes).padStart(2, "0")}_${ano}.pdf`
+        : `EspelhoPonto_TODOS_${String(mes).padStart(2, "0")}_${ano}.pdf`;
+      link.download = nomeArq;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      toast.success("PDF gerado!");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao gerar PDF");
     }
   };
 
@@ -109,11 +133,11 @@ export default function PontoQuadroTab({ refreshKey }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end gap-2">
               <Button
                 onClick={fetchDashboard}
                 disabled={loading}
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
               >
                 {loading ? (
                   <Loader2 className="animate-spin mr-2" size={16} />
@@ -121,6 +145,16 @@ export default function PontoQuadroTab({ refreshKey }) {
                   <Calendar className="mr-2" size={16} />
                 )}
                 Atualizar
+              </Button>
+              <Button
+                onClick={() => baixarPdf(null)}
+                disabled={loading || !dashboard?.funcionarios?.length}
+                variant="outline"
+                title="Exportar espelho de ponto consolidado de todos os funcionários"
+                data-testid="btn-pdf-todos"
+              >
+                <FileDown size={16} className="mr-2" />
+                PDF (todos)
               </Button>
             </div>
           </div>
@@ -341,8 +375,19 @@ export default function PontoQuadroTab({ refreshKey }) {
       <Dialog open={!!funcDetalhe} onOpenChange={(o) => !o && setFuncDetalhe(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {funcDetalhe?.nome} — {meses[mes - 1]}/{ano}
+            <DialogTitle className="flex items-center justify-between gap-3">
+              <span>{funcDetalhe?.nome} — {meses[mes - 1]}/{ano}</span>
+              {funcDetalhe && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => baixarPdf(funcDetalhe.funcionario_id, funcDetalhe.nome)}
+                  data-testid="btn-pdf-individual"
+                >
+                  <FileDown size={14} className="mr-2" />
+                  Baixar PDF
+                </Button>
+              )}
             </DialogTitle>
           </DialogHeader>
           {funcDetalhe && (

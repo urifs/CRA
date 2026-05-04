@@ -1014,6 +1014,268 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
 
 
 
+# ===== PDF: ESPELHO DE PONTO MENSAL =====
+def _fmt_min_pdf(min_total: int) -> str:
+    """Formata minutos como '+12h 30min' / '-3h 45min' / '0h'"""
+    if min_total == 0:
+        return "0h"
+    sinal = "-" if min_total < 0 else ""
+    abs_min = abs(min_total)
+    h = abs_min // 60
+    m = abs_min % 60
+    if m == 0:
+        return f"{sinal}{h}h"
+    return f"{sinal}{h}h {m}min"
+
+
+def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
+    """Gera PDF de Espelho de Ponto. Aceita 1 ou N funcionários (cada um em uma seção)."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, PageBreak,
+    )
+    
+    meses_pt = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    dias_semana_pt = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=1.5 * cm, rightMargin=1.5 * cm,
+        topMargin=1.5 * cm, bottomMargin=1.5 * cm,
+        title=f"Espelho de Ponto {meses_pt[mes]}/{ano}",
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle("Title", parent=styles["Heading1"],
+                                 fontSize=14, alignment=1, spaceAfter=4, textColor=colors.HexColor("#0f172a"))
+    subtitle_style = ParagraphStyle("Subtitle", parent=styles["Heading3"],
+                                    fontSize=10, alignment=1, spaceAfter=8, textColor=colors.HexColor("#475569"))
+    section_style = ParagraphStyle("Section", parent=styles["Heading4"],
+                                   fontSize=10, spaceBefore=8, spaceAfter=4, textColor=colors.HexColor("#10B981"))
+    small = ParagraphStyle("Small", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#64748b"))
+    
+    elements = []
+    for idx, f in enumerate(funcionarios):
+        if idx > 0:
+            elements.append(PageBreak())
+        
+        # CABEÇALHO
+        elements.append(Paragraph("ESPELHO DE PONTO ELETRÔNICO", title_style))
+        elements.append(Paragraph(f"Competência: {meses_pt[mes]} / {ano}", subtitle_style))
+        
+        # Bloco de identificação do funcionário
+        identif_data = [
+            ["Funcionário:", f.get("nome", "-"), "Cargo:", f.get("cargo", "-")],
+            ["Departamento:", f.get("departamento", "-"), "Status:",
+             "Cadastrado" if f.get("cadastrado") else "NÃO CADASTRADO NA PLATAFORMA"],
+        ]
+        t_identif = Table(identif_data, colWidths=[2.5 * cm, 7 * cm, 2 * cm, 6.5 * cm])
+        t_identif.setStyle(TableStyle([
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ]))
+        elements.append(t_identif)
+        elements.append(Spacer(1, 6))
+        
+        # Resumo do mês (4 quadros lado a lado)
+        elements.append(Paragraph("RESUMO DO PERÍODO", section_style))
+        
+        saldo_minutos = f.get("saldo_mes_minutos", 0)
+        banco_minutos = f.get("banco_horas_acumulado_minutos", 0)
+        saldo_str = ("+" if saldo_minutos > 0 else "") + _fmt_min_pdf(saldo_minutos)
+        banco_str = ("+" if banco_minutos > 0 else "") + _fmt_min_pdf(banco_minutos)
+        
+        resumo_data = [
+            ["Trabalhadas", "Previstas", "Saldo do mês", "Banco acumulado"],
+            [
+                _fmt_min_pdf(f.get("minutos_trabalhados", 0)),
+                _fmt_min_pdf(f.get("minutos_previstos", 0)),
+                saldo_str,
+                banco_str,
+            ],
+        ]
+        t_resumo = Table(resumo_data, colWidths=[4.5 * cm, 4.5 * cm, 4.5 * cm, 4.5 * cm])
+        cor_saldo = colors.HexColor("#10B981") if saldo_minutos >= 0 else colors.HexColor("#ef4444")
+        cor_banco = colors.HexColor("#2563eb") if banco_minutos >= 0 else colors.HexColor("#ea580c")
+        t_resumo.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("FONTSIZE", (0, 1), (-1, 1), 12),
+            ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("TEXTCOLOR", (0, 1), (0, 1), colors.HexColor("#10B981")),
+            ("TEXTCOLOR", (1, 1), (1, 1), colors.HexColor("#475569")),
+            ("TEXTCOLOR", (2, 1), (2, 1), cor_saldo),
+            ("TEXTCOLOR", (3, 1), (3, 1), cor_banco),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#e2e8f0")),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(t_resumo)
+        
+        # Estatísticas de dias
+        stats_data = [
+            ["Dias trabalhados", "Dias incompletos", "Faltas"],
+            [
+                str(f.get("dias_com_registro", 0)),
+                str(f.get("dias_incompletos", 0)),
+                str(f.get("dias_falta", 0)),
+            ],
+        ]
+        t_stats = Table(stats_data, colWidths=[6 * cm, 6 * cm, 6 * cm])
+        t_stats.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 7),
+            ("FONTSIZE", (0, 1), (-1, 1), 11),
+            ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#dcfce7")),
+            ("BACKGROUND", (1, 0), (1, 0), colors.HexColor("#fef3c7")),
+            ("BACKGROUND", (2, 0), (2, 0), colors.HexColor("#fee2e2")),
+            ("TEXTCOLOR", (0, 1), (0, 1), colors.HexColor("#15803d")),
+            ("TEXTCOLOR", (1, 1), (1, 1), colors.HexColor("#a16207")),
+            ("TEXTCOLOR", (2, 1), (2, 1), colors.HexColor("#b91c1c")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#e2e8f0")),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(Spacer(1, 4))
+        elements.append(t_stats)
+        elements.append(Spacer(1, 8))
+        
+        # Tabela detalhada dia a dia
+        elements.append(Paragraph("DETALHAMENTO DIÁRIO", section_style))
+        
+        cab = ["Data", "Dia", "Batidas registradas", "Trabalhado", "Previsto", "Saldo"]
+        linhas = [cab]
+        
+        for d in f.get("detalhe_dias", []):
+            data = d.get("data", "")
+            data_br = "/".join(reversed(data.split("-"))) if data else "-"
+            dia_idx = d.get("dia_semana", 0)
+            dia_lbl = dias_semana_pt[dia_idx] if 0 <= dia_idx < 7 else "?"
+            batidas_lst = d.get("batidas") or []
+            batidas_str = " | ".join(batidas_lst) if batidas_lst else "—"
+            saldo = d.get("saldo_minutos", 0)
+            saldo_lbl = ("+" if saldo > 0 else "") + _fmt_min_pdf(saldo)
+            
+            linhas.append([
+                data_br,
+                dia_lbl,
+                batidas_str,
+                _fmt_min_pdf(d.get("minutos_trabalhados", 0)),
+                _fmt_min_pdf(d.get("minutos_previstos", 0)),
+                saldo_lbl,
+            ])
+        
+        t_dias = Table(linhas, colWidths=[2.2 * cm, 1.5 * cm, 6.8 * cm, 2.4 * cm, 2.4 * cm, 2.7 * cm])
+        ts = TableStyle([
+            ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("ALIGN", (2, 1), (2, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#e2e8f0")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ])
+        # Colorir saldos da última coluna
+        for i, d in enumerate(f.get("detalhe_dias", []), start=1):
+            saldo = d.get("saldo_minutos", 0)
+            if saldo > 0:
+                ts.add("TEXTCOLOR", (5, i), (5, i), colors.HexColor("#10B981"))
+            elif saldo < 0:
+                ts.add("TEXTCOLOR", (5, i), (5, i), colors.HexColor("#dc2626"))
+        t_dias.setStyle(ts)
+        elements.append(t_dias)
+        elements.append(Spacer(1, 14))
+        
+        # Linhas de assinatura
+        elements.append(Paragraph(
+            "Declaro que as informações registradas neste espelho de ponto estão corretas e foram conferidas.",
+            small,
+        ))
+        elements.append(Spacer(1, 24))
+        
+        sign_data = [
+            ["_" * 40, "", "_" * 40],
+            ["Assinatura do Funcionário", "", "Assinatura do Responsável"],
+        ]
+        t_sign = Table(sign_data, colWidths=[7 * cm, 1 * cm, 7 * cm])
+        t_sign.setStyle(TableStyle([
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#475569")),
+        ]))
+        elements.append(t_sign)
+        elements.append(Spacer(1, 8))
+        elements.append(Paragraph(
+            f"Documento gerado pelo Sistema CRA em {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            small,
+        ))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+@rh_router.get("/ponto/relatorio-pdf")
+async def gerar_pdf_espelho_ponto(
+    mes: int,
+    ano: int,
+    funcionario_id: Optional[str] = None,
+):
+    """Gera espelho de ponto em PDF.
+    Se `funcionario_id` for informado, retorna PDF de 1 funcionário.
+    Caso contrário, retorna PDF consolidado com todos os funcionários do mês."""
+    # Reusa a lógica do dashboard_mensal para garantir cálculos idênticos
+    dashboard = await get_ponto_dashboard_mensal(mes=mes, ano=ano)
+    
+    funcionarios = dashboard.get("funcionarios", [])
+    if funcionario_id:
+        funcionarios = [f for f in funcionarios if f.get("funcionario_id") == funcionario_id]
+        if not funcionarios:
+            raise HTTPException(status_code=404, detail="Funcionário não encontrado neste mês")
+    
+    if not funcionarios:
+        raise HTTPException(status_code=404, detail="Nenhum registro de ponto encontrado para este período")
+    
+    pdf_bytes = _build_espelho_ponto_pdf(funcionarios, mes, ano)
+    
+    if funcionario_id:
+        nome_seguro = (funcionarios[0].get("nome") or "funcionario").replace(" ", "_")[:40]
+        filename = f"EspelhoPonto_{nome_seguro}_{mes:02d}_{ano}.pdf"
+    else:
+        filename = f"EspelhoPonto_TODOS_{mes:02d}_{ano}.pdf"
+    
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+
+
 
 @rh_router.get("/ponto/relatorio-mensal")
 async def get_relatorio_ponto_mensal(mes: int, ano: int, funcionario_id: Optional[str] = None):
