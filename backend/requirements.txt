@@ -137,6 +137,7 @@ watchfiles==1.1.1
 webencodings==0.5.1
 websockets==15.0.1
 xlsxwriter==3.2.9
+xlrd==2.0.1
 yarl==1.22.0
 zipp==3.23.0
 erpbrasil.base==2.4.1

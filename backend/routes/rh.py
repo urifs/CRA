@@ -522,6 +522,435 @@ async def delete_ponto(ponto_id: str):
     return {"message": "Registro excluído com sucesso"}
 
 
+# ===== IMPORTAÇÃO DE PLANILHA DE PONTO (.xls) =====
+def _normalizar_nome(nome: str) -> str:
+    """Normaliza nome para comparação: trim + lowercase + remover múltiplos espaços."""
+    if not nome:
+        return ""
+    return " ".join(nome.strip().lower().split())
+
+
+def _parse_batidas_celula(valor: str) -> list:
+    """Recebe o valor da célula (ex: '08:01\\n11:50\\n13:55\\n17:48') e retorna lista ordenada de batidas HH:MM."""
+    if not valor:
+        return []
+    raw = str(valor).replace("\r", "\n").split("\n")
+    batidas = []
+    for b in raw:
+        b = b.strip()
+        if not b:
+            continue
+        # Aceita formatos HH:MM ou HH:MM:SS
+        partes = b.split(":")
+        if len(partes) >= 2:
+            try:
+                h = int(partes[0])
+                m = int(partes[1])
+                if 0 <= h <= 23 and 0 <= m <= 59:
+                    batidas.append(f"{h:02d}:{m:02d}")
+            except (ValueError, TypeError):
+                continue
+    # Ordenar
+    batidas.sort()
+    return batidas
+
+
+def _calcular_minutos_trabalhados(batidas: list, dia_semana: int) -> tuple:
+    """Calcula minutos trabalhados a partir de uma lista de batidas ordenadas.
+    Regras:
+      - 0 batidas: dia sem registro (falta se for dia útil)
+      - 1 batida: incompleto (entrada apenas) → 0 minutos
+      - 2 batidas: entrada e saída sem almoço (jornada curta, ex: sábado)
+      - 3 batidas: assume entrada/saída-almoço/retorno (sem saída final) ou inverso → aplica almoço padrão de 60min
+      - 4+ batidas: pareia em entrada/saída-almoço/retorno-almoço/saída
+    Retorna: (minutos_trabalhados, status_legivel)
+    """
+    if not batidas:
+        return 0, "sem_registro"
+    if len(batidas) == 1:
+        return 0, "incompleto"
+    
+    def to_min(s):
+        h, m = s.split(":")
+        return int(h) * 60 + int(m)
+    
+    pts = [to_min(b) for b in batidas]
+    
+    if len(pts) == 2:
+        return max(0, pts[1] - pts[0]), "ok_2_batidas"
+    
+    if len(pts) == 3:
+        # Inferir: entrada=p1, saída=p3; descontar 60min de almoço
+        bruto = pts[2] - pts[0]
+        liquido = max(0, bruto - 60)
+        return liquido, "inferido_3_batidas"
+    
+    # 4+ batidas: usa as primeiras 4 (entrada, saída-almoço, retorno-almoço, saída)
+    e, sa, ra, s = pts[0], pts[1], pts[2], pts[3]
+    parte1 = max(0, sa - e)
+    parte2 = max(0, s - ra)
+    return parte1 + parte2, "ok_4_batidas"
+
+
+def _jornada_prevista_minutos(dia_semana: int) -> int:
+    """0=Seg ... 5=Sáb, 6=Dom. Retorna minutos previstos."""
+    if dia_semana <= 4:  # Seg-Sex
+        return 8 * 60
+    if dia_semana == 5:  # Sábado
+        return 4 * 60
+    return 0  # Domingo
+
+
+@rh_router.post("/ponto/importar-planilha")
+async def importar_planilha_ponto(file: UploadFile = File(...)):
+    """Importa planilha .xls/.xlsx de registro de presença (formato Topdata/Hikvision/etc.).
+    
+    Estrutura esperada:
+      Linha N+0: 'IDUsuário: <id>' ... 'Nome: <nome>' ... 'Dep.: <departamento>'
+      Linha N+1: cabeçalho com dias do mês (1, 2, 3, ..., 31)
+      Linha N+2: batidas separadas por \\n para cada dia
+      Linha 2 contém 'Data de presença:DD/MM/AAAA~DD/MM/AAAA'
+    
+    Comportamento:
+      - Match por nome exato (case-insensitive normalizado)
+      - Funcionários não encontrados: registros são salvos com flag 'funcionario_nao_cadastrado'
+      - Sobrescreve registros existentes do mesmo (funcionario_id, data)
+    """
+    import xlrd
+    import re
+    
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Arquivo vazio")
+    
+    # Detectar formato pelo magic byte
+    if content[:8].hex().lower() == "d0cf11e0a1b11ae1":
+        try:
+            wb = xlrd.open_workbook(file_contents=content, formatting_info=False)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Erro ao abrir .xls: {e}")
+    elif content[:4] == b"PK\x03\x04":
+        try:
+            from openpyxl import load_workbook
+            from io import BytesIO
+            wb_x = load_workbook(BytesIO(content), data_only=True)
+            # Converter para um wb-like com sheet_by_index
+            class _SheetWrap:
+                def __init__(self, ws):
+                    self.ws = ws
+                    self.nrows = ws.max_row
+                    self.ncols = ws.max_column
+                def cell_value(self, r, c):
+                    v = self.ws.cell(row=r+1, column=c+1).value
+                    return v if v is not None else ""
+            class _WBWrap:
+                def __init__(self, wbx):
+                    self.wbx = wbx
+                def sheet_by_index(self, i):
+                    return _SheetWrap(self.wbx.worksheets[i])
+            wb = _WBWrap(wb_x)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Erro ao abrir .xlsx: {e}")
+    else:
+        raise HTTPException(status_code=400, detail="Formato não reconhecido. Envie um arquivo .xls ou .xlsx válido.")
+    
+    sh = wb.sheet_by_index(0)
+    
+    # Detectar período (procurar nas primeiras 10 linhas)
+    periodo_match = None
+    for r in range(min(10, sh.nrows)):
+        for c in range(sh.ncols):
+            v = str(sh.cell_value(r, c) or "")
+            m = re.search(r"(\d{2}/\d{2}/\d{4})\s*[~\-–]\s*(\d{2}/\d{2}/\d{4})", v)
+            if m:
+                periodo_match = m
+                break
+        if periodo_match:
+            break
+    
+    if not periodo_match:
+        raise HTTPException(status_code=400, detail="Não foi possível identificar o período (procurando 'Data de presença:DD/MM/AAAA~DD/MM/AAAA')")
+    
+    inicio_str, fim_str = periodo_match.group(1), periodo_match.group(2)
+    try:
+        inicio_dt = datetime.strptime(inicio_str, "%d/%m/%Y")
+        fim_dt = datetime.strptime(fim_str, "%d/%m/%Y")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Período inválido: {e}")
+    
+    if inicio_dt.year != fim_dt.year or inicio_dt.month != fim_dt.month:
+        raise HTTPException(status_code=400, detail="A planilha deve cobrir UM ÚNICO mês (limitação atual).")
+    
+    ano = inicio_dt.year
+    mes = inicio_dt.month
+    
+    # Carregar todos os funcionários para matching por nome
+    funcs_db = {}
+    async for f in funcionarios_collection.find({}):
+        funcs_db[_normalizar_nome(f.get("nome", ""))] = f
+    
+    # Os registros existentes serão sobrescritos individualmente abaixo (por funcionario_id + data)
+    
+    # Iterar linhas em busca de blocos de funcionários
+    funcionarios_processados = []
+    funcionarios_nao_cadastrados = []
+    total_registros_inseridos = 0
+    
+    r = 0
+    while r < sh.nrows:
+        linha_idu = [str(sh.cell_value(r, c) or "").strip() for c in range(sh.ncols)]
+        linha_concat = " ".join(linha_idu).lower()
+        
+        # Buscar a linha que contém 'idusuário' ou 'idusuario'
+        if "idusuário" in linha_concat or "idusuario" in linha_concat:
+            # Extrair IDUsuário, Nome, Dep.
+            id_usuario = ""
+            nome = ""
+            dep = ""
+            for c in range(sh.ncols):
+                v = str(sh.cell_value(r, c) or "").strip()
+                v_low = v.lower()
+                if v_low.startswith("idusuário") or v_low.startswith("idusuario"):
+                    # ID está no próximo valor não vazio
+                    for c2 in range(c + 1, sh.ncols):
+                        nv = str(sh.cell_value(r, c2) or "").strip()
+                        if nv:
+                            id_usuario = nv
+                            break
+                elif v_low.startswith("nome"):
+                    for c2 in range(c + 1, sh.ncols):
+                        nv = str(sh.cell_value(r, c2) or "").strip()
+                        if nv:
+                            nome = nv
+                            break
+                elif v_low.startswith("dep"):
+                    for c2 in range(c + 1, sh.ncols):
+                        nv = str(sh.cell_value(r, c2) or "").strip()
+                        if nv:
+                            dep = nv
+                            break
+            
+            # Próxima linha: cabeçalho de dias (1.0, 2.0, ..., 31.0)
+            # Linha r+1 = dias, Linha r+2 = batidas
+            if r + 2 < sh.nrows and nome:
+                linha_dias = [sh.cell_value(r + 1, c) for c in range(sh.ncols)]
+                linha_batidas = [sh.cell_value(r + 2, c) for c in range(sh.ncols)]
+                
+                # Match funcionário
+                nome_norm = _normalizar_nome(nome)
+                func = funcs_db.get(nome_norm)
+                func_id = func["id"] if func else None
+                cargo = func.get("cargo", "") if func else ""
+                
+                if not func:
+                    funcionarios_nao_cadastrados.append({
+                        "nome": nome,
+                        "id_usuario_planilha": id_usuario,
+                        "departamento_planilha": dep,
+                    })
+                
+                # Iterar dias: cada coluna onde linha_dias é numérica = dia válido
+                dias_processados = 0
+                for c in range(sh.ncols):
+                    dia_val = linha_dias[c]
+                    try:
+                        dia_num = int(float(dia_val)) if dia_val not in (None, "") else 0
+                    except (ValueError, TypeError):
+                        dia_num = 0
+                    
+                    if not (1 <= dia_num <= 31):
+                        continue
+                    
+                    # Validar que o dia existe no mês
+                    try:
+                        data_str = f"{ano}-{mes:02d}-{dia_num:02d}"
+                        data_dt = datetime.strptime(data_str, "%Y-%m-%d")
+                    except ValueError:
+                        continue
+                    
+                    batidas_raw = linha_batidas[c] if c < len(linha_batidas) else ""
+                    batidas = _parse_batidas_celula(batidas_raw)
+                    
+                    dia_semana = data_dt.weekday()
+                    minutos_trab, status_dia = _calcular_minutos_trabalhados(batidas, dia_semana)
+                    minutos_prev = _jornada_prevista_minutos(dia_semana)
+                    saldo = minutos_trab - minutos_prev
+                    
+                    # Montar registro: usa primeira batida como entrada, última como saída, etc.
+                    entrada = batidas[0] if len(batidas) >= 1 else ""
+                    saida = batidas[-1] if len(batidas) >= 2 else ""
+                    saida_almoco = batidas[1] if len(batidas) >= 4 else (batidas[1] if len(batidas) == 3 else "")
+                    retorno_almoco = batidas[2] if len(batidas) >= 4 else ""
+                    
+                    ponto_doc = {
+                        "id": str(uuid.uuid4()),
+                        "funcionario_id": func_id or f"NAO_CADASTRADO::{nome_norm}",
+                        "funcionario_nome_planilha": nome,
+                        "funcionario_nao_cadastrado": func is None,
+                        "id_usuario_planilha": id_usuario,
+                        "departamento_planilha": dep,
+                        "data": data_str,
+                        "batidas": batidas,
+                        "entrada": entrada,
+                        "saida_almoco": saida_almoco,
+                        "retorno_almoco": retorno_almoco,
+                        "saida": saida,
+                        "minutos_trabalhados": minutos_trab,
+                        "minutos_previstos": minutos_prev,
+                        "saldo_minutos": saldo,
+                        "status_dia": status_dia,
+                        "dia_semana": dia_semana,
+                        "origem": "planilha_xls",
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    
+                    # Sobrescrever existente
+                    await ponto_collection.delete_many({
+                        "funcionario_id": ponto_doc["funcionario_id"],
+                        "data": data_str,
+                    })
+                    await ponto_collection.insert_one(ponto_doc)
+                    total_registros_inseridos += 1
+                    dias_processados += 1
+                
+                funcionarios_processados.append({
+                    "nome": nome,
+                    "id_usuario_planilha": id_usuario,
+                    "departamento": dep or cargo,
+                    "funcionario_id": func_id,
+                    "cadastrado": func is not None,
+                    "dias_com_registro": dias_processados,
+                })
+                r += 3
+                continue
+        r += 1
+    
+    return {
+        "message": f"Importação concluída: {total_registros_inseridos} registros de ponto importados.",
+        "periodo": {"inicio": inicio_str, "fim": fim_str, "mes": mes, "ano": ano},
+        "total_funcionarios": len(funcionarios_processados),
+        "total_registros": total_registros_inseridos,
+        "funcionarios_processados": funcionarios_processados,
+        "funcionarios_nao_cadastrados": funcionarios_nao_cadastrados,
+        "aviso_nao_cadastrados": (
+            f"{len(funcionarios_nao_cadastrados)} funcionário(s) da planilha não estão cadastrados na plataforma "
+            f"(serão exibidos no quadro com aviso): {', '.join([f['nome'] for f in funcionarios_nao_cadastrados[:5]])}"
+            if funcionarios_nao_cadastrados else None
+        ),
+    }
+
+
+@rh_router.get("/ponto/dashboard-mensal")
+async def get_ponto_dashboard_mensal(mes: int, ano: int):
+    """Quadro consolidado por funcionário do mês: horas trabalhadas vs previstas, saldo, banco de horas acumulado.
+    Inclui detalhamento dia a dia."""
+    inicio_mes = f"{ano}-{mes:02d}-01"
+    if mes == 12:
+        fim_mes = f"{ano + 1}-01-01"
+    else:
+        fim_mes = f"{ano}-{mes + 1:02d}-01"
+    
+    pipeline = [
+        {"$match": {"data": {"$gte": inicio_mes, "$lt": fim_mes}}},
+        {"$sort": {"data": 1}},
+    ]
+    
+    por_func = {}
+    async for reg in ponto_collection.aggregate(pipeline):
+        fid = reg["funcionario_id"]
+        if fid not in por_func:
+            por_func[fid] = []
+        por_func[fid].append(reg)
+    
+    # Banco de horas acumulado (de TODOS os meses anteriores e atual): soma saldo_minutos de cada registro
+    banco_acumulado_por_func = {}
+    async for reg in ponto_collection.aggregate([
+        {"$match": {"data": {"$lt": fim_mes}}},
+        {"$group": {"_id": "$funcionario_id", "total": {"$sum": "$saldo_minutos"}}},
+    ]):
+        banco_acumulado_por_func[reg["_id"]] = int(reg.get("total", 0) or 0)
+    
+    funcionarios_dashboard = []
+    for fid, registros in por_func.items():
+        # Tentar achar funcionário
+        nome = ""
+        cargo = ""
+        departamento = ""
+        cadastrado = False
+        if fid.startswith("NAO_CADASTRADO::"):
+            nome = registros[0].get("funcionario_nome_planilha", "")
+            departamento = registros[0].get("departamento_planilha", "")
+            cargo = "(Não cadastrado)"
+            cadastrado = False
+        else:
+            func = await funcionarios_collection.find_one({"id": fid})
+            if func:
+                nome = func.get("nome", "")
+                cargo = func.get("cargo", "")
+                departamento = func.get("departamento", "") or registros[0].get("departamento_planilha", "")
+                cadastrado = True
+            else:
+                nome = registros[0].get("funcionario_nome_planilha", "?")
+                cargo = "(Funcionário removido)"
+                cadastrado = False
+        
+        total_trab = sum(int(r.get("minutos_trabalhados", 0) or 0) for r in registros)
+        total_prev = sum(int(r.get("minutos_previstos", 0) or 0) for r in registros)
+        saldo_mes = total_trab - total_prev
+        
+        dias_com_registro = sum(1 for r in registros if r.get("minutos_trabalhados", 0) > 0)
+        dias_incompletos = sum(1 for r in registros if r.get("status_dia") == "incompleto")
+        dias_falta = sum(1 for r in registros if r.get("status_dia") == "sem_registro" and r.get("dia_semana", 6) <= 5)
+        
+        # Detalhamento dia a dia
+        detalhe = []
+        for r in registros:
+            detalhe.append({
+                "data": r.get("data"),
+                "dia_semana": r.get("dia_semana"),
+                "batidas": r.get("batidas", []),
+                "minutos_trabalhados": r.get("minutos_trabalhados", 0),
+                "minutos_previstos": r.get("minutos_previstos", 0),
+                "saldo_minutos": r.get("saldo_minutos", 0),
+                "status_dia": r.get("status_dia"),
+            })
+        
+        funcionarios_dashboard.append({
+            "funcionario_id": fid,
+            "nome": nome,
+            "cargo": cargo,
+            "departamento": departamento,
+            "cadastrado": cadastrado,
+            "minutos_trabalhados": total_trab,
+            "minutos_previstos": total_prev,
+            "saldo_mes_minutos": saldo_mes,
+            "banco_horas_acumulado_minutos": banco_acumulado_por_func.get(fid, 0),
+            "dias_com_registro": dias_com_registro,
+            "dias_incompletos": dias_incompletos,
+            "dias_falta": dias_falta,
+            "detalhe_dias": detalhe,
+        })
+    
+    # Ordenar: cadastrados primeiro, por nome
+    funcionarios_dashboard.sort(key=lambda x: (not x["cadastrado"], x["nome"].lower()))
+    
+    # Totais gerais
+    total_funcionarios = len(funcionarios_dashboard)
+    total_extras = sum(max(0, f["saldo_mes_minutos"]) for f in funcionarios_dashboard)
+    total_devidas = sum(abs(min(0, f["saldo_mes_minutos"])) for f in funcionarios_dashboard)
+    
+    return {
+        "mes": mes,
+        "ano": ano,
+        "total_funcionarios": total_funcionarios,
+        "total_extras_minutos": total_extras,
+        "total_devidas_minutos": total_devidas,
+        "funcionarios": funcionarios_dashboard,
+    }
+
+
+
+
 @rh_router.get("/ponto/relatorio-mensal")
 async def get_relatorio_ponto_mensal(mes: int, ano: int, funcionario_id: Optional[str] = None):
     """Obter relatório mensal de ponto com cálculo de horas extras e banco de horas"""

@@ -19,11 +19,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { 
-  Clock, Users, Play, Pause, Square, AlertTriangle, CheckCircle, 
-  Calendar, Search, Filter, Plus, Edit, Trash2, Coffee
+  Clock, Users, Play, Square, AlertTriangle, CheckCircle, 
+  Search, Plus, Edit, Trash2, Coffee, Upload, LayoutGrid
 } from "lucide-react";
 import { toast } from "sonner";
+import PontoImportarTab from "./PontoImportarTab";
+import PontoQuadroTab from "./PontoQuadroTab";
 
 export default function PontoPage() {
   const [registros, setRegistros] = useState([]);
@@ -200,12 +208,32 @@ export default function PontoPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Ponto Eletrônico</h1>
-          <p className="text-gray-500 mt-1">Registro de entrada e saída</p>
+          <p className="text-gray-500 mt-1">Registro diário, importação de planilhas e banco de horas</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#10B981] hover:bg-[#059669]" data-testid="btn-novo-ponto">
-          <Plus size={18} className="mr-2" />Registrar Ponto
-        </Button>
       </div>
+
+      <Tabs defaultValue="diario" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="diario" data-testid="tab-ponto-diario">
+            <Clock size={16} className="mr-2" />
+            Registro Diário
+          </TabsTrigger>
+          <TabsTrigger value="importar" data-testid="tab-ponto-importar">
+            <Upload size={16} className="mr-2" />
+            Importar Planilha
+          </TabsTrigger>
+          <TabsTrigger value="quadro" data-testid="tab-ponto-quadro">
+            <LayoutGrid size={16} className="mr-2" />
+            Quadro Mensal
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="diario" className="space-y-4">
+          <div className="flex justify-end mb-2">
+            <Button onClick={() => openModal()} className="bg-[#10B981] hover:bg-[#059669]" data-testid="btn-novo-ponto">
+              <Plus size={18} className="mr-2" />Registrar Ponto
+            </Button>
+          </div>
 
       {/* Filtros */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -370,6 +398,16 @@ export default function PontoPage() {
           </table>
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="importar">
+          <PontoImportarTab onImportSuccess={() => fetchRegistros()} />
+        </TabsContent>
+
+        <TabsContent value="quadro">
+          <PontoQuadroTab />
+        </TabsContent>
+      </Tabs>
 
       {/* Modal de Registro */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

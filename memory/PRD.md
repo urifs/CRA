@@ -1,5 +1,28 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Changelog - 04/05/2026 (Sessão 43) — 🟢 Ponto Eletrônico: Importação de Planilha + Quadro Mensal + Banco de Horas
+
+### Feature implementada
+- **Importação de planilha .xls/.xlsx do relógio de ponto** (formato Topdata/Hikvision-like): cada bloco com `IDUsuário/Nome/Dep.` + linha de dias 1-31 + linha de batidas separadas por `\n` é parseado automaticamente.
+- **Match por nome exato** (case-insensitive normalizado). Não cadastrados são importados com flag `funcionario_nao_cadastrado=true` e exibidos no quadro com badge amarelo.
+- **Cálculo automático de jornada**: 1 batida = incompleto (0h); 2 batidas = entrada+saída direta; 3 batidas = inferido com almoço padrão de 60min; 4+ batidas = par entrada/saída-almoço/retorno-almoço/saída.
+- **Saldo do dia** = trabalhado − previsto. Jornada padrão: Seg-Sex 8h, Sáb 4h (08:00-12:00), Dom descanso.
+- **Re-importação sobrescreve** registros do mesmo (funcionario_id, data) automaticamente.
+- **Quadro Mensal** com filtros mês/ano + 3 KPIs gerais + um card por funcionário mostrando: barra de progresso de horas, saldo do mês colorido (verde/vermelho), banco de horas acumulado (soma de todos os meses anteriores + atual), dias trabalhados/incompletos/faltas.
+- **Modal de detalhamento** ao clicar em cada card: tabela dia-a-dia com batidas brutas + minutos trabalhados/previstos/saldo do dia.
+
+### Arquivos
+- `backend/routes/rh.py` — novos endpoints `POST /rh/ponto/importar-planilha` e `GET /rh/ponto/dashboard-mensal?mes=&ano=` + helpers de parsing.
+- `backend/requirements.txt` — adicionado `xlrd==2.0.1`.
+- `frontend/src/pages/rh/PontoPage.jsx` — refatorado para Tabs (Diário/Importar/Quadro).
+- `frontend/src/pages/rh/PontoImportarTab.jsx` — NOVO (upload drag-drop + preview de resultado).
+- `frontend/src/pages/rh/PontoQuadroTab.jsx` — NOVO (cards mensais + modal de detalhamento).
+
+### Validação
+- Backend testado via curl: planilha real do usuário (RegistroPresença.xls Abril/2026, 10 funcionários, 30 dias) importada com sucesso → 300 registros gravados.
+- Frontend validado via Playwright: 10 cards renderizados, modal de detalhamento com batidas, todas as 3 abas operacionais.
+
+
 ## Changelog - 04/05/2026 (Sessão 42) — 🟡 Diagnóstico claro de Importação NFS-e WebISS
 
 ### Problema reportado
