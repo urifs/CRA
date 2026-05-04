@@ -530,6 +530,60 @@ def _normalizar_nome(nome: str) -> str:
     return " ".join(nome.strip().lower().split())
 
 
+def _tokens_nome(nome: str) -> list:
+    """Quebra um nome em tokens limpos (sem pontuação, lowercase)."""
+    norm = _normalizar_nome(nome)
+    return [t.strip(".,;-_") for t in norm.split() if t.strip(".,;-_")]
+
+
+def _match_funcionario_por_nome(nome_planilha: str, funcs_db: dict):
+    """Encontra funcionário cadastrado para um nome vindo da planilha do relógio.
+    
+    Estratégia em camadas (do mais restritivo ao mais permissivo):
+    1. Match exato após normalização (já no dict).
+    2. Subsequência de tokens com prefixo: cada token da planilha deve ser igual ou
+       prefixo de algum token do cadastro, preservando a ordem. Ex.:
+       "GUSTAVO RODRIGUES" → "GUSTAVO HENRIQUE A RODRIGUES" ✓
+       "LUIZ CARLOS M." (token "m") → "LUIZ CARLOS MOURA ..." (prefixo "m" → "moura") ✓
+    
+    Em caso de múltiplos matches, retorna o de maior pontuação (mais tokens cobertos)
+    e desempate pelo nome mais curto (cadastro mais "próximo" do que a planilha trouxe).
+    """
+    if not nome_planilha:
+        return None
+    
+    target_norm = _normalizar_nome(nome_planilha)
+    
+    # 1) Match exato
+    if target_norm in funcs_db:
+        return funcs_db[target_norm]
+    
+    tokens_p = _tokens_nome(nome_planilha)
+    if not tokens_p:
+        return None
+    
+    candidatos = []
+    for nome_norm, func in funcs_db.items():
+        tokens_c = _tokens_nome(nome_norm)
+        if not tokens_c:
+            continue
+        # Verifica subsequência com prefixo
+        i = 0
+        for tc in tokens_c:
+            if i < len(tokens_p) and tc.startswith(tokens_p[i]):
+                i += 1
+        if i == len(tokens_p):
+            # Pontuação: nº de tokens da planilha que casaram (=len(tokens_p) sempre que entra aqui)
+            # Desempate: cadastro com MENOS tokens extras é mais provável de ser o correto
+            score = len(tokens_p) * 1000 - len(tokens_c)
+            candidatos.append((score, func))
+    
+    if not candidatos:
+        return None
+    candidatos.sort(key=lambda x: x[0], reverse=True)
+    return candidatos[0][1]
+
+
 def _parse_batidas_celula(valor: str) -> list:
     """Recebe o valor da célula (ex: '08:01\\n11:50\\n13:55\\n17:48') e retorna lista ordenada de batidas HH:MM."""
     if not valor:
@@ -689,7 +743,18 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
     async for f in funcionarios_collection.find({}):
         funcs_db[_normalizar_nome(f.get("nome", ""))] = f
     
-    # Os registros existentes serão sobrescritos individualmente abaixo (por funcionario_id + data)
+    # Limpeza: remover registros antigos do mês com origem 'planilha_xls'
+    # Isso garante que ao re-importar após cadastrar funcionários, os IDs
+    # antigos NAO_CADASTRADO::* sejam descartados.
+    inicio_mes_iso = f"{ano}-{mes:02d}-01"
+    if mes == 12:
+        fim_mes_iso = f"{ano + 1}-01-01"
+    else:
+        fim_mes_iso = f"{ano}-{mes + 1:02d}-01"
+    await ponto_collection.delete_many({
+        "origem": "planilha_xls",
+        "data": {"$gte": inicio_mes_iso, "$lt": fim_mes_iso},
+    })
     
     # Iterar linhas em busca de blocos de funcionários
     funcionarios_processados = []
@@ -736,9 +801,8 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
                 linha_dias = [sh.cell_value(r + 1, c) for c in range(sh.ncols)]
                 linha_batidas = [sh.cell_value(r + 2, c) for c in range(sh.ncols)]
                 
-                # Match funcionário
-                nome_norm = _normalizar_nome(nome)
-                func = funcs_db.get(nome_norm)
+                # Match funcionário (exato → subsequência de tokens com prefixo)
+                func = _match_funcionario_por_nome(nome, funcs_db)
                 func_id = func["id"] if func else None
                 cargo = func.get("cargo", "") if func else ""
                 
@@ -784,7 +848,7 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
                     
                     ponto_doc = {
                         "id": str(uuid.uuid4()),
-                        "funcionario_id": func_id or f"NAO_CADASTRADO::{nome_norm}",
+                        "funcionario_id": func_id or f"NAO_CADASTRADO::{_normalizar_nome(nome)}",
                         "funcionario_nome_planilha": nome,
                         "funcionario_nao_cadastrado": func is None,
                         "id_usuario_planilha": id_usuario,

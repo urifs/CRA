@@ -1,5 +1,25 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Hotfix - 04/05/2026 (Sessão 43.1) — 🐛 Matching de nomes parciais na Importação de Ponto
+
+### Bug reportado
+Funcionários cadastrados com nome COMPLETO (ex: "JUNIOR ALVES GUIMARÃES") não eram reconhecidos quando a planilha do relógio trazia nome ABREVIADO (ex: "JUNIOR ALVES"). Resultado: 8 falsos "não cadastrados".
+
+### Correção
+- Nova função `_match_funcionario_por_nome` em `backend/routes/rh.py` faz match em camadas:
+  1. Exato (case-insensitive normalizado)
+  2. Subsequência de tokens com prefixo: cada palavra da planilha precisa ser igual OU prefixo de uma palavra do cadastro, preservando ordem.
+  - Exemplos validados (10/10):
+    - "GUSTAVO RODRIGUES" → "GUSTAVO HENRIQUE A RODRIGUES" ✅
+    - "LUIZ CARLOS M." → "LUIZ CARLOS MOURA DA SILVA" ✅ (prefixo "M" → "MOURA")
+    - "junior" → "JUNIOR ALVES GUIMARÃES" ✅ (caso minúsculo)
+- Re-importação agora deleta antes registros antigos do mês com `origem: planilha_xls` para limpar IDs `NAO_CADASTRADO::*` obsoletos quando o usuário cadastra o funcionário e re-sobe a planilha.
+
+### Validação
+- Teste unitário: 10/10 nomes da planilha real corretamente identificados.
+- Importação completa: de 8 "não cadastrados" → reduziu para 2 reais (LEANDRO DOS SANTOS + pedro henrique, que de fato não estão na lista do cliente).
+
+
 ## Changelog - 04/05/2026 (Sessão 43) — 🟢 Ponto Eletrônico: Importação de Planilha + Quadro Mensal + Banco de Horas
 
 ### Feature implementada
