@@ -1,5 +1,33 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Changelog - 04/05/2026 (Sessão 42) — 🟡 Diagnóstico claro de Importação NFS-e WebISS
+
+### Problema reportado
+- Usuário cadastrou Inscrição Municipal e URL `https://palmasto.webiss.com.br/ws/nfse.asmx` em 3 CNPJs mas o botão "Importar NFS-e" mostrava "0 notas importadas" sem feedback útil. Toasts de erro do backend chegavam como `toast.info` (cinza pálido), tornando-se invisíveis.
+
+### Diagnóstico técnico realizado
+- Curl direto ao endpoint Palmas/TO (`palmasto.webiss.com.br`) confirmou: o servidor exige **mTLS** e fecha a conexão TCP imediatamente após o handshake quando o certificado A1 não é aceito (`Remote end closed connection without response`). Nada chegou ao SOAP. Causa típica: A1 expirado, senha incorreta, CNPJ do cert ≠ CNPJ do tomador, ou IM não cadastrada em Palmas.
+
+### Correções
+- **Frontend** (`ImportacaoNFPage.jsx`):
+  - Botão "Importar NFS-e" do topo agora **itera todos os CNPJs com URL configurada** (antes só acionava `certificados[0]`). Nova função `handleImportarNFSeTodos` exibe toast por empresa.
+  - Avisos da NFS-e mudaram de `toast.info` → `toast.warning` (laranja, 12s) com nome da empresa no prefixo.
+  - Toast de erro do "Testar Conexão" passa a mapear nova etapa `mtls_rejeitado`.
+- **Backend** (`routes/importacao_nf.py`):
+  - Detecta `Remote end closed`, `Connection reset`, falha de SSL/handshake → devolve mensagem-amiga (4 causas mais prováveis) em vez de jargão técnico cru.
+  - Endpoint `/nfse/importar` agora retorna `total_encontradas` e `duplicadas` na resposta. Quando webservice respondeu OK mas 0 notas chegaram, gera aviso explicando cada hipótese.
+  - Endpoint `/nfse/testar-conexao` introduz nova etapa `mtls_rejeitado` com texto orientando o usuário a fazer login no portal `palmasto.webiss.com.br` com o mesmo .pfx para validar o certificado.
+
+### Como o usuário deve agir
+1. Vá na aba **CNPJs/Certificados** → clique no ícone "plug" (Testar Conexão NFS-e) em cada CNPJ.
+2. Se aparecer **"Certificado Rejeitado"**, é problema do A1 ou do cadastro do CNPJ na Prefeitura (não código).
+3. Se aparecer **"Regra de Negócio: [Cód L004] Inscrição Municipal não cadastrada"** → IM digitada está errada.
+
+### Arquivos modificados
+- `frontend/src/pages/admin/ImportacaoNFPage.jsx`
+- `backend/routes/importacao_nf.py`
+
+
 
 ### Bug P0 corrigido
 - **CNPJ/CEP retornavam erro nos formulários** — `axios.defaults.headers.common["Authorization"]` global era enviado também para BrasilAPI/ViaCEP, que rejeitavam a chamada. Substituído `axios.get` por `fetch()` nativo nos 4 arquivos: `CadastroFormModal.jsx`, `OrdensServicoPage.jsx`, `EmissaoNFPage.jsx`, `ImoveisPage.jsx`. Agora consulta CNPJ/CEP funciona em qualquer formulário do sistema.

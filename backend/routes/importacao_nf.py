@@ -632,10 +632,27 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
                 pass
 
         if response is None:
+            ultima_tentativa = tentativas_sa[-1] if tentativas_sa else {}
+            ultimo_erro = (ultima_tentativa.get("erro", "") or "").lower()
+            # Detectar mTLS handshake fail / server fechou conexão sem responder
+            if "remote end closed" in ultimo_erro or "connection reset" in ultimo_erro or "ssl" in ultimo_erro or "handshake" in ultimo_erro:
+                aviso_clara = (
+                    "O servidor da Prefeitura FECHOU a conexão TLS imediatamente — isto indica que o "
+                    "CERTIFICADO DIGITAL A1 foi REJEITADO (mTLS). Causas mais comuns: "
+                    "1) Certificado expirado ou senha incorreta; "
+                    "2) Certificado é de OUTRO CNPJ (deve ser e-CNPJ exato da empresa tomadora); "
+                    "3) CNPJ não está cadastrado como contribuinte em Palmas-TO; "
+                    "4) Inscrição Municipal incorreta. "
+                    "Acesse https://palmasto.webiss.com.br/ , faça login com o certificado "
+                    "que você uploadou aqui e verifique se a empresa aparece corretamente."
+                )
+            else:
+                aviso_clara = f"Nenhum SOAPAction foi aceito pelo servidor. Tentativas: {len(tentativas_sa)}. Última mensagem: {ultima_tentativa}"
             return {
                 "message": "Falha de conexão com o webservice NFS-e",
                 "novas_nfses": 0,
-                "aviso": f"Nenhum SOAPAction foi aceito pelo servidor. Tentativas: {len(tentativas_sa)}. Última mensagem: {tentativas_sa[-1] if tentativas_sa else 'sem resposta'}",
+                "aviso": aviso_clara,
+                "diagnostico_tecnico": str(tentativas_sa)[:500],
             }
 
         if response.status_code != 200:
@@ -710,6 +727,8 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
 
         # Extrair NFS-e
         comp_nfses = root.findall(f".//{{{NFSE_NS}}}CompNfse") or root.findall(".//CompNfse")
+        total_encontradas = len(comp_nfses)
+        duplicadas = 0
 
         for comp in comp_nfses:
             try:
@@ -732,6 +751,7 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
                     "cnpj_emitente": cnpj_prestador or numero
                 })
                 if existente:
+                    duplicadas += 1
                     continue
 
                 try:
@@ -791,11 +811,26 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
     if erros:
         mensagem += f" | Avisos: {'; '.join(erros[:2])}"
 
-    return {
+    resp = {
         "message": mensagem,
         "novas_nfses": novas_importadas,
-        "erros": erros
+        "erros": erros,
+        "total_encontradas": total_encontradas if 'total_encontradas' in locals() else 0,
+        "duplicadas": duplicadas if 'duplicadas' in locals() else 0,
     }
+    # Se webservice respondeu OK mas 0 NFS-e foram encontradas, sinaliza isso ao usuário
+    if novas_importadas == 0 and not erros and resp["total_encontradas"] == 0:
+        resp["aviso"] = (
+            f"Webservice respondeu OK, mas não retornou nenhuma NFS-e nos últimos 90 dias para "
+            f"CNPJ {cnpj_limpo} (IM {inscricao_municipal or 'não informada'}). "
+            f"Verifique: 1) Inscrição Municipal correta; 2) CNPJ é tomador de algum serviço no período; "
+            f"3) Notas foram emitidas em PALMAS-TO. Use o botão 'Testar Conexão' para diagnóstico."
+        )
+    elif novas_importadas == 0 and resp["total_encontradas"] > 0:
+        resp["aviso"] = (
+            f"Encontradas {resp['total_encontradas']} NFS-e no webservice mas todas já estavam importadas (duplicadas: {resp['duplicadas']})."
+        )
+    return resp
 
 
 
@@ -911,10 +946,25 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
                     pass
 
         if response is None:
+            ultima_tentativa = tentativas_sa[-1] if tentativas_sa else {}
+            ultimo_erro = (ultima_tentativa.get("erro", "") or "").lower()
+            if "remote end closed" in ultimo_erro or "connection reset" in ultimo_erro or "ssl" in ultimo_erro or "handshake" in ultimo_erro:
+                return {
+                    "ok": False,
+                    "etapa": "mtls_rejeitado",
+                    "mensagem": (
+                        "O servidor da Prefeitura FECHOU a conexão TLS imediatamente — o certificado A1 "
+                        "foi REJEITADO. Verifique: 1) Se o .pfx é o e-CNPJ da empresa tomadora; "
+                        "2) Se a senha do certificado está correta; 3) Se o certificado está dentro "
+                        "da validade; 4) Se o CNPJ está cadastrado como contribuinte em Palmas-TO. "
+                        "Faça login em https://palmasto.webiss.com.br/ com o mesmo .pfx para confirmar."
+                    ),
+                    "diagnostico_tecnico": str(tentativas_sa)[:500],
+                }
             return {
                 "ok": False,
                 "etapa": "conexao",
-                "mensagem": f"Nenhum SOAPAction aceito em {len(tentativas_sa)} tentativas",
+                "mensagem": f"Nenhum SOAPAction aceito em {len(tentativas_sa)} tentativas. Detalhe: {ultima_tentativa}",
             }
 
         # Etapa 4: interpretar resposta

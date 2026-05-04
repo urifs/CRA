@@ -428,39 +428,93 @@ export default function ImportacaoNFPage() {
         axios.post(`${API}/nfse/importar/${certificadoId}`)
       ]);
 
+      const empresaNome = cert?.razao_social || "Empresa";
+
       // Tratar resultado NF-e
       if (nfeResult.status === 'fulfilled') {
         const d = nfeResult.value.data;
         if (d.aviso) {
-          toast.warning(d.aviso, { duration: 8000 });
+          toast.warning(`NF-e ${empresaNome}: ${d.aviso}`, { duration: 8000 });
         } else if (d.novas_nfes > 0) {
-          toast.success(`${d.novas_nfes} nova(s) NF-e importada(s)!`);
+          toast.success(`${empresaNome}: ${d.novas_nfes} nova(s) NF-e importada(s)!`);
         } else {
-          toast.info("NF-e: nenhuma nova nota encontrada na SEFAZ");
+          toast.info(`NF-e ${empresaNome}: nenhuma nova nota encontrada na SEFAZ`);
         }
       } else {
-        toast.error(nfeResult.reason?.response?.data?.detail || "Erro ao importar NF-e");
+        toast.error(`NF-e ${empresaNome}: ${nfeResult.reason?.response?.data?.detail || "Erro"}`);
       }
 
-      // Tratar resultado NFS-e
+      // Tratar resultado NFS-e (mais visível: warning/error em vez de info)
       if (nfseResult.status === 'fulfilled') {
         const d = nfseResult.value.data;
         if (d.aviso) {
-          toast.info(d.aviso, { duration: 6000 });
+          toast.warning(`NFS-e ${empresaNome}: ${d.aviso}`, { duration: 12000 });
         } else if (d.novas_nfses > 0) {
-          toast.success(`${d.novas_nfses} nova(s) NFS-e importada(s)!`);
-        } else if (!d.aviso) {
-          toast.info("NFS-e: nenhuma nova nota encontrada");
+          toast.success(`${empresaNome}: ${d.novas_nfses} nova(s) NFS-e importada(s)!`);
+        } else if ((d.erros || []).length > 0) {
+          toast.warning(`NFS-e ${empresaNome}: ${d.erros.join(' | ')}`, { duration: 12000 });
+        } else {
+          toast.info(`NFS-e ${empresaNome}: nenhuma nova nota encontrada nos últimos 90 dias`);
         }
       } else {
         const errMsg = nfseResult.reason?.response?.data?.detail;
-        if (errMsg) toast.error(`NFS-e: ${errMsg}`);
+        toast.error(`NFS-e ${empresaNome}: ${errMsg || "falha na consulta ao webservice"}`);
       }
 
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao importar notas");
       fetchData();
+    } finally {
+      setImportando(false);
+      setImportandoCertId(null);
+    }
+  };
+
+  // Importa NFS-e de TODOS os certificados que têm URL do webservice configurada
+  const handleImportarNFSeTodos = async () => {
+    const certsComUrl = certificados.filter(c => c.ativo && (c.url_nfse || "").trim());
+    if (certsComUrl.length === 0) {
+      toast.error("Nenhum CNPJ tem URL do webservice NFS-e configurada. Edite o cadastro do certificado para adicionar a URL.");
+      return;
+    }
+    setImportando(true);
+    let totalNovas = 0;
+    let temErro = false;
+    try {
+      for (const cert of certsComUrl) {
+        if (isCertificadoBloqueado(cert)) {
+          toast.warning(`${cert.razao_social}: certificado bloqueado, ignorando.`);
+          continue;
+        }
+        setImportandoCertId(cert.id);
+        try {
+          const { data } = await axios.post(`${API}/nfse/importar/${cert.id}`);
+          if (data.aviso) {
+            temErro = true;
+            toast.warning(`${cert.razao_social}: ${data.aviso}`, { duration: 12000 });
+          } else if (data.novas_nfses > 0) {
+            totalNovas += data.novas_nfses;
+            toast.success(`${cert.razao_social}: ${data.novas_nfses} NFS-e importada(s)!`);
+          } else if ((data.erros || []).length > 0) {
+            temErro = true;
+            toast.warning(`${cert.razao_social}: ${data.erros.join(' | ')}`, { duration: 12000 });
+          } else {
+            toast.info(`${cert.razao_social}: nenhuma NFS-e nova nos últimos 90 dias`);
+          }
+        } catch (e) {
+          temErro = true;
+          toast.error(`${cert.razao_social}: ${e.response?.data?.detail || "falha na consulta"}`);
+        }
+      }
+      if (totalNovas === 0 && !temErro) {
+        toast.info("Importação concluída — nenhuma NFS-e nova encontrada para os CNPJs ativos.");
+      } else if (totalNovas === 0 && temErro) {
+        toast.warning("Importação concluída com avisos. Use o botão 'Testar Conexão' (ícone de plug) em cada CNPJ para diagnóstico detalhado.", { duration: 14000 });
+      } else {
+        toast.success(`Total: ${totalNovas} NFS-e importada(s) ao todo.`);
+      }
+      await fetchData();
     } finally {
       setImportando(false);
       setImportandoCertId(null);
@@ -484,6 +538,7 @@ export default function ImportacaoNFPage() {
           soap_fault: "SOAP Fault",
           negocio: "Regra de Negócio",
           parse: "Resposta Inválida",
+          mtls_rejeitado: "Certificado Rejeitado",
           inesperado: "Erro",
         }[data.etapa] || "Erro";
         toast.error(`${prefix}: ${data.mensagem}`, { duration: 12000 });
@@ -622,8 +677,15 @@ export default function ImportacaoNFPage() {
           {certificados.length > 0 && (
             <Button
               className="bg-[#D4A000] hover:bg-[#b88f00] text-black font-bold"
-              onClick={() => handleImportarNotas(certificados[0]?.id)}
+              onClick={() => {
+                if (tipoNota === "nfse") {
+                  handleImportarNFSeTodos();
+                } else {
+                  handleImportarNotas(certificados[0]?.id);
+                }
+              }}
               disabled={importando}
+              data-testid="btn-importar-topo"
             >
               {importando ? (
                 <>
