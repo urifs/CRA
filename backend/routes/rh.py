@@ -182,8 +182,10 @@ class EPIItem(BaseModel):
 
 class FichaEPICreate(BaseModel):
     funcionario_id: str
-    cargo: str
+    cargo: Optional[str] = None
     codigo_cbo: Optional[str] = None
+    ocupacao_cbo: Optional[str] = None
+    data_entrega: Optional[str] = None
     epis: List[EPIItem] = []
     observacoes: Optional[str] = None
 
@@ -2858,9 +2860,8 @@ async def list_fichas_epi(funcionario_id: Optional[str] = None):
         query["funcionario_id"] = funcionario_id
     
     fichas = []
-    async for ficha in epi_fichas_collection.find(query):
-        ficha["_id"] = str(ficha["_id"])
-        func = await funcionarios_collection.find_one({"id": ficha["funcionario_id"]})
+    async for ficha in epi_fichas_collection.find(query, {"_id": 0}):
+        func = await funcionarios_collection.find_one({"id": ficha["funcionario_id"]}, {"_id": 0})
         ficha["funcionario_nome"] = func["nome"] if func else "-"
         fichas.append(ficha)
     
@@ -2873,10 +2874,267 @@ async def create_ficha_epi(data: FichaEPICreate):
     ficha_doc = data.dict()
     ficha_doc["id"] = str(uuid.uuid4())
     ficha_doc["created_at"] = datetime.now().isoformat()
-    
+
+    # Auto-preenche cargo a partir do funcionário se não foi enviado
+    if not ficha_doc.get("cargo"):
+        func = await funcionarios_collection.find_one(
+            {"id": ficha_doc["funcionario_id"]}, {"_id": 0}
+        )
+        ficha_doc["cargo"] = (func or {}).get("cargo") or ficha_doc.get("ocupacao_cbo") or "-"
+
     await epi_fichas_collection.insert_one(ficha_doc)
-    ficha_doc["_id"] = str(ficha_doc.get("_id", ""))
+    # Remove o _id que o Mongo adicionou para evitar erro de serialização
+    ficha_doc.pop("_id", None)
     return ficha_doc
+
+
+def _build_ficha_epi_pdf(ficha: dict, func: dict) -> bytes:
+    """Gera o PDF da Ficha de EPI completa com layout corporativo padronizado."""
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, KeepTogether
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table, build_signatures_table,
+        BRAND_COLORS, header_table_style,
+    )
+
+    def _br_date(s: str) -> str:
+        if not s:
+            return "-"
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+        except Exception:
+            return s
+
+    buffer = io.BytesIO()
+    doc = create_corporate_doc(
+        buffer,
+        title=f"Ficha de EPI - {func.get('nome','funcionario')}",
+    )
+    styles = get_corporate_styles()
+
+    elements = []
+    add_corporate_header(
+        elements,
+        doc_title="FICHA DE CONTROLE DE EPI",
+        subtitle="Equipamento de Proteção Individual — NR-06",
+    )
+
+    # Dados do funcionário
+    elements.append(Paragraph("IDENTIFICAÇÃO DO FUNCIONÁRIO", styles["section"]))
+    elements.append(build_data_table([
+        ("Funcionário:", func.get("nome", "-")),
+        ("CPF:", func.get("cpf", "-")),
+        ("RG:", func.get("rg", "-")),
+        ("Cargo:", ficha.get("cargo") or func.get("cargo", "-")),
+        ("CBO:", f"{ficha.get('codigo_cbo','-')} - {ficha.get('ocupacao_cbo','')}".rstrip(" -")),
+        ("Departamento:", func.get("departamento", "-")),
+        ("Admissão:", _br_date(func.get("data_admissao", ""))),
+        ("Data de Entrega:", _br_date(ficha.get("data_entrega", ""))),
+    ]))
+    elements.append(Spacer(1, 14))
+
+    # Tabela de EPIs entregues
+    elements.append(Paragraph("EQUIPAMENTOS DE PROTEÇÃO INDIVIDUAL ENTREGUES", styles["section"]))
+    rows = [["#", "EPI", "C.A.", "Validade", "Prioridade"]]
+    epis = ficha.get("epis") or []
+    for idx, e in enumerate(epis, 1):
+        rows.append([
+            str(idx),
+            (e.get("nome") or "-"),
+            (e.get("ca") or "-"),
+            _br_date(e.get("validade") or ""),
+            (e.get("prioridade") or "Média"),
+        ])
+    if not epis:
+        rows.append(["-", "Nenhum EPI registrado", "-", "-", "-"])
+
+    t_epis = Table(
+        rows,
+        colWidths=[0.8 * cm, 8.5 * cm, 2.5 * cm, 2.5 * cm, 2.5 * cm],
+        repeatRows=1,
+    )
+    style = header_table_style()
+    style.add("ALIGN", (0, 1), (0, -1), "CENTER")
+    style.add("ALIGN", (2, 1), (-1, -1), "CENTER")
+    t_epis.setStyle(style)
+    elements.append(t_epis)
+    elements.append(Spacer(1, 14))
+
+    # Observações
+    obs = (ficha.get("observacoes") or "").strip()
+    if obs:
+        elements.append(Paragraph("OBSERVAÇÕES", styles["section"]))
+        elements.append(Paragraph(obs.replace("\n", "<br/>"), styles["body"]))
+        elements.append(Spacer(1, 12))
+
+    # Termo de recebimento (texto compacto)
+    elements.append(Paragraph("TERMO DE RECEBIMENTO E RESPONSABILIDADE", styles["section"]))
+    termo_txt = (
+        "Declaro, para os devidos fins, que recebi gratuitamente da empresa CRA Construtora "
+        "os Equipamentos de Proteção Individual (EPI) discriminados nesta ficha, em perfeitas "
+        "condições de uso, comprometendo-me a: <br/>"
+        "<b>I –</b> usá-los apenas para a finalidade a que se destinam, durante toda a jornada de trabalho;<br/>"
+        "<b>II –</b> ser responsável pela guarda e conservação;<br/>"
+        "<b>III –</b> comunicar imediatamente ao empregador qualquer alteração que torne o EPI "
+        "impróprio para uso ou que necessite de reposição;<br/>"
+        "<b>IV –</b> cumprir as determinações da empresa quanto ao uso adequado;<br/>"
+        "<b>V –</b> devolvê-los ao empregador quando não for mais utilizá-los, em caso de "
+        "desligamento ou troca, sob pena das sanções previstas na NR-06 da Portaria 3.214/78."
+    )
+    elements.append(Paragraph(termo_txt, styles["body"]))
+    elements.append(Spacer(1, 30))
+
+    # Assinaturas
+    elements.append(KeepTogether(build_signatures_table(
+        left_label="Assinatura do Funcionário",
+        right_label="Assinatura do Empregador / SESMT",
+    )))
+
+    add_footer(elements, "Sistema CRA · Ficha de Controle de EPI - NR-06")
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def _build_termo_responsabilidade_pdf(ficha: dict, func: dict) -> bytes:
+    """Gera o Termo de Responsabilidade isolado (NR-06) com layout corporativo."""
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib import colors
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table, build_signatures_table,
+        BRAND_COLORS,
+    )
+
+    def _br_date(s: str) -> str:
+        if not s:
+            return "-"
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+        except Exception:
+            return s
+
+    buffer = io.BytesIO()
+    doc = create_corporate_doc(
+        buffer,
+        title=f"Termo de Responsabilidade - {func.get('nome','funcionario')}",
+    )
+    styles = get_corporate_styles()
+
+    elements = []
+    add_corporate_header(
+        elements,
+        doc_title="TERMO DE RESPONSABILIDADE - EPI",
+        subtitle="NR-06 — Portaria 3.214/78 do Ministério do Trabalho",
+    )
+
+    elements.append(Paragraph("IDENTIFICAÇÃO", styles["section"]))
+    elements.append(build_data_table([
+        ("Funcionário:", func.get("nome", "-")),
+        ("CPF:", func.get("cpf", "-")),
+        ("Cargo:", ficha.get("cargo") or func.get("cargo", "-")),
+        ("CBO:", f"{ficha.get('codigo_cbo','-')} - {ficha.get('ocupacao_cbo','')}".rstrip(" -")),
+        ("Data de Entrega:", _br_date(ficha.get("data_entrega", ""))),
+    ]))
+    elements.append(Spacer(1, 16))
+
+    elements.append(Paragraph("DECLARAÇÃO", styles["section"]))
+    declaracao = (
+        f"Eu, <b>{func.get('nome','-')}</b>, portador(a) do CPF nº "
+        f"<b>{func.get('cpf','-')}</b>, declaro para os devidos fins que recebi "
+        f"da <b>CRA Construtora</b>, em "
+        f"<b>{_br_date(ficha.get('data_entrega',''))}</b>, gratuitamente e em perfeitas "
+        "condições de uso, os Equipamentos de Proteção Individual (EPI) discriminados a "
+        "seguir, comprometendo-me a:<br/><br/>"
+        "<b>I.</b> Utilizá-los apenas para a finalidade a que se destinam, durante toda "
+        "a jornada de trabalho;<br/>"
+        "<b>II.</b> Responsabilizar-me pela guarda e conservação dos referidos EPIs;<br/>"
+        "<b>III.</b> Comunicar imediatamente ao empregador qualquer alteração que torne "
+        "o EPI impróprio para uso ou que necessite de substituição;<br/>"
+        "<b>IV.</b> Cumprir as determinações do empregador quanto ao uso adequado;<br/>"
+        "<b>V.</b> Devolvê-los à empresa em caso de desligamento, transferência ou "
+        "substituição;<br/>"
+        "<b>VI.</b> Estar ciente de que o não uso ou uso inadequado dos EPIs constitui "
+        "ato faltoso, podendo gerar advertência, suspensão ou demissão por justa causa, "
+        "conforme art. 158, parágrafo único, alínea 'b', da CLT e item 6.7.1 da NR-06."
+    )
+    elements.append(Paragraph(declaracao, styles["body"]))
+    elements.append(Spacer(1, 16))
+
+    elements.append(Paragraph("EQUIPAMENTOS RECEBIDOS", styles["section"]))
+    rows = [["#", "EPI", "C.A.", "Validade"]]
+    epis = ficha.get("epis") or []
+    for idx, e in enumerate(epis, 1):
+        rows.append([
+            str(idx),
+            (e.get("nome") or "-"),
+            (e.get("ca") or "-"),
+            _br_date(e.get("validade") or ""),
+        ])
+    if not epis:
+        rows.append(["-", "Nenhum EPI registrado", "-", "-"])
+
+    from utils.pdf_template import header_table_style
+    t_epis = Table(rows, colWidths=[0.8 * cm, 11.5 * cm, 2.5 * cm, 2.5 * cm], repeatRows=1)
+    style = header_table_style()
+    style.add("ALIGN", (0, 1), (0, -1), "CENTER")
+    style.add("ALIGN", (2, 1), (-1, -1), "CENTER")
+    t_epis.setStyle(style)
+    elements.append(t_epis)
+    elements.append(Spacer(1, 28))
+
+    elements.append(build_signatures_table(
+        left_label="Assinatura do Funcionário",
+        right_label="Assinatura do Empregador / SESMT",
+    ))
+
+    add_footer(elements, "Sistema CRA · Termo de Responsabilidade NR-06")
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+@rh_router.get("/epi/fichas/{ficha_id}/exportar")
+async def exportar_ficha_epi(ficha_id: str):
+    """Exportar a Ficha de EPI completa em PDF com layout corporativo."""
+    ficha = await epi_fichas_collection.find_one({"id": ficha_id}, {"_id": 0})
+    if not ficha:
+        raise HTTPException(status_code=404, detail="Ficha de EPI não encontrada")
+    func = await funcionarios_collection.find_one({"id": ficha["funcionario_id"]}, {"_id": 0})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    pdf_bytes = _build_ficha_epi_pdf(ficha, func)
+    nome_safe = (func.get("nome") or "func").replace(" ", "_")[:40]
+    filename = f"FichaEPI_{nome_safe}_{(ficha.get('data_entrega') or '')[:10]}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@rh_router.get("/epi/fichas/{ficha_id}/termo-responsabilidade")
+async def exportar_termo_responsabilidade(ficha_id: str):
+    """Exportar o Termo de Responsabilidade NR-06 em PDF com layout corporativo."""
+    ficha = await epi_fichas_collection.find_one({"id": ficha_id}, {"_id": 0})
+    if not ficha:
+        raise HTTPException(status_code=404, detail="Ficha de EPI não encontrada")
+    func = await funcionarios_collection.find_one({"id": ficha["funcionario_id"]}, {"_id": 0})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    pdf_bytes = _build_termo_responsabilidade_pdf(ficha, func)
+    nome_safe = (func.get("nome") or "func").replace(" ", "_")[:40]
+    filename = f"TermoResponsabilidade_{nome_safe}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 # ===== NOTIFICAÇÕES =====

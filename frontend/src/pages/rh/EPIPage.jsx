@@ -181,7 +181,20 @@ export default function EPIPage() {
       fetchFichasEPI();
       closeModal();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao salvar ficha");
+      // Pydantic v2 retorna um array em error.response.data.detail.
+      // Renderizar um array no toast quebra o React (Objects are not valid as a React child).
+      const raw = error?.response?.data?.detail;
+      let msg = "Erro ao salvar ficha";
+      if (typeof raw === "string") {
+        msg = raw;
+      } else if (Array.isArray(raw)) {
+        msg = raw
+          .map((d) => d?.msg || d?.detail || JSON.stringify(d))
+          .join(", ");
+      } else if (raw) {
+        msg = JSON.stringify(raw);
+      }
+      toast.error(msg);
     }
   };
 

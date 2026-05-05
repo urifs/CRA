@@ -1,6 +1,37 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix - 05/05/2026 (Sessão 45.5) — 🛠️ Ficha de EPI: tela preta + exportações em PDF
+
+### Problemas reportados
+1. Ao clicar em "Salvar Ficha de EPI" a tela ficava toda preta (frontend crasha).
+2. Não havia como exportar a ficha completa em PDF, nem o termo de responsabilidade.
+3. PDFs antigos não seguiam o padrão visual da plataforma.
+
+### Causa raiz
+1. **Tela preta**: Backend exigia o campo `cargo` no `FichaEPICreate`, mas o frontend não enviava → erro 422 Pydantic v2 retornando array de objetos em `detail` → frontend usava `toast.error(error.response.data.detail)` que tentava renderizar um array de objetos como JSX → "Objects are not valid as a React child" → crash → tela preta.
+2. **Sem exportação**: Endpoints `GET /epi/fichas/{id}/exportar` e `/termo-responsabilidade` simplesmente não existiam no backend (404 silencioso).
+
+### Implementado
+**Backend (`routes/rh.py`):**
+- `FichaEPICreate`: `cargo` virou opcional, novos campos `data_entrega` e `ocupacao_cbo` adicionados.
+- `POST /epi/fichas`: agora auto-preenche `cargo` consultando o funcionário se não informado; remove `_id` do retorno (evita erro de serialização BSON).
+- `GET /epi/fichas`: passou a excluir `_id` na projeção.
+- `GET /epi/fichas/{id}/exportar` (NOVO): gera PDF da ficha completa com layout corporativo (`utils/pdf_template.py`), incluindo identificação completa, tabela de EPIs com CA/Validade/Prioridade, Termo de Recebimento (itens I a V) e assinaturas.
+- `GET /epi/fichas/{id}/termo-responsabilidade` (NOVO): PDF do Termo de Responsabilidade isolado, citando NR-06 / Portaria 3.214/78 / CLT art. 158, com declaração formal e assinaturas.
+
+**Frontend (`pages/rh/EPIPage.jsx`):**
+- `handleSalvarFichaEPI`: trata corretamente arrays Pydantic em `error.response.data.detail`, convertendo para string segura antes de chamar `toast.error` — tela preta eliminada.
+
+### Validação
+- ✅ POST sem `cargo`: aceita, retorna `cargo: "Operador de Máquinas"` (auto-preenchido)
+- ✅ Resposta sem `_id`: confirmado
+- ✅ GET /epi/fichas: lista limpa com 4 EPIs corretamente
+- ✅ Export Ficha: PDF 39KB válido, **6/6 elementos confirmados pelo analyzer** (cabeçalho corporativo, identificação, tabela EPIs, Termo I-V, assinaturas, rodapé)
+- ✅ Export Termo: PDF 39KB válido com declaração NR-06 completa
+
+
+
 ## Feature - 05/05/2026 (Sessão 45.4) — 🚀 Auto-bootstrap da Base de Conhecimento
 
 ### Implementado
