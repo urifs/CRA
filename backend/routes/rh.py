@@ -1,7 +1,7 @@
 """
 RH Routes - Human Resources module endpoints
 """
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Body, Response
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Body, Form, Response
 from fastapi.responses import FileResponse
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -1146,7 +1146,7 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
                 "saldo_minutos": saldo_dia,
                 "status_dia": "abonado" if ab else r.get("status_dia"),
                 "abono": (
-                    {"tipo": ab["tipo"], "motivo": ab["motivo"], "id": ab["id"]}
+                    {"tipo": ab["tipo"], "motivo": ab["motivo"], "id": ab["id"], "anexo": ab.get("anexo")}
                     if ab else None
                 ),
             })
@@ -1418,16 +1418,21 @@ def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
         abonos = f.get("abonos") or []
         if abonos:
             elements.append(Paragraph("ABONOS DO MÊS", section_style))
-            ab_cab = ["Data", "Tipo", "Motivo / Justificativa"]
+            ab_cab = ["Data", "Tipo", "Motivo / Justificativa", "Anexo"]
             ab_linhas = [ab_cab]
             for ab in sorted(abonos, key=lambda x: x.get("data", "")):
                 d_br = "/".join(reversed(ab.get("data", "").split("-")))
+                anexo = ab.get("anexo") or {}
+                anexo_str = "Sim" if anexo.get("storage_path") else "—"
+                if anexo.get("filename_original"):
+                    anexo_str = f"Sim ({anexo['filename_original'][:24]})"
                 ab_linhas.append([
                     d_br,
                     (ab.get("tipo") or "").upper(),
                     ab.get("motivo") or "",
+                    anexo_str,
                 ])
-            t_ab = Table(ab_linhas, colWidths=[2.5 * cm, 3 * cm, 12.5 * cm])
+            t_ab = Table(ab_linhas, colWidths=[2.2 * cm, 2.6 * cm, 9.5 * cm, 3.7 * cm])
             t_ab.setStyle(TableStyle([
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
@@ -1532,17 +1537,28 @@ async def gerar_pdf_espelho_ponto(
 
 # ===== ABONOS DE PONTO (faltas justificadas / atestados / folgas / feriados) =====
 TIPOS_ABONO_VALIDOS = {"atestado", "justificativa", "feriado", "folga", "ferias", "outros"}
+ABONO_EXTS_VALIDAS = {"pdf", "jpg", "jpeg", "png", "webp", "heic", "heif"}
+ABONO_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _ext_arquivo(filename: str) -> str:
+    if not filename or "." not in filename:
+        return ""
+    return filename.rsplit(".", 1)[-1].lower().strip()
 
 
 @rh_router.post("/ponto/abono")
-async def criar_abono(payload: dict = Body(...)):
-    """Cria um abono para uma data específica de um funcionário.
-    Body: { funcionario_id, data (YYYY-MM-DD), tipo, motivo }
-    """
-    funcionario_id = (payload.get("funcionario_id") or "").strip()
-    data = (payload.get("data") or "").strip()
-    tipo = (payload.get("tipo") or "").strip().lower()
-    motivo = (payload.get("motivo") or "").strip()
+async def criar_abono(
+    funcionario_id: str = Body(...),
+    data: str = Body(...),
+    tipo: str = Body(...),
+    motivo: str = Body(...),
+):
+    """Cria um abono SEM anexo. Body JSON: { funcionario_id, data, tipo, motivo }."""
+    funcionario_id = (funcionario_id or "").strip()
+    data = (data or "").strip()
+    tipo = (tipo or "").strip().lower()
+    motivo = (motivo or "").strip()
     
     if not funcionario_id:
         raise HTTPException(status_code=400, detail="funcionario_id é obrigatório")
@@ -1560,7 +1576,6 @@ async def criar_abono(payload: dict = Body(...)):
     if not motivo:
         raise HTTPException(status_code=400, detail="motivo é obrigatório")
     
-    # Substitui abono existente para mesmo (funcionario, data)
     await ponto_abonos_collection.delete_many({
         "funcionario_id": funcionario_id,
         "data": data,
@@ -1572,11 +1587,119 @@ async def criar_abono(payload: dict = Body(...)):
         "data": data,
         "tipo": tipo,
         "motivo": motivo,
+        "anexo": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await ponto_abonos_collection.insert_one(doc)
     doc.pop("_id", None)
     return doc
+
+
+@rh_router.post("/ponto/abono-com-anexo")
+async def criar_abono_com_anexo(
+    funcionario_id: str = Form(...),
+    data: str = Form(...),
+    tipo: str = Form(...),
+    motivo: str = Form(...),
+    arquivo: Optional[UploadFile] = File(None),
+):
+    """Cria abono e (opcional) faz upload de atestado/justificativa.
+    Multipart/form-data. Aceita PDF/JPG/PNG/WEBP/HEIC até 10MB."""
+    from fastapi import Form  # noqa: F401 (já importado no topo via UploadFile/File)
+    funcionario_id = (funcionario_id or "").strip()
+    data_str = (data or "").strip()
+    tipo = (tipo or "").strip().lower()
+    motivo = (motivo or "").strip()
+    
+    if not funcionario_id:
+        raise HTTPException(status_code=400, detail="funcionario_id é obrigatório")
+    if not data_str:
+        raise HTTPException(status_code=400, detail="data é obrigatória")
+    try:
+        datetime.strptime(data_str, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="data inválida (YYYY-MM-DD)")
+    if tipo not in TIPOS_ABONO_VALIDOS:
+        raise HTTPException(status_code=400, detail="tipo inválido")
+    if not motivo:
+        raise HTTPException(status_code=400, detail="motivo é obrigatório")
+    
+    anexo_doc = None
+    if arquivo and arquivo.filename:
+        ext = _ext_arquivo(arquivo.filename)
+        if ext not in ABONO_EXTS_VALIDAS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Extensão de arquivo não permitida ({ext}). Use: {', '.join(sorted(ABONO_EXTS_VALIDAS))}",
+            )
+        conteudo = await arquivo.read()
+        if not conteudo:
+            raise HTTPException(status_code=400, detail="Arquivo vazio")
+        if len(conteudo) > ABONO_MAX_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Arquivo muito grande ({len(conteudo) // (1024 * 1024)}MB). Máx: 10MB",
+            )
+        from utils.storage import put_object, MIME_BY_EXT, APP_NAME
+        path = f"{APP_NAME}/abonos/{funcionario_id}/{uuid.uuid4()}.{ext}"
+        content_type = MIME_BY_EXT.get(ext, arquivo.content_type or "application/octet-stream")
+        try:
+            result = put_object(path, conteudo, content_type)
+            anexo_doc = {
+                "storage_path": result["path"],
+                "filename_original": arquivo.filename,
+                "content_type": content_type,
+                "size": result.get("size", len(conteudo)),
+                "ext": ext,
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Falha ao subir arquivo para o storage: {e}",
+            )
+    
+    # Substitui abono anterior do mesmo (funcionario, data) — mas mantém anexo antigo se quiser preservar
+    await ponto_abonos_collection.delete_many({
+        "funcionario_id": funcionario_id,
+        "data": data_str,
+    })
+    
+    doc = {
+        "id": str(uuid.uuid4()),
+        "funcionario_id": funcionario_id,
+        "data": data_str,
+        "tipo": tipo,
+        "motivo": motivo,
+        "anexo": anexo_doc,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await ponto_abonos_collection.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@rh_router.get("/ponto/abono/{abono_id}/anexo")
+async def baixar_anexo_abono(abono_id: str):
+    """Baixa o arquivo anexo de um abono (PDF/imagem)."""
+    abono = await ponto_abonos_collection.find_one({"id": abono_id}, {"_id": 0})
+    if not abono:
+        raise HTTPException(status_code=404, detail="Abono não encontrado")
+    anexo = abono.get("anexo")
+    if not anexo or not anexo.get("storage_path"):
+        raise HTTPException(status_code=404, detail="Este abono não tem anexo")
+    from utils.storage import get_object
+    try:
+        data, content_type = get_object(anexo["storage_path"])
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Erro ao baixar do storage: {e}")
+    
+    filename = anexo.get("filename_original") or f"anexo_abono.{anexo.get('ext', 'bin')}"
+    return Response(
+        content=data,
+        media_type=anexo.get("content_type") or content_type,
+        headers={"Content-Disposition": f"inline; filename=\"{filename}\""},
+    )
+
 
 
 @rh_router.get("/ponto/abonos")

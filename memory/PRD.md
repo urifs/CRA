@@ -1,5 +1,35 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Feature - 04/05/2026 (Sessão 43.5) — 📎 Upload de Atestado/Justificativa anexado ao Abono
+
+### Implementado
+- **Backend** (Emergent Object Storage):
+  - `utils/storage.py` novo helper com `init_storage`, `put_object`, `get_object` usando `EMERGENT_LLM_KEY`. Inicializado no `startup_event` do server.
+  - Endpoint `POST /api/rh/ponto/abono-com-anexo` (multipart/form-data) — aceita `funcionario_id`, `data`, `tipo`, `motivo` e `arquivo` opcional. Valida extensão (PDF/JPG/PNG/WEBP/HEIC/HEIF), tamanho (≤10MB), faz upload ao storage no path `cra-erp/abonos/{funcionario_id}/{uuid}.{ext}` e salva metadados no documento.
+  - Endpoint `GET /api/rh/ponto/abono/{abono_id}/anexo` baixa o arquivo do storage com `Content-Disposition: inline` para abrir no navegador (PDFs/imagens).
+  - Endpoint legado `POST /api/rh/ponto/abono` (JSON) mantido para abonos sem anexo (compatibilidade).
+  - `dashboard-mensal` agora retorna `abono.anexo` com `storage_path`, `filename_original`, `content_type`, `size`, `ext`.
+  - **PDF Espelho**: tabela ABONOS DO MÊS ganhou coluna **"Anexo"** mostrando `Sim (filename.pdf)` ou `—`.
+
+- **Frontend** (`PontoQuadroTab.jsx`):
+  - Form de abono ganhou seção **"Anexar atestado/justificativa (opcional)"** com input file e validação visual de tamanho/nome.
+  - `criarAbono` envia `FormData` para `/abono-com-anexo` quando há arquivo, ou JSON para `/abono` quando não há.
+  - `baixarAnexoAbono` faz fetch como blob e abre em nova aba.
+  - Linha do dia abonado ganhou **botão de paperclip + external-link** ao lado do badge do abono quando existe anexo.
+
+### Validação
+- Curl upload de PDF (1477 bytes) → salvou em `cra-erp/abonos/{fid}/{uuid}.pdf`. ✅
+- Curl GET `/abono/{id}/anexo` → HTTP 200, content-type `application/pdf`, conteúdo idêntico ao original. ✅
+- PDF espelho extraído via pdfminer mostra coluna "Anexo" com `Sim (atestado_teste.pdf)`. ✅
+- Visual Playwright: linha 03/04 mostra clip + ícone external; formulário mostra input file + dicas. ✅
+
+### Arquivos modificados
+- `backend/utils/storage.py` (NOVO)
+- `backend/server.py` (init storage no startup)
+- `backend/routes/rh.py` (3 endpoints novos: abono JSON, abono-com-anexo multipart, download anexo)
+- `frontend/src/pages/rh/PontoQuadroTab.jsx` (input file, função download blob, ícone na linha do dia)
+
+
 ## Hotfix - 04/05/2026 (Sessão 43.4) — 🐛 Aba "Registro Diário" mostrava 0 / não tinha filtro por mês
 
 ### Problema reportado

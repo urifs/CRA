@@ -33,6 +33,8 @@ import {
   Trash2,
   Save,
   ShieldCheck,
+  Paperclip,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -110,17 +112,52 @@ export default function PontoQuadroTab({ refreshKey }) {
       return;
     }
     try {
-      await axios.post(`${API}/rh/ponto/abono`, {
-        funcionario_id: funcDetalhe.funcionario_id,
-        data: abonoForm.data,
-        tipo: abonoForm.tipo,
-        motivo: abonoForm.motivo.trim(),
-      });
+      // Se tem arquivo, usa endpoint multipart; senão, JSON simples
+      if (abonoForm.arquivo) {
+        const fd = new FormData();
+        fd.append("funcionario_id", funcDetalhe.funcionario_id);
+        fd.append("data", abonoForm.data);
+        fd.append("tipo", abonoForm.tipo);
+        fd.append("motivo", abonoForm.motivo.trim());
+        fd.append("arquivo", abonoForm.arquivo);
+        await axios.post(`${API}/rh/ponto/abono-com-anexo`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await axios.post(`${API}/rh/ponto/abono`, {
+          funcionario_id: funcDetalhe.funcionario_id,
+          data: abonoForm.data,
+          tipo: abonoForm.tipo,
+          motivo: abonoForm.motivo.trim(),
+        });
+      }
       toast.success(`Dia ${abonoForm.data.split("-").reverse().join("/")} abonado`);
       setAbonoForm(null);
       await recarregarFuncDetalhe();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao criar abono");
+    }
+  };
+
+  const baixarAnexoAbono = async (abonoId, filenameSugerido) => {
+    try {
+      const resp = await axios.get(`${API}/rh/ponto/abono/${abonoId}/anexo`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([resp.data], { type: resp.headers["content-type"] });
+      const url = URL.createObjectURL(blob);
+      // Abre em nova aba para o usuário visualizar (PDFs/imagens abrem inline)
+      const win = window.open(url, "_blank");
+      if (!win) {
+        // Fallback: força download
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filenameSugerido || "anexo";
+        a.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao baixar anexo");
     }
   };
 
@@ -555,6 +592,20 @@ export default function PontoQuadroTab({ refreshKey }) {
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-200 text-amber-900 rounded text-xs font-semibold">
                                 <ShieldCheck size={12} />
                                 {(d.abono.tipo || "").toUpperCase()}: {d.abono.motivo}
+                                {d.abono.anexo?.storage_path && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      baixarAnexoAbono(d.abono.id, d.abono.anexo.filename_original);
+                                    }}
+                                    className="ml-1 inline-flex items-center gap-0.5 px-1 py-0.5 bg-amber-700 text-white rounded text-[10px] hover:bg-amber-800"
+                                    title={`Abrir ${d.abono.anexo.filename_original}`}
+                                    data-testid={`btn-anexo-${d.data}`}
+                                  >
+                                    <Paperclip size={10} />
+                                    <ExternalLink size={9} />
+                                  </button>
+                                )}
                               </span>
                             ) : (
                               (d.batidas || []).join(" • ") || "—"
@@ -673,6 +724,33 @@ export default function PontoQuadroTab({ refreshKey }) {
                           data-testid="input-motivo-abono"
                         />
                       </div>
+                    </div>
+                    {/* Upload de arquivo (atestado/justificativa) */}
+                    <div>
+                      <Label className="text-xs flex items-center gap-1">
+                        <Paperclip size={12} />
+                        Anexar atestado/justificativa (opcional)
+                      </Label>
+                      <Input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+                        onChange={(e) =>
+                          setAbonoForm({
+                            ...abonoForm,
+                            arquivo: e.target.files?.[0] || null,
+                          })
+                        }
+                        className="cursor-pointer"
+                        data-testid="input-arquivo-abono"
+                      />
+                      {abonoForm.arquivo && (
+                        <p className="text-xs text-amber-700 mt-1">
+                          {abonoForm.arquivo.name} ({(abonoForm.arquivo.size / 1024).toFixed(1)} KB)
+                        </p>
+                      )}
+                      <p className="text-[10px] text-amber-600 mt-1">
+                        Formatos: PDF, JPG, PNG, WEBP, HEIC. Máximo 10MB.
+                      </p>
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button

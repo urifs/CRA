@@ -8156,6 +8156,14 @@ async def startup_event():
     """Inicializa o scheduler de importação automática"""
     logger.info("Iniciando scheduler de importação automática de notas...")
     
+    # Inicializar object storage (Emergent)
+    try:
+        from utils.storage import init_storage
+        init_storage()
+        logger.info("Object storage inicializado (Emergent)")
+    except Exception as e:
+        logger.warning(f"Falha ao inicializar object storage: {e}. Uploads ficarão indisponíveis até reinicializar.")
+    
     # Agendar importação diária às 22:00 (horário de Brasília)
     scheduler.add_job(
         importacao_automatica_notas,
