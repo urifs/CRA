@@ -266,9 +266,13 @@ export default function JornadasQuadro() {
                   placeholder="Ex: Comercial 8h, Diarista 6h, 12x36..."
                   value={form.nome}
                   onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                  disabled={editing?.is_padrao}
                   data-testid="input-jornada-nome"
                 />
+                {editing?.is_padrao && (
+                  <p className="text-[11px] text-emerald-600 mt-1">
+                    Esta é a jornada Padrão (atribuída automaticamente a quem não tem jornada definida). Você pode editar nome e horários livremente.
+                  </p>
+                )}
               </div>
               <div>
                 <Label>Descrição</Label>

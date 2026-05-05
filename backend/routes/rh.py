@@ -30,6 +30,7 @@ ponto_collection = db["ponto_registros"]
 ponto_abonos_collection = db["ponto_abonos"]
 ponto_observacoes_collection = db["ponto_observacoes"]
 jornadas_collection = db["jornadas_trabalho"]
+custos_rh_config_collection = db["custos_rh_config"]
 folha_pagamento_collection = db["folha_pagamento"]
 ferias_collection = db["ferias"]
 epi_fichas_collection = db["epi_fichas"]
@@ -2794,9 +2795,80 @@ async def get_rh_notificacoes_contagem():
 
 
 # ===== CUSTOS =====
+@rh_router.get("/custos/config")
+async def get_custos_config():
+    """Retorna a configuração de custos (cria com defaults se não existir)."""
+    cfg = await custos_rh_config_collection.find_one({"id": "default"}, {"_id": 0})
+    if cfg:
+        return cfg
+    defaults = {
+        "id": "default",
+        "fgts_aliquota": FGTS_ALIQUOTA,
+        "inss_patronal_aliquota": INSS_PATRONAL_ALIQUOTA,
+        "vale_transporte": 0.0,
+        "vale_alimentacao": 0.0,
+        "plano_saude": 0.0,
+        "outros_beneficios": 150.0,
+        "epis_custo_mensal": 50.0,
+        "horas_mes": 220,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await custos_rh_config_collection.insert_one(defaults)
+    defaults.pop("_id", None)
+    return defaults
+
+
+@rh_router.put("/custos/config")
+async def update_custos_config(payload: dict = Body(...)):
+    """Atualiza a configuração global de custos."""
+    update = {}
+    campos_float = [
+        "fgts_aliquota", "inss_patronal_aliquota",
+        "vale_transporte", "vale_alimentacao", "plano_saude",
+        "outros_beneficios", "epis_custo_mensal",
+    ]
+    for k in campos_float:
+        if k in payload:
+            try:
+                update[k] = float(payload[k] or 0)
+            except (ValueError, TypeError):
+                raise HTTPException(status_code=400, detail=f"{k} deve ser numérico")
+    if "horas_mes" in payload:
+        try:
+            update["horas_mes"] = int(payload["horas_mes"]) or 220
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="horas_mes deve ser inteiro")
+    if not update:
+        raise HTTPException(status_code=400, detail="Nada para atualizar")
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await custos_rh_config_collection.update_one(
+        {"id": "default"},
+        {"$set": update, "$setOnInsert": {"id": "default"}},
+        upsert=True,
+    )
+    cfg = await custos_rh_config_collection.find_one({"id": "default"}, {"_id": 0})
+    return cfg
+
+
+async def _carregar_custos_config():
+    """Carrega config (chama get_custos_config para garantir defaults)."""
+    return await get_custos_config()
+
+
 @rh_router.get("/custos")
 async def get_custos_rh():
-    """Obter custos detalhados de RH"""
+    """Obter custos detalhados de RH (usa configuração editável)."""
+    cfg = await _carregar_custos_config()
+    fgts_aliq = float(cfg.get("fgts_aliquota") or FGTS_ALIQUOTA)
+    inss_aliq = float(cfg.get("inss_patronal_aliquota") or INSS_PATRONAL_ALIQUOTA)
+    vt = float(cfg.get("vale_transporte") or 0)
+    va = float(cfg.get("vale_alimentacao") or 0)
+    ps = float(cfg.get("plano_saude") or 0)
+    outros = float(cfg.get("outros_beneficios") or 0)
+    epis_padrao = float(cfg.get("epis_custo_mensal") or 0)
+    horas_mes = int(cfg.get("horas_mes") or 220)
+    
     custos_funcionarios = []
     total_salarios = 0
     total_encargos = 0
@@ -2804,15 +2876,16 @@ async def get_custos_rh():
     total_epis = 0
     
     async for func in funcionarios_collection.find({"status": "ativo"}):
-        salario = func.get("salario", 0)
-        fgts = salario * (FGTS_ALIQUOTA / 100)
-        inss_patronal = salario * (INSS_PATRONAL_ALIQUOTA / 100)
+        salario = float(func.get("salario", 0) or 0)
+        fgts = salario * (fgts_aliq / 100)
+        inss_patronal = salario * (inss_aliq / 100)
         
-        beneficios = 150
-        epis_custo = 50
+        # Override por funcionário (futuro): func.get("custos_override")
+        beneficios = vt + va + ps + outros
+        epis_custo = epis_padrao
         
         custo_total = salario + fgts + inss_patronal + beneficios + epis_custo
-        custo_hora = custo_total / 220 if custo_total > 0 else 0
+        custo_hora = custo_total / horas_mes if custo_total > 0 and horas_mes > 0 else 0
         
         total_salarios += salario
         total_encargos += fgts + inss_patronal
@@ -2829,7 +2902,7 @@ async def get_custos_rh():
             "beneficios": beneficios,
             "epis": epis_custo,
             "custo_total": custo_total,
-            "custo_hora": custo_hora
+            "custo_hora": custo_hora,
         })
     
     return {
@@ -2839,19 +2912,32 @@ async def get_custos_rh():
             "total_encargos": total_encargos,
             "total_beneficios": total_beneficios,
             "total_epis": total_epis,
-            "custo_total": total_salarios + total_encargos + total_beneficios + total_epis
-        }
+            "custo_total": total_salarios + total_encargos + total_beneficios + total_epis,
+        },
+        "config": {
+            "fgts_aliquota": fgts_aliq,
+            "inss_patronal_aliquota": inss_aliq,
+            "vale_transporte": vt,
+            "vale_alimentacao": va,
+            "plano_saude": ps,
+            "outros_beneficios": outros,
+            "epis_custo_mensal": epis_padrao,
+            "horas_mes": horas_mes,
+        },
     }
 
 
 @rh_router.post("/custos/simular-dissidio")
 async def simular_dissidio(percentual: float = Body(..., embed=True)):
     """Simular impacto de dissídio na folha"""
+    cfg = await _carregar_custos_config()
+    fgts_aliq = float(cfg.get("fgts_aliquota") or FGTS_ALIQUOTA)
+    inss_aliq = float(cfg.get("inss_patronal_aliquota") or INSS_PATRONAL_ALIQUOTA)
     folha_atual = 0
     async for func in funcionarios_collection.find({"status": "ativo"}):
         salario = func.get("salario", 0)
-        fgts = salario * (FGTS_ALIQUOTA / 100)
-        inss_patronal = salario * (INSS_PATRONAL_ALIQUOTA / 100)
+        fgts = salario * (fgts_aliq / 100)
+        inss_patronal = salario * (inss_aliq / 100)
         folha_atual += salario + fgts + inss_patronal
     
     folha_nova = folha_atual * (1 + percentual / 100)
@@ -2873,6 +2959,9 @@ async def simular_rescisao(funcionario_id: str = Body(..., embed=True)):
     if not func:
         raise HTTPException(status_code=404, detail="Funcionário não encontrado")
     
+    cfg = await _carregar_custos_config()
+    fgts_aliq = float(cfg.get("fgts_aliquota") or FGTS_ALIQUOTA)
+    
     salario = func.get("salario", 0)
     data_admissao = func.get("data_admissao", "")
     
@@ -2886,7 +2975,7 @@ async def simular_rescisao(funcionario_id: str = Body(..., embed=True)):
     aviso_previo = salario + (salario / 30 * 3 * (meses_trabalhados // 12))
     ferias_proporcionais = (salario / 12) * (meses_trabalhados % 12) + (salario / 12 * (meses_trabalhados % 12) / 3)
     decimo_terceiro = (salario / 12) * (datetime.now().month)
-    fgts_saldo = salario * (FGTS_ALIQUOTA / 100) * meses_trabalhados
+    fgts_saldo = salario * (fgts_aliq / 100) * meses_trabalhados
     multa_fgts = fgts_saldo * 0.4
     
     total = saldo_salario + aviso_previo + ferias_proporcionais + decimo_terceiro + multa_fgts

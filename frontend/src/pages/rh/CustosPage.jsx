@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { 
   Calculator, Users, DollarSign, TrendingUp, TrendingDown, 
-  AlertTriangle, Search, BarChart3, PieChart, Loader2
+  AlertTriangle, Search, BarChart3, PieChart, Loader2, Settings, Save
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,11 +44,58 @@ export default function CustosPage() {
   const [simulacaoDissidio, setSimulacaoDissidio] = useState(null);
   const [simulacaoRescisao, setSimulacaoRescisao] = useState(null);
   const [calculando, setCalculando] = useState(false);
+  
+  // Configuração editável de custos
+  const [configCustos, setConfigCustos] = useState({
+    fgts_aliquota: 8.0,
+    inss_patronal_aliquota: 20.0,
+    vale_transporte: 0,
+    vale_alimentacao: 0,
+    plano_saude: 0,
+    outros_beneficios: 150,
+    epis_custo_mensal: 50,
+    horas_mes: 220,
+  });
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
 
   useEffect(() => {
     fetchFuncionarios();
     fetchCustos();
+    fetchConfig();
   }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const { data } = await axios.get(`${API}/rh/custos/config`);
+      setConfigCustos({
+        fgts_aliquota: data.fgts_aliquota ?? 8,
+        inss_patronal_aliquota: data.inss_patronal_aliquota ?? 20,
+        vale_transporte: data.vale_transporte ?? 0,
+        vale_alimentacao: data.vale_alimentacao ?? 0,
+        plano_saude: data.plano_saude ?? 0,
+        outros_beneficios: data.outros_beneficios ?? 0,
+        epis_custo_mensal: data.epis_custo_mensal ?? 0,
+        horas_mes: data.horas_mes ?? 220,
+      });
+    } catch (e) {
+      console.error("Erro ao carregar config", e);
+    }
+  };
+
+  const salvarConfig = async () => {
+    setSalvandoConfig(true);
+    try {
+      await axios.put(`${API}/rh/custos/config`, configCustos);
+      toast.success("Configuração de custos salva. Valores recalculados.");
+      setIsConfigModalOpen(false);
+      await fetchCustos();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao salvar configuração");
+    } finally {
+      setSalvandoConfig(false);
+    }
+  };
 
   const fetchFuncionarios = async () => {
     try {
@@ -135,6 +182,9 @@ export default function CustosPage() {
           <p className="text-gray-500 mt-1">Análise de custos com pessoal</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsConfigModalOpen(true)} className="border-emerald-500 text-emerald-600">
+            <Settings size={18} className="mr-2" />Configurar Custos
+          </Button>
           <Button variant="outline" onClick={() => setIsDissidioModalOpen(true)} className="border-orange-500 text-orange-500">
             <TrendingUp size={18} className="mr-2" />Simular Dissídio
           </Button>
@@ -183,19 +233,32 @@ export default function CustosPage() {
         </Card>
       </div>
 
-      {/* Explicação do Custo Real */}
+      {/* Explicação do Custo Real (com valores atuais) */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <Calculator size={18} className="text-[#10B981]" />
-            Cálculo do Custo Real por Funcionário
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Calculator size={18} className="text-[#10B981]" />
+              Cálculo do Custo Real por Funcionário
+            </h3>
+            <Button size="sm" variant="ghost" onClick={() => setIsConfigModalOpen(true)} className="text-emerald-600">
+              <Settings size={14} className="mr-1" />
+              Editar valores
+            </Button>
+          </div>
           <div className="bg-gray-50 p-4 rounded-lg text-sm">
             <p className="font-mono">
-              <strong>Custo Real = </strong>Salário + FGTS (8%) + INSS Patronal (~20%) + Vale Transporte + Vale Alimentação + Plano de Saúde + EPIs
+              <strong>Custo Real = </strong>Salário 
+              + FGTS ({configCustos.fgts_aliquota}%) 
+              + INSS Patronal ({configCustos.inss_patronal_aliquota}%) 
+              + VT ({formatCurrency(configCustos.vale_transporte)}) 
+              + VA ({formatCurrency(configCustos.vale_alimentacao)}) 
+              + Plano Saúde ({formatCurrency(configCustos.plano_saude)})
+              + Outros ({formatCurrency(configCustos.outros_beneficios)})
+              + EPIs ({formatCurrency(configCustos.epis_custo_mensal)}/mês)
             </p>
             <p className="text-gray-500 mt-2">
-              <strong>Custo/Hora = </strong>Custo Real Mensal ÷ Horas Trabalhadas (220h CLT)
+              <strong>Custo/Hora = </strong>Custo Real Mensal ÷ {configCustos.horas_mes}h (jornada-base)
             </p>
           </div>
         </CardContent>
@@ -400,6 +463,112 @@ export default function CustosPage() {
               setSimulacaoRescisao(null);
               setSelectedFuncionario("");
             }}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal de Configuração de Custos */}
+      <Dialog open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="text-emerald-600" size={20} />
+              Configurar valores de Custos RH
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Estes valores são aplicados automaticamente a todos os funcionários ativos no cálculo do custo real e nas simulações.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>FGTS (%)</Label>
+                <DecimalInput
+                  value={configCustos.fgts_aliquota}
+                  onChange={(v) => setConfigCustos({ ...configCustos, fgts_aliquota: v })}
+                  placeholder="8,00"
+                  data-testid="input-config-fgts"
+                />
+              </div>
+              <div>
+                <Label>INSS Patronal (%)</Label>
+                <DecimalInput
+                  value={configCustos.inss_patronal_aliquota}
+                  onChange={(v) => setConfigCustos({ ...configCustos, inss_patronal_aliquota: v })}
+                  placeholder="20,00"
+                  data-testid="input-config-inss"
+                />
+              </div>
+              <div>
+                <Label>Vale Transporte (R$/mês)</Label>
+                <DecimalInput
+                  value={configCustos.vale_transporte}
+                  onChange={(v) => setConfigCustos({ ...configCustos, vale_transporte: v })}
+                  placeholder="0,00"
+                  data-testid="input-config-vt"
+                />
+              </div>
+              <div>
+                <Label>Vale Alimentação (R$/mês)</Label>
+                <DecimalInput
+                  value={configCustos.vale_alimentacao}
+                  onChange={(v) => setConfigCustos({ ...configCustos, vale_alimentacao: v })}
+                  placeholder="0,00"
+                  data-testid="input-config-va"
+                />
+              </div>
+              <div>
+                <Label>Plano de Saúde (R$/mês)</Label>
+                <DecimalInput
+                  value={configCustos.plano_saude}
+                  onChange={(v) => setConfigCustos({ ...configCustos, plano_saude: v })}
+                  placeholder="0,00"
+                  data-testid="input-config-saude"
+                />
+              </div>
+              <div>
+                <Label>Outros Benefícios (R$/mês)</Label>
+                <DecimalInput
+                  value={configCustos.outros_beneficios}
+                  onChange={(v) => setConfigCustos({ ...configCustos, outros_beneficios: v })}
+                  placeholder="0,00"
+                  data-testid="input-config-outros"
+                />
+              </div>
+              <div>
+                <Label>EPIs (R$/mês)</Label>
+                <DecimalInput
+                  value={configCustos.epis_custo_mensal}
+                  onChange={(v) => setConfigCustos({ ...configCustos, epis_custo_mensal: v })}
+                  placeholder="0,00"
+                  data-testid="input-config-epis"
+                />
+              </div>
+              <div>
+                <Label>Horas/mês (jornada-base)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={configCustos.horas_mes}
+                  onChange={(e) => setConfigCustos({ ...configCustos, horas_mes: parseInt(e.target.value) || 220 })}
+                  data-testid="input-config-horas"
+                />
+              </div>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded p-3 text-xs text-emerald-700">
+              💡 Valores típicos no Brasil: FGTS 8%, INSS Patronal 20% (Anexo IV pode variar 7,5%–27,5%). Salve para recalcular toda a tabela.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsConfigModalOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={salvarConfig}
+              disabled={salvandoConfig}
+              className="bg-emerald-600 hover:bg-emerald-700"
+              data-testid="btn-salvar-config-custos"
+            >
+              {salvandoConfig ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save size={16} className="mr-2" />}
+              Salvar e recalcular
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

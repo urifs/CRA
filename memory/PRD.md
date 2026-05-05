@@ -1,5 +1,30 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Feature - 04/05/2026 (Sessão 43.7) — 🟢 Edição da Jornada Padrão + Custos RH editáveis
+
+### Implementado
+**Jornada Padrão editável**:
+- Removida a trava do input "Nome" no dialog de edição da jornada Padrão. Agora o usuário pode renomear, ajustar horários e descrição livremente.
+- Mensagem em verde explica que continua sendo a jornada atribuída automaticamente a quem não tem outra definida.
+- Backend já aceitava `PUT /jornadas/{id}` em qualquer jornada (sem mudança).
+
+**Custos RH editáveis** (antes hardcoded):
+- Nova collection `custos_rh_config` (singleton id="default") com campos persistidos: `fgts_aliquota`, `inss_patronal_aliquota`, `vale_transporte`, `vale_alimentacao`, `plano_saude`, `outros_beneficios`, `epis_custo_mensal`, `horas_mes`.
+- Endpoints novos:
+  - `GET /api/rh/custos/config` — cria com defaults (8% / 20% / 0 / 0 / 0 / 150 / 50 / 220) se não existir.
+  - `PUT /api/rh/custos/config` — atualiza qualquer subset.
+- `GET /api/rh/custos`, `simular_dissidio` e `simular_rescisao` agora carregam config dinâmica em vez das constantes.
+- Frontend `CustosPage.jsx`:
+  - Botão **"Configurar Custos"** no header + atalho "Editar valores" no card de explicação.
+  - Modal com 8 inputs (DecimalInput para BRL e horas como `Input number`).
+  - Salvar refresca toda a tabela de custos automaticamente.
+  - Card explicativo agora exibe valores dinâmicos.
+
+### Validação
+- Curl: GET config retornou defaults; PUT atualizou para FGTS 8.5%, INSS 22%, VT 200, VA 350, Saúde 250, EPIs 80; GET /custos passou a refletir (resumo: salários R$7000, encargos R$2135, benefícios R$7200, EPIs R$720, custo total R$17.055).
+- Frontend Playwright: 3 telas (página com card dinâmico, dialog de configuração, edição da Padrão com campo nome desbloqueado) renderizadas corretamente.
+
+
 ## Feature - 04/05/2026 (Sessão 43.6) — 🟢 Jornadas de Trabalho personalizáveis
 
 ### Implementado
