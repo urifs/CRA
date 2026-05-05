@@ -407,7 +407,7 @@ export default function ImportacaoNFPage() {
     return Math.max(0, LIMITE_DIARIO - consultasHoje);
   };
 
-  const handleImportarNotas = async (certificadoId) => {
+  const handleImportarNotas = async (certificadoId, desdeInicio = false) => {
     const cert = certificados.find(c => c.id === certificadoId);
     
     if (cert && isCertificadoBloqueado(cert)) {
@@ -422,23 +422,28 @@ export default function ImportacaoNFPage() {
     setImportando(true);
     setImportandoCertId(certificadoId);
     try {
-      // Importar NF-e (SEFAZ) e NFS-e (prefeitura) em paralelo
+      // Importar NF-e (SEFAZ) e NFS-e (prefeitura) em paralelo.
+      // Se desdeInicio=true, NF-e ignora o cursor NSU e re-varre o histórico todo.
+      const nfeUrl = desdeInicio
+        ? `${API}/nfe/importar/${certificadoId}?desde_inicio=true`
+        : `${API}/nfe/importar/${certificadoId}`;
       const [nfeResult, nfseResult] = await Promise.allSettled([
-        axios.post(`${API}/nfe/importar/${certificadoId}`),
+        axios.post(nfeUrl),
         axios.post(`${API}/nfse/importar/${certificadoId}`)
       ]);
 
       const empresaNome = cert?.razao_social || "Empresa";
+      const sufixo = desdeInicio ? " [varredura completa]" : "";
 
       // Tratar resultado NF-e
       if (nfeResult.status === 'fulfilled') {
         const d = nfeResult.value.data;
         if (d.aviso) {
-          toast.warning(`NF-e ${empresaNome}: ${d.aviso}`, { duration: 8000 });
+          toast.warning(`NF-e ${empresaNome}${sufixo}: ${d.aviso}`, { duration: 8000 });
         } else if (d.novas_nfes > 0) {
-          toast.success(`${empresaNome}: ${d.novas_nfes} nova(s) NF-e importada(s)!`);
+          toast.success(`${empresaNome}${sufixo}: ${d.novas_nfes} nova(s) NF-e importada(s)!`);
         } else {
-          toast.info(`NF-e ${empresaNome}: nenhuma nova nota encontrada na SEFAZ`);
+          toast.info(`NF-e ${empresaNome}${sufixo}: nenhuma nova nota encontrada na SEFAZ`);
         }
       } else {
         toast.error(`NF-e ${empresaNome}: ${nfeResult.reason?.response?.data?.detail || "Erro"}`);
@@ -454,7 +459,7 @@ export default function ImportacaoNFPage() {
         } else if ((d.erros || []).length > 0) {
           toast.warning(`NFS-e ${empresaNome}: ${d.erros.join(' | ')}`, { duration: 12000 });
         } else {
-          toast.info(`NFS-e ${empresaNome}: nenhuma nova nota encontrada nos últimos 90 dias`);
+          toast.info(`NFS-e ${empresaNome}: nenhuma nova nota encontrada no histórico (5 anos)`);
         }
       } else {
         const errMsg = nfseResult.reason?.response?.data?.detail;
@@ -1562,13 +1567,15 @@ export default function ImportacaoNFPage() {
                       </span>
                     </div>
                     
-                    <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
+                    <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1"
+                        className="flex-1 min-w-[120px]"
                         onClick={() => handleImportarNotas(cert.id)}
                         disabled={importando || bloqueado || semConsultas}
+                        data-testid={`btn-importar-incremental-${cert.id}`}
+                        title="Importa apenas as NF-e novas desde a última sincronização"
                       >
                         {importandoCertId === cert.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -1588,6 +1595,25 @@ export default function ImportacaoNFPage() {
                             Importar
                           </>
                         )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                        onClick={() => {
+                          if (window.confirm(
+                            `Importação COMPLETA: re-varre todo o histórico de NF-e (NSU=0) e busca todas as NFS-e dos últimos 5 anos. ` +
+                            `Pode demorar mais que o normal (até ~30s). Duplicatas serão ignoradas. Deseja continuar?`
+                          )) {
+                            handleImportarNotas(cert.id, true);
+                          }
+                        }}
+                        disabled={importando || bloqueado || semConsultas}
+                        data-testid={`btn-importar-completo-${cert.id}`}
+                        title="Re-varre TODO o histórico (NF-e desde NSU=0 e NFS-e dos últimos 5 anos)"
+                      >
+                        <FileDown size={14} className="mr-1" />
+                        Histórico Completo
                       </Button>
                       <Button 
                         variant="outline" 

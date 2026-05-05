@@ -184,8 +184,17 @@ def _post_nfse_com_fallback_soapaction(
 
 
 @importacao_router.post("/nfe/importar/{certificado_id}")
-async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_current_user)):
-    """Consulta e importa NF-e da SEFAZ para o CNPJ especificado"""
+async def importar_nfe(
+    certificado_id: str,
+    desde_inicio: bool = False,
+    current_user: dict = Depends(get_current_user),
+):
+    """Consulta e importa NF-e da SEFAZ para o CNPJ especificado.
+
+    Por padrão importa de forma incremental a partir do último NSU sincronizado.
+    Passe `?desde_inicio=true` para forçar uma varredura completa do histórico
+    (NSU=0). Duplicatas são detectadas pela chave de acesso.
+    """
     certificado = await db.nfe_certificados.find_one({"id": certificado_id})
     if not certificado:
         raise HTTPException(status_code=404, detail="Certificado não encontrado")
@@ -369,10 +378,15 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
                 homologacao=(certificado.get("ambiente", "producao") == "homologacao")
             )
             
-            ultimo_nsu = certificado.get("ultimo_nsu", "000000000000000")
+            ultimo_nsu = "000000000000000" if desde_inicio else certificado.get("ultimo_nsu", "000000000000000")
             
-            max_iteracoes = 10
+            # Importação completa: SEFAZ retorna até ~50 docs/chamada via cursor NSU.
+            # Iteramos até esgotar o cursor (ultNSU >= maxNSU) ou bater o teto de segurança.
+            # Teto de 100 iterações ≈ 5.000 NF-e em uma única importação.
+            max_iteracoes = 100
+            iteracoes_realizadas = 0
             for i in range(max_iteracoes):
+                iteracoes_realizadas = i + 1
                 try:
                     resposta = con.consulta_distribuicao(
                         cnpj=certificado["cnpj"],
@@ -513,6 +527,8 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             })
         
         status_message = "Consulta realizada com sucesso" if consulta_realizada else "Consulta realizada (modo offline)"
+        if desde_inicio:
+            status_message += " (varredura completa do histórico)"
         
         return {
             "message": status_message,
@@ -520,6 +536,8 @@ async def importar_nfe(certificado_id: str, current_user: dict = Depends(get_cur
             "total_novas": total_novas,
             "certificado_id": certificado_id,
             "ultimo_nsu": ultimo_nsu_processado,
+            "iteracoes_realizadas": iteracoes_realizadas if 'iteracoes_realizadas' in locals() else 0,
+            "desde_inicio": desde_inicio,
             "aviso": None
         }
         
