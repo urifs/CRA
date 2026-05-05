@@ -4,7 +4,7 @@ Chatbot Routes - AI Assistant for the platform
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import io
 import base64
@@ -60,77 +60,235 @@ class ChatResponse(BaseModel):
 
 
 async def get_full_platform_context() -> str:
-    """Coleta TODAS as informações de TODAS as coleções do banco de dados"""
+    """Coleta TODAS as informações de TODAS as coleções do banco de dados.
+    Inclui agregações úteis para Ponto (faltas/atrasos), Folha, NF-e, OS, etc."""
+    from collections import defaultdict
     context_parts = []
-    
+    hoje = datetime.now()
+    inicio_30 = (hoje - timedelta(days=30)).strftime("%Y-%m-%d")
+    inicio_60 = (hoje - timedelta(days=60)).strftime("%Y-%m-%d")
+    mes_passado_dt = hoje.replace(day=1) - timedelta(days=1)
+    mes_passado_inicio = mes_passado_dt.replace(day=1).strftime("%Y-%m-%d")
+    mes_passado_fim = mes_passado_dt.strftime("%Y-%m-%d")
+
     context_parts.append("=" * 60)
-    context_parts.append("BANCO DE DADOS COMPLETO - CRA CONSTRUTORA")
+    context_parts.append(f"BANCO DE DADOS COMPLETO - CRA CONSTRUTORA  |  Hoje: {hoje.strftime('%d/%m/%Y')}")
     context_parts.append("=" * 60)
-    
-    # USUÁRIOS
+
+    # ============ USUÁRIOS ============
     users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nUSUÁRIOS DO SISTEMA ({len(users)} registros)\n{'='*40}")
+    context_parts.append(f"\n\n{'='*40}\nUSUÁRIOS ({len(users)})\n{'='*40}")
     for u in users:
-        context_parts.append(f"- Nome: {u.get('name')} | Email: {u.get('email')} | Tipo: {u.get('role', 'gerenciamento')}")
-    
-    # CATEGORIAS DE MÁQUINAS
-    categories = await db.categories.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nCATEGORIAS DE MÁQUINAS ({len(categories)} registros)\n{'='*40}")
-    for c in categories:
-        context_parts.append(f"- Nome: {c.get('name')} | Descrição: {c.get('description', '-')}")
-    
-    # MÁQUINAS
+        context_parts.append(f"- {u.get('name')} | {u.get('email')} | role={u.get('role','gerenciamento')}")
+
+    # ============ MÁQUINAS / FROTA ============
+    categories = await db.categories.find({}, {"_id": 0}).to_list(200)
     machines = await db.machines.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nMÁQUINAS CADASTRADAS ({len(machines)} registros)\n{'='*40}")
+    context_parts.append(f"\n\n{'='*40}\nFROTA ({len(machines)} máquinas, {len(categories)} categorias)\n{'='*40}")
     for m in machines:
-        context_parts.append(f"- Nome: {m.get('name')} | Placa: {m.get('plate')} | Marca: {m.get('brand', '-')} | Status: {m.get('status', '-')}")
-    
-    # MANUTENÇÕES
+        context_parts.append(
+            f"- {m.get('name')} | placa={m.get('plate','-')} | marca={m.get('brand','-')} | status={m.get('status','-')}"
+        )
+
+    # ============ MANUTENÇÕES ============
     maintenances = await db.maintenances.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nMANUTENÇÕES ({len(maintenances)} registros)\n{'='*40}")
-    total_valor = sum(m.get('part_value', 0) for m in maintenances)
-    context_parts.append(f"RESUMO: Total gasto: R$ {total_valor:.2f}")
-    for m in maintenances[:20]:
-        context_parts.append(f"- Peça: {m.get('part_name')} | Valor: R$ {m.get('part_value', 0):.2f} | Data: {m.get('replacement_date', '-')}")
-    
-    # ESTOQUE
+    total_valor_manut = sum(m.get('part_value', 0) for m in maintenances)
+    context_parts.append(f"\n\n{'='*40}\nMANUTENÇÕES ({len(maintenances)})\n{'='*40}")
+    context_parts.append(f"TOTAL GASTO: R$ {total_valor_manut:,.2f}")
+    for m in maintenances[:30]:
+        context_parts.append(
+            f"- {m.get('part_name','-')} | R$ {m.get('part_value',0):,.2f} | data={m.get('replacement_date','-')} | máquina={m.get('machine_id','-')}"
+        )
+
+    # ============ ESTOQUE ============
     stock_items = await db.stock_items.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nITENS DE ESTOQUE ({len(stock_items)} registros)\n{'='*40}")
     low_stock = [i for i in stock_items if i.get("quantity", 0) <= i.get("min_quantity", 0)]
-    context_parts.append(f"ALERTA: {len(low_stock)} itens com estoque baixo!")
+    context_parts.append(f"\n\n{'='*40}\nESTOQUE ({len(stock_items)} itens, {len(low_stock)} em alerta)\n{'='*40}")
     for i in stock_items:
-        context_parts.append(f"- Nome: {i.get('name')} | Qtd: {i.get('quantity', 0)} | Mínimo: {i.get('min_quantity', 0)}")
-    
-    # OBRAS
+        context_parts.append(f"- {i.get('name')} | qtd={i.get('quantity',0)} | min={i.get('min_quantity',0)}")
+
+    # ============ OBRAS ============
     obras = await db.obras.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nOBRAS/PROJETOS ({len(obras)} registros)\n{'='*40}")
+    context_parts.append(f"\n\n{'='*40}\nOBRAS ({len(obras)})\n{'='*40}")
     for o in obras:
-        context_parts.append(f"- Nome: {o.get('name')} | Local: {o.get('location', '-')} | Status: {o.get('status', '-')}")
-    
-    # CADASTROS
+        context_parts.append(f"- {o.get('name','-')} | {o.get('location','-')} | status={o.get('status','-')}")
+
+    # ============ CADASTROS (clientes/fornecedores) ============
     cadastros = await db.cadastros.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nCADASTROS ({len(cadastros)} registros)\n{'='*40}")
-    for c in cadastros:
-        context_parts.append(f"- Tipo: {c.get('tipo_cadastro', '-')} | Nome: {c.get('nome_razao', '-')}")
-    
-    # CONTAS A PAGAR
-    contas_pagar = await db.contas_pagar.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nCONTAS A PAGAR ({len(contas_pagar)} registros)\n{'='*40}")
-    total_pagar = sum(c.get('valor', 0) for c in contas_pagar if c.get('status') == 'em_aberto')
-    context_parts.append(f"TOTAL EM ABERTO: R$ {total_pagar:.2f}")
-    
-    # CONTAS A RECEBER
-    contas_receber = await db.contas_receber.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nCONTAS A RECEBER ({len(contas_receber)} registros)\n{'='*40}")
-    total_receber = sum(c.get('valor', 0) for c in contas_receber if c.get('status') == 'em_aberto')
-    context_parts.append(f"TOTAL EM ABERTO: R$ {total_receber:.2f}")
-    
-    # FUNCIONÁRIOS RH
+    context_parts.append(f"\n\n{'='*40}\nCADASTROS ({len(cadastros)})\n{'='*40}")
+    for c in cadastros[:80]:
+        context_parts.append(f"- {c.get('tipo_cadastro','-')}: {c.get('nome_razao','-')} | CNPJ/CPF={c.get('cnpj_cpf','-')}")
+
+    # ============ FINANCEIRO ============
+    contas_pagar = await db.contas_pagar.find({}, {"_id": 0}).to_list(2000)
+    contas_receber = await db.contas_receber.find({}, {"_id": 0}).to_list(2000)
+    pagar_aberto = [c for c in contas_pagar if c.get("status") in ("em_aberto", "pendente", "parcial")]
+    receber_aberto = [c for c in contas_receber if c.get("status") in ("em_aberto", "pendente", "parcial")]
+    pagar_vencidas = [c for c in pagar_aberto if (c.get("data_vencimento") or "9999") < hoje.strftime("%Y-%m-%d")]
+    receber_vencidas = [c for c in receber_aberto if (c.get("data_vencimento") or "9999") < hoje.strftime("%Y-%m-%d")]
+    context_parts.append(f"\n\n{'='*40}\nCONTAS A PAGAR ({len(contas_pagar)})\n{'='*40}")
+    context_parts.append(f"EM ABERTO: {len(pagar_aberto)} | VENCIDAS: {len(pagar_vencidas)}")
+    context_parts.append(f"TOTAL EM ABERTO: R$ {sum(c.get('valor',0) for c in pagar_aberto):,.2f}")
+    for c in pagar_aberto[:40]:
+        context_parts.append(
+            f"- {c.get('descricao','-')[:50]} | R$ {c.get('valor',0):,.2f} | venc={c.get('data_vencimento','-')} | forma={c.get('forma_pagamento','-')} | fornecedor={c.get('cadastro_nome','-')}"
+        )
+    context_parts.append(f"\n\n{'='*40}\nCONTAS A RECEBER ({len(contas_receber)})\n{'='*40}")
+    context_parts.append(f"EM ABERTO: {len(receber_aberto)} | VENCIDAS: {len(receber_vencidas)}")
+    context_parts.append(f"TOTAL EM ABERTO: R$ {sum(c.get('valor',0) for c in receber_aberto):,.2f}")
+    for c in receber_aberto[:40]:
+        context_parts.append(
+            f"- {c.get('descricao','-')[:50]} | R$ {c.get('valor',0):,.2f} | venc={c.get('data_vencimento','-')} | cliente={c.get('cadastro_nome','-')}"
+        )
+
+    # ============ ORDENS DE SERVIÇO ============
+    ordens_servico = await db.ordens_servico.find({}, {"_id": 0}).sort("data_emissao", -1).to_list(200)
+    context_parts.append(f"\n\n{'='*40}\nORDENS DE SERVIÇO ({len(ordens_servico)})\n{'='*40}")
+    for os_ in ordens_servico[:30]:
+        context_parts.append(
+            f"- OS #{os_.get('numero','?')} | {os_.get('cliente_nome','-')} | R$ {os_.get('valor_total',0):,.2f} | status={os_.get('status','-')} | emissão={os_.get('data_emissao','-')}"
+        )
+
+    # ============ ALUGUEIS ============
+    alugueis = await db.alugueis.find({}, {"_id": 0}).to_list(200)
+    context_parts.append(f"\n\n{'='*40}\nALUGUEIS ({len(alugueis)})\n{'='*40}")
+    for a in alugueis[:30]:
+        context_parts.append(
+            f"- {a.get('descricao','-')[:50]} | R$ {a.get('valor_mensal',0):,.2f}/mês | início={a.get('data_inicio','-')} | status={a.get('status','-')}"
+        )
+
+    # ============ NF-e e NFS-e IMPORTADAS ============
+    nfes = await db.nfes_importadas.find({}, {"_id": 0}).sort("data_emissao", -1).to_list(50)
+    nfses = await db.nfse_importadas.find({}, {"_id": 0}).sort("data_emissao", -1).to_list(50)
+    context_parts.append(f"\n\n{'='*40}\nNF-e ({len(nfes)} amostra) / NFS-e ({len(nfses)} amostra)\n{'='*40}")
+    for nf in nfes[:15]:
+        context_parts.append(
+            f"- NF-e #{nf.get('numero_nota','?')} | {nf.get('razao_social_emitente','-')} | R$ {nf.get('valor_total',0):,.2f} | {nf.get('data_emissao','-')}"
+        )
+    for nf in nfses[:15]:
+        context_parts.append(
+            f"- NFS-e #{nf.get('numero_nota','?')} | {nf.get('razao_social_emitente','-')} | R$ {nf.get('valor_total',0):,.2f} | {nf.get('data_emissao','-')}"
+        )
+
+    # ============ FUNCIONÁRIOS RH ============
     funcionarios = await db.funcionarios.find({}, {"_id": 0}).to_list(500)
-    context_parts.append(f"\n\n{'='*40}\nFUNCIONÁRIOS RH ({len(funcionarios)} registros)\n{'='*40}")
+    func_id_to_nome = {f.get("id"): f.get("nome") for f in funcionarios}
+    ativos = [f for f in funcionarios if (f.get("status") or "").lower() == "ativo"]
+    context_parts.append(f"\n\n{'='*40}\nFUNCIONÁRIOS RH ({len(funcionarios)} total, {len(ativos)} ativos)\n{'='*40}")
     for f in funcionarios:
-        context_parts.append(f"- ID: {f.get('id')} | Nome: {f.get('nome')} | Cargo: {f.get('cargo', '-')} | Salário: R$ {f.get('salario', 0):,.2f}")
-    
+        context_parts.append(
+            f"- ID:{f.get('id','-')} | {f.get('nome','-')} | {f.get('cargo','-')} | R$ {f.get('salario',0):,.2f} | status={f.get('status','-')}"
+        )
+
+    # ============ PONTO ELETRÔNICO — agregações por funcionário ============
+    ponto_30 = await db.ponto_registros.find(
+        {"data": {"$gte": inicio_30, "$lte": hoje.strftime("%Y-%m-%d")}}, {"_id": 0}
+    ).to_list(5000)
+    ponto_mes_passado = await db.ponto_registros.find(
+        {"data": {"$gte": mes_passado_inicio, "$lte": mes_passado_fim}}, {"_id": 0}
+    ).to_list(5000)
+    ponto_60 = await db.ponto_registros.find(
+        {"data": {"$gte": inicio_60, "$lte": hoje.strftime("%Y-%m-%d")}}, {"_id": 0}
+    ).to_list(8000)
+    context_parts.append(
+        f"\n\n{'='*40}\nPONTO ELETRÔNICO (últ. 30 dias: {len(ponto_30)} regs / 60 dias: {len(ponto_60)})\n{'='*40}"
+    )
+    context_parts.append(
+        f"Período mês passado considerado: {mes_passado_inicio} a {mes_passado_fim}"
+    )
+
+    def _agregar(registros, label):
+        faltas = defaultdict(int)
+        atrasos = defaultdict(int)
+        abonados = defaultdict(int)
+        trabalhados = defaultdict(int)
+        for r in registros:
+            fid = r.get("funcionario_id")
+            if not fid:
+                continue
+            status_dia = (r.get("status_dia") or "").lower()
+            if r.get("abono") or status_dia == "abonado":
+                abonados[fid] += 1
+            elif status_dia in ("sem_registro", "faltou", "ausente"):
+                faltas[fid] += 1
+            elif status_dia in ("atrasado", "atraso"):
+                atrasos[fid] += 1
+                trabalhados[fid] += 1
+            elif r.get("batidas"):
+                trabalhados[fid] += 1
+        if faltas or atrasos or abonados:
+            context_parts.append(f"\n>>> RESUMO {label}:")
+            top_faltas = sorted(faltas.items(), key=lambda x: -x[1])[:10]
+            for fid, qtd in top_faltas:
+                context_parts.append(
+                    f"- {func_id_to_nome.get(fid,'?')} → {qtd} falta(s) | {atrasos.get(fid,0)} atraso(s) | {abonados.get(fid,0)} abono(s) | {trabalhados.get(fid,0)} dia(s) trabalhado(s)"
+                )
+            if not top_faltas:
+                # Se ninguém tem faltas, ainda mostre quem mais trabalhou
+                top_t = sorted(trabalhados.items(), key=lambda x: -x[1])[:5]
+                for fid, qtd in top_t:
+                    context_parts.append(f"- {func_id_to_nome.get(fid,'?')} → {qtd} dia(s) trabalhado(s) | {atrasos.get(fid,0)} atraso(s)")
+        else:
+            context_parts.append(f"(nenhuma falta/atraso/abono registrado em {label})")
+
+    _agregar(ponto_mes_passado, "MÊS PASSADO")
+    _agregar(ponto_30, "ÚLTIMOS 30 DIAS")
+
+    # ============ FOLHA DE PAGAMENTO ============
+    folhas = await db.folha_pagamento.find({}, {"_id": 0}).sort("competencia", -1).to_list(200)
+    context_parts.append(f"\n\n{'='*40}\nFOLHA DE PAGAMENTO ({len(folhas)})\n{'='*40}")
+    by_comp = defaultdict(list)
+    for fp in folhas:
+        by_comp[fp.get("competencia", "?")].append(fp)
+    for comp in list(sorted(by_comp.keys(), reverse=True))[:6]:
+        items = by_comp[comp]
+        total_liq = sum(i.get("liquido", 0) for i in items)
+        context_parts.append(
+            f"- Competência {comp}: {len(items)} funcionário(s) | total líquido R$ {total_liq:,.2f}"
+        )
+
+    # ============ FÉRIAS ============
+    ferias = await db.ferias.find({}, {"_id": 0}).to_list(200)
+    context_parts.append(f"\n\n{'='*40}\nFÉRIAS ({len(ferias)})\n{'='*40}")
+    for fe in ferias[:20]:
+        context_parts.append(
+            f"- {func_id_to_nome.get(fe.get('funcionario_id'), '?')} | {fe.get('data_inicio','-')} → {fe.get('data_fim','-')} | status={fe.get('status','-')}"
+        )
+
+    # ============ EPI ============
+    epi = await db.epi_fichas.find({}, {"_id": 0}).to_list(500)
+    context_parts.append(f"\n\n{'='*40}\nEPI ({len(epi)} fichas)\n{'='*40}")
+    for e in epi[:20]:
+        context_parts.append(
+            f"- {func_id_to_nome.get(e.get('funcionario_id'), '?')} | EPI={e.get('item','-')} | entrega={e.get('data_entrega','-')}"
+        )
+
+    # ============ JORNADAS ============
+    jornadas = await db.jornadas.find({}, {"_id": 0}).to_list(50)
+    context_parts.append(f"\n\n{'='*40}\nJORNADAS DE TRABALHO ({len(jornadas)})\n{'='*40}")
+    for j in jornadas:
+        context_parts.append(f"- {j.get('nome','-')} | padrão={j.get('is_padrao',False)}")
+
+    # ============ NOTIFICAÇÕES RH ============
+    notifs = await db.rh_notificacoes.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    context_parts.append(f"\n\n{'='*40}\nNOTIFICAÇÕES RH ({len(notifs)})\n{'='*40}")
+    for n in notifs[:20]:
+        context_parts.append(
+            f"- [{n.get('tipo','info')}] {n.get('titulo','-')} → {n.get('funcionario_nome','-')} | lida={n.get('lida',False)}"
+        )
+
+    # ============ CONTAS BANCÁRIAS / FORMAS / PLANO ============
+    contas_bancarias = await db.contas_bancarias.find({}, {"_id": 0}).to_list(50)
+    formas_pag = await db.formas_pagamento.find({}, {"_id": 0}).to_list(50)
+    plano_contas = await db.plano_contas.find({}, {"_id": 0}).to_list(200)
+    centros = await db.centros_custo.find({}, {"_id": 0}).to_list(50)
+    context_parts.append(f"\n\n{'='*40}\nCONTAS BANCÁRIAS ({len(contas_bancarias)})\n{'='*40}")
+    for cb in contas_bancarias:
+        context_parts.append(f"- {cb.get('nome','-')} | banco={cb.get('banco','-')} | saldo R$ {cb.get('saldo_atual',0):,.2f}")
+    context_parts.append(f"\nFORMAS DE PAGAMENTO: {', '.join(f.get('nome','-') for f in formas_pag) or '(nenhuma)'}")
+    context_parts.append(f"\nCENTROS DE CUSTO ({len(centros)}): {', '.join(c.get('nome','-') for c in centros) or '(nenhum)'}")
+    context_parts.append(f"\nPLANO DE CONTAS: {len(plano_contas)} contas cadastradas")
+
     return "\n".join(context_parts)
 
 
