@@ -222,9 +222,9 @@ export const RHLayout = () => {
       {/* Main content */}
       <main 
         className="admin-main-content md:pt-0"
-        style={{ paddingTop: 'calc(56px + env(safe-area-inset-top))' }}
+        style={{ paddingTop: isMobile ? 'calc(56px + env(safe-area-inset-top))' : 0 }}
       >
-        <div className="p-4 md:p-8 pb-24 md:pb-8">
+        <div className={location.pathname === "/rh/chat" ? "" : "p-4 md:p-8 pb-24 md:pb-8"}>
           <Outlet />
         </div>
       </main>

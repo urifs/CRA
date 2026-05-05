@@ -190,7 +190,7 @@ export default function RHChatPage() {
   ];
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] md:h-[calc(100vh-0px)] bg-[#0f0f10] text-gray-100 -m-4 md:-m-6 lg:-m-8">
+    <div className="flex h-screen md:h-screen bg-[#0f0f10] text-gray-100">
       {/* Sidebar */}
       <aside
         className={`${
