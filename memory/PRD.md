@@ -1,6 +1,33 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 05/05/2026 (Sessão 45.6) — 🤖 Sugestão inteligente de EPIs com base no PGR/PCMSO/LTCAT da empresa
+
+### Implementado
+**Backend (`routes/rh.py` — `POST /epi/consultar-epis-cbo`):**
+- Endpoint enriquecido para PRIORIZAR documentos normativos da CRA Construtora.
+- Carrega o contexto da Base de Conhecimento (PGR/PCMSO/LTCAT/CCT, ~116K chars) via `_build_knowledge_base_context()` e injeta no prompt do Gemini.
+- Gemini retorna EPIs com:
+  - `fonte`: "PGR", "PCMSO", "LTCAT", "CCT" ou "NR_geral"
+  - `fonte_principal`: documento principal usado para a função
+- Quando a função está nos laudos da empresa, a IA copia C.A. e validade desses documentos. Se não, complementa com NRs gerais.
+
+**Frontend (`pages/rh/EPIPage.jsx`):**
+- `handleConsultarEPIs`: pré-marca automaticamente EPIs com fonte oficial da empresa (PGR/PCMSO/LTCAT/CCT).
+- Badge colorido ao lado de cada EPI mostrando a fonte (verde para documentos da CRA, cinza para NRs gerais).
+- Toast informativo destaca a fonte principal e quantos EPIs foram pré-marcados.
+
+### Validação
+- ✅ "Operador de retroescavadeira" (7151-15) → `fonte_principal: LTCAT`, 10 EPIs com Protetor Solar marcado como `fonte: CCT`
+- ✅ Auxiliar de escritório (4110-05) → IA corretamente diz "não requer EPIs específicos"
+- ✅ Almoxarife → IA traz pacote completo via NR_geral
+- ✅ Lint passou em todos os arquivos
+
+### Benefício
+O cadastro de Ficha de EPI agora é **proativo e auditável**: o admin sabe imediatamente quais EPIs vêm dos laudos oficiais da empresa (cumprimento da NR-06) e quais são complementos genéricos. Reduz tempo de cadastro e elimina o risco de esquecer EPIs obrigatórios listados no PGR/LTCAT.
+
+
+
 ## Bug Fix - 05/05/2026 (Sessão 45.5) — 🛠️ Ficha de EPI: tela preta + exportações em PDF
 
 ### Problemas reportados

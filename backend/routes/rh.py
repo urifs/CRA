@@ -2728,16 +2728,41 @@ async def buscar_cbo(q: str, refresh: bool = False):
 
 @rh_router.post("/epi/consultar-epis-cbo")
 async def consultar_epis_por_cbo(codigo_cbo: str = Body(...), ocupacao: str = Body(...)):
-    """Consultar EPIs recomendados por código CBO - SEMPRE usa IA Gemini para precisão"""
+    """Consultar EPIs recomendados por código CBO.
+    
+    PRIORIZA os documentos normativos da empresa (PGR, PCMSO, LTCAT) carregados na
+    Base de Conhecimento. Se a função estiver mapeada nesses documentos, traz EPIs
+    EXATOS daqueles laudos. Caso contrário, usa Gemini com NRs gerais.
+    """
     
     # Normalizar código CBO
     codigo_cbo = codigo_cbo.strip()
-    
+
+    # Carrega o contexto de PGR/PCMSO/LTCAT/CCT (se disponíveis)
+    kb_context = ""
+    try:
+        from routes.chatbot import _build_knowledge_base_context
+        kb_context = await _build_knowledge_base_context()
+    except Exception as kb_err:
+        logger.warning(f"KB indisponível na consulta de EPIs: {kb_err}")
+
     # SEMPRE consultar a IA Gemini com o código CBO para garantir precisão
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
-        prompt = f"""Você é um especialista em segurança do trabalho no Brasil, com profundo conhecimento da Classificação Brasileira de Ocupações (CBO).
+        kb_prompt_block = ""
+        if kb_context:
+            kb_prompt_block = (
+                "\n\n=== DOCUMENTOS NORMATIVOS DA EMPRESA (USE COMO PRIMEIRA FONTE) ===\n"
+                "Os EPIs e riscos abaixo foram levantados no PGR, PCMSO e LTCAT da CRA "
+                "Construtora. Quando a função informada estiver coberta por estes documentos, "
+                "EXTRAIA os EPIs e riscos DELES (com os números de C.A. e validade quando "
+                "houver). Apenas complemente com NRs gerais se a função não estiver mapeada.\n"
+                f"{kb_context[:60000]}\n"
+                "=== FIM DOS DOCUMENTOS DA EMPRESA ===\n"
+            )
+
+        prompt = f"""Você é um especialista em segurança do trabalho no Brasil, com profundo conhecimento da Classificação Brasileira de Ocupações (CBO) e das Normas Regulamentadoras (NRs).{kb_prompt_block}
 
 CÓDIGO CBO INFORMADO: {codigo_cbo}
 OCUPAÇÃO: {ocupacao}
@@ -2745,32 +2770,41 @@ OCUPAÇÃO: {ocupacao}
 IMPORTANTE: Primeiro, verifique se o código CBO {codigo_cbo} corresponde EXATAMENTE à ocupação "{ocupacao}". 
 Se houver divergência, informe a ocupação correta para este código CBO.
 
-Com base no código CBO {codigo_cbo}, liste TODOS os Equipamentos de Proteção Individual (EPIs) obrigatórios e recomendados conforme as Normas Regulamentadoras (NRs) brasileiras.
+Liste TODOS os Equipamentos de Proteção Individual (EPIs) obrigatórios e recomendados para a ocupação informada.
+PRIORIZE EPIs encontrados nos DOCUMENTOS DA EMPRESA acima (PGR/PCMSO/LTCAT). Se a função estiver
+listada nesses documentos, copie nome, C.A. e validade DE LÁ. Apenas para EPIs não cobertos use NRs gerais.
 
 Para cada EPI, forneça:
-1. Nome do EPI
-2. CA (Certificado de Aprovação) - coloque "A definir" se não souber o número específico
-3. Validade média em meses
-4. Prioridade: "Alta" (obrigatório por NR), "Média" (recomendado), "Baixa" (opcional)
+1. Nome do EPI (igual ao do PGR quando disponível)
+2. CA (Certificado de Aprovação) - traga o número exato do PGR/PCMSO se houver, senão "A definir"
+3. Validade média em meses (default 12)
+4. Prioridade: "Alta" (obrigatório por NR ou listado no PGR como tal), "Média" (recomendado), "Baixa" (opcional)
+5. Fonte: "PGR", "PCMSO", "LTCAT", "CCT" ou "NR_geral" — indica de onde a recomendação foi extraída
 
-Também forneça um mapa de risco com os principais riscos da ocupação segundo a NR correspondente.
+Também forneça um mapa de risco com os principais riscos da ocupação. Use os riscos do GHE/setor
+do PGR quando a função estiver lá; complemente com NRs gerais quando necessário.
 
 Responda APENAS em formato JSON válido:
 {{
   "codigo_cbo": "{codigo_cbo}",
   "ocupacao_oficial": "Nome oficial da ocupação segundo CBO",
+  "fonte_principal": "PGR" | "PCMSO" | "LTCAT" | "CCT" | "NR_geral",
   "epis": [
-    {{"nome": "Nome do EPI", "ca": "A definir", "validade_meses": 36, "prioridade": "Alta"}}
+    {{"nome": "Nome do EPI", "ca": "12345 ou A definir", "validade_meses": 36, "prioridade": "Alta", "fonte": "PGR"}}
   ],
   "mapa_risco": [
-    {{"risco": "Descrição do risco", "prioridade": "Alta", "epi_recomendado": "Nome do EPI"}}
+    {{"risco": "Descrição do risco", "prioridade": "Alta", "epi_recomendado": "Nome do EPI", "fonte": "PGR"}}
   ]
 }}"""
         
         llm = LlmChat(
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
             session_id=f"epi_cbo_{codigo_cbo}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-            system_message="Você é especialista em segurança do trabalho, CBO e EPIs no Brasil. Sempre responda com precisão baseado no código CBO informado."
+            system_message=(
+                "Você é especialista em segurança do trabalho, CBO e EPIs no Brasil. "
+                "Sempre PRIORIZE os documentos normativos da empresa (PGR, PCMSO, LTCAT) "
+                "quando fornecidos. Apenas complemente com NRs gerais se necessário."
+            )
         ).with_model("gemini", "gemini-2.5-flash")
         
         response_text = await llm.send_message(UserMessage(text=prompt))

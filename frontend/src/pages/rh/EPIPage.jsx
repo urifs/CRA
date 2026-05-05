@@ -144,10 +144,28 @@ export default function EPIPage() {
         ocupacao: formData.ocupacao_cbo
       });
       
-      setEpisSugeridos(response.data.epis || []);
+      const epis = response.data.epis || [];
+      setEpisSugeridos(epis);
       setMapaRisco(response.data.mapa_risco || []);
-      setEpisSelecionados([]);
-      toast.success("EPIs carregados com base na CBO!");
+      // Pré-seleciona EPIs de fontes oficiais da empresa (PGR, PCMSO, LTCAT)
+      // ou os marcados como Alta prioridade quando não há fonte específica.
+      const fontesOficiais = ["PGR", "PCMSO", "LTCAT", "CCT"];
+      const preMarcados = epis.filter((e) =>
+        fontesOficiais.includes((e.fonte || "").toUpperCase()) ||
+        (e.prioridade === "Alta" && !e.fonte)
+      );
+      setEpisSelecionados(preMarcados);
+
+      const fontePrincipal = (response.data.fonte_principal || "").toUpperCase();
+      if (fontesOficiais.includes(fontePrincipal)) {
+        toast.success(
+          `EPIs carregados — ${preMarcados.length} pré-marcado(s) com base no ${fontePrincipal} da CRA`,
+        );
+      } else {
+        toast.success(
+          `EPIs carregados (fonte: ${fontePrincipal || "NRs gerais"}) — revise as sugestões`,
+        );
+      }
     } catch (error) {
       toast.error("Erro ao consultar EPIs");
     } finally {
@@ -622,9 +640,26 @@ export default function EPIPage() {
                           CA: {epi.ca || 'A definir'} | Validade: {epi.validade_meses || 12} meses
                         </p>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs ${getPrioridadeCor(epi.prioridade)}`}>
-                        {epi.prioridade}
-                      </span>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {epi.fonte && (
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              ["PGR", "PCMSO", "LTCAT", "CCT"].includes(
+                                (epi.fonte || "").toUpperCase()
+                              )
+                                ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                                : "bg-gray-100 text-gray-600 border border-gray-200"
+                            }`}
+                            title={`Fonte: ${epi.fonte}`}
+                            data-testid={`epi-fonte-${idx}`}
+                          >
+                            {epi.fonte.toUpperCase()}
+                          </span>
+                        )}
+                        <span className={`px-2 py-1 rounded text-xs ${getPrioridadeCor(epi.prioridade)}`}>
+                          {epi.prioridade}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
