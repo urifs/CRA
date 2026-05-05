@@ -678,100 +678,6 @@ export default function PontoQuadroTab({ refreshKey }) {
                 </table>
               </div>
 
-              {/* Formulário de criação de abono (modal-in-modal) */}
-              {abonoForm && (
-                <Card className="border-amber-300 bg-amber-50">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-amber-900 flex items-center gap-2">
-                        <ShieldCheck size={16} />
-                        Abonar dia {abonoForm.data.split("-").reverse().join("/")}
-                      </h4>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setAbonoForm(null)}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
-                        <Label className="text-xs">Tipo</Label>
-                        <Select
-                          value={abonoForm.tipo}
-                          onValueChange={(v) =>
-                            setAbonoForm({ ...abonoForm, tipo: v })
-                          }
-                        >
-                          <SelectTrigger data-testid="select-tipo-abono">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="atestado">Atestado médico</SelectItem>
-                            <SelectItem value="justificativa">Justificativa</SelectItem>
-                            <SelectItem value="folga">Folga compensada</SelectItem>
-                            <SelectItem value="feriado">Feriado</SelectItem>
-                            <SelectItem value="ferias">Férias</SelectItem>
-                            <SelectItem value="outros">Outros</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-xs">Motivo / Justificativa</Label>
-                        <Input
-                          placeholder="Ex.: Atestado médico - clínica geral"
-                          value={abonoForm.motivo}
-                          onChange={(e) =>
-                            setAbonoForm({ ...abonoForm, motivo: e.target.value })
-                          }
-                          onKeyDown={(e) => e.key === "Enter" && criarAbono()}
-                          data-testid="input-motivo-abono"
-                        />
-                      </div>
-                    </div>
-                    {/* Upload de arquivo (atestado/justificativa) */}
-                    <div>
-                      <Label className="text-xs flex items-center gap-1">
-                        <Paperclip size={12} />
-                        Anexar atestado/justificativa (opcional)
-                      </Label>
-                      <Input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
-                        onChange={(e) =>
-                          setAbonoForm({
-                            ...abonoForm,
-                            arquivo: e.target.files?.[0] || null,
-                          })
-                        }
-                        className="cursor-pointer"
-                        data-testid="input-arquivo-abono"
-                      />
-                      {abonoForm.arquivo && (
-                        <p className="text-xs text-amber-700 mt-1">
-                          {abonoForm.arquivo.name} ({(abonoForm.arquivo.size / 1024).toFixed(1)} KB)
-                        </p>
-                      )}
-                      <p className="text-[10px] text-amber-600 mt-1">
-                        Formatos: PDF, JPG, PNG, WEBP, HEIC. Máximo 10MB.
-                      </p>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-amber-600 hover:bg-amber-700"
-                        onClick={criarAbono}
-                        data-testid="btn-confirmar-abono"
-                      >
-                        <CheckCircle2 size={14} className="mr-2" />
-                        Confirmar abono
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Observações livres do mês */}
               <Card>
                 <CardContent className="p-4 space-y-2">
@@ -801,6 +707,102 @@ export default function PontoQuadroTab({ refreshKey }) {
                   />
                 </CardContent>
               </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog dedicado para criação/edição de Abono — fica em primeiro plano */}
+      <Dialog open={!!abonoForm} onOpenChange={(o) => !o && setAbonoForm(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-900">
+              <ShieldCheck size={18} />
+              {abonoForm
+                ? `Abonar dia ${abonoForm.data.split("-").reverse().join("/")}`
+                : "Abonar dia"}
+            </DialogTitle>
+          </DialogHeader>
+          {abonoForm && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <Label className="text-xs">Tipo</Label>
+                  <Select
+                    value={abonoForm.tipo}
+                    onValueChange={(v) => setAbonoForm({ ...abonoForm, tipo: v })}
+                  >
+                    <SelectTrigger data-testid="select-tipo-abono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="atestado">Atestado médico</SelectItem>
+                      <SelectItem value="justificativa">Justificativa</SelectItem>
+                      <SelectItem value="folga">Folga compensada</SelectItem>
+                      <SelectItem value="feriado">Feriado</SelectItem>
+                      <SelectItem value="ferias">Férias</SelectItem>
+                      <SelectItem value="outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Motivo / Justificativa</Label>
+                  <Input
+                    placeholder="Ex.: Atestado médico - clínica geral"
+                    value={abonoForm.motivo}
+                    onChange={(e) =>
+                      setAbonoForm({ ...abonoForm, motivo: e.target.value })
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && criarAbono()}
+                    data-testid="input-motivo-abono"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1">
+                  <Paperclip size={12} />
+                  Anexar atestado/justificativa (opcional)
+                </Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+                  onChange={(e) =>
+                    setAbonoForm({
+                      ...abonoForm,
+                      arquivo: e.target.files?.[0] || null,
+                    })
+                  }
+                  className="cursor-pointer"
+                  data-testid="input-arquivo-abono"
+                />
+                {abonoForm.arquivo && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {abonoForm.arquivo.name} ({(abonoForm.arquivo.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
+                <p className="text-[10px] text-amber-600 mt-1">
+                  Formatos: PDF, JPG, PNG, WEBP, HEIC. Máximo 10MB.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAbonoForm(null)}
+                  data-testid="btn-cancelar-abono"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700"
+                  onClick={criarAbono}
+                  data-testid="btn-confirmar-abono"
+                >
+                  <CheckCircle2 size={14} className="mr-2" />
+                  Confirmar abono
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
