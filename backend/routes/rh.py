@@ -2469,6 +2469,23 @@ async def delete_ferias(ferias_id: str):
     return {"message": "Férias excluídas com sucesso"}
 
 
+@rh_router.delete("/ferias")
+async def delete_todas_ferias(confirmar: bool = False):
+    """Exclui TODOS os registros de férias (zera a coleção).
+    Requer query param ?confirmar=true para evitar acidentes."""
+    if not confirmar:
+        raise HTTPException(
+            status_code=400,
+            detail="Operação destrutiva. Reenvie com ?confirmar=true para confirmar.",
+        )
+    total = await ferias_collection.count_documents({})
+    result = await ferias_collection.delete_many({})
+    return {
+        "message": f"Todos os registros de férias foram excluídos ({result.deleted_count} de {total}).",
+        "deleted_count": result.deleted_count,
+    }
+
+
 # ===== EPI =====
 @rh_router.get("/epi/cbo/buscar")
 async def buscar_cbo(q: str):

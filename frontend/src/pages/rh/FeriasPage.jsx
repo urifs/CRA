@@ -107,6 +107,26 @@ export default function FeriasPage() {
     }
   };
 
+  const handleZerarTodos = async () => {
+    const confirmText = "ZERAR FERIAS";
+    const input = window.prompt(
+      `⚠️ ATENÇÃO: esta ação exclui TODOS os ${ferias.length} registros de férias e é IRREVERSÍVEL.\n\n` +
+      `Para confirmar, digite exatamente: ${confirmText}`
+    );
+    if (input === null) return;
+    if (input.trim().toUpperCase() !== confirmText) {
+      toast.error("Texto de confirmação não confere. Operação cancelada.");
+      return;
+    }
+    try {
+      const r = await axios.delete(`${API}/rh/ferias?confirmar=true`);
+      toast.success(r.data.message || "Todos os registros foram excluídos");
+      fetchFerias();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao excluir todos os registros");
+    }
+  };
+
   const openModal = (ferias = null) => {
     if (ferias) {
       setEditingFerias(ferias);
@@ -206,9 +226,23 @@ export default function FeriasPage() {
           <h1 className="page-title">Férias e Escalas</h1>
           <p className="text-gray-500 mt-1">Calendário de férias dos funcionários</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#10B981] hover:bg-[#059669]">
-          <Plus size={18} className="mr-2" />Agendar Férias
-        </Button>
+        <div className="flex items-center gap-2">
+          {ferias.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleZerarTodos}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+              data-testid="btn-zerar-ferias"
+              title="Excluir TODOS os registros de férias"
+            >
+              <Trash2 size={16} className="mr-2" />
+              Zerar tudo
+            </Button>
+          )}
+          <Button onClick={() => openModal()} className="bg-[#10B981] hover:bg-[#059669]">
+            <Plus size={18} className="mr-2" />Agendar Férias
+          </Button>
+        </div>
       </div>
 
       {/* Seletor de Ano */}

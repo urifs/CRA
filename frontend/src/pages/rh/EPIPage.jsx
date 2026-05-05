@@ -41,6 +41,8 @@ export default function EPIPage() {
   const [cboInfo, setCboInfo] = useState(null);
   const [cboSearch, setCboSearch] = useState("");
   const [cboResults, setCboResults] = useState([]);
+  const [cboNotFound, setCboNotFound] = useState(false);
+  const [manualCbo, setManualCbo] = useState({ codigo: "", ocupacao: "" });
   
   const [formData, setFormData] = useState({
     funcionario_id: "",
@@ -86,17 +88,36 @@ export default function EPIPage() {
     
     setConsultandoCBO(true);
     setCboResults([]);
+    setCboNotFound(false);
     try {
       const response = await axios.get(`${API}/rh/epi/cbo/buscar?q=${encodeURIComponent(cboSearch)}`);
       setCboResults(response.data || []);
       if (response.data.length === 0) {
-        toast.info("Nenhuma ocupação encontrada");
+        setCboNotFound(true);
+        toast.info("CBO não encontrado em nossa base. Você pode cadastrá-lo manualmente abaixo.");
       }
     } catch (error) {
       toast.error("Erro ao buscar CBO");
     } finally {
       setConsultandoCBO(false);
     }
+  };
+
+  const handleAddManualCBO = () => {
+    if (!manualCbo.codigo.trim() || !manualCbo.ocupacao.trim()) {
+      toast.error("Informe o código CBO e a descrição da ocupação");
+      return;
+    }
+    const cbo = {
+      codigo: manualCbo.codigo.trim(),
+      ocupacao: manualCbo.ocupacao.trim(),
+      descricao: "Cadastrado manualmente",
+      familia: "—",
+    };
+    handleSelectCBO(cbo);
+    setManualCbo({ codigo: "", ocupacao: "" });
+    setCboNotFound(false);
+    toast.success("Ocupação adicionada manualmente");
   };
 
   const handleSelectCBO = (cbo) => {
@@ -469,6 +490,38 @@ export default function EPIPage() {
                       <Button size="sm" variant="outline">Selecionar</Button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* CBO não encontrado: oferecer cadastro manual */}
+              {cboNotFound && cboResults.length === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+                  <p className="text-sm text-amber-800 mb-2">
+                    <strong>CBO não encontrado em nossa base.</strong> Cadastre manualmente abaixo —
+                    o código e a ocupação serão usados na ficha de EPI deste funcionário.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <Input
+                      placeholder="Código CBO (ex: 7152-10)"
+                      value={manualCbo.codigo}
+                      onChange={(e) => setManualCbo({ ...manualCbo, codigo: e.target.value })}
+                      data-testid="input-manual-cbo-codigo"
+                    />
+                    <Input
+                      placeholder="Descrição da ocupação"
+                      value={manualCbo.ocupacao}
+                      onChange={(e) => setManualCbo({ ...manualCbo, ocupacao: e.target.value })}
+                      className="md:col-span-1"
+                      data-testid="input-manual-cbo-ocupacao"
+                    />
+                    <Button
+                      onClick={handleAddManualCBO}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      data-testid="btn-add-manual-cbo"
+                    >
+                      Adicionar manualmente
+                    </Button>
+                  </div>
                 </div>
               )}
 
