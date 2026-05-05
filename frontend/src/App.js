@@ -58,6 +58,7 @@ import ConciliacaoPage from "@/pages/admin/ConciliacaoPage";
 // RH Pages
 import RHLayout from "@/components/RHLayout";
 import RHDashboardPage from "@/pages/rh/RHDashboardPage";
+import RHChatPage from "@/pages/rh/RHChatPage";
 import FuncionariosPage from "@/pages/rh/FuncionariosPage";
 import PontoPage from "@/pages/rh/PontoPage";
 import FolhaPagamentoPage from "@/pages/rh/FolhaPagamentoPage";
@@ -233,7 +234,8 @@ function App() {
           
           {/* RH routes */}
           <Route path="/rh" element={<ProtectedRoute><RHLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/rh/dashboard" replace />} />
+            <Route index element={<Navigate to="/rh/chat" replace />} />
+            <Route path="chat" element={<RHChatPage />} />
             <Route path="dashboard" element={<RHDashboardPage />} />
             <Route path="funcionarios" element={<FuncionariosPage />} />
             <Route path="ponto" element={<PontoPage />} />

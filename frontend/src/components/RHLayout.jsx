@@ -18,9 +18,9 @@ import {
   MoreHorizontal,
   UserPlus,
   FileText,
-  FileDown
+  FileDown,
+  Sparkles
 } from "lucide-react";
-import ChatbotWidget from "@/components/ChatbotWidget";
 import TasksInbox from "@/components/TasksInbox";
 
 export const RHLayout = () => {
@@ -64,6 +64,7 @@ export const RHLayout = () => {
   };
 
   const navItems = [
+    { path: "/rh/chat", icon: Sparkles, label: "Chat IA" },
     { path: "/rh/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/rh/funcionarios", icon: Users, label: "Funcionários" },
     { path: "/rh/ponto", icon: Clock, label: "Ponto Eletrônico" },
@@ -256,8 +257,7 @@ export const RHLayout = () => {
         })}
       </nav>
 
-      {/* Chatbot Widget */}
-      <ChatbotWidget module="rh" accentColor="#10B981" />
+      {/* RH usa página de Chat IA dedicada (/rh/chat) — sem widget flutuante */}
     </div>
   );
 };

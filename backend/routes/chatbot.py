@@ -37,7 +37,11 @@ def decode_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Token inválido")
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    return decode_token(credentials.credentials)
+    payload = decode_token(credentials.credentials)
+    # Normaliza: token usa "user_id"; alguns trechos esperam "id"
+    if "id" not in payload and "user_id" in payload:
+        payload["id"] = payload["user_id"]
+    return payload
 
 # Create router
 chatbot_router = APIRouter(prefix="/chatbot", tags=["Chatbot"])
@@ -158,7 +162,7 @@ INSTRUÇÕES:
             api_key=llm_key,
             session_id=f"chatbot-{current_user['id']}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
             system_message=system_message
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         user_message = UserMessage(text=chat_message.message)
         response = await llm_chat.send_message(user_message)
@@ -280,7 +284,7 @@ INSTRUÇÕES:
             api_key=llm_key,
             session_id=f"chatbot-files-{current_user['id']}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
             system_message=system_message
-        ).with_model("gemini", "gemini-2.0-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
         
         user_text = message if message else "Analise os arquivos que anexei"
         if files_info:
@@ -297,3 +301,198 @@ INSTRUÇÕES:
     except Exception as e:
         logging.error(f"Erro no chatbot com arquivos: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro ao processar arquivos: {str(e)}")
+
+
+
+# ============================================================
+# Conversas persistentes (estilo ChatGPT) — usadas pela tela principal do RH
+# ============================================================
+import uuid
+from datetime import timezone
+
+
+class ConversationCreate(BaseModel):
+    title: Optional[str] = "Nova conversa"
+    module: str = "rh"
+
+
+class ConversationOut(BaseModel):
+    id: str
+    title: str
+    module: str
+    created_at: str
+    updated_at: str
+    last_message_preview: Optional[str] = None
+
+
+class MessageIn(BaseModel):
+    content: str
+
+
+class MessageOut(BaseModel):
+    id: str
+    role: str  # "user" | "assistant"
+    content: str
+    created_at: str
+
+
+@chatbot_router.get("/conversations", response_model=List[ConversationOut])
+async def list_conversations(
+    module: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Lista conversas do usuário autenticado, ordenadas por última atualização (mais recentes primeiro)."""
+    query = {"user_id": current_user["id"]}
+    if module:
+        query["module"] = module
+    convs = await db.chat_conversations.find(query, {"_id": 0}).sort("updated_at", -1).to_list(200)
+    return [ConversationOut(**c) for c in convs]
+
+
+@chatbot_router.post("/conversations", response_model=ConversationOut)
+async def create_conversation(
+    payload: ConversationCreate,
+    current_user: dict = Depends(get_current_user),
+):
+    now_iso = datetime.now(timezone.utc).isoformat()
+    conv = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "title": payload.title or "Nova conversa",
+        "module": payload.module,
+        "created_at": now_iso,
+        "updated_at": now_iso,
+        "last_message_preview": None,
+    }
+    await db.chat_conversations.insert_one(dict(conv))
+    return ConversationOut(**{k: v for k, v in conv.items() if k != "user_id"})
+
+
+@chatbot_router.get("/conversations/{conv_id}/messages", response_model=List[MessageOut])
+async def list_messages(conv_id: str, current_user: dict = Depends(get_current_user)):
+    conv = await db.chat_conversations.find_one(
+        {"id": conv_id, "user_id": current_user["id"]}, {"_id": 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversa não encontrada")
+    msgs = await db.chat_messages.find(
+        {"conversation_id": conv_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(2000)
+    return [MessageOut(**m) for m in msgs]
+
+
+@chatbot_router.delete("/conversations/{conv_id}")
+async def delete_conversation(conv_id: str, current_user: dict = Depends(get_current_user)):
+    conv = await db.chat_conversations.find_one({"id": conv_id, "user_id": current_user["id"]})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversa não encontrada")
+    await db.chat_messages.delete_many({"conversation_id": conv_id})
+    await db.chat_conversations.delete_one({"id": conv_id})
+    return {"deleted": True}
+
+
+@chatbot_router.post("/conversations/{conv_id}/messages", response_model=MessageOut)
+async def send_message_in_conversation(
+    conv_id: str,
+    payload: MessageIn,
+    current_user: dict = Depends(get_current_user),
+):
+    """Envia mensagem do usuário, gera resposta com Gemini 2.5 Flash + contexto da plataforma e persiste tudo."""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+    conv = await db.chat_conversations.find_one(
+        {"id": conv_id, "user_id": current_user["id"]}, {"_id": 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversa não encontrada")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Persistir mensagem do usuário
+    user_msg = {
+        "id": str(uuid.uuid4()),
+        "conversation_id": conv_id,
+        "role": "user",
+        "content": payload.content,
+        "created_at": now_iso,
+    }
+    await db.chat_messages.insert_one(dict(user_msg))
+
+    # Construir histórico recente para contexto (últimas 30 mensagens) — emergentintegrations
+    # mantém histórico por session_id; aqui re-injetamos o histórico textual no system prompt.
+    msgs_anteriores = await db.chat_messages.find(
+        {"conversation_id": conv_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(60)
+    historico_txt = "\n".join(
+        f"[{m['role'].upper()}]: {m['content']}" for m in msgs_anteriores[:-1]  # exclui a recém-inserida (vai no UserMessage)
+    )
+
+    # Contexto completo da plataforma
+    platform_context = await get_full_platform_context()
+
+    # Module-aware system prompt (RH em destaque)
+    foco_modulo = ""
+    if conv.get("module") == "rh":
+        foco_modulo = (
+            "Você é o assistente principal do MÓDULO DE RECURSOS HUMANOS desta plataforma. "
+            "Tem acesso a TODOS os dados da plataforma (financeiro, frota, obras etc.) mas seu "
+            "foco principal é responder com profundidade sobre Funcionários, Ponto Eletrônico, "
+            "Folha de Pagamento, Férias, EPI, Custos de RH e Jornadas. Use os dados reais do "
+            "banco para todas as respostas — nunca invente. Quando perguntarem sobre dados de "
+            "outros módulos, responda com igual precisão.\n\n"
+        )
+
+    system_message = f"""{foco_modulo}Você é o assistente virtual inteligente da CRA Construtora.
+Você tem ACESSO COMPLETO a TODAS as informações do banco de dados.
+
+DADOS DO SISTEMA:
+{platform_context}
+
+HISTÓRICO RECENTE DESTA CONVERSA:
+{historico_txt or "(início da conversa)"}
+
+INSTRUÇÕES:
+1. SEMPRE responda em português brasileiro.
+2. Use quebras de linha para separar parágrafos e listas com "•".
+3. Formate valores monetários como R$ 1.234,56.
+4. NÃO use markdown com asteriscos.
+5. Seja útil, direto e específico — cite números e nomes reais quando possível.
+6. Se a pergunta for ambígua, pergunte qual recorte o usuário quer.
+"""
+
+    llm_key = os.environ.get("EMERGENT_LLM_KEY")
+    llm_chat = LlmChat(
+        api_key=llm_key,
+        session_id=f"conv-{conv_id}",
+        system_message=system_message,
+    ).with_model("gemini", "gemini-2.5-flash")
+
+    try:
+        ai_response = await llm_chat.send_message(UserMessage(text=payload.content))
+    except Exception as e:
+        logging.error(f"Erro Gemini: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro na IA: {str(e)[:200]}")
+
+    # Persistir resposta do assistente
+    assistant_msg = {
+        "id": str(uuid.uuid4()),
+        "conversation_id": conv_id,
+        "role": "assistant",
+        "content": ai_response,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.chat_messages.insert_one(dict(assistant_msg))
+
+    # Atualizar conversa: timestamp + preview + título auto se ainda for "Nova conversa"
+    update_fields = {
+        "updated_at": assistant_msg["created_at"],
+        "last_message_preview": (ai_response or "")[:120],
+    }
+    if conv.get("title") in (None, "", "Nova conversa"):
+        # Pega as primeiras palavras da pergunta como título
+        title_auto = (payload.content or "").strip().split("\n")[0][:60]
+        if title_auto:
+            update_fields["title"] = title_auto
+    await db.chat_conversations.update_one({"id": conv_id}, {"$set": update_fields})
+
+    return MessageOut(**{k: v for k, v in assistant_msg.items() if k != "conversation_id"})
