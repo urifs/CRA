@@ -463,22 +463,127 @@ async def delete_funcionario(funcionario_id: str):
 
 # ===== PONTO =====
 @rh_router.get("/ponto")
-async def list_ponto(data: Optional[str] = None, funcionario_id: Optional[str] = None):
-    """Listar registros de ponto"""
+async def list_ponto(
+    data: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    mes: Optional[int] = None,
+    ano: Optional[int] = None,
+    funcionario_id: Optional[str] = None,
+):
+    """Listar registros de ponto com filtros flexíveis.
+    
+    Aceita (em ordem de prioridade):
+    - `data`: dia exato (YYYY-MM-DD)
+    - `data_inicio` + `data_fim`: período inclusivo
+    - `mes` + `ano`: mês inteiro
+    - sem filtro de data: últimos 30 dias
+    
+    Retorna `{ registros, resumo }` com presentes / ausentes / atrasados / abonados / total_minutos.
+    """
     query = {}
+    
+    # Resolve período
     if data:
         query["data"] = data
+        periodo_ini = data
+        periodo_fim = data
+    elif data_inicio and data_fim:
+        query["data"] = {"$gte": data_inicio, "$lte": data_fim}
+        periodo_ini = data_inicio
+        periodo_fim = data_fim
+    elif mes and ano:
+        ini = f"{ano}-{mes:02d}-01"
+        if mes == 12:
+            fim_excl = f"{ano + 1}-01-01"
+        else:
+            fim_excl = f"{ano}-{mes + 1:02d}-01"
+        query["data"] = {"$gte": ini, "$lt": fim_excl}
+        periodo_ini = ini
+        periodo_fim = fim_excl
+    else:
+        from datetime import timedelta
+        hoje = datetime.now()
+        ini = (hoje - timedelta(days=30)).strftime("%Y-%m-%d")
+        fim = hoje.strftime("%Y-%m-%d")
+        query["data"] = {"$gte": ini, "$lte": fim}
+        periodo_ini = ini
+        periodo_fim = fim
+    
     if funcionario_id:
         query["funcionario_id"] = funcionario_id
     
+    # Carrega abonos do mesmo período para indicar dias abonados
+    abonos_query = {}
+    if isinstance(query.get("data"), dict):
+        abonos_query["data"] = query["data"]
+    elif isinstance(query.get("data"), str):
+        abonos_query["data"] = query["data"]
+    abonos_set = set()
+    async for ab in ponto_abonos_collection.find(abonos_query, {"_id": 0, "funcionario_id": 1, "data": 1}):
+        abonos_set.add((ab["funcionario_id"], ab["data"]))
+    
+    # Carrega registros (excluindo _id)
     registros = []
-    async for reg in ponto_collection.find(query).sort("data", -1):
-        reg["_id"] = str(reg["_id"])
-        func = await funcionarios_collection.find_one({"id": reg["funcionario_id"]})
-        reg["funcionario_nome"] = func["nome"] if func else "-"
+    cache_funcionarios = {}
+    async for reg in ponto_collection.find(query, {"_id": 0}).sort([("data", -1), ("entrada", 1)]):
+        fid = reg.get("funcionario_id", "")
+        # Resolver nome
+        if fid.startswith("NAO_CADASTRADO::"):
+            reg["funcionario_nome"] = reg.get("funcionario_nome_planilha", "-")
+            reg["funcionario_cadastrado"] = False
+        else:
+            if fid not in cache_funcionarios:
+                f = await funcionarios_collection.find_one({"id": fid}, {"_id": 0, "nome": 1, "cargo": 1, "departamento": 1})
+                cache_funcionarios[fid] = f
+            f = cache_funcionarios.get(fid)
+            reg["funcionario_nome"] = f.get("nome") if f else (reg.get("funcionario_nome_planilha") or "-")
+            reg["funcionario_cargo"] = f.get("cargo") if f else None
+            reg["funcionario_departamento"] = f.get("departamento") if f else None
+            reg["funcionario_cadastrado"] = bool(f)
+        # Marca abonos
+        reg["abonado"] = (fid, reg.get("data")) in abonos_set
         registros.append(reg)
     
-    return registros
+    # Calcular resumo
+    presentes = sum(1 for r in registros if (r.get("minutos_trabalhados") or 0) > 0)
+    abonados = sum(1 for r in registros if r.get("abonado"))
+    # Ausentes: registros sem batidas/incompletos em dias úteis (seg-sex)
+    ausentes = sum(
+        1 for r in registros
+        if (r.get("minutos_trabalhados") or 0) == 0
+        and not r.get("abonado")
+        and r.get("dia_semana", 6) <= 4
+    )
+    # Atrasados: trabalharam mas tem saldo negativo (sem abono)
+    atrasados = sum(
+        1 for r in registros
+        if (r.get("minutos_trabalhados") or 0) > 0
+        and (r.get("saldo_minutos") or 0) < 0
+        and not r.get("abonado")
+    )
+    total_minutos_trab = sum((r.get("minutos_trabalhados") or 0) for r in registros)
+    total_minutos_prev = sum((r.get("minutos_previstos") or 0) for r in registros)
+    
+    # Funcionários únicos no período (com algum registro)
+    funcionarios_no_periodo = len({r.get("funcionario_id") for r in registros})
+    
+    return {
+        "registros": registros,
+        "resumo": {
+            "presentes": presentes,
+            "ausentes": ausentes,
+            "atrasados": atrasados,
+            "abonados": abonados,
+            "total_registros": len(registros),
+            "total_funcionarios": funcionarios_no_periodo,
+            "minutos_trabalhados": total_minutos_trab,
+            "minutos_previstos": total_minutos_prev,
+            "saldo_minutos": total_minutos_trab - total_minutos_prev,
+            "periodo_inicio": periodo_ini,
+            "periodo_fim": periodo_fim,
+        },
+    }
 
 
 @rh_router.post("/ponto")

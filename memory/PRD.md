@@ -1,5 +1,29 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Hotfix - 04/05/2026 (Sessão 43.4) — 🐛 Aba "Registro Diário" mostrava 0 / não tinha filtro por mês
+
+### Problema reportado
+Após importar a planilha de ponto, a aba "Registro Diário" mostrava 0 presentes/ausentes e a lista vazia, sem opção de filtrar por mês/ano/período. Só dava para escolher 1 dia específico.
+
+### Bugs encontrados
+1. Endpoint `GET /rh/ponto` retornava lista direta, mas o frontend esperava `{registros, resumo}` → resumo sempre 0.
+2. Endpoint só aceitava `data` exata, sem suporte a `data_inicio`/`data_fim`/`mes`/`ano`.
+3. Backend incluía `_id` do MongoDB no response e quebrava com IDs `NAO_CADASTRADO::*`.
+4. Resumo não considerava abonos.
+
+### Correção
+- **Backend** (`routes/rh.py`): `GET /rh/ponto` reescrito com filtros flexíveis (data exata / período inclusivo / mês completo / últimos 30 dias por padrão), exclusão de `_id`, resolução de nome para funcionários cadastrados E não cadastrados (usa `funcionario_nome_planilha`), marcação de `abonado`, e cálculo de resumo completo (presentes, ausentes, atrasados, abonados, total_funcionarios, minutos trabalhados/previstos/saldo).
+- **Frontend** (`PontoPage.jsx`): 3 botões de modo (Dia / Mês inteiro / Período personalizado) com campos contextuais, filtro por funcionário mantido. Cards de resumo expandidos para 6 KPIs (Funcionários / Presentes / Faltas / Atrasados / Abonados / Saldo período colorido). Tabela ganhou coluna "Data", linha amarela para dias abonados, badge "(não cadastrado)" para nomes que não estão no cadastro de funcionários.
+
+### Validação
+- Curl `?mes=4&ano=2026`: 270 registros, resumo correto (130 presentes, 1 abonado, saldo -744h49min).
+- Curl `?data_inicio=2026-04-07&data_fim=2026-04-15`: 81 registros do período.
+- Frontend Playwright em ambos os modos: filtros e KPIs renderizados, tabela com data e dados corretos.
+
+### Default mostrado
+- O modo **"Mês inteiro"** vem como padrão usando o mês corrente. Se não houver dados no mês atual, basta trocar para o mês desejado nos selects.
+
+
 ## Feature - 04/05/2026 (Sessão 43.3) — 🟢 Abonos + Observações no Ponto Eletrônico
 
 ### Implementado

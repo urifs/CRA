@@ -34,14 +34,27 @@ import PontoImportarTab from "./PontoImportarTab";
 import PontoQuadroTab from "./PontoQuadroTab";
 
 export default function PontoPage() {
+  const today = new Date();
   const [registros, setRegistros] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Modo de filtro: 'dia' | 'mes' | 'periodo'
+  const [filtroModo, setFiltroModo] = useState("mes");
+  const [selectedDate, setSelectedDate] = useState(today.toISOString().split('T')[0]);
+  const [selectedMes, setSelectedMes] = useState(today.getMonth() + 1);
+  const [selectedAno, setSelectedAno] = useState(today.getFullYear());
+  const [dataInicio, setDataInicio] = useState(today.toISOString().split('T')[0]);
+  const [dataFim, setDataFim] = useState(today.toISOString().split('T')[0]);
+  
   const [selectedFuncionario, setSelectedFuncionario] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRegistro, setEditingRegistro] = useState(null);
-  const [resumoDia, setResumoDia] = useState({ presentes: 0, ausentes: 0, atrasados: 0 });
+  const [resumoDia, setResumoDia] = useState({
+    presentes: 0, ausentes: 0, atrasados: 0, abonados: 0,
+    total_registros: 0, total_funcionarios: 0,
+    minutos_trabalhados: 0, minutos_previstos: 0, saldo_minutos: 0,
+  });
   
   const [formData, setFormData] = useState({
     funcionario_id: "",
@@ -65,7 +78,8 @@ export default function PontoPage() {
 
   useEffect(() => {
     fetchRegistros();
-  }, [selectedDate, selectedFuncionario]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtroModo, selectedDate, selectedMes, selectedAno, dataInicio, dataFim, selectedFuncionario]);
 
   const fetchFuncionarios = async () => {
     try {
@@ -79,12 +93,25 @@ export default function PontoPage() {
   const fetchRegistros = async () => {
     setLoading(true);
     try {
-      let url = `${API}/rh/ponto?data=${selectedDate}`;
-      if (selectedFuncionario) url += `&funcionario_id=${selectedFuncionario}`;
+      const params = new URLSearchParams();
+      if (filtroModo === "dia") {
+        params.set("data", selectedDate);
+      } else if (filtroModo === "mes") {
+        params.set("mes", String(selectedMes));
+        params.set("ano", String(selectedAno));
+      } else if (filtroModo === "periodo") {
+        params.set("data_inicio", dataInicio);
+        params.set("data_fim", dataFim);
+      }
+      if (selectedFuncionario) params.set("funcionario_id", selectedFuncionario);
       
-      const response = await axios.get(url);
+      const response = await axios.get(`${API}/rh/ponto?${params.toString()}`);
       setRegistros(response.data.registros || []);
-      setResumoDia(response.data.resumo || { presentes: 0, ausentes: 0, atrasados: 0 });
+      setResumoDia(response.data.resumo || {
+        presentes: 0, ausentes: 0, atrasados: 0, abonados: 0,
+        total_registros: 0, total_funcionarios: 0,
+        minutos_trabalhados: 0, minutos_previstos: 0, saldo_minutos: 0,
+      });
     } catch (error) {
       toast.error("Erro ao carregar registros");
     } finally {
@@ -235,69 +262,179 @@ export default function PontoPage() {
             </Button>
           </div>
 
-      {/* Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div>
-          <Label>Data</Label>
-          <Input 
-            type="date" 
-            value={selectedDate} 
-            onChange={(e) => setSelectedDate(e.target.value)}
-            data-testid="filtro-data"
-          />
-        </div>
-        <div>
-          <Label>Funcionário</Label>
-          <Select value={selectedFuncionario || "all"} onValueChange={(v) => setSelectedFuncionario(v === "all" ? "" : v)}>
-            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent className="z-[9999]">
-              <SelectItem value="all">Todos</SelectItem>
-              {funcionarios.map(f => (
-                <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-end">
-          <Button onClick={fetchRegistros} className="w-full bg-[#10B981] hover:bg-[#059669]">
-            <Search size={16} className="mr-2" />Buscar
-          </Button>
-        </div>
-      </div>
+      {/* Filtros: modo + campos contextuais */}
+      <Card className="mb-4">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={filtroModo === "dia" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltroModo("dia")}
+              className={filtroModo === "dia" ? "bg-[#10B981] hover:bg-[#059669]" : ""}
+              data-testid="filtro-modo-dia"
+            >
+              <Clock size={14} className="mr-1" /> Dia
+            </Button>
+            <Button
+              variant={filtroModo === "mes" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltroModo("mes")}
+              className={filtroModo === "mes" ? "bg-[#10B981] hover:bg-[#059669]" : ""}
+              data-testid="filtro-modo-mes"
+            >
+              <LayoutGrid size={14} className="mr-1" /> Mês inteiro
+            </Button>
+            <Button
+              variant={filtroModo === "periodo" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltroModo("periodo")}
+              className={filtroModo === "periodo" ? "bg-[#10B981] hover:bg-[#059669]" : ""}
+              data-testid="filtro-modo-periodo"
+            >
+              Período personalizado
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            {filtroModo === "dia" && (
+              <div>
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  data-testid="filtro-data"
+                />
+              </div>
+            )}
+            {filtroModo === "mes" && (
+              <>
+                <div>
+                  <Label>Mês</Label>
+                  <Select value={String(selectedMes)} onValueChange={(v) => setSelectedMes(Number(v))}>
+                    <SelectTrigger data-testid="filtro-mes"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      {["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"].map((nome, i) => (
+                        <SelectItem key={i+1} value={String(i+1)}>{nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Ano</Label>
+                  <Select value={String(selectedAno)} onValueChange={(v) => setSelectedAno(Number(v))}>
+                    <SelectTrigger data-testid="filtro-ano"><SelectValue /></SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      {[2024, 2025, 2026, 2027].map((a) => (
+                        <SelectItem key={a} value={String(a)}>{a}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            {filtroModo === "periodo" && (
+              <>
+                <div>
+                  <Label>Data inicial</Label>
+                  <Input
+                    type="date"
+                    value={dataInicio}
+                    onChange={(e) => setDataInicio(e.target.value)}
+                    data-testid="filtro-data-inicio"
+                  />
+                </div>
+                <div>
+                  <Label>Data final</Label>
+                  <Input
+                    type="date"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    data-testid="filtro-data-fim"
+                  />
+                </div>
+              </>
+            )}
+            <div>
+              <Label>Funcionário</Label>
+              <Select value={selectedFuncionario || "all"} onValueChange={(v) => setSelectedFuncionario(v === "all" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent className="z-[9999]">
+                  <SelectItem value="all">Todos</SelectItem>
+                  {funcionarios.map(f => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button onClick={fetchRegistros} className="w-full bg-[#10B981] hover:bg-[#059669]">
+                <Search size={16} className="mr-2" />Atualizar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-              <CheckCircle className="text-green-600" size={24} />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="text-blue-500" size={18} />
+              <p className="text-xs text-gray-500">Funcionários</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{resumoDia.presentes}</p>
-              <p className="text-sm text-gray-500">Presentes</p>
-            </div>
+            <p className="text-2xl font-bold text-blue-600">{resumoDia.total_funcionarios || 0}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
-              <Users className="text-red-600" size={24} />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle className="text-green-500" size={18} />
+              <p className="text-xs text-gray-500">Presentes</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">{resumoDia.ausentes}</p>
-              <p className="text-sm text-gray-500">Ausentes</p>
-            </div>
+            <p className="text-2xl font-bold text-green-600">{resumoDia.presentes || 0}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
-              <AlertTriangle className="text-yellow-600" size={24} />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="text-red-500" size={18} />
+              <p className="text-xs text-gray-500">Faltas</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{resumoDia.atrasados}</p>
-              <p className="text-sm text-gray-500">Atrasados</p>
+            <p className="text-2xl font-bold text-red-600">{resumoDia.ausentes || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle className="text-amber-500" size={18} />
+              <p className="text-xs text-gray-500">Atrasados</p>
             </div>
+            <p className="text-2xl font-bold text-amber-600">{resumoDia.atrasados || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle className="text-purple-500" size={18} />
+              <p className="text-xs text-gray-500">Abonados</p>
+            </div>
+            <p className="text-2xl font-bold text-purple-600">{resumoDia.abonados || 0}</p>
+          </CardContent>
+        </Card>
+        <Card className={resumoDia.saldo_minutos >= 0 ? "bg-emerald-50" : "bg-rose-50"}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className={resumoDia.saldo_minutos >= 0 ? "text-emerald-500" : "text-rose-500"} size={18} />
+              <p className="text-xs text-gray-500">Saldo período</p>
+            </div>
+            <p className={`text-2xl font-bold ${resumoDia.saldo_minutos >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {resumoDia.saldo_minutos > 0 ? "+" : ""}
+              {resumoDia.saldo_minutos === 0
+                ? "0h"
+                : `${resumoDia.saldo_minutos < 0 ? "-" : ""}${Math.floor(Math.abs(resumoDia.saldo_minutos)/60)}h${Math.abs(resumoDia.saldo_minutos)%60 > 0 ? ` ${Math.abs(resumoDia.saldo_minutos)%60}min` : ""}`}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -338,7 +475,8 @@ export default function PontoPage() {
         <Card>
           <CardContent className="py-12 text-center text-gray-400">
             <Clock className="mx-auto mb-4" size={48} />
-            <p>Nenhum registro de ponto para esta data</p>
+            <p>Nenhum registro de ponto encontrado neste período</p>
+            <p className="text-xs mt-2">Verifique os filtros ou importe a planilha do relógio na aba "Importar Planilha".</p>
           </CardContent>
         </Card>
       ) : (
@@ -346,6 +484,7 @@ export default function PontoPage() {
           <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow">
             <thead className="bg-gray-100">
               <tr>
+                <th className="text-left p-3 text-sm font-medium text-gray-600">Data</th>
                 <th className="text-left p-3 text-sm font-medium text-gray-600">Funcionário</th>
                 <th className="text-center p-3 text-sm font-medium text-gray-600">Entrada</th>
                 <th className="text-center p-3 text-sm font-medium text-gray-600">Saída Almoço</th>
@@ -357,9 +496,20 @@ export default function PontoPage() {
               </tr>
             </thead>
             <tbody>
-              {registros.map((r) => (
-                <tr key={r.id} className="border-t hover:bg-gray-50">
-                  <td className="p-3 text-sm font-medium">{getFuncionarioNome(r.funcionario_id)}</td>
+              {registros.map((r) => {
+                const nomeFunc = r.funcionario_nome || getFuncionarioNome(r.funcionario_id);
+                const naoCadastrado = r.funcionario_cadastrado === false;
+                return (
+                <tr key={r.id} className={`border-t hover:bg-gray-50 ${r.abonado ? "bg-amber-50" : ""}`}>
+                  <td className="p-3 text-sm font-mono text-gray-600">
+                    {r.data?.split("-").reverse().join("/") || "-"}
+                  </td>
+                  <td className="p-3 text-sm font-medium">
+                    {nomeFunc}
+                    {naoCadastrado && (
+                      <span className="ml-2 text-xs text-amber-600">(não cadastrado)</span>
+                    )}
+                  </td>
                   <td className="p-3 text-sm text-center">
                     <span className="inline-flex items-center gap-1">
                       <Play size={14} className="text-green-600" />
@@ -393,7 +543,8 @@ export default function PontoPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
