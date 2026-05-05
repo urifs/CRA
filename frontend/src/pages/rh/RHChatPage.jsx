@@ -159,22 +159,19 @@ export default function RHChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, sending]);
 
-  // Inicial: carrega conversas e abre a mais recente (ou cria uma vazia)
+  // Inicial: carrega conversas e abre a mais recente (carrega mensagens uma única vez)
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const list = await fetchConversations();
+      if (cancelled) return;
       if (list.length > 0) {
         setActiveId(list[0].id);
         await loadMessages(list[0].id);
       }
     })();
+    return () => { cancelled = true; };
   }, [fetchConversations]);
-
-  // Quando mudar conversa ativa, recarrega mensagens
-  useEffect(() => {
-    if (activeId) loadMessages(activeId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -258,8 +255,11 @@ export default function RHChatPage() {
               {conversations.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => {
-                    setActiveId(c.id);
+                  onClick={async () => {
+                    if (activeId !== c.id) {
+                      setActiveId(c.id);
+                      await loadMessages(c.id);
+                    }
                     setSidebarOpen(false);
                   }}
                   className={`w-full text-left px-2 py-2 rounded-md text-sm group hover:bg-gray-800 flex items-start gap-2 ${

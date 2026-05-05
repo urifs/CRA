@@ -589,6 +589,55 @@ async def _execute_chat_tool(action: str, params: dict, current_user: dict):
         )
         return None, result_text
 
+    if action == "gerar_pdf_notificacao":
+        funcionario_id = params.get("funcionario_id")
+        tipo_notif = (params.get("tipo_notificacao") or "comunicado").strip().lower()
+        motivo = (params.get("motivo") or "Não informado").strip()
+        data_ocorrencia = params.get("data_ocorrencia") or datetime.now().strftime("%Y-%m-%d")
+        texto_complementar = (params.get("texto_complementar") or "").strip()
+        if not funcionario_id:
+            raise ValueError("funcionario_id é obrigatório")
+        func = await db.funcionarios.find_one({"id": funcionario_id}, {"_id": 0})
+        if not func:
+            raise ValueError(f"Funcionário {funcionario_id} não encontrado")
+        pdf_bytes = _gerar_pdf_notificacao_formal(func, tipo_notif, motivo, data_ocorrencia, texto_complementar)
+        artifact_id = str(uuid.uuid4())
+        nome_safe = (func.get("nome") or "func").replace(" ", "_")[:30]
+        await db.chat_artifacts.insert_one({
+            "id": artifact_id,
+            "user_id": current_user.get("id"),
+            "filename": f"notificacao_{tipo_notif}_{nome_safe}.pdf",
+            "content_type": "application/pdf",
+            "content_b64": base64.b64encode(pdf_bytes).decode("ascii"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        artifact = {
+            "type": "pdf",
+            "label": f"Baixar Notificação ({tipo_notif.title()}) - {func.get('nome')}",
+            "download_url": f"/api/chatbot/artifacts/{artifact_id}",
+        }
+        # Também grava registro interno
+        await db.rh_notificacoes.insert_one({
+            "id": str(uuid.uuid4()),
+            "tipo": "alerta" if tipo_notif in ("falta", "advertencia") else "info",
+            "titulo": f"{tipo_notif.title()}: {motivo[:80]}",
+            "mensagem": f"Data: {data_ocorrencia}. {texto_complementar}".strip(),
+            "categoria": "rh",
+            "funcionario_id": funcionario_id,
+            "funcionario_nome": func.get("nome"),
+            "lida": False,
+            "criada_por_ia": True,
+            "criada_por_user_id": current_user.get("id"),
+            "tem_pdf": True,
+            "pdf_artifact_id": artifact_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        return artifact, (
+            f"📄 Notificação de {tipo_notif} gerada para {func.get('nome')}.\n"
+            f"• Data da ocorrência: {data_ocorrencia}\n"
+            f"• Motivo: {motivo}"
+        )
+
     if action == "gerar_pdf_funcionario":
         funcionario_id = params.get("funcionario_id")
         if not funcionario_id:
@@ -634,6 +683,169 @@ async def _execute_chat_tool(action: str, params: dict, current_user: dict):
         return artifact, f"📄 Lista de funcionários gerada ({len(funcionarios)} registros)."
 
     raise ValueError(f"Ação desconhecida: {action}")
+
+
+def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorrencia: str, texto_complementar: str) -> bytes:
+    """Gera PDF formal/timbrado de notificação (falta, advertência, comunicado).
+    Inspirado no template corporativo de exports_all.py — com cabeçalho da CRA,
+    bloco de dados do colaborador, corpo do texto e linhas de assinatura."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.platypus import (
+        Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    )
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+        leftMargin=2.2 * cm, rightMargin=2.2 * cm,
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle("ntTitle", parent=styles["Heading1"],
+                                 fontSize=18, textColor=colors.HexColor("#0f172a"),
+                                 alignment=TA_CENTER, spaceAfter=8)
+    subtitle = ParagraphStyle("ntSub", parent=styles["Normal"], fontSize=10,
+                              textColor=colors.HexColor("#64748b"),
+                              alignment=TA_CENTER, spaceAfter=18)
+    section = ParagraphStyle("ntSec", parent=styles["Heading2"], fontSize=12,
+                             textColor=colors.HexColor("#0f172a"),
+                             spaceBefore=10, spaceAfter=6)
+    body = ParagraphStyle("ntBody", parent=styles["Normal"], fontSize=10.5,
+                          textColor=colors.black, alignment=TA_JUSTIFY,
+                          leading=15, spaceAfter=6)
+
+    titulos_pt = {
+        "falta": "NOTIFICAÇÃO DE FALTA",
+        "atraso": "NOTIFICAÇÃO DE ATRASO",
+        "advertencia": "ADVERTÊNCIA FORMAL",
+        "comunicado": "COMUNICADO INTERNO",
+        "outro": "NOTIFICAÇÃO INTERNA",
+    }
+    titulo_doc = titulos_pt.get(tipo, "NOTIFICAÇÃO INTERNA")
+
+    elements = []
+
+    # Logo + Cabeçalho da empresa
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            elements.append(RLImage(logo_path, width=3 * cm, height=3 * cm, kind="proportional"))
+            elements.append(Spacer(1, 6))
+    except Exception:
+        pass
+
+    elements.append(Paragraph("CRA Construtora", title_style))
+    elements.append(Paragraph(f"Documento emitido em {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle))
+
+    # Linha divisória
+    div = Table([[""]], colWidths=[16 * cm])
+    div.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 1.5, colors.HexColor("#0f766e"))]))
+    elements.append(div)
+    elements.append(Spacer(1, 12))
+
+    # Título
+    elements.append(Paragraph(titulo_doc, ParagraphStyle("ntDocTitle", parent=styles["Heading1"],
+                                                        fontSize=16, alignment=TA_CENTER,
+                                                        textColor=colors.HexColor("#0f172a"),
+                                                        spaceAfter=14)))
+
+    # Bloco de dados do colaborador
+    def _f(v):
+        return str(v) if v not in (None, "") else "-"
+    data_oc_fmt = data_ocorrencia
+    try:
+        if len(data_ocorrencia) >= 10 and data_ocorrencia[4] == "-":
+            data_oc_fmt = f"{data_ocorrencia[8:10]}/{data_ocorrencia[5:7]}/{data_ocorrencia[0:4]}"
+    except Exception:
+        pass
+
+    dados_func = [
+        ["Colaborador:", _f(func.get("nome"))],
+        ["CPF:", _f(func.get("cpf"))],
+        ["Cargo:", _f(func.get("cargo"))],
+        ["Departamento:", _f(func.get("departamento"))],
+        ["Data de admissão:", _f(func.get("data_admissao"))],
+        ["Data da ocorrência:", data_oc_fmt],
+    ]
+    t = Table(dados_func, colWidths=[4.5 * cm, 11 * cm])
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#475569")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f8fafc")),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 16))
+
+    # Corpo do texto
+    elements.append(Paragraph("Motivo / Descrição", section))
+    elements.append(Paragraph(motivo, body))
+
+    if texto_complementar:
+        elements.append(Paragraph("Observações complementares", section))
+        elements.append(Paragraph(texto_complementar.replace("\n", "<br/>"), body))
+
+    # Texto padrão por tipo
+    rodape_textos = {
+        "falta": (
+            "Pela presente, comunicamos formalmente o registro da falta acima descrita. "
+            "Solicitamos a apresentação de justificativa por escrito (atestado médico ou outro documento) "
+            "no prazo de 48 horas a partir do recebimento, sob pena de configuração de falta injustificada "
+            "com os respectivos descontos previstos em lei."
+        ),
+        "atraso": (
+            "Comunicamos o registro do atraso conforme descrito acima. "
+            "Reforçamos a importância do cumprimento da jornada de trabalho conforme acordado. "
+            "Atrasos recorrentes poderão configurar advertência formal."
+        ),
+        "advertencia": (
+            "Pela presente, fica o(a) colaborador(a) ADVERTIDO(A) formalmente em razão dos fatos acima descritos. "
+            "Esta advertência ficará arquivada em sua ficha funcional. "
+            "A reincidência poderá ensejar a aplicação de penalidades mais severas, conforme a legislação vigente."
+        ),
+        "comunicado": (
+            "Este comunicado tem caráter informativo. Solicitamos a leitura atenta e a observância das informações descritas."
+        ),
+    }
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph(rodape_textos.get(tipo, rodape_textos["comunicado"]), body))
+    elements.append(Spacer(1, 36))
+
+    # Assinaturas
+    assinaturas = Table(
+        [["", ""], ["Colaborador", "Setor de RH / Gestor"]],
+        colWidths=[7.5 * cm, 7.5 * cm],
+    )
+    assinaturas.setStyle(TableStyle([
+        ("LINEABOVE", (0, 1), (-1, 1), 0.7, colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTSIZE", (0, 1), (-1, 1), 9),
+        ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#475569")),
+        ("TOPPADDING", (0, 1), (-1, 1), 4),
+    ]))
+    elements.append(assinaturas)
+
+    elements.append(Spacer(1, 24))
+    rodape = ParagraphStyle("ntFoot", parent=styles["Normal"], fontSize=8,
+                            textColor=colors.HexColor("#94a3b8"), alignment=TA_CENTER)
+    elements.append(Paragraph(
+        f"Documento gerado pelo Assistente IA do RH · CRA Construtora · {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        rodape
+    ))
+
+    doc.build(elements)
+    return buf.getvalue()
 
 
 def _gerar_pdf_funcionario(func: dict) -> bytes:
@@ -810,19 +1022,25 @@ emita uma chamada de ferramenta ANTES da sua mensagem em texto, no formato:
 
 Ações suportadas:
 • action="criar_notificacao" — params: {{"funcionario_id":"<id>","titulo":"...","mensagem":"...","tipo":"info|alerta|urgente"}}
-  Use quando o usuário pedir para gerar/criar uma notificação para um funcionário.
+  Use apenas para registrar uma notificação INTERNA na plataforma (NÃO gera PDF).
+• action="gerar_pdf_notificacao" — params: {{"funcionario_id":"<id>","tipo_notificacao":"falta|atraso|advertencia|comunicado|outro","motivo":"...","data_ocorrencia":"YYYY-MM-DD","texto_complementar":"..."}}
+  GERA UM PDF FORMAL TIMBRADO com cabeçalho da CRA, dados completos do funcionário,
+  motivo, data da ocorrência, texto explicativo e linhas para assinatura. USE ESTA AÇÃO
+  quando o usuário pedir "notificação de falta", "advertência", "comunicado" em PDF.
 • action="gerar_pdf_funcionario" — params: {{"funcionario_id":"<id>"}}
-  Gera um PDF com dados completos de um funcionário (folha, ponto, férias, etc.).
+  Gera PDF com a FICHA COMPLETA do funcionário (cargo, salário, admissão).
 • action="gerar_pdf_lista_funcionarios" — params: {{}}
-  Gera um PDF com a lista geral de funcionários ativos.
+  Gera PDF com a lista geral de funcionários ativos.
 
 Após o bloco <<TOOL>>...<<END>>, escreva uma mensagem natural em português confirmando
 o que está sendo feito. NÃO emita uma ação se não tiver os parâmetros necessários —
-nesse caso, pergunte ao usuário primeiro (ex.: "Para qual funcionário?").
+nesse caso, pergunte ao usuário primeiro (ex.: "Para qual funcionário e qual a data da falta?").
 
 Os IDs de funcionários estão na seção FUNCIONÁRIOS RH do contexto. Use o ID correto.
-Se o usuário pedir uma ação genérica e houver ambiguidade (ex.: "gere notificação"),
-peça os detalhes faltantes em vez de chutar.
+Quando o usuário pedir "gerar uma notificação de falta para o João", use a ação
+`gerar_pdf_notificacao` com tipo_notificacao="falta", incluindo motivo e data.
+Se o usuário não informou a data, use a data de hoje. Se não informou o motivo,
+use "Falta sem justificativa apresentada".
 """
 
     llm_key = os.environ.get("EMERGENT_LLM_KEY")
