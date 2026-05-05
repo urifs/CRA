@@ -175,6 +175,16 @@ export default function PontoImportarTab({ onImportSuccess }) {
               </div>
             </div>
 
+            {resultado.registros_sobrescritos > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 flex items-start gap-2">
+                <AlertTriangle className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
+                <p className="text-sm text-blue-800">
+                  <strong>{resultado.registros_sobrescritos}</strong> registro(s) anterior(es) do mesmo intervalo
+                  ({resultado.periodo?.inicio} a {resultado.periodo?.fim}) foram <strong>sobrescritos</strong> por esta importação.
+                </p>
+              </div>
+            )}
+
             {resultado.funcionarios_nao_cadastrados?.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
                 <div className="flex items-start gap-2">

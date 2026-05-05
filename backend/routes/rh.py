@@ -777,7 +777,8 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
     Comportamento:
       - Match por nome exato (case-insensitive normalizado)
       - Funcionários não encontrados: registros são salvos com flag 'funcionario_nao_cadastrado'
-      - Sobrescreve registros existentes do mesmo (funcionario_id, data)
+      - Sobrescreve APENAS os dias do intervalo da planilha (ex.: 01-15/04 não apaga 16-30/04)
+      - Re-upload do mesmo intervalo substitui os registros existentes desses dias
     """
     import xlrd
     import re
@@ -852,17 +853,18 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
     async for f in funcionarios_collection.find({}):
         funcs_db[_normalizar_nome(f.get("nome", ""))] = f
     
-    # Limpeza: remover registros antigos do mês com origem 'planilha_xls'
-    # Isso garante que ao re-importar após cadastrar funcionários, os IDs
-    # antigos NAO_CADASTRADO::* sejam descartados.
-    inicio_mes_iso = f"{ano}-{mes:02d}-01"
-    if mes == 12:
-        fim_mes_iso = f"{ano + 1}-01-01"
-    else:
-        fim_mes_iso = f"{ano}-{mes + 1:02d}-01"
+    # Limpeza por intervalo da planilha (e NÃO o mês inteiro).
+    # Permite uploads parciais (ex.: 01-15/04) sem destruir dias importados antes
+    # em outras planilhas (ex.: 16-30/04). Re-upload do mesmo intervalo sobrescreve.
+    inicio_periodo_iso = inicio_dt.strftime("%Y-%m-%d")
+    fim_periodo_iso = fim_dt.strftime("%Y-%m-%d")
+    registros_sobrescritos = await ponto_collection.count_documents({
+        "origem": "planilha_xls",
+        "data": {"$gte": inicio_periodo_iso, "$lte": fim_periodo_iso},
+    })
     await ponto_collection.delete_many({
         "origem": "planilha_xls",
-        "data": {"$gte": inicio_mes_iso, "$lt": fim_mes_iso},
+        "data": {"$gte": inicio_periodo_iso, "$lte": fim_periodo_iso},
     })
     
     # Iterar linhas em busca de blocos de funcionários
@@ -940,6 +942,10 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
                         data_dt = datetime.strptime(data_str, "%Y-%m-%d")
                     except ValueError:
                         continue
+
+                    # Considerar apenas dias dentro do intervalo declarado pela planilha
+                    if data_dt < inicio_dt or data_dt > fim_dt:
+                        continue
                     
                     batidas_raw = linha_batidas[c] if c < len(linha_batidas) else ""
                     batidas = _parse_batidas_celula(batidas_raw)
@@ -998,11 +1004,16 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
                 continue
         r += 1
     
+    msg_base = f"Importação concluída: {total_registros_inseridos} registros de ponto importados."
+    if registros_sobrescritos > 0:
+        msg_base += f" {registros_sobrescritos} registro(s) anterior(es) do mesmo período foram sobrescritos."
+
     return {
-        "message": f"Importação concluída: {total_registros_inseridos} registros de ponto importados.",
+        "message": msg_base,
         "periodo": {"inicio": inicio_str, "fim": fim_str, "mes": mes, "ano": ano},
         "total_funcionarios": len(funcionarios_processados),
         "total_registros": total_registros_inseridos,
+        "registros_sobrescritos": registros_sobrescritos,
         "funcionarios_processados": funcionarios_processados,
         "funcionarios_nao_cadastrados": funcionarios_nao_cadastrados,
         "aviso_nao_cadastrados": (
