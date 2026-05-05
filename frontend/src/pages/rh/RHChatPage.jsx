@@ -14,6 +14,7 @@ import {
   Bot,
   Menu,
   X,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -182,6 +183,27 @@ export default function RHChatPage() {
     }
   };
 
+  const downloadArtifact = async (artifact) => {
+    try {
+      const url = artifact.download_url.startsWith("http")
+        ? artifact.download_url
+        : `${API}${artifact.download_url}`;
+      const r = await axios.get(url, { headers, responseType: "blob" });
+      const blob = new Blob([r.data], { type: artifact.content_type || "application/octet-stream" });
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      const name = artifact.label?.replace(/^Baixar\s+/i, "") || "arquivo";
+      link.download = `${name}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(link.href);
+    } catch (e) {
+      console.error("Erro ao baixar:", e);
+      toast.error("Erro ao baixar arquivo gerado");
+    }
+  };
+
   const examplePrompts = [
     "Quantos funcionários temos ativos hoje?",
     "Qual o custo total da folha de pagamento do mês atual?",
@@ -337,7 +359,7 @@ export default function RHChatPage() {
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            <div className="max-w-3xl mx-auto px-4 py-8 space-y-10">
               {messages.map((m) => (
                 <div
                   key={m.id}
@@ -363,6 +385,18 @@ export default function RHChatPage() {
                     <div
                       dangerouslySetInnerHTML={{ __html: formatMessage(m.content) }}
                     />
+                    {m.artifact && (
+                      <div className="mt-3 pt-3 border-t border-gray-700">
+                        <button
+                          onClick={() => downloadArtifact(m.artifact)}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 rounded-lg text-xs font-medium transition-colors"
+                          data-testid={`rhchat-artifact-${m.id}`}
+                        >
+                          <FileDown size={14} />
+                          {m.artifact.label || "Baixar arquivo gerado"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
