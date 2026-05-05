@@ -1,5 +1,31 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Feature - 04/05/2026 (Sessão 43.8) — 🟢 Custos Extras personalizáveis com aplicação seletiva
+
+### Implementado
+- **Backend** — campo `custos_extras: List[{id, nome, tipo, valor, funcionario_ids}]` em `custos_rh_config`:
+  - `tipo`: `fixo` (R$/mês) ou `percentual` (% sobre salário do funcionário)
+  - `funcionario_ids` vazio = aplica a TODOS os ativos; preenchido = só aos listados
+  - Endpoint `PUT /api/rh/custos/config` aceita o array, valida e normaliza (gera UUID em itens novos).
+  - `GET /api/rh/custos` aplica os extras por funcionário e retorna `extras_total` + `extras_detalhe[]` (nome, tipo, valor, valor_aplicado) + agrega `total_extras` no resumo geral.
+
+- **Frontend** (`CustosPage.jsx`):
+  - Nova seção **"Custos Extras Personalizados"** dentro do modal de configuração com botão **"+ Adicionar custo"**.
+  - Cada linha tem: descrição, tipo (R$ fixo / % salário), valor, "Aplica a..." (mostra "Todos os ativos" ou "N funcionário(s)"), e botão de remover.
+  - **Mini-dialog** ao clicar em "Aplica a..." com checkbox "Aplicar a todos" no topo + lista de funcionários ativos (cada um com cargo e checkbox individual). Selecionar "todos" limpa a lista; desmarcar "todos" mostra a lista.
+
+### Validação
+- Curl: criou Cesta Básica (R$80 fixo / todos) + PLR (5% / 1 funcionário). 
+  - João Silva (selecionado): R$80 + 5%×R$3500 = **R$255** extras ✅
+  - Outros: só R$80 ✅
+  - `total_extras` resumo: R$895 ✅
+- Frontend Playwright: dialog principal com 2 linhas, mini-dialog de seleção com checkbox "Todos" + 7 funcionários listados ✅
+
+### Arquivos
+- `backend/routes/rh.py` — endpoint `PUT /custos/config` aceita `custos_extras`; `GET /custos` aplica e retorna detalhamento.
+- `frontend/src/pages/rh/CustosPage.jsx` — UI completa de gestão de extras + mini-dialog de seleção.
+
+
 ## Feature - 04/05/2026 (Sessão 43.7) — 🟢 Edição da Jornada Padrão + Custos RH editáveis
 
 ### Implementado

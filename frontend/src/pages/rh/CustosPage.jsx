@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { 
   Calculator, Users, DollarSign, TrendingUp, TrendingDown, 
-  AlertTriangle, Search, BarChart3, PieChart, Loader2, Settings, Save
+  AlertTriangle, Search, BarChart3, PieChart, Loader2, Settings, Save, Plus
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,9 +55,11 @@ export default function CustosPage() {
     outros_beneficios: 150,
     epis_custo_mensal: 50,
     horas_mes: 220,
+    custos_extras: [],
   });
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
+  const [extraEditandoFuncs, setExtraEditandoFuncs] = useState(null); // { extra_id }
 
   useEffect(() => {
     fetchFuncionarios();
@@ -77,10 +79,39 @@ export default function CustosPage() {
         outros_beneficios: data.outros_beneficios ?? 0,
         epis_custo_mensal: data.epis_custo_mensal ?? 0,
         horas_mes: data.horas_mes ?? 220,
+        custos_extras: data.custos_extras ?? [],
       });
     } catch (e) {
       console.error("Erro ao carregar config", e);
     }
+  };
+
+  const adicionarCustoExtra = () => {
+    setConfigCustos({
+      ...configCustos,
+      custos_extras: [
+        ...(configCustos.custos_extras || []),
+        {
+          id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          nome: "",
+          tipo: "fixo",
+          valor: 0,
+          funcionario_ids: [],
+        },
+      ],
+    });
+  };
+
+  const atualizarCustoExtra = (idx, campo, valor) => {
+    const novos = [...(configCustos.custos_extras || [])];
+    novos[idx] = { ...novos[idx], [campo]: valor };
+    setConfigCustos({ ...configCustos, custos_extras: novos });
+  };
+
+  const removerCustoExtra = (idx) => {
+    const novos = [...(configCustos.custos_extras || [])];
+    novos.splice(idx, 1);
+    setConfigCustos({ ...configCustos, custos_extras: novos });
   };
 
   const salvarConfig = async () => {
@@ -468,7 +499,7 @@ export default function CustosPage() {
       </Dialog>
       {/* Modal de Configuração de Custos */}
       <Dialog open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="text-emerald-600" size={20} />
@@ -554,6 +585,104 @@ export default function CustosPage() {
                 />
               </div>
             </div>
+
+            {/* Custos Extras Personalizáveis */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Plus size={16} className="text-emerald-600" />
+                  Custos Extras Personalizados
+                </h4>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={adicionarCustoExtra}
+                  className="border-emerald-500 text-emerald-600"
+                  data-testid="btn-add-custo-extra"
+                >
+                  <Plus size={14} className="mr-1" />
+                  Adicionar custo
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Adicione custos personalizados (cesta básica, comissão, PLR, convênio etc). Por padrão aplica a TODOS os funcionários ativos. Click em "Aplicar a..." para escolher quem recebe.
+              </p>
+              {(configCustos.custos_extras || []).length === 0 ? (
+                <p className="text-sm text-gray-400 italic text-center py-3 bg-gray-50 rounded">
+                  Nenhum custo extra cadastrado.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {configCustos.custos_extras.map((ce, idx) => (
+                    <div key={ce.id || idx} className="border rounded-lg p-3 bg-emerald-50/30">
+                      <div className="grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-4">
+                          <Label className="text-xs">Descrição*</Label>
+                          <Input
+                            placeholder="Ex: Cesta básica, PLR, Convênio odonto..."
+                            value={ce.nome || ""}
+                            onChange={(e) => atualizarCustoExtra(idx, "nome", e.target.value)}
+                            className="h-9"
+                            data-testid={`input-extra-nome-${idx}`}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs">Tipo</Label>
+                          <Select value={ce.tipo || "fixo"} onValueChange={(v) => atualizarCustoExtra(idx, "tipo", v)}>
+                            <SelectTrigger className="h-9" data-testid={`select-extra-tipo-${idx}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixo">R$ fixo</SelectItem>
+                              <SelectItem value="percentual">% salário</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2">
+                          <Label className="text-xs">Valor</Label>
+                          <DecimalInput
+                            value={ce.valor || 0}
+                            onChange={(v) => atualizarCustoExtra(idx, "valor", v)}
+                            placeholder="0,00"
+                            data-testid={`input-extra-valor-${idx}`}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-xs">Aplica a</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full h-9 justify-start text-xs"
+                            onClick={() => setExtraEditandoFuncs(idx)}
+                            data-testid={`btn-extra-funcs-${idx}`}
+                          >
+                            <Users size={12} className="mr-1" />
+                            {(ce.funcionario_ids || []).length === 0
+                              ? "Todos os ativos"
+                              : `${ce.funcionario_ids.length} funcionário(s)`}
+                          </Button>
+                        </div>
+                        <div className="col-span-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-rose-600 h-9 w-full"
+                            onClick={() => removerCustoExtra(idx)}
+                            data-testid={`btn-remover-extra-${idx}`}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="bg-emerald-50 border border-emerald-200 rounded p-3 text-xs text-emerald-700">
               💡 Valores típicos no Brasil: FGTS 8%, INSS Patronal 20% (Anexo IV pode variar 7,5%–27,5%). Salve para recalcular toda a tabela.
             </div>
@@ -568,6 +697,70 @@ export default function CustosPage() {
             >
               {salvandoConfig ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save size={16} className="mr-2" />}
               Salvar e recalcular
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Mini-dialog: selecionar funcionários para um custo extra */}
+      <Dialog open={extraEditandoFuncs !== null} onOpenChange={(o) => !o && setExtraEditandoFuncs(null)}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Aplicar custo a quais funcionários?
+            </DialogTitle>
+          </DialogHeader>
+          {extraEditandoFuncs !== null && configCustos.custos_extras?.[extraEditandoFuncs] && (() => {
+            const ce = configCustos.custos_extras[extraEditandoFuncs];
+            const fids = ce.funcionario_ids || [];
+            const todos = fids.length === 0;
+            const toggleFunc = (id) => {
+              const novo = fids.includes(id)
+                ? fids.filter(x => x !== id)
+                : [...fids, id];
+              atualizarCustoExtra(extraEditandoFuncs, "funcionario_ids", novo);
+            };
+            return (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">
+                  Custo: <strong>{ce.nome || "(sem nome)"}</strong>
+                </p>
+                <label className="flex items-center gap-2 p-2 bg-emerald-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={todos}
+                    onChange={() => atualizarCustoExtra(extraEditandoFuncs, "funcionario_ids", todos ? [funcionarios[0]?.id || ""].filter(Boolean) : [])}
+                    data-testid="check-todos-funcs-extra"
+                  />
+                  <span className="text-sm font-semibold text-emerald-700">
+                    Aplicar a todos os funcionários ativos
+                  </span>
+                </label>
+                {!todos && (
+                  <div className="border rounded divide-y max-h-80 overflow-y-auto">
+                    {funcionarios.length === 0 ? (
+                      <p className="p-4 text-center text-sm text-gray-400">Nenhum funcionário ativo</p>
+                    ) : funcionarios.map((f) => (
+                      <label key={f.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={fids.includes(f.id)}
+                          onChange={() => toggleFunc(f.id)}
+                          data-testid={`check-func-extra-${f.id}`}
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{f.nome}</p>
+                          <p className="text-xs text-gray-500">{f.cargo}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button onClick={() => setExtraEditandoFuncs(null)} className="bg-emerald-600 hover:bg-emerald-700">
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>

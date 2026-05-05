@@ -2811,6 +2811,7 @@ async def get_custos_config():
         "outros_beneficios": 150.0,
         "epis_custo_mensal": 50.0,
         "horas_mes": 220,
+        "custos_extras": [],
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await custos_rh_config_collection.insert_one(defaults)
@@ -2838,6 +2839,38 @@ async def update_custos_config(payload: dict = Body(...)):
             update["horas_mes"] = int(payload["horas_mes"]) or 220
         except (ValueError, TypeError):
             raise HTTPException(status_code=400, detail="horas_mes deve ser inteiro")
+    
+    # Custos extras: lista de { id, nome, tipo (fixo|percentual), valor, funcionario_ids: [] }
+    if "custos_extras" in payload:
+        extras_in = payload.get("custos_extras") or []
+        if not isinstance(extras_in, list):
+            raise HTTPException(status_code=400, detail="custos_extras deve ser uma lista")
+        extras_norm = []
+        for it in extras_in:
+            if not isinstance(it, dict):
+                continue
+            nome = (it.get("nome") or "").strip()
+            tipo = (it.get("tipo") or "fixo").strip().lower()
+            if tipo not in ("fixo", "percentual"):
+                tipo = "fixo"
+            try:
+                valor = float(it.get("valor") or 0)
+            except (ValueError, TypeError):
+                valor = 0.0
+            func_ids = it.get("funcionario_ids") or []
+            if not isinstance(func_ids, list):
+                func_ids = []
+            if not nome:
+                continue  # ignora itens sem nome
+            extras_norm.append({
+                "id": it.get("id") or str(uuid.uuid4()),
+                "nome": nome,
+                "tipo": tipo,
+                "valor": valor,
+                "funcionario_ids": [str(x) for x in func_ids],
+            })
+        update["custos_extras"] = extras_norm
+    
     if not update:
         raise HTTPException(status_code=400, detail="Nada para atualizar")
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -2868,32 +2901,54 @@ async def get_custos_rh():
     outros = float(cfg.get("outros_beneficios") or 0)
     epis_padrao = float(cfg.get("epis_custo_mensal") or 0)
     horas_mes = int(cfg.get("horas_mes") or 220)
+    custos_extras = cfg.get("custos_extras") or []
     
     custos_funcionarios = []
     total_salarios = 0
     total_encargos = 0
     total_beneficios = 0
     total_epis = 0
+    total_extras = 0
     
     async for func in funcionarios_collection.find({"status": "ativo"}):
         salario = float(func.get("salario", 0) or 0)
+        fid = func["id"]
         fgts = salario * (fgts_aliq / 100)
         inss_patronal = salario * (inss_aliq / 100)
-        
-        # Override por funcionário (futuro): func.get("custos_override")
         beneficios = vt + va + ps + outros
         epis_custo = epis_padrao
         
-        custo_total = salario + fgts + inss_patronal + beneficios + epis_custo
+        # Aplicar custos extras: se funcionario_ids vazio = aplica a todos; senão só aos listados
+        extras_funcionario = []
+        extras_total = 0.0
+        for ce in custos_extras:
+            ce_func_ids = ce.get("funcionario_ids") or []
+            if ce_func_ids and fid not in ce_func_ids:
+                continue
+            valor = float(ce.get("valor") or 0)
+            if ce.get("tipo") == "percentual":
+                aplicado = salario * (valor / 100)
+            else:
+                aplicado = valor
+            extras_total += aplicado
+            extras_funcionario.append({
+                "nome": ce.get("nome"),
+                "tipo": ce.get("tipo"),
+                "valor": valor,
+                "valor_aplicado": aplicado,
+            })
+        
+        custo_total = salario + fgts + inss_patronal + beneficios + epis_custo + extras_total
         custo_hora = custo_total / horas_mes if custo_total > 0 and horas_mes > 0 else 0
         
         total_salarios += salario
         total_encargos += fgts + inss_patronal
         total_beneficios += beneficios
         total_epis += epis_custo
+        total_extras += extras_total
         
         custos_funcionarios.append({
-            "funcionario_id": func["id"],
+            "funcionario_id": fid,
             "nome": func["nome"],
             "cargo": func.get("cargo", "-"),
             "salario": salario,
@@ -2901,6 +2956,8 @@ async def get_custos_rh():
             "inss_patronal": inss_patronal,
             "beneficios": beneficios,
             "epis": epis_custo,
+            "extras_total": extras_total,
+            "extras_detalhe": extras_funcionario,
             "custo_total": custo_total,
             "custo_hora": custo_hora,
         })
@@ -2912,7 +2969,8 @@ async def get_custos_rh():
             "total_encargos": total_encargos,
             "total_beneficios": total_beneficios,
             "total_epis": total_epis,
-            "custo_total": total_salarios + total_encargos + total_beneficios + total_epis,
+            "total_extras": total_extras,
+            "custo_total": total_salarios + total_encargos + total_beneficios + total_epis + total_extras,
         },
         "config": {
             "fgts_aliquota": fgts_aliq,
@@ -2923,6 +2981,7 @@ async def get_custos_rh():
             "outros_beneficios": outros,
             "epis_custo_mensal": epis_padrao,
             "horas_mes": horas_mes,
+            "custos_extras": custos_extras,
         },
     }
 
