@@ -574,29 +574,61 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
             f.write(key_pem)
             key_pem_path = f.name
 
-        # Período: últimos 90 dias
-        data_final = datetime.now()
-        data_inicial = data_final - timedelta(days=90)
+        # Período: últimos 5 ANOS, dividido em chunks de 90 dias (limite típico ABRASF v2)
+        data_final_total = datetime.now()
+        data_inicial_total = data_final_total - timedelta(days=365 * 5)
+        CHUNK_DAYS = 90
 
-        # Montar SOAP envelope ABRASF v2 usado pelo WebISS (Palmas, Araguaína...)
-        # Namespace do WSDL: http://nfse.abrasf.org.br
-        # Operação: ConsultarNfseServicoTomado (notas recebidas como tomador)
+        # Construir lista de janelas (mais antigas primeiro)
+        janelas: list[tuple[datetime, datetime]] = []
+        cursor = data_inicial_total
+        while cursor < data_final_total:
+            fim = min(cursor + timedelta(days=CHUNK_DAYS - 1), data_final_total)
+            janelas.append((cursor, fim))
+            cursor = fim + timedelta(days=1)
+
         cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
-        
         im_tag = f"<InscricaoMunicipal>{inscricao_municipal}</InscricaoMunicipal>" if inscricao_municipal else ""
-        dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+
+        headers_soap_base = {
+            "Content-Type": "text/xml; charset=utf-8",
+        }
+
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        total_encontradas = 0
+        duplicadas = 0
+        soapaction_persistido = certificado.get("soapaction_nfse")
+        ultimo_response_erro = None
+        ultima_tentativas_sa: list = []
+        chunks_processados = 0
+        chunks_falhados = 0
+
+        # NFSE_NS para parsing das respostas
+        NFSE_NS = "http://www.abrasf.org.br/nfse.xsd"
+
+        def find_text(el, tag):
+            for child in el.iter():
+                local = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                if local == tag:
+                    return (child.text or "").strip()
+            return ""
+
+        for janela_ini, janela_fim in janelas:
+            dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <ConsultarNfseServicoTomadoEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
   <Consulente>
     <CpfCnpj><Cnpj>{cnpj_limpo}</Cnpj></CpfCnpj>
     {im_tag}
   </Consulente>
   <PeriodoEmissao>
-    <DataInicial>{data_inicial.strftime('%Y-%m-%d')}</DataInicial>
-    <DataFinal>{data_final.strftime('%Y-%m-%d')}</DataFinal>
+    <DataInicial>{janela_ini.strftime('%Y-%m-%d')}</DataInicial>
+    <DataFinal>{janela_fim.strftime('%Y-%m-%d')}</DataFinal>
   </PeriodoEmissao>
 </ConsultarNfseServicoTomadoEnvio>"""
 
-        soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
+            soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://nfse.abrasf.org.br">
   <soap:Header/>
   <soap:Body>
@@ -607,34 +639,166 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
   </soap:Body>
 </soap:Envelope>"""
 
-        headers_soap_base = {
-            "Content-Type": "text/xml; charset=utf-8",
-        }
+            try:
+                response, soapaction_usado, tentativas_sa = _post_nfse_com_fallback_soapaction(
+                    url_nfse=url_nfse,
+                    soap_envelope_bytes=soap_envelope.encode("utf-8"),
+                    cert_tuple=(cert_pem_path, key_pem_path),
+                    base_headers=headers_soap_base,
+                    timeout=30,
+                    operation="ConsultarNfseServicoTomado",
+                    preferred_soapaction=soapaction_persistido,
+                )
+            except Exception as call_err:
+                logger.warning(f"NFS-e chunk {janela_ini.date()}-{janela_fim.date()} falhou: {call_err}")
+                chunks_falhados += 1
+                continue
 
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            if response is None:
+                ultima_tentativas_sa = tentativas_sa
+                chunks_falhados += 1
+                # Se primeiro chunk falhou catastroficamente (mTLS/SSL), interrompe
+                if chunks_processados == 0:
+                    break
+                continue
 
-        response, soapaction_usado, tentativas_sa = _post_nfse_com_fallback_soapaction(
-            url_nfse=url_nfse,
-            soap_envelope_bytes=soap_envelope.encode("utf-8"),
-            cert_tuple=(cert_pem_path, key_pem_path),
-            base_headers=headers_soap_base,
-            timeout=30,
-            operation="ConsultarNfseServicoTomado",
-            preferred_soapaction=certificado.get("soapaction_nfse"),
-        )
+            if response.status_code != 200:
+                ultimo_response_erro = response
+                chunks_falhados += 1
+                if chunks_processados == 0:
+                    break
+                continue
 
-        # Limpar temporários
+            body_lower = (response.text or "").lower()
+            if "<soap:fault" in body_lower or "<s:fault" in body_lower or "<faultstring" in body_lower:
+                ultimo_response_erro = response
+                chunks_falhados += 1
+                if chunks_processados == 0:
+                    break
+                continue
+
+            # Atualiza SOAPAction persistido (na primeira chamada bem-sucedida)
+            if soapaction_usado and soapaction_persistido != soapaction_usado:
+                soapaction_persistido = soapaction_usado
+
+            # Parse XML
+            try:
+                root = ET.fromstring(response.text)
+            except ET.ParseError:
+                inner = re.search(r'<\?xml.*?</\w+Resposta>', response.text, re.DOTALL)
+                if inner:
+                    try:
+                        root = ET.fromstring(inner.group())
+                    except Exception:
+                        chunks_falhados += 1
+                        continue
+                else:
+                    chunks_falhados += 1
+                    continue
+
+            # Mensagens de retorno (avisos do webservice)
+            lista_mensagens = root.findall(f".//{{{NFSE_NS}}}ListaMensagemRetorno") or root.findall(".//ListaMensagemRetorno")
+            if lista_mensagens:
+                for msg in lista_mensagens:
+                    codigo = find_text(msg, "Codigo")
+                    descricao = find_text(msg, "Descricao")
+                    if codigo and codigo not in ("0", "S"):
+                        msg_chunk = f"[{codigo}] {descricao}"
+                        if msg_chunk not in erros:
+                            erros.append(msg_chunk)
+
+            # Extrair NFS-e do chunk
+            comp_nfses = root.findall(f".//{{{NFSE_NS}}}CompNfse") or root.findall(".//CompNfse")
+            total_encontradas += len(comp_nfses)
+
+            for comp in comp_nfses:
+                try:
+                    numero = find_text(comp, "Numero")
+                    codigo_verificacao = find_text(comp, "CodigoVerificacao")
+                    data_emissao = find_text(comp, "DataEmissao")
+                    discriminacao = find_text(comp, "Discriminacao")
+                    valor_servicos = find_text(comp, "ValorServicos") or find_text(comp, "ValorLiquidoNfse")
+                    valor_iss = find_text(comp, "ValorIss") or "0"
+                    cnpj_prestador = find_text(comp, "Cnpj")
+                    razao_prestador = find_text(comp, "RazaoSocial")
+                    inscricao_prestador = find_text(comp, "InscricaoMunicipal")
+
+                    if not numero:
+                        continue
+
+                    existente = await db.nfse_importadas.find_one({
+                        "numero_nota": numero,
+                        "cnpj_emitente": cnpj_prestador or numero
+                    })
+                    if existente:
+                        duplicadas += 1
+                        continue
+
+                    try:
+                        valor_float = float(valor_servicos.replace(",", ".")) if valor_servicos else 0.0
+                    except (ValueError, TypeError):
+                        valor_float = 0.0
+
+                    nfse_id = str(uuid.uuid4())
+                    nfse_doc = {
+                        "id": nfse_id,
+                        "numero_nota": numero,
+                        "serie": "1",
+                        "chave_acesso": codigo_verificacao or f"{cnpj_limpo}-{numero}",
+                        "data_emissao": data_emissao[:10] if data_emissao else datetime.now().strftime("%Y-%m-%d"),
+                        "cnpj_emitente": cnpj_prestador,
+                        "razao_social_emitente": razao_prestador,
+                        "prestador_nome": razao_prestador,
+                        "cnpj_destinatario": cnpj_limpo,
+                        "valor_total": valor_float,
+                        "valor_servicos": valor_float,
+                        "valor_iss": float(valor_iss.replace(",", ".")) if valor_iss else 0.0,
+                        "descricao_servico": discriminacao,
+                        "inscricao_municipal_prestador": inscricao_prestador,
+                        "certificado_id": certificado_id,
+                        "importacao_manual": False,
+                        "status": "nova",
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await db.nfse_importadas.insert_one(nfse_doc)
+                    novas_importadas += 1
+
+                except Exception as e_item:
+                    logger.warning(f"Erro ao processar NFS-e item: {e_item}")
+                    continue
+
+            chunks_processados += 1
+
+        # Limpar temporários (uma vez no fim)
         for p in [cert_pem_path, key_pem_path]:
             try:
                 os.unlink(p)
             except Exception:
                 pass
 
-        if response is None:
-            ultima_tentativa = tentativas_sa[-1] if tentativas_sa else {}
+        # Persistir SOAPAction caso tenha sido descoberto
+        if soapaction_persistido and certificado.get("soapaction_nfse") != soapaction_persistido:
+            try:
+                await db.nfe_certificados.update_one(
+                    {"id": certificado_id},
+                    {"$set": {"soapaction_nfse": soapaction_persistido}},
+                )
+            except Exception:
+                pass
+
+        # Diagnóstico se NENHUM chunk teve sucesso
+        if chunks_processados == 0:
+            if ultimo_response_erro is not None:
+                erro_legivel = _parse_nfse_soap_error(ultimo_response_erro.text)
+                return {
+                    "message": f"Webservice NFS-e retornou erro HTTP {ultimo_response_erro.status_code}",
+                    "novas_nfses": 0,
+                    "aviso": f"Detalhes do servidor: {erro_legivel}",
+                    "chunks_processados": 0,
+                    "chunks_falhados": chunks_falhados,
+                }
+            ultima_tentativa = ultima_tentativas_sa[-1] if ultima_tentativas_sa else {}
             ultimo_erro = (ultima_tentativa.get("erro", "") or "").lower()
-            # Detectar mTLS handshake fail / server fechou conexão sem responder
             if "remote end closed" in ultimo_erro or "connection reset" in ultimo_erro or "ssl" in ultimo_erro or "handshake" in ultimo_erro:
                 aviso_clara = (
                     "O servidor da Prefeitura FECHOU a conexão TLS imediatamente — isto indica que o "
@@ -647,145 +811,15 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
                     "que você uploadou aqui e verifique se a empresa aparece corretamente."
                 )
             else:
-                aviso_clara = f"Nenhum SOAPAction foi aceito pelo servidor. Tentativas: {len(tentativas_sa)}. Última mensagem: {ultima_tentativa}"
+                aviso_clara = f"Nenhum SOAPAction foi aceito pelo servidor. Última mensagem: {ultima_tentativa}"
             return {
                 "message": "Falha de conexão com o webservice NFS-e",
                 "novas_nfses": 0,
                 "aviso": aviso_clara,
-                "diagnostico_tecnico": str(tentativas_sa)[:500],
+                "diagnostico_tecnico": str(ultima_tentativas_sa)[:500],
+                "chunks_processados": 0,
+                "chunks_falhados": chunks_falhados,
             }
-
-        if response.status_code != 200:
-            erro_legivel = _parse_nfse_soap_error(response.text)
-            # Se todas as tentativas de SOAPAction falharam com 500 "did not recognize", informa claramente
-            todas_falharam_sa = all("SOAPAction não reconhecido" in (t.get("erro", "") or "") for t in tentativas_sa if "erro" in t)
-            if todas_falharam_sa and len(tentativas_sa) >= 3:
-                return {
-                    "message": "Nenhum SOAPAction reconhecido pelo webservice",
-                    "novas_nfses": 0,
-                    "aviso": f"O webservice rejeitou todos os SOAPActions padrão. Verifique a URL e a versão do webservice. Última resposta: {erro_legivel}",
-                }
-            return {
-                "message": f"Webservice NFS-e retornou erro HTTP {response.status_code}",
-                "novas_nfses": 0,
-                "aviso": f"Detalhes do servidor: {erro_legivel}"
-            }
-
-        # Mesmo com status 200, resposta pode conter SOAP Fault ou erros de negócio:
-        # detecta antes de tentar o parser de NFS-e e dá erro amigável.
-        body_lower = response.text.lower()
-        if "<soap:fault" in body_lower or "<s:fault" in body_lower or "<faultstring" in body_lower:
-            erro_legivel = _parse_nfse_soap_error(response.text)
-            return {
-                "message": "Webservice NFS-e retornou um erro (SOAP Fault)",
-                "novas_nfses": 0,
-                "aviso": erro_legivel
-            }
-
-        # Parsear resposta XML
-        try:
-            root = ET.fromstring(response.text)
-        except ET.ParseError:
-            # Tentar extrair conteúdo CDATA
-            import re
-            inner = re.search(r'<\?xml.*?</\w+Resposta>', response.text, re.DOTALL)
-            if inner:
-                root = ET.fromstring(inner.group())
-            else:
-                return {"message": "Resposta XML inválida do webservice NFS-e", "novas_nfses": 0,
-                        "aviso": _parse_nfse_soap_error(response.text)}
-
-        # SOAPAction funcionou → persiste para acelerar próximas importações
-        if soapaction_usado is not None and certificado.get("soapaction_nfse") != soapaction_usado:
-            try:
-                await db.nfe_certificados.update_one(
-                    {"id": certificado_id},
-                    {"$set": {"soapaction_nfse": soapaction_usado}},
-                )
-            except Exception:
-                pass
-
-        # Namespace ABRASF
-        NFSE_NS = "http://www.abrasf.org.br/nfse.xsd"
-
-        def find_text(el, tag):
-            """Busca recursiva por tag ignorando namespace"""
-            for child in el.iter():
-                local = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-                if local == tag:
-                    return (child.text or "").strip()
-            return ""
-
-        # Verificar erros na resposta
-        lista_mensagens = root.findall(f".//{{{NFSE_NS}}}ListaMensagemRetorno") or root.findall(".//ListaMensagemRetorno")
-        if lista_mensagens:
-            for msg in lista_mensagens:
-                codigo = find_text(msg, "Codigo")
-                descricao = find_text(msg, "Descricao")
-                if codigo and codigo not in ("0", "S"):
-                    erros.append(f"[{codigo}] {descricao}")
-
-        # Extrair NFS-e
-        comp_nfses = root.findall(f".//{{{NFSE_NS}}}CompNfse") or root.findall(".//CompNfse")
-        total_encontradas = len(comp_nfses)
-        duplicadas = 0
-
-        for comp in comp_nfses:
-            try:
-                numero = find_text(comp, "Numero")
-                codigo_verificacao = find_text(comp, "CodigoVerificacao")
-                data_emissao = find_text(comp, "DataEmissao")
-                discriminacao = find_text(comp, "Discriminacao")
-                valor_servicos = find_text(comp, "ValorServicos") or find_text(comp, "ValorLiquidoNfse")
-                valor_iss = find_text(comp, "ValorIss") or "0"
-                cnpj_prestador = find_text(comp, "Cnpj")
-                razao_prestador = find_text(comp, "RazaoSocial")
-                inscricao_prestador = find_text(comp, "InscricaoMunicipal")
-
-                if not numero:
-                    continue
-
-                # Verificar duplicata
-                existente = await db.nfse_importadas.find_one({
-                    "numero_nota": numero,
-                    "cnpj_emitente": cnpj_prestador or numero
-                })
-                if existente:
-                    duplicadas += 1
-                    continue
-
-                try:
-                    valor_float = float(valor_servicos.replace(",", ".")) if valor_servicos else 0.0
-                except (ValueError, TypeError):
-                    valor_float = 0.0
-
-                nfse_id = str(uuid.uuid4())
-                nfse_doc = {
-                    "id": nfse_id,
-                    "numero_nota": numero,
-                    "serie": "1",
-                    "chave_acesso": codigo_verificacao or f"{cnpj_limpo}-{numero}",
-                    "data_emissao": data_emissao[:10] if data_emissao else datetime.now().strftime("%Y-%m-%d"),
-                    "cnpj_emitente": cnpj_prestador,
-                    "razao_social_emitente": razao_prestador,
-                    "prestador_nome": razao_prestador,
-                    "cnpj_destinatario": cnpj_limpo,
-                    "valor_total": valor_float,
-                    "valor_servicos": valor_float,
-                    "valor_iss": float(valor_iss.replace(",", ".")) if valor_iss else 0.0,
-                    "descricao_servico": discriminacao,
-                    "inscricao_municipal_prestador": inscricao_prestador,
-                    "certificado_id": certificado_id,
-                    "importacao_manual": False,
-                    "status": "nova",
-                    "created_at": datetime.now(timezone.utc).isoformat()
-                }
-                await db.nfse_importadas.insert_one(nfse_doc)
-                novas_importadas += 1
-
-            except Exception as e_item:
-                logger.warning(f"Erro ao processar NFS-e item: {e_item}")
-                continue
 
     except req_sync.exceptions.SSLError as e:
         return {
@@ -817,13 +851,15 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
         "erros": erros,
         "total_encontradas": total_encontradas if 'total_encontradas' in locals() else 0,
         "duplicadas": duplicadas if 'duplicadas' in locals() else 0,
+        "chunks_processados": chunks_processados if 'chunks_processados' in locals() else 0,
+        "chunks_falhados": chunks_falhados if 'chunks_falhados' in locals() else 0,
     }
     # Se webservice respondeu OK mas 0 NFS-e foram encontradas, sinaliza isso ao usuário
     if novas_importadas == 0 and not erros and resp["total_encontradas"] == 0:
         resp["aviso"] = (
-            f"Webservice respondeu OK, mas não retornou nenhuma NFS-e nos últimos 90 dias para "
+            f"Webservice respondeu OK em {resp['chunks_processados']} janelas (5 anos retroativos), mas não retornou nenhuma NFS-e para "
             f"CNPJ {cnpj_limpo} (IM {inscricao_municipal or 'não informada'}). "
-            f"Verifique: 1) Inscrição Municipal correta; 2) CNPJ é tomador de algum serviço no período; "
+            f"Verifique: 1) Inscrição Municipal correta; 2) CNPJ é tomador de algum serviço; "
             f"3) Notas foram emitidas em PALMAS-TO. Use o botão 'Testar Conexão' para diagnóstico."
         )
     elif novas_importadas == 0 and resp["total_encontradas"] > 0:
@@ -836,9 +872,9 @@ async def importar_nfse(certificado_id: str, current_user: dict = Depends(get_cu
 
 @importacao_router.post("/nfse/testar-conexao/{certificado_id}")
 async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(get_current_user)):
-    """Testa a conectividade e autenticação do certificado contra o webservice NFS-e.
-    Faz uma chamada leve (últimos 7 dias) e interpreta a resposta, retornando diagnóstico.
-    NÃO importa notas — apenas valida URL + certificado + inscrição municipal."""
+    """Testa a conectividade e autenticação do certificado contra o webservice NFS-e
+    e conta o total de NFS-e disponíveis no histórico (varre últimos 5 anos em chunks
+    de 90 dias — limite ABRASF v2). NÃO importa notas — apenas valida e contabiliza."""
     certificado = await db.nfe_certificados.find_one({"id": certificado_id}, {"_id": 0})
     if not certificado:
         raise HTTPException(status_code=404, detail="Certificado não encontrado")
@@ -883,25 +919,43 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
             f.write(key_pem)
             key_pem_path = f.name
 
-        # Etapa 2: montar requisição curta (últimos 7 dias) no formato ABRASF v2.
-        # WebISS (Palmas, Araguaína, etc.) usa namespace http://nfse.abrasf.org.br
-        # e a operação ConsultarNfseServicoTomado para consultar notas recebidas.
-        data_final = datetime.now()
-        data_inicial = data_final - timedelta(days=7)
+        # Etapa 2: montar janelas de 90 dias cobrindo os últimos 5 anos
+        data_final_total = datetime.now()
+        data_inicial_total = data_final_total - timedelta(days=365 * 5)
+        CHUNK_DAYS = 90
+        janelas: list[tuple[datetime, datetime]] = []
+        cursor = data_inicial_total
+        while cursor < data_final_total:
+            fim = min(cursor + timedelta(days=CHUNK_DAYS - 1), data_final_total)
+            janelas.append((cursor, fim))
+            cursor = fim + timedelta(days=1)
+
+        cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
         im_tag = f"<InscricaoMunicipal>{inscricao_municipal}</InscricaoMunicipal>" if inscricao_municipal else ""
-        dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+        headers_soap_base = {"Content-Type": "text/xml; charset=utf-8"}
+
+        total_nfses = 0
+        chunks_ok = 0
+        chunks_falhados = 0
+        soapaction_persistido = certificado.get("soapaction_nfse")
+        primeiro_erro_response = None
+        primeiro_erro_tentativas: list = []
+        primeiro_erro_excecao: Optional[str] = None
+        msgs_negocio: list[str] = []
+
+        for janela_ini, janela_fim in janelas:
+            dados_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <ConsultarNfseServicoTomadoEnvio xmlns="http://www.abrasf.org.br/nfse.xsd">
   <Consulente>
     <CpfCnpj><Cnpj>{cnpj_limpo}</Cnpj></CpfCnpj>
     {im_tag}
   </Consulente>
   <PeriodoEmissao>
-    <DataInicial>{data_inicial.strftime('%Y-%m-%d')}</DataInicial>
-    <DataFinal>{data_final.strftime('%Y-%m-%d')}</DataFinal>
+    <DataInicial>{janela_ini.strftime('%Y-%m-%d')}</DataInicial>
+    <DataFinal>{janela_fim.strftime('%Y-%m-%d')}</DataFinal>
   </PeriodoEmissao>
 </ConsultarNfseServicoTomadoEnvio>"""
-        cabecalho_xml = '<?xml version="1.0" encoding="UTF-8"?><cabecalho versao="2.01" xmlns="http://www.abrasf.org.br/nfse.xsd"><versaoDados>2.01</versaoDados></cabecalho>'
-        soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
+            soap_envelope = f"""<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:nfse="http://nfse.abrasf.org.br">
   <soap:Header/>
   <soap:Body>
@@ -911,82 +965,73 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
     </nfse:ConsultarNfseServicoTomadoRequest>
   </soap:Body>
 </soap:Envelope>"""
-        headers_soap_base = {
-            "Content-Type": "text/xml; charset=utf-8",
-        }
 
-        # Etapa 3: chamada HTTP com fallback de SOAPAction
-        response = None
-        soapaction_usado = None
-        tentativas_sa = []
-        try:
-            response, soapaction_usado, tentativas_sa = _post_nfse_com_fallback_soapaction(
-                url_nfse=url_nfse,
-                soap_envelope_bytes=soap_envelope.encode("utf-8"),
-                cert_tuple=(cert_pem_path, key_pem_path),
-                base_headers=headers_soap_base,
-                timeout=15,
-                operation="ConsultarNfseServicoTomado",
-                preferred_soapaction=certificado.get("soapaction_nfse"),
-            )
-        except req_sync.exceptions.SSLError as e:
-            return {"ok": False, "etapa": "ssl",
-                    "mensagem": f"Erro SSL ao conectar. Certificado pode estar expirado ou URL incorreta. Detalhes: {str(e)[:200]}"}
-        except req_sync.exceptions.ConnectTimeout:
-            return {"ok": False, "etapa": "timeout",
-                    "mensagem": f"Timeout ao conectar em {url_nfse}. Verifique se o endpoint está online."}
-        except req_sync.exceptions.ConnectionError as e:
-            return {"ok": False, "etapa": "conexao",
-                    "mensagem": f"Falha ao conectar em {url_nfse}: {str(e)[:200]}"}
-        finally:
-            for p in [cert_pem_path, key_pem_path]:
-                try:
-                    os.unlink(p)
-                except Exception:
-                    pass
+            try:
+                response, soapaction_usado, tentativas_sa = _post_nfse_com_fallback_soapaction(
+                    url_nfse=url_nfse,
+                    soap_envelope_bytes=soap_envelope.encode("utf-8"),
+                    cert_tuple=(cert_pem_path, key_pem_path),
+                    base_headers=headers_soap_base,
+                    timeout=15,
+                    operation="ConsultarNfseServicoTomado",
+                    preferred_soapaction=soapaction_persistido,
+                )
+            except req_sync.exceptions.SSLError as e:
+                primeiro_erro_excecao = f"SSL: {str(e)[:200]}"
+                chunks_falhados += 1
+                if chunks_ok == 0:
+                    break
+                continue
+            except (req_sync.exceptions.ConnectTimeout, req_sync.exceptions.ConnectionError) as e:
+                primeiro_erro_excecao = f"Conexão: {str(e)[:200]}"
+                chunks_falhados += 1
+                if chunks_ok == 0:
+                    break
+                continue
 
-        if response is None:
-            ultima_tentativa = tentativas_sa[-1] if tentativas_sa else {}
-            ultimo_erro = (ultima_tentativa.get("erro", "") or "").lower()
-            if "remote end closed" in ultimo_erro or "connection reset" in ultimo_erro or "ssl" in ultimo_erro or "handshake" in ultimo_erro:
-                return {
-                    "ok": False,
-                    "etapa": "mtls_rejeitado",
-                    "mensagem": (
-                        "O servidor da Prefeitura FECHOU a conexão TLS imediatamente — o certificado A1 "
-                        "foi REJEITADO. Verifique: 1) Se o .pfx é o e-CNPJ da empresa tomadora; "
-                        "2) Se a senha do certificado está correta; 3) Se o certificado está dentro "
-                        "da validade; 4) Se o CNPJ está cadastrado como contribuinte em Palmas-TO. "
-                        "Faça login em https://palmasto.webiss.com.br/ com o mesmo .pfx para confirmar."
-                    ),
-                    "diagnostico_tecnico": str(tentativas_sa)[:500],
-                }
-            return {
-                "ok": False,
-                "etapa": "conexao",
-                "mensagem": f"Nenhum SOAPAction aceito em {len(tentativas_sa)} tentativas. Detalhe: {ultima_tentativa}",
-            }
+            if response is None:
+                if not primeiro_erro_tentativas:
+                    primeiro_erro_tentativas = tentativas_sa
+                chunks_falhados += 1
+                if chunks_ok == 0:
+                    break
+                continue
 
-        # Etapa 4: interpretar resposta
-        body_lower = (response.text or "").lower()
-        if response.status_code != 200:
-            return {
-                "ok": False,
-                "etapa": "http",
-                "mensagem": f"HTTP {response.status_code}: {_parse_nfse_soap_error(response.text)}",
-            }
+            if response.status_code != 200:
+                if primeiro_erro_response is None:
+                    primeiro_erro_response = response
+                chunks_falhados += 1
+                if chunks_ok == 0:
+                    break
+                continue
 
-        if "<soap:fault" in body_lower or "<s:fault" in body_lower or "<faultstring" in body_lower:
-            return {
-                "ok": False,
-                "etapa": "soap_fault",
-                "mensagem": f"SOAP Fault: {_parse_nfse_soap_error(response.text)}",
-            }
+            body_lower = (response.text or "").lower()
+            if "<soap:fault" in body_lower or "<s:fault" in body_lower or "<faultstring" in body_lower:
+                if primeiro_erro_response is None:
+                    primeiro_erro_response = response
+                chunks_falhados += 1
+                if chunks_ok == 0:
+                    break
+                continue
 
-        try:
-            root = ET.fromstring(response.text)
-            msgs_with_error = []
-            total_nfses = 0
+            # Sucesso de SOAPAction → persiste
+            if soapaction_usado and soapaction_persistido != soapaction_usado:
+                soapaction_persistido = soapaction_usado
+
+            try:
+                root = ET.fromstring(response.text)
+            except ET.ParseError:
+                inner = re.search(r'<\?xml.*?</\w+Resposta>', response.text, re.DOTALL)
+                if inner:
+                    try:
+                        root = ET.fromstring(inner.group())
+                    except Exception:
+                        chunks_falhados += 1
+                        continue
+                else:
+                    chunks_falhados += 1
+                    continue
+
             for msg in root.iter():
                 tag = msg.tag.split('}')[-1] if '}' in msg.tag else msg.tag
                 if tag == "MensagemRetorno":
@@ -999,44 +1044,88 @@ async def testar_conexao_nfse(certificado_id: str, current_user: dict = Depends(
                         elif ctag == "Descricao" and c.text:
                             descricao = c.text.strip()
                     if codigo and codigo not in ("0", "S") and descricao:
-                        msgs_with_error.append(f"[Cód {codigo}] {descricao}")
+                        msg_chunk = f"[Cód {codigo}] {descricao}"
+                        if msg_chunk not in msgs_negocio:
+                            msgs_negocio.append(msg_chunk)
                 elif tag == "CompNfse":
                     total_nfses += 1
-            if msgs_with_error:
-                # Mesmo com mensagens de negócio, o SOAPAction funcionou — salva pra próxima importação
-                if soapaction_usado is not None:
-                    await db.nfe_certificados.update_one(
-                        {"id": certificado_id},
-                        {"$set": {"soapaction_nfse": soapaction_usado}},
-                    )
-                return {
-                    "ok": False,
-                    "etapa": "negocio",
-                    "mensagem": "Conexão e certificado OK, mas o webservice rejeitou a consulta: "
-                                + " | ".join(msgs_with_error[:3]),
-                    "soapaction_usado": soapaction_usado,
-                }
 
-            # Persiste o SOAPAction que funcionou pra evitar retries em futuras importações
-            if soapaction_usado is not None:
+            chunks_ok += 1
+
+        # Limpar temporários
+        for p in [cert_pem_path, key_pem_path]:
+            try:
+                os.unlink(p)
+            except Exception:
+                pass
+
+        # Persistir SOAPAction caso descoberto
+        if soapaction_persistido and certificado.get("soapaction_nfse") != soapaction_persistido:
+            try:
                 await db.nfe_certificados.update_one(
                     {"id": certificado_id},
-                    {"$set": {"soapaction_nfse": soapaction_usado}},
+                    {"$set": {"soapaction_nfse": soapaction_persistido}},
                 )
+            except Exception:
+                pass
 
-            return {
-                "ok": True,
-                "etapa": "sucesso",
-                "mensagem": f"Conexão OK! Certificado válido e webservice respondendo. {total_nfses} NFS-e encontrada(s) nos últimos 7 dias."
-                            + (f" SOAPAction aceito: '{soapaction_usado}'" if soapaction_usado and soapaction_usado != "http://www.abrasf.org.br/nfse.xsd/ConsultarNfseRecebidos" else ""),
-                "soapaction_usado": soapaction_usado,
-            }
-        except ET.ParseError:
+        # Diagnóstico se NENHUM chunk teve sucesso
+        if chunks_ok == 0:
+            if primeiro_erro_response is not None:
+                return {
+                    "ok": False,
+                    "etapa": "http" if primeiro_erro_response.status_code != 200 else "soap_fault",
+                    "mensagem": f"HTTP {primeiro_erro_response.status_code}: {_parse_nfse_soap_error(primeiro_erro_response.text)}",
+                }
+            if primeiro_erro_excecao:
+                return {"ok": False, "etapa": "ssl_ou_conexao", "mensagem": primeiro_erro_excecao}
+            ultima_tentativa = primeiro_erro_tentativas[-1] if primeiro_erro_tentativas else {}
+            ultimo_erro = (ultima_tentativa.get("erro", "") or "").lower()
+            if "remote end closed" in ultimo_erro or "connection reset" in ultimo_erro or "ssl" in ultimo_erro or "handshake" in ultimo_erro:
+                return {
+                    "ok": False,
+                    "etapa": "mtls_rejeitado",
+                    "mensagem": (
+                        "O servidor da Prefeitura FECHOU a conexão TLS imediatamente — o certificado A1 "
+                        "foi REJEITADO. Verifique: 1) Se o .pfx é o e-CNPJ da empresa tomadora; "
+                        "2) Se a senha do certificado está correta; 3) Se o certificado está dentro "
+                        "da validade; 4) Se o CNPJ está cadastrado como contribuinte em Palmas-TO. "
+                        "Faça login em https://palmasto.webiss.com.br/ com o mesmo .pfx para confirmar."
+                    ),
+                    "diagnostico_tecnico": str(primeiro_erro_tentativas)[:500],
+                }
             return {
                 "ok": False,
-                "etapa": "parse",
-                "mensagem": f"Resposta não é XML válido. Verifique se a URL aponta para o endpoint correto. Amostra: {_parse_nfse_soap_error(response.text)}",
+                "etapa": "conexao",
+                "mensagem": f"Nenhum SOAPAction aceito em {len(primeiro_erro_tentativas)} tentativas. Detalhe: {ultima_tentativa}",
             }
+
+        # Sucesso: pelo menos 1 chunk respondeu OK
+        if msgs_negocio:
+            return {
+                "ok": False,
+                "etapa": "negocio",
+                "mensagem": "Conexão e certificado OK, mas o webservice rejeitou parte da consulta: "
+                            + " | ".join(msgs_negocio[:3])
+                            + f" — {chunks_ok}/{len(janelas)} janelas processadas com sucesso.",
+                "soapaction_usado": soapaction_persistido,
+                "total_nfses": total_nfses,
+                "chunks_ok": chunks_ok,
+                "chunks_falhados": chunks_falhados,
+            }
+
+        return {
+            "ok": True,
+            "etapa": "sucesso",
+            "mensagem": f"Conexão OK! Certificado válido e webservice respondendo. "
+                        f"{total_nfses} NFS-e encontrada(s) no histórico (últimos 5 anos, "
+                        f"{chunks_ok}/{len(janelas)} janelas processadas)."
+                        + (f" SOAPAction aceito: '{soapaction_persistido}'" if soapaction_persistido else ""),
+            "soapaction_usado": soapaction_persistido,
+            "total_nfses": total_nfses,
+            "chunks_ok": chunks_ok,
+            "chunks_falhados": chunks_falhados,
+        }
 
     except Exception as e:
         logger.error(f"Erro em testar_conexao_nfse: {e}")
