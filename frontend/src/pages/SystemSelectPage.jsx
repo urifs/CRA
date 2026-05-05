@@ -98,7 +98,7 @@ export default function SystemSelectPage() {
       color: "bg-[#10B981]",
       hoverColor: "hover:border-[#10B981]",
       textColor: "text-[#10B981]",
-      path: "/rh/dashboard",
+      path: "/rh/chat",
       hasAccess: canAccessRH,
       features: [
         { icon: Users, label: "Funcionários" },
