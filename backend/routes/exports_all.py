@@ -52,6 +52,81 @@ logger = logging.getLogger(__name__)
 exports_all_router = APIRouter(tags=["Exportação"])
 
 
+# ============ HELPER: Filtro de período por coleção ============
+
+# Mapeamento coleção -> campo de data primário usado para filtragem por período.
+# Coleções não listadas usam "created_at" como fallback.
+COLLECTION_DATE_FIELDS = {
+    "contas_pagar": "data_vencimento",
+    "contas_receber": "data_vencimento",
+    "ordens_servico": "data_emissao",
+    "maintenances": "service_date",
+    "alugueis": "data_inicio",
+    "ponto_registros": "data",
+    "ferias": "data_inicio",
+    "obras": "data_inicio",
+    "imoveis": "data_inicio",
+    "stock_movements": "created_at",
+    "usage_logs": "created_at",
+    "audit_logs": "created_at",
+    "folha_pagamento": "competencia",  # YYYY-MM
+    "epi_fichas": "data_entrega",
+}
+
+
+def _apply_period_filter(
+    collection_name: str,
+    query_filter: dict,
+    data_inicio: Optional[str],
+    data_fim: Optional[str],
+) -> dict:
+    """Aplica filtro por período (data_inicio/data_fim em YYYY-MM-DD) ao query_filter
+    com base no campo de data principal da coleção.
+
+    - Para campos do tipo string YYYY-MM-DD (ex.: data_vencimento), $gte/$lte funcionam direto.
+    - Para `created_at` (ISO datetime string), append T23:59:59 no fim do dia.
+    - Para `competencia` (YYYY-MM), recorta o YYYY-MM dos parâmetros.
+    """
+    if not data_inicio and not data_fim:
+        return query_filter
+
+    date_field = COLLECTION_DATE_FIELDS.get(collection_name, "created_at")
+    period: dict = {}
+
+    if date_field == "competencia":
+        # Folha de pagamento opera por competência YYYY-MM
+        if data_inicio and len(data_inicio) >= 7:
+            period["$gte"] = data_inicio[:7]
+        if data_fim and len(data_fim) >= 7:
+            period["$lte"] = data_fim[:7]
+    elif date_field == "created_at":
+        # ISO datetime string. Para incluir o último dia inteiro, usar fim do dia.
+        if data_inicio:
+            period["$gte"] = data_inicio  # "2026-04-01" < "2026-04-01T..." trabalha como prefixo
+        if data_fim:
+            period["$lte"] = f"{data_fim}T23:59:59.999999+00:00"
+    else:
+        # Campo texto YYYY-MM-DD
+        if data_inicio:
+            period["$gte"] = data_inicio
+        if data_fim:
+            period["$lte"] = data_fim
+
+    if not period:
+        return query_filter
+
+    # Mesclar com filtro existente no mesmo campo (ex.: vencidas já tem $lt today)
+    existing = query_filter.get(date_field)
+    if isinstance(existing, dict):
+        merged = dict(existing)
+        merged.update(period)
+        query_filter[date_field] = merged
+    else:
+        query_filter[date_field] = period
+
+    return query_filter
+
+
 # ============ PDF EXPORT ROUTES ============
 
 from fastapi.responses import StreamingResponse
@@ -768,8 +843,14 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
     return buffer
 
 @exports_all_router.get("/export/pdf/{category}")
-async def export_pdf(category: str, centro_custo: Optional[str] = Query(None), current_user: dict = Depends(get_current_user)):
-    """Exporta dados de uma categoria em PDF com filtros"""
+async def export_pdf(
+    category: str,
+    centro_custo: Optional[str] = Query(None),
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Exporta dados de uma categoria em PDF com filtros (centro de custo + período)"""
     
     # Mapear categoria para coleção, título e filtro
     category_configs = {
@@ -901,6 +982,11 @@ async def export_pdf(category: str, centro_custo: Optional[str] = Query(None), c
     if centro_custo and centro_custo != "todos" and collection_name in FINANCIAL_COLLECTIONS:
         query_filter["centro_custo"] = centro_custo
         title += f" - {centro_custo}"
+
+    # Aplicar filtro de período (global)
+    query_filter = _apply_period_filter(collection_name, query_filter, data_inicio, data_fim)
+    if data_inicio or data_fim:
+        title += f" ({data_inicio or '...'} a {data_fim or '...'})"
     
     # Buscar dados com filtro
     collection = db[collection_name]
@@ -946,6 +1032,8 @@ class CombinedExportRequest(BaseModel):
     format: str = "pdf"  # pdf, excel
     filters: Optional[dict] = None  # Filtros específicos por ID
     centro_custo: Optional[str] = None  # Filtro por centro de custo
+    data_inicio: Optional[str] = None  # YYYY-MM-DD (filtro global de período)
+    data_fim: Optional[str] = None     # YYYY-MM-DD
 
 @exports_all_router.post("/export/combined")
 async def export_combined(data: CombinedExportRequest, current_user: dict = Depends(get_current_user)):
@@ -1000,11 +1088,18 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
         if data.centro_custo and data.centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
             query_filter["centro_custo"] = data.centro_custo
 
+        # Aplicar filtro global de período
+        query_filter = _apply_period_filter(
+            config["collection"], query_filter, data.data_inicio, data.data_fim
+        )
+
         items = await db[config["collection"]].find(query_filter, {"_id": 0}).to_list(1000)
         if items:
             section_title = config["title"]
             if data.centro_custo and data.centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
                 section_title += f" - {data.centro_custo}"
+            if data.data_inicio or data.data_fim:
+                section_title += f" ({data.data_inicio or '...'} a {data.data_fim or '...'})"
             all_data.append({
                 "title": section_title,
                 "items": items,
@@ -1734,10 +1829,13 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
 class MultipleItemsExport(BaseModel):
     category: str
     item_ids: list
+    data_inicio: Optional[str] = None
+    data_fim: Optional[str] = None
 
 @exports_all_router.post("/export/individual-multiple")
 async def export_multiple_individual_items(data: MultipleItemsExport, current_user: dict = Depends(get_current_user)):
-    """Exporta múltiplos itens individuais em um único PDF - cada item com detalhes completos"""
+    """Exporta múltiplos itens individuais em um único PDF - cada item com detalhes completos.
+    Aceita filtro opcional de período (intersecção: somente itens dentro do range)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
@@ -1774,10 +1872,12 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
         raise HTTPException(status_code=400, detail="Categoria inválida")
     
     config = category_config[data.category]
-    items = await db[config["collection"]].find({"id": {"$in": data.item_ids}}, {"_id": 0}).to_list(100)
+    multi_filter: dict = {"id": {"$in": data.item_ids}}
+    multi_filter = _apply_period_filter(config["collection"], multi_filter, data.data_inicio, data.data_fim)
+    items = await db[config["collection"]].find(multi_filter, {"_id": 0}).to_list(100)
     
     if not items:
-        raise HTTPException(status_code=404, detail="Nenhum item encontrado")
+        raise HTTPException(status_code=404, detail="Nenhum item encontrado no período selecionado")
     
     # Criar PDF
     buffer = io.BytesIO()
@@ -3393,8 +3493,14 @@ NEWFILEUID:NONE
     return ofx_content
 
 @exports_all_router.get("/export/excel/{category}")
-async def export_excel(category: str, centro_custo: Optional[str] = Query(None), current_user: dict = Depends(get_current_user)):
-    """Exporta dados de uma categoria em Excel"""
+async def export_excel(
+    category: str,
+    centro_custo: Optional[str] = Query(None),
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Exporta dados de uma categoria em Excel (com filtro opcional de período)"""
     
     category_configs = {
         "machines": {"collection": "machines", "title": "Maquinas", "filter": {}},
@@ -3432,7 +3538,10 @@ async def export_excel(category: str, centro_custo: Optional[str] = Query(None),
     FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
     if centro_custo and centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
         excel_filter["centro_custo"] = centro_custo
-    
+
+    # Aplicar filtro global de período
+    excel_filter = _apply_period_filter(config["collection"], excel_filter, data_inicio, data_fim)
+
     collection = db[config["collection"]]
     data = await collection.find(excel_filter, {"_id": 0}).to_list(5000)
     
@@ -3457,8 +3566,14 @@ async def export_excel(category: str, centro_custo: Optional[str] = Query(None),
     )
 
 @exports_all_router.get("/export/ofx/{category}")
-async def export_ofx(category: str, centro_custo: Optional[str] = Query(None), current_user: dict = Depends(get_current_user)):
-    """Exporta dados financeiros em formato OFX"""
+async def export_ofx(
+    category: str,
+    centro_custo: Optional[str] = Query(None),
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Exporta dados financeiros em formato OFX (com filtro opcional de período)"""
     
     valid_categories = {
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas_a_Pagar", "type": "pagar"},
@@ -3481,6 +3596,8 @@ async def export_ofx(category: str, centro_custo: Optional[str] = Query(None), c
     query_filter = dict(config.get("filter", {}))
     if centro_custo and centro_custo != "todos":
         query_filter["centro_custo"] = centro_custo
+    # Filtro de período
+    query_filter = _apply_period_filter(config["collection"], query_filter, data_inicio, data_fim)
     collection = db[config["collection"]]
     data = await collection.find(query_filter, {"_id": 0}).to_list(5000)
     
@@ -3519,9 +3636,11 @@ async def export_relatorio_conta_bancaria(
     conta_bancaria_id: str,
     tipo: str = "pagar",  # "pagar", "receber" ou "todas"
     status: str = "todas",  # "todas", "pendente", "quitada", "parcial"
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Exporta relatório de contas a pagar ou receber filtrado por conta bancária e status"""
+    """Exporta relatório de contas a pagar ou receber filtrado por conta bancária, status e período"""
     
     # Buscar conta bancária
     conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
@@ -3537,6 +3656,9 @@ async def export_relatorio_conta_bancaria(
         filtro_base["status"] = "quitada"
     elif status == "parcial":
         filtro_base["status"] = "parcial"
+
+    # Aplicar filtro global de período (data_vencimento para contas)
+    filtro_base = _apply_period_filter("contas_pagar", filtro_base, data_inicio, data_fim)
     
     # Buscar dados conforme o tipo
     data = []

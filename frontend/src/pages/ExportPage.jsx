@@ -124,6 +124,22 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const [extratoStatus, setExtratoStatus] = useState("todas");
   const [exportingExtratoPC, setExportingExtratoPC] = useState(false);
 
+  // Filtro GLOBAL de período (aplica a TODAS as exportações)
+  const [globalDataInicio, setGlobalDataInicio] = useState("");
+  const [globalDataFim, setGlobalDataFim] = useState("");
+
+  // Helper: monta query string com período (e centro de custo opcional)
+  const buildPeriodQuery = (extra = {}) => {
+    const params = new URLSearchParams();
+    if (globalDataInicio) params.append("data_inicio", globalDataInicio);
+    if (globalDataFim) params.append("data_fim", globalDataFim);
+    Object.entries(extra).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") params.append(k, v);
+    });
+    const s = params.toString();
+    return s ? `?${s}` : "";
+  };
+
   useEffect(() => {
     fetchCategories();
     if (module === "administrativo") {
@@ -214,8 +230,13 @@ export default function ExportPage({ module = "gerenciamento" }) {
     
     setExportingRelatorio(true);
     try {
+      const qs = buildPeriodQuery({
+        conta_bancaria_id: relContaBancaria,
+        tipo: relTipoConta,
+        status: relStatusConta,
+      });
       const response = await axios.get(
-        `${API}/export/relatorio-conta-bancaria?conta_bancaria_id=${relContaBancaria}&tipo=${relTipoConta}&status=${relStatusConta}`,
+        `${API}/export/relatorio-conta-bancaria${qs}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob'
@@ -287,7 +308,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
     if (subcategoryId === 'extrato_bancario') {
       setExporting(`individual-${itemId}`);
       try {
-        const response = await axios.get(`${API}/export/extrato-bancario/${itemId}`, {
+        const response = await axios.get(`${API}/export/extrato-bancario/${itemId}${buildPeriodQuery()}`, {
           headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob'
         });
@@ -385,7 +406,9 @@ export default function ExportPage({ module = "gerenciamento" }) {
     try {
       const response = await axios.post(`${API}/export/individual-multiple`, {
         category: subcategoryId,
-        item_ids: selectedIds
+        item_ids: selectedIds,
+        data_inicio: globalDataInicio || null,
+        data_fim: globalDataFim || null,
       }, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -595,7 +618,9 @@ export default function ExportPage({ module = "gerenciamento" }) {
       const response = await axios.post(`${API}/export/combined`, {
         categories: selectedItems,
         format: 'pdf',
-        centro_custo: ccParam || null
+        centro_custo: ccParam || null,
+        data_inicio: globalDataInicio || null,
+        data_fim: globalDataFim || null,
       }, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -640,9 +665,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
     setExporting(`pdf-${itemId}`);
     try {
       const ccParam = getCentroCustoParam();
-      const apiUrl = ccParam
-        ? `${API}/export/pdf/${itemId}?centro_custo=${encodeURIComponent(ccParam)}`
-        : `${API}/export/pdf/${itemId}`;
+      const apiUrl = `${API}/export/pdf/${itemId}${buildPeriodQuery(ccParam ? { centro_custo: ccParam } : {})}`;
       const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -684,9 +707,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
     setExporting(`excel-${itemId}`);
     try {
       const ccParam = getCentroCustoParam();
-      const apiUrl = ccParam
-        ? `${API}/export/excel/${itemId}?centro_custo=${encodeURIComponent(ccParam)}`
-        : `${API}/export/excel/${itemId}`;
+      const apiUrl = `${API}/export/excel/${itemId}${buildPeriodQuery(ccParam ? { centro_custo: ccParam } : {})}`;
       const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -728,9 +749,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
     setExporting(`ofx-${itemId}`);
     try {
       const ccParam = getCentroCustoParam();
-      const apiUrl = ccParam
-        ? `${API}/export/ofx/${itemId}?centro_custo=${encodeURIComponent(ccParam)}`
-        : `${API}/export/ofx/${itemId}`;
+      const apiUrl = `${API}/export/ofx/${itemId}${buildPeriodQuery(ccParam ? { centro_custo: ccParam } : {})}`;
       const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -773,7 +792,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
     
     setExporting('extrato_bancario');
     try {
-      const response = await axios.get(`${API}/export/extrato-bancario/${selectedContaBancaria}`, {
+      const response = await axios.get(`${API}/export/extrato-bancario/${selectedContaBancaria}${buildPeriodQuery()}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -862,6 +881,62 @@ export default function ExportPage({ module = "gerenciamento" }) {
             )}
             Exportar ({selectedItems.length})
           </Button>
+        </div>
+      </div>
+
+      {/* Banner GLOBAL de Período — aplica a TODAS as exportações */}
+      <div className="mb-6 rounded-xl border-2 border-indigo-200 bg-indigo-50 p-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-indigo-100">
+              <Clock size={18} className="text-indigo-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-indigo-900">Período de exportação (global)</p>
+              <p className="text-xs text-indigo-600">
+                {globalDataInicio || globalDataFim
+                  ? `Filtrando: ${globalDataInicio || "início"} até ${globalDataFim || "hoje"}`
+                  : "Sem filtro — exporta todos os registros. Defina um intervalo abaixo se quiser limitar."}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-xs text-indigo-700 font-medium block mb-1">Data Início</label>
+              <Input
+                type="date"
+                value={globalDataInicio}
+                onChange={(e) => setGlobalDataInicio(e.target.value)}
+                className="h-9 w-40 bg-white"
+                data-testid="export-global-data-inicio"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-indigo-700 font-medium block mb-1">Data Fim</label>
+              <Input
+                type="date"
+                value={globalDataFim}
+                onChange={(e) => setGlobalDataFim(e.target.value)}
+                className="h-9 w-40 bg-white"
+                data-testid="export-global-data-fim"
+              />
+            </div>
+            {(globalDataInicio || globalDataFim) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setGlobalDataInicio("");
+                  setGlobalDataFim("");
+                }}
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-100 h-9"
+                data-testid="export-global-clear-period"
+              >
+                <XIcon size={14} className="mr-1" />
+                Limpar
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
