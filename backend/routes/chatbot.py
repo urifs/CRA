@@ -686,37 +686,16 @@ async def _execute_chat_tool(action: str, params: dict, current_user: dict):
 
 
 def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorrencia: str, texto_complementar: str) -> bytes:
-    """Gera PDF formal/timbrado de notificação (falta, advertência, comunicado).
-    Inspirado no template corporativo de exports_all.py — com cabeçalho da CRA,
-    bloco de dados do colaborador, corpo do texto e linhas de assinatura."""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.platypus import (
-        Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    """Gera PDF formal de notificação usando o template corporativo padrão da plataforma."""
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table, build_signatures_table,
     )
+    from reportlab.platypus import Paragraph, Spacer
 
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf, pagesize=A4,
-        topMargin=2 * cm, bottomMargin=2 * cm,
-        leftMargin=2.2 * cm, rightMargin=2.2 * cm,
-    )
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle("ntTitle", parent=styles["Heading1"],
-                                 fontSize=18, textColor=colors.HexColor("#0f172a"),
-                                 alignment=TA_CENTER, spaceAfter=8)
-    subtitle = ParagraphStyle("ntSub", parent=styles["Normal"], fontSize=10,
-                              textColor=colors.HexColor("#64748b"),
-                              alignment=TA_CENTER, spaceAfter=18)
-    section = ParagraphStyle("ntSec", parent=styles["Heading2"], fontSize=12,
-                             textColor=colors.HexColor("#0f172a"),
-                             spaceBefore=10, spaceAfter=6)
-    body = ParagraphStyle("ntBody", parent=styles["Normal"], fontSize=10.5,
-                          textColor=colors.black, alignment=TA_JUSTIFY,
-                          leading=15, spaceAfter=6)
+    doc = create_corporate_doc(buf, title=f"Notificação - {func.get('nome','-')}")
+    styles = get_corporate_styles()
 
     titulos_pt = {
         "falta": "NOTIFICAÇÃO DE FALTA",
@@ -728,30 +707,7 @@ def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorr
     titulo_doc = titulos_pt.get(tipo, "NOTIFICAÇÃO INTERNA")
 
     elements = []
-
-    # Logo + Cabeçalho da empresa
-    try:
-        logo_path = "/app/frontend/public/logo.png"
-        if os.path.exists(logo_path):
-            elements.append(RLImage(logo_path, width=3 * cm, height=3 * cm, kind="proportional"))
-            elements.append(Spacer(1, 6))
-    except Exception:
-        pass
-
-    elements.append(Paragraph("CRA Construtora", title_style))
-    elements.append(Paragraph(f"Documento emitido em {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle))
-
-    # Linha divisória
-    div = Table([[""]], colWidths=[16 * cm])
-    div.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 1.5, colors.HexColor("#0f766e"))]))
-    elements.append(div)
-    elements.append(Spacer(1, 12))
-
-    # Título
-    elements.append(Paragraph(titulo_doc, ParagraphStyle("ntDocTitle", parent=styles["Heading1"],
-                                                        fontSize=16, alignment=TA_CENTER,
-                                                        textColor=colors.HexColor("#0f172a"),
-                                                        spaceAfter=14)))
+    add_corporate_header(elements, doc_title=titulo_doc)
 
     # Bloco de dados do colaborador
     def _f(v):
@@ -763,40 +719,23 @@ def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorr
     except Exception:
         pass
 
-    dados_func = [
-        ["Colaborador:", _f(func.get("nome"))],
-        ["CPF:", _f(func.get("cpf"))],
-        ["Cargo:", _f(func.get("cargo"))],
-        ["Departamento:", _f(func.get("departamento"))],
-        ["Data de admissão:", _f(func.get("data_admissao"))],
-        ["Data da ocorrência:", data_oc_fmt],
-    ]
-    t = Table(dados_func, colWidths=[4.5 * cm, 11 * cm])
-    t.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#475569")),
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f8fafc")),
-        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-        ("INNERGRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    elements.append(build_data_table([
+        ("Colaborador:", _f(func.get("nome"))),
+        ("CPF:", _f(func.get("cpf"))),
+        ("Cargo:", _f(func.get("cargo"))),
+        ("Departamento:", _f(func.get("departamento"))),
+        ("Data de admissão:", _f(func.get("data_admissao"))),
+        ("Data da ocorrência:", data_oc_fmt),
     ]))
-    elements.append(t)
     elements.append(Spacer(1, 16))
 
-    # Corpo do texto
-    elements.append(Paragraph("Motivo / Descrição", section))
-    elements.append(Paragraph(motivo, body))
+    elements.append(Paragraph("Motivo / Descrição", styles["section"]))
+    elements.append(Paragraph(motivo, styles["body"]))
 
     if texto_complementar:
-        elements.append(Paragraph("Observações complementares", section))
-        elements.append(Paragraph(texto_complementar.replace("\n", "<br/>"), body))
+        elements.append(Paragraph("Observações complementares", styles["section"]))
+        elements.append(Paragraph(texto_complementar.replace("\n", "<br/>"), styles["body"]))
 
-    # Texto padrão por tipo
     rodape_textos = {
         "falta": (
             "Pela presente, comunicamos formalmente o registro da falta acima descrita. "
@@ -819,110 +758,97 @@ def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorr
         ),
     }
     elements.append(Spacer(1, 8))
-    elements.append(Paragraph(rodape_textos.get(tipo, rodape_textos["comunicado"]), body))
+    elements.append(Paragraph(rodape_textos.get(tipo, rodape_textos["comunicado"]), styles["body"]))
     elements.append(Spacer(1, 36))
 
-    # Assinaturas
-    assinaturas = Table(
-        [["", ""], ["Colaborador", "Setor de RH / Gestor"]],
-        colWidths=[7.5 * cm, 7.5 * cm],
-    )
-    assinaturas.setStyle(TableStyle([
-        ("LINEABOVE", (0, 1), (-1, 1), 0.7, colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTSIZE", (0, 1), (-1, 1), 9),
-        ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#475569")),
-        ("TOPPADDING", (0, 1), (-1, 1), 4),
-    ]))
-    elements.append(assinaturas)
-
-    elements.append(Spacer(1, 24))
-    rodape = ParagraphStyle("ntFoot", parent=styles["Normal"], fontSize=8,
-                            textColor=colors.HexColor("#94a3b8"), alignment=TA_CENTER)
-    elements.append(Paragraph(
-        f"Documento gerado pelo Assistente IA do RH · CRA Construtora · {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        rodape
-    ))
+    elements.append(build_signatures_table())
+    add_footer(elements, "Documento gerado pelo Assistente IA do RH · CRA Construtora")
 
     doc.build(elements)
     return buf.getvalue()
 
 
 def _gerar_pdf_funcionario(func: dict) -> bytes:
-    """Gera PDF simples com dados do funcionário usando reportlab."""
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
+    """Gera PDF da ficha do funcionário usando template corporativo."""
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table,
+    )
+    from reportlab.platypus import Paragraph, Spacer
+
     buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
-    width, height = A4
-    y = height - 2 * cm
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(2 * cm, y, "Ficha do Funcionário")
-    y -= 1 * cm
-    c.setFont("Helvetica", 10)
-    c.drawString(2 * cm, y, f"Gerado pelo Assistente IA · {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    y -= 1 * cm
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(2 * cm, y, f"Nome: {func.get('nome', '-')}")
-    y -= 0.7 * cm
-    c.setFont("Helvetica", 11)
-    campos = [
-        ("CPF", func.get("cpf")),
-        ("Cargo", func.get("cargo")),
-        ("Departamento", func.get("departamento")),
-        ("Data de Admissão", func.get("data_admissao")),
-        ("Salário", f"R$ {(func.get('salario') or 0):,.2f}"),
-        ("Tipo Contrato", func.get("tipo_contrato")),
-        ("Telefone", func.get("telefone")),
-        ("Email", func.get("email")),
-        ("Status", func.get("status")),
-    ]
-    for k, v in campos:
-        if v in (None, ""):
-            continue
-        c.drawString(2 * cm, y, f"{k}: {v}")
-        y -= 0.6 * cm
-        if y < 2 * cm:
-            c.showPage()
-            y = height - 2 * cm
-    c.showPage()
-    c.save()
+    doc = create_corporate_doc(buf, title=f"Ficha - {func.get('nome','-')}")
+    styles = get_corporate_styles()
+    elements = []
+    add_corporate_header(elements, doc_title="FICHA DO FUNCIONÁRIO")
+
+    def _f(v):
+        return str(v) if v not in (None, "") else "-"
+
+    elements.append(Paragraph("Dados Pessoais", styles["section"]))
+    elements.append(build_data_table([
+        ("Nome:", _f(func.get("nome"))),
+        ("CPF:", _f(func.get("cpf"))),
+        ("RG:", _f(func.get("rg"))),
+        ("Data de nascimento:", _f(func.get("data_nascimento"))),
+        ("Telefone:", _f(func.get("telefone"))),
+        ("E-mail:", _f(func.get("email"))),
+        ("Endereço:", _f(func.get("endereco"))),
+    ]))
+    elements.append(Spacer(1, 12))
+
+    elements.append(Paragraph("Dados Funcionais", styles["section"]))
+    elements.append(build_data_table([
+        ("Cargo:", _f(func.get("cargo"))),
+        ("Departamento:", _f(func.get("departamento"))),
+        ("Data de admissão:", _f(func.get("data_admissao"))),
+        ("Tipo de contrato:", _f(func.get("tipo_contrato"))),
+        ("Salário:", f"R$ {(func.get('salario') or 0):,.2f}"),
+        ("Status:", _f(func.get("status"))),
+    ]))
+
+    add_footer(elements)
+    doc.build(elements)
     return buf.getvalue()
 
 
 def _gerar_pdf_lista_funcionarios(funcionarios: list) -> bytes:
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import A4
+    """Gera PDF com lista geral de funcionários usando template corporativo."""
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, header_table_style,
+    )
+    from reportlab.platypus import Paragraph, Spacer, Table
     from reportlab.lib.units import cm
+
     buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
-    width, height = A4
-    y = height - 2 * cm
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(2 * cm, y, f"Lista de Funcionários ({len(funcionarios)})")
-    y -= 0.8 * cm
-    c.setFont("Helvetica", 9)
-    c.drawString(2 * cm, y, f"Gerado pelo Assistente IA · {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    y -= 1 * cm
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(2 * cm, y, "Nome")
-    c.drawString(9 * cm, y, "Cargo")
-    c.drawString(14 * cm, y, "Salário")
-    y -= 0.4 * cm
-    c.line(2 * cm, y, width - 2 * cm, y)
-    y -= 0.5 * cm
-    c.setFont("Helvetica", 9)
-    for f in funcionarios:
-        if y < 2 * cm:
-            c.showPage()
-            y = height - 2 * cm
-        c.drawString(2 * cm, y, (f.get("nome") or "")[:42])
-        c.drawString(9 * cm, y, (f.get("cargo") or "")[:28])
-        c.drawString(14 * cm, y, f"R$ {(f.get('salario') or 0):,.2f}")
-        y -= 0.5 * cm
-    c.showPage()
-    c.save()
+    doc = create_corporate_doc(buf, title="Lista de Funcionários")
+    styles = get_corporate_styles()
+    elements = []
+    add_corporate_header(
+        elements,
+        doc_title="LISTA DE FUNCIONÁRIOS",
+        subtitle=f"{len(funcionarios)} colaboradores · {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+    )
+
+    if not funcionarios:
+        elements.append(Paragraph("Nenhum funcionário cadastrado.", styles["body"]))
+    else:
+        rows = [["Nome", "Cargo", "Departamento", "Salário"]]
+        for f in funcionarios:
+            rows.append([
+                (f.get("nome") or "-")[:36],
+                (f.get("cargo") or "-")[:24],
+                (f.get("departamento") or "-")[:18],
+                f"R$ {(f.get('salario') or 0):,.2f}",
+            ])
+        t = Table(rows, colWidths=[6 * cm, 4.5 * cm, 3.5 * cm, 3 * cm], repeatRows=1)
+        t.setStyle(header_table_style())
+        elements.append(t)
+
+    elements.append(Spacer(1, 12))
+    add_footer(elements, "Documento gerado pelo Assistente IA do RH · CRA Construtora")
+    doc.build(elements)
     return buf.getvalue()
 
 
