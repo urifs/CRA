@@ -682,6 +682,102 @@ async def _execute_chat_tool(action: str, params: dict, current_user: dict):
         }
         return artifact, f"📄 Lista de funcionários gerada ({len(funcionarios)} registros)."
 
+    if action == "gerar_holerite":
+        funcionario_id = params.get("funcionario_id")
+        mes = params.get("mes")
+        ano = params.get("ano")
+        if not funcionario_id or not mes or not ano:
+            raise ValueError("Parâmetros obrigatórios: funcionario_id, mes, ano")
+        try:
+            mes_i, ano_i = int(mes), int(ano)
+        except (TypeError, ValueError):
+            raise ValueError("mes e ano devem ser números inteiros")
+        func = await db.funcionarios.find_one({"id": funcionario_id}, {"_id": 0})
+        if not func:
+            raise ValueError(f"Funcionário {funcionario_id} não encontrado")
+        folha = await db.folha_pagamento.find_one(
+            {"funcionario_id": funcionario_id, "mes": mes_i, "ano": ano_i}, {"_id": 0}
+        )
+        if not folha:
+            meses_pt = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+            raise ValueError(
+                f"Não há folha de pagamento de {meses_pt[mes_i]}/{ano_i} para {func.get('nome')}. "
+                f"Gere a folha primeiro em RH ▸ Folha de Pagamento."
+            )
+        from routes.rh import _build_holerite_pdf
+        pdf_bytes = _build_holerite_pdf(folha, func)
+        artifact_id = str(uuid.uuid4())
+        nome_safe = (func.get("nome") or "func").replace(" ", "_")[:30]
+        await db.chat_artifacts.insert_one({
+            "id": artifact_id,
+            "user_id": current_user.get("id"),
+            "filename": f"Holerite_{nome_safe}_{mes_i:02d}_{ano_i}.pdf",
+            "content_type": "application/pdf",
+            "content_b64": base64.b64encode(pdf_bytes).decode("ascii"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        artifact = {
+            "type": "pdf",
+            "label": f"Baixar Holerite {mes_i:02d}/{ano_i} - {func.get('nome')}",
+            "download_url": f"/api/chatbot/artifacts/{artifact_id}",
+        }
+        liq_brl = f"R$ {float(folha.get('salario_liquido', 0)):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return artifact, (
+            f"💰 Holerite de {func.get('nome')} gerado.\n"
+            f"• Competência: {mes_i:02d}/{ano_i}\n"
+            f"• Salário Líquido: {liq_brl}"
+        )
+
+    if action == "gerar_espelho_ponto":
+        mes = params.get("mes")
+        ano = params.get("ano")
+        funcionario_id = params.get("funcionario_id")  # opcional
+        if not mes or not ano:
+            raise ValueError("Parâmetros obrigatórios: mes, ano")
+        try:
+            mes_i, ano_i = int(mes), int(ano)
+        except (TypeError, ValueError):
+            raise ValueError("mes e ano devem ser números inteiros")
+        # Reusa a função que já calcula os dados consolidados de ponto
+        from routes.rh import get_ponto_dashboard_mensal, _build_espelho_ponto_pdf
+        dashboard = await get_ponto_dashboard_mensal(mes=mes_i, ano=ano_i)
+        funcionarios = dashboard.get("funcionarios", [])
+        nome_arquivo = "TODOS"
+        nome_label = f"todos os funcionários de {mes_i:02d}/{ano_i}"
+        if funcionario_id:
+            funcionarios = [f for f in funcionarios if f.get("funcionario_id") == funcionario_id]
+            if not funcionarios:
+                func = await db.funcionarios.find_one({"id": funcionario_id}, {"_id": 0})
+                nome = (func or {}).get("nome", funcionario_id)
+                raise ValueError(
+                    f"Não há registros de ponto de {nome} em {mes_i:02d}/{ano_i}."
+                )
+            nome_arquivo = (funcionarios[0].get("nome") or "func").replace(" ", "_")[:30]
+            nome_label = f"{funcionarios[0].get('nome')} ({mes_i:02d}/{ano_i})"
+        if not funcionarios:
+            raise ValueError(f"Nenhum registro de ponto encontrado para {mes_i:02d}/{ano_i}.")
+        pdf_bytes = _build_espelho_ponto_pdf(funcionarios, mes_i, ano_i)
+        artifact_id = str(uuid.uuid4())
+        await db.chat_artifacts.insert_one({
+            "id": artifact_id,
+            "user_id": current_user.get("id"),
+            "filename": f"EspelhoPonto_{nome_arquivo}_{mes_i:02d}_{ano_i}.pdf",
+            "content_type": "application/pdf",
+            "content_b64": base64.b64encode(pdf_bytes).decode("ascii"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        artifact = {
+            "type": "pdf",
+            "label": f"Baixar Espelho de Ponto - {nome_label}",
+            "download_url": f"/api/chatbot/artifacts/{artifact_id}",
+        }
+        return artifact, (
+            f"⏰ Espelho de Ponto gerado.\n"
+            f"• Período: {mes_i:02d}/{ano_i}\n"
+            f"• Abrange: {len(funcionarios)} funcionário(s)"
+        )
+
     raise ValueError(f"Ação desconhecida: {action}")
 
 
@@ -957,6 +1053,15 @@ Ações suportadas:
   Gera PDF com a FICHA COMPLETA do funcionário (cargo, salário, admissão).
 • action="gerar_pdf_lista_funcionarios" — params: {{}}
   Gera PDF com a lista geral de funcionários ativos.
+• action="gerar_holerite" — params: {{"funcionario_id":"<id>","mes":<1-12>,"ano":<YYYY>}}
+  Gera o HOLERITE em PDF (proventos × descontos, salário líquido em destaque, FGTS, INSS).
+  Use quando o usuário pedir "holerite", "contracheque" ou "demonstrativo de pagamento".
+  Exige folha já gerada para o período. Se o usuário não informar mês/ano, pergunte.
+• action="gerar_espelho_ponto" — params: {{"mes":<1-12>,"ano":<YYYY>,"funcionario_id":"<id>"}}
+  Gera o ESPELHO DE PONTO em PDF (batidas, faltas, banco de horas, abonos).
+  funcionario_id é OPCIONAL: se omitido, gera o espelho consolidado de TODOS os funcionários
+  do período. Use quando o usuário pedir "espelho de ponto", "relatório de ponto",
+  "frequência" ou "registro de ponto" em PDF.
 
 Após o bloco <<TOOL>>...<<END>>, escreva uma mensagem natural em português confirmando
 o que está sendo feito. NÃO emita uma ação se não tiver os parâmetros necessários —
@@ -967,6 +1072,13 @@ Quando o usuário pedir "gerar uma notificação de falta para o João", use a a
 `gerar_pdf_notificacao` com tipo_notificacao="falta", incluindo motivo e data.
 Se o usuário não informou a data, use a data de hoje. Se não informou o motivo,
 use "Falta sem justificativa apresentada".
+
+Exemplos para HOLERITE/ESPELHO:
+- "Gere o holerite do João de fevereiro" → use `gerar_holerite` com mes=2 e ano do contexto.
+- "Quero o espelho de ponto de abril" → use `gerar_espelho_ponto` com mes=4 (sem funcionario_id = consolidado).
+- "Espelho de ponto da Maria em março/2026" → use `gerar_espelho_ponto` com funcionario_id, mes=3, ano=2026.
+Se o usuário não informou o ano, assuma o ano atual.
+Se a folha de pagamento ainda não existir para o período, INFORME ao usuário sem chamar a tool.
 """
 
     llm_key = os.environ.get("EMERGENT_LLM_KEY")

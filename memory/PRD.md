@@ -1,5 +1,24 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
+
+## Feature - 05/05/2026 (Sessão 45.1) — 🤖 Chat IA: novas ferramentas Holerite + Espelho de Ponto
+
+### Implementado
+**Backend (`routes/chatbot.py` + `routes/rh.py`):**
+- Extraído `_build_holerite_pdf(folha, func) -> bytes` como helper reutilizável em `routes/rh.py`.
+- Adicionadas 2 novas tools ao `_execute_chat_tool` do assistente IA do RH:
+  - **`gerar_holerite`** — params `funcionario_id`, `mes`, `ano`. Gera holerite corporativo em PDF com salário líquido em destaque. Mensagem amigável quando a folha do período ainda não existe.
+  - **`gerar_espelho_ponto`** — params `mes`, `ano` e `funcionario_id` (opcional). Reusa `get_ponto_dashboard_mensal` + `_build_espelho_ponto_pdf`. Sem `funcionario_id` retorna o espelho consolidado de TODOS os funcionários.
+- Atualizado o **system prompt** do Gemini com as novas ações, exemplos de uso natural ("Gere o holerite do João de fevereiro", "Espelho de ponto da Maria em março/2026") e regras de disambiguação por ano.
+
+### Validação
+- ✅ Direct call `_execute_chat_tool('gerar_holerite', ...)` → PDF 38KB com "R$ 2.973,61"
+- ✅ Direct call `gerar_espelho_ponto` consolidado → PDF 71KB com 9 funcionários
+- ✅ Erro amigável quando folha não existe ("Não há folha de pagamento de Dezembro/1999...")
+- ✅ End-to-end via API: "Gere o espelho de ponto consolidado de abril de 2026" → Gemini invoca a tool e devolve o link de download
+- ✅ Disambiguação inteligente: ao pedir holerite com nome ambíguo (2 João Silvas), o Gemini lista os IDs e pede clarificação antes de chamar a tool
+
+
 ## Feature - 05/05/2026 (Sessão 45) — 🌐 API pública CBO + 📄 Padronização visual de PDFs (RH/Gerenciamento)
 
 ### Implementado

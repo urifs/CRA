@@ -2242,6 +2242,18 @@ async def gerar_holerite(folha_id: str):
     if not func:
         raise HTTPException(status_code=404, detail="Funcionário não encontrado")
     
+    pdf_bytes = _build_holerite_pdf(folha, func)
+    nome_seguro = (func.get("nome") or "funcionario").replace(" ", "_")[:40]
+    filename = f"Holerite_{nome_seguro}_{folha['mes']:02d}_{folha['ano']}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+def _build_holerite_pdf(folha: dict, func: dict) -> bytes:
+    """Gera bytes do PDF de holerite (reutilizável pelo chatbot e rotas REST)."""
     from reportlab.lib import colors
     from reportlab.lib.units import cm
     from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
@@ -2303,7 +2315,6 @@ async def gerar_holerite(folha_id: str):
     ]
     
     rows = [["Discriminação", "Proventos", "Descontos"]]
-    max_len = max(len(proventos), len(descontos))
     proventos_filtrados = [(d, v) for d, v in proventos if v > 0]
     descontos_filtrados = [(d, v) for d, v in descontos if v > 0]
     max_len = max(len(proventos_filtrados), len(descontos_filtrados), 1)
@@ -2369,14 +2380,7 @@ async def gerar_holerite(folha_id: str):
     
     doc.build(elements)
     buffer.seek(0)
-    
-    nome_seguro = (func.get("nome") or "funcionario").replace(" ", "_")[:40]
-    filename = f"Holerite_{nome_seguro}_{folha['mes']:02d}_{folha['ano']}.pdf"
-    return Response(
-        content=buffer.getvalue(),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+    return buffer.getvalue()
 
 
 @rh_router.post("/folha-pagamento/gerar-contas-pagar")
