@@ -402,7 +402,7 @@ export default function ImportacaoNFPage() {
   };
 
   const getConsultasRestantes = (cert) => {
-    const LIMITE_DIARIO = 3;
+    const LIMITE_DIARIO = 5;
     const consultasHoje = cert.consultas_hoje || 0;
     return Math.max(0, LIMITE_DIARIO - consultasHoje);
   };
@@ -415,7 +415,7 @@ export default function ImportacaoNFPage() {
       return;
     }
     if (cert && getConsultasRestantes(cert) <= 0) {
-      toast.error("Limite diário de 3 consultas atingido. Tente novamente amanhã.");
+      toast.error("Limite diário de 5 consultas atingido. Tente novamente amanhã.");
       return;
     }
     
@@ -1685,7 +1685,7 @@ export default function ImportacaoNFPage() {
                 <li>Cadastre o CNPJ da empresa com o certificado digital A1 (.pfx)</li>
                 <li>O sistema consultará a SEFAZ em busca de NF-e destinadas ao CNPJ</li>
                 <li>As notas encontradas serão listadas e podem ser convertidas em Contas a Pagar</li>
-                <li><strong>Limite:</strong> 3 consultas por dia por empresa</li>
+                <li><strong>Limite:</strong> 5 consultas por dia por empresa</li>
                 <li>Se a SEFAZ bloquear, aguarde o cronômetro de 1 hora</li>
               </ol>
             </CardContent>

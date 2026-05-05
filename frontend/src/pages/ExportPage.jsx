@@ -127,12 +127,18 @@ export default function ExportPage({ module = "gerenciamento" }) {
   // Filtro GLOBAL de período (aplica a TODAS as exportações)
   const [globalDataInicio, setGlobalDataInicio] = useState("");
   const [globalDataFim, setGlobalDataFim] = useState("");
+  // Filtro GLOBAL de forma de pagamento (aplica a contas_pagar/receber em qualquer export)
+  const [globalFormaPagamento, setGlobalFormaPagamento] = useState("todas");
+  const [formasPagamento, setFormasPagamento] = useState([]);
 
   // Helper: monta query string com período (e centro de custo opcional)
   const buildPeriodQuery = (extra = {}) => {
     const params = new URLSearchParams();
     if (globalDataInicio) params.append("data_inicio", globalDataInicio);
     if (globalDataFim) params.append("data_fim", globalDataFim);
+    if (globalFormaPagamento && globalFormaPagamento !== "todas") {
+      params.append("forma_pagamento", globalFormaPagamento);
+    }
     Object.entries(extra).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") params.append(k, v);
     });
@@ -147,7 +153,19 @@ export default function ExportPage({ module = "gerenciamento" }) {
       fetchCentrosCusto();
       fetchPlanosContas();
     }
+    fetchFormasPagamento();
   }, [module]);
+
+  const fetchFormasPagamento = async () => {
+    try {
+      const response = await axios.get(`${API}/formas-pagamento`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFormasPagamento(response.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar formas de pagamento:", error);
+    }
+  };
 
   const fetchPlanosContas = async () => {
     try {
@@ -409,6 +427,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
         item_ids: selectedIds,
         data_inicio: globalDataInicio || null,
         data_fim: globalDataFim || null,
+        forma_pagamento: globalFormaPagamento && globalFormaPagamento !== "todas" ? globalFormaPagamento : null,
       }, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -621,6 +640,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
         centro_custo: ccParam || null,
         data_inicio: globalDataInicio || null,
         data_fim: globalDataFim || null,
+        forma_pagamento: globalFormaPagamento && globalFormaPagamento !== "todas" ? globalFormaPagamento : null,
       }, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
@@ -884,19 +904,20 @@ export default function ExportPage({ module = "gerenciamento" }) {
         </div>
       </div>
 
-      {/* Banner GLOBAL de Período — aplica a TODAS as exportações */}
+      {/* Banner GLOBAL de Período + Forma de Pagamento — aplica a TODAS as exportações */}
       <div className="mb-6 rounded-xl border-2 border-indigo-200 bg-indigo-50 p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-3 shrink-0">
             <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-indigo-100">
               <Clock size={18} className="text-indigo-600" />
             </div>
             <div>
-              <p className="font-semibold text-sm text-indigo-900">Período de exportação (global)</p>
+              <p className="font-semibold text-sm text-indigo-900">Filtros globais de exportação</p>
               <p className="text-xs text-indigo-600">
-                {globalDataInicio || globalDataFim
-                  ? `Filtrando: ${globalDataInicio || "início"} até ${globalDataFim || "hoje"}`
-                  : "Sem filtro — exporta todos os registros. Defina um intervalo abaixo se quiser limitar."}
+                {globalDataInicio || globalDataFim || (globalFormaPagamento && globalFormaPagamento !== "todas")
+                  ? `Aplicando: ${globalDataInicio || "início"} até ${globalDataFim || "hoje"}` +
+                    (globalFormaPagamento && globalFormaPagamento !== "todas" ? ` • Forma: ${globalFormaPagamento}` : "")
+                  : "Sem filtros — exporta todos os registros. Configure abaixo para limitar."}
               </p>
             </div>
           </div>
@@ -921,13 +942,28 @@ export default function ExportPage({ module = "gerenciamento" }) {
                 data-testid="export-global-data-fim"
               />
             </div>
-            {(globalDataInicio || globalDataFim) && (
+            <div>
+              <label className="text-xs text-indigo-700 font-medium block mb-1">Forma de Pagamento</label>
+              <select
+                value={globalFormaPagamento}
+                onChange={(e) => setGlobalFormaPagamento(e.target.value)}
+                className="h-9 w-48 bg-white rounded-md border border-input px-3 text-sm"
+                data-testid="export-global-forma-pagamento"
+              >
+                <option value="todas">Todas as formas</option>
+                {formasPagamento.map((fp) => (
+                  <option key={fp.id} value={fp.nome}>{fp.nome}</option>
+                ))}
+              </select>
+            </div>
+            {(globalDataInicio || globalDataFim || (globalFormaPagamento && globalFormaPagamento !== "todas")) && (
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
                   setGlobalDataInicio("");
                   setGlobalDataFim("");
+                  setGlobalFormaPagamento("todas");
                 }}
                 className="border-indigo-300 text-indigo-700 hover:bg-indigo-100 h-9"
                 data-testid="export-global-clear-period"
@@ -938,6 +974,9 @@ export default function ExportPage({ module = "gerenciamento" }) {
             )}
           </div>
         </div>
+        <p className="text-[11px] text-indigo-500 mt-2 italic">
+          Filtro de Forma de Pagamento aplica-se apenas às coleções de Contas a Pagar / Receber.
+        </p>
       </div>
 
       {/* Centro de Custo Filter Banner - apenas módulo administrativo */}

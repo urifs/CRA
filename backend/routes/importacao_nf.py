@@ -220,7 +220,7 @@ async def importar_nfe(
                 {"$set": {"bloqueado_ate": None}}
             )
     
-    # Verificar limite diário (3 consultas por dia)
+    # Verificar limite diário (5 consultas por dia)
     hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     consultas_hoje = certificado.get("consultas_hoje", 0)
     data_consultas = certificado.get("data_consultas")
@@ -233,7 +233,7 @@ async def importar_nfe(
             {"$set": {"consultas_hoje": 0, "data_consultas": hoje}}
         )
     
-    LIMITE_DIARIO = 3
+    LIMITE_DIARIO = 5
     if consultas_hoje >= LIMITE_DIARIO:
         raise HTTPException(
             status_code=429,

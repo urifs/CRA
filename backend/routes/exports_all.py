@@ -127,6 +127,26 @@ def _apply_period_filter(
     return query_filter
 
 
+def _apply_forma_pagamento_filter(
+    collection_name: str,
+    query_filter: dict,
+    forma_pagamento: Optional[str],
+) -> dict:
+    """Filtra contas_pagar / contas_receber pelo campo `forma_pagamento` (case-insensitive).
+    Para outras coleções é no-op. Aceita o nome da forma (ex.: "PIX") ou "todas"/None.
+    """
+    if not forma_pagamento or forma_pagamento.lower() == "todas":
+        return query_filter
+    if collection_name not in ("contas_pagar", "contas_receber"):
+        return query_filter
+    # Match exato case-insensitive (escape para evitar regex injection)
+    query_filter["forma_pagamento"] = {
+        "$regex": f"^{re.escape(forma_pagamento)}$",
+        "$options": "i",
+    }
+    return query_filter
+
+
 # ============ PDF EXPORT ROUTES ============
 
 from fastapi.responses import StreamingResponse
@@ -848,9 +868,10 @@ async def export_pdf(
     centro_custo: Optional[str] = Query(None),
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    forma_pagamento: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
-    """Exporta dados de uma categoria em PDF com filtros (centro de custo + período)"""
+    """Exporta dados de uma categoria em PDF com filtros (centro de custo + período + forma de pagamento)"""
     
     # Mapear categoria para coleção, título e filtro
     category_configs = {
@@ -987,6 +1008,11 @@ async def export_pdf(
     query_filter = _apply_period_filter(collection_name, query_filter, data_inicio, data_fim)
     if data_inicio or data_fim:
         title += f" ({data_inicio or '...'} a {data_fim or '...'})"
+
+    # Aplicar filtro de forma de pagamento (apenas contas_pagar/receber)
+    query_filter = _apply_forma_pagamento_filter(collection_name, query_filter, forma_pagamento)
+    if forma_pagamento and forma_pagamento.lower() != "todas" and collection_name in ("contas_pagar", "contas_receber"):
+        title += f" - Forma: {forma_pagamento}"
     
     # Buscar dados com filtro
     collection = db[collection_name]
@@ -1034,6 +1060,7 @@ class CombinedExportRequest(BaseModel):
     centro_custo: Optional[str] = None  # Filtro por centro de custo
     data_inicio: Optional[str] = None  # YYYY-MM-DD (filtro global de período)
     data_fim: Optional[str] = None     # YYYY-MM-DD
+    forma_pagamento: Optional[str] = None  # ex.: "PIX", "boleto" ou "todas"
 
 @exports_all_router.post("/export/combined")
 async def export_combined(data: CombinedExportRequest, current_user: dict = Depends(get_current_user)):
@@ -1093,6 +1120,11 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
             config["collection"], query_filter, data.data_inicio, data.data_fim
         )
 
+        # Aplicar filtro global de forma de pagamento
+        query_filter = _apply_forma_pagamento_filter(
+            config["collection"], query_filter, data.forma_pagamento
+        )
+
         items = await db[config["collection"]].find(query_filter, {"_id": 0}).to_list(1000)
         if items:
             section_title = config["title"]
@@ -1100,6 +1132,8 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
                 section_title += f" - {data.centro_custo}"
             if data.data_inicio or data.data_fim:
                 section_title += f" ({data.data_inicio or '...'} a {data.data_fim or '...'})"
+            if data.forma_pagamento and data.forma_pagamento.lower() != "todas" and config["collection"] in ("contas_pagar", "contas_receber"):
+                section_title += f" - {data.forma_pagamento}"
             all_data.append({
                 "title": section_title,
                 "items": items,
@@ -1831,6 +1865,7 @@ class MultipleItemsExport(BaseModel):
     item_ids: list
     data_inicio: Optional[str] = None
     data_fim: Optional[str] = None
+    forma_pagamento: Optional[str] = None
 
 @exports_all_router.post("/export/individual-multiple")
 async def export_multiple_individual_items(data: MultipleItemsExport, current_user: dict = Depends(get_current_user)):
@@ -1874,6 +1909,7 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     config = category_config[data.category]
     multi_filter: dict = {"id": {"$in": data.item_ids}}
     multi_filter = _apply_period_filter(config["collection"], multi_filter, data.data_inicio, data.data_fim)
+    multi_filter = _apply_forma_pagamento_filter(config["collection"], multi_filter, data.forma_pagamento)
     items = await db[config["collection"]].find(multi_filter, {"_id": 0}).to_list(100)
     
     if not items:
@@ -3498,9 +3534,10 @@ async def export_excel(
     centro_custo: Optional[str] = Query(None),
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    forma_pagamento: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
-    """Exporta dados de uma categoria em Excel (com filtro opcional de período)"""
+    """Exporta dados de uma categoria em Excel (com filtro opcional de período e forma de pagamento)"""
     
     category_configs = {
         "machines": {"collection": "machines", "title": "Maquinas", "filter": {}},
@@ -3541,6 +3578,8 @@ async def export_excel(
 
     # Aplicar filtro global de período
     excel_filter = _apply_period_filter(config["collection"], excel_filter, data_inicio, data_fim)
+    # Filtro de forma de pagamento (apenas contas_pagar/receber)
+    excel_filter = _apply_forma_pagamento_filter(config["collection"], excel_filter, forma_pagamento)
 
     collection = db[config["collection"]]
     data = await collection.find(excel_filter, {"_id": 0}).to_list(5000)
@@ -3571,9 +3610,10 @@ async def export_ofx(
     centro_custo: Optional[str] = Query(None),
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    forma_pagamento: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
-    """Exporta dados financeiros em formato OFX (com filtro opcional de período)"""
+    """Exporta dados financeiros em formato OFX (com filtro opcional de período e forma de pagamento)"""
     
     valid_categories = {
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas_a_Pagar", "type": "pagar"},
@@ -3598,6 +3638,8 @@ async def export_ofx(
         query_filter["centro_custo"] = centro_custo
     # Filtro de período
     query_filter = _apply_period_filter(config["collection"], query_filter, data_inicio, data_fim)
+    # Filtro de forma de pagamento
+    query_filter = _apply_forma_pagamento_filter(config["collection"], query_filter, forma_pagamento)
     collection = db[config["collection"]]
     data = await collection.find(query_filter, {"_id": 0}).to_list(5000)
     
@@ -3638,9 +3680,10 @@ async def export_relatorio_conta_bancaria(
     status: str = "todas",  # "todas", "pendente", "quitada", "parcial"
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    forma_pagamento: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
-    """Exporta relatório de contas a pagar ou receber filtrado por conta bancária, status e período"""
+    """Exporta relatório de contas a pagar ou receber filtrado por conta bancária, status, período e forma de pagamento"""
     
     # Buscar conta bancária
     conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
@@ -3659,6 +3702,8 @@ async def export_relatorio_conta_bancaria(
 
     # Aplicar filtro global de período (data_vencimento para contas)
     filtro_base = _apply_period_filter("contas_pagar", filtro_base, data_inicio, data_fim)
+    # Filtro de forma de pagamento
+    filtro_base = _apply_forma_pagamento_filter("contas_pagar", filtro_base, forma_pagamento)
     
     # Buscar dados conforme o tipo
     data = []
