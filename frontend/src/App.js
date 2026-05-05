@@ -48,6 +48,7 @@ import OrdensServicoPage from "@/pages/admin/OrdensServicoPage";
 import AdminMorePage from "@/pages/admin/AdminMorePage";
 import CentroCustoPage from "@/pages/admin/CentroCustoPage";
 import FormasPagamentoPage from "@/pages/admin/FormasPagamentoPage";
+import ChatKnowledgeBasePage from "@/pages/admin/ChatKnowledgeBasePage";
 import AlugueisPage from "@/pages/admin/AlugueisPage";
 import ImoveisPage from "@/pages/admin/ImoveisPage";
 import AdminNotificacoesPage from "@/pages/admin/NotificacoesPage";
@@ -178,6 +179,9 @@ function App() {
           
           {/* Painel Administrativo (Gestão de Usuários) */}
           <Route path="/painel-admin" element={<ProtectedRoute><PainelAdminPage /></ProtectedRoute>} />
+
+          {/* Base de Conhecimento do Chat IA (PCMSO/PGR/LTCAT/CCT) */}
+          <Route path="/admin/chat-knowledge-base" element={<ProtectedRoute><ChatKnowledgeBasePage /></ProtectedRoute>} />
           
           {/* Sistema de Armazenamento */}
           <Route path="/armazenamento" element={<ProtectedRoute><ArmazenamentoPage /></ProtectedRoute>} />

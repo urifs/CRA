@@ -1,6 +1,29 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 05/05/2026 (Sessão 45.3) — 🔧 Tela admin para Base de Conhecimento do Chat IA
+
+### Implementado
+**Frontend (`pages/admin/ChatKnowledgeBasePage.jsx`):**
+- Nova tela em `/admin/chat-knowledge-base` para gerenciar os 4 documentos normativos do Chat IA do RH (PCMSO, PGR, LTCAT, CCT).
+- Drag-and-drop de PDFs com sugestões rápidas pré-preenchidas (botões PCMSO/PGR/LTCAT/CCT).
+- Mostra: nome curto, título descritivo, páginas, tamanho do PDF, data de atualização.
+- Ações por documento: download do PDF original, remoção (com cache invalidado automaticamente).
+- Loader visual indicando "Enviando e extraindo texto" — útil para PDFs escaneados onde o OCR via Gemini pode levar 1–2 minutos.
+
+**Frontend (`pages/rh/RHChatPage.jsx`):**
+- Adicionado link "Base de Conhecimento" no rodapé do sidebar do Chat IA com ícone BookOpen.
+
+### Por quê
+Usuário relatou que após deploy a IA na produção continua respondendo "Não tenho acesso aos documentos PCMSO/PGR/LTCAT". A causa: o MongoDB de produção é separado do preview, e a coleção `chat_knowledge_base` precisa ser populada lá também. Esta tela elimina a necessidade de scripts pós-deploy — o admin sobe os PDFs pelo navegador.
+
+### Validação
+- ✅ Lint frontend passou (App.js, RHChatPage.jsx, ChatKnowledgeBasePage.jsx)
+- ✅ Endpoints `/api/chatbot/knowledge-base` (GET/POST upload/GET download/DELETE) validados na sessão anterior
+- ✅ OCR fallback via Gemini funcionando para PDFs escaneados (CCT)
+
+
+
 ## Feature - 05/05/2026 (Sessão 45.2) — 🧠 Base de Conhecimento RH (PCMSO/PGR/LTCAT/CCT) no Chat IA + 📐 Espaçamento
 
 ### Implementado

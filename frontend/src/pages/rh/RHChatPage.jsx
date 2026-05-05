@@ -15,8 +15,10 @@ import {
   Menu,
   X,
   FileDown,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -33,6 +35,7 @@ const formatMessage = (text) => {
 };
 
 export default function RHChatPage() {
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -293,8 +296,18 @@ export default function RHChatPage() {
           )}
         </div>
 
-        <div className="p-3 border-t border-gray-800 text-[11px] text-gray-500">
-          Powered by Gemini 2.5 Flash
+        <div className="p-3 border-t border-gray-800 space-y-2">
+          <button
+            onClick={() => navigate("/admin/chat-knowledge-base")}
+            className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-xs text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+            data-testid="rhchat-kb-link"
+          >
+            <BookOpen size={14} className="text-emerald-400" />
+            <span>Base de Conhecimento</span>
+          </button>
+          <div className="text-[11px] text-gray-500 px-2">
+            Powered by Gemini 2.5 Flash
+          </div>
         </div>
       </aside>
 
