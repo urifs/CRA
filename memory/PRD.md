@@ -1,5 +1,24 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Feature - 04/05/2026 (Sessão 43.9) — 🟢 Vinculação seletiva também nos campos padrão de Custos RH
+
+### Implementado
+Estendido o mecanismo de "Aplica a..." aos 7 campos padrão (FGTS, INSS Patronal, Vale Transporte, Vale Alimentação, Plano de Saúde, Outros Benefícios, EPIs).
+
+**Backend** (`routes/rh.py`):
+- Novos campos `*_funcionario_ids` paralelos a cada item padrão na config (vazio = todos os ativos; preenchido = subset).
+- `PUT /custos/config` valida e persiste essas listas.
+- `GET /custos` aplica seletivamente: se funcionário não está na lista, o custo correspondente é zero para ele. Mantém compatibilidade total com configs antigas (lista vazia = comportamento anterior "todos").
+
+**Frontend** (`CustosPage.jsx`):
+- Componente reutilizável `BotaoAplicaA` adicionado embaixo de cada um dos 7 inputs padrão. Mostra "Aplica a todos os ativos" ou "Aplica a N func.".
+- Mini-dialog de seleção idêntico ao dos extras: checkbox "Aplicar a todos" + lista de funcionários com cargo + checkboxes individuais.
+
+### Validação
+- Curl: aplicado VT R$300 só ao primeiro funcionário ⇒ ele tem benefícios R$900 (R$300 VT + R$350 VA + R$250 Saúde), os outros R$600. Total benefícios reduziu de R$7200 → R$5700. ✅
+- Frontend Playwright: dialog principal com 7 botões "Aplica a..." abaixo dos inputs, mini-dialog do VT com lista de 9 funcionários e João Silva pré-marcado. ✅
+
+
 ## Feature - 04/05/2026 (Sessão 43.8) — 🟢 Custos Extras personalizáveis com aplicação seletiva
 
 ### Implementado

@@ -2804,12 +2804,19 @@ async def get_custos_config():
     defaults = {
         "id": "default",
         "fgts_aliquota": FGTS_ALIQUOTA,
+        "fgts_funcionario_ids": [],
         "inss_patronal_aliquota": INSS_PATRONAL_ALIQUOTA,
+        "inss_patronal_funcionario_ids": [],
         "vale_transporte": 0.0,
+        "vale_transporte_funcionario_ids": [],
         "vale_alimentacao": 0.0,
+        "vale_alimentacao_funcionario_ids": [],
         "plano_saude": 0.0,
+        "plano_saude_funcionario_ids": [],
         "outros_beneficios": 150.0,
+        "outros_beneficios_funcionario_ids": [],
         "epis_custo_mensal": 50.0,
+        "epis_custo_mensal_funcionario_ids": [],
         "horas_mes": 220,
         "custos_extras": [],
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -2839,6 +2846,20 @@ async def update_custos_config(payload: dict = Body(...)):
             update["horas_mes"] = int(payload["horas_mes"]) or 220
         except (ValueError, TypeError):
             raise HTTPException(status_code=400, detail="horas_mes deve ser inteiro")
+    
+    # Listas de funcionário_ids paralelas a cada campo padrão (vazia = todos)
+    campos_lista = [
+        "fgts_funcionario_ids", "inss_patronal_funcionario_ids",
+        "vale_transporte_funcionario_ids", "vale_alimentacao_funcionario_ids",
+        "plano_saude_funcionario_ids", "outros_beneficios_funcionario_ids",
+        "epis_custo_mensal_funcionario_ids",
+    ]
+    for k in campos_lista:
+        if k in payload:
+            v = payload.get(k) or []
+            if not isinstance(v, list):
+                raise HTTPException(status_code=400, detail=f"{k} deve ser uma lista")
+            update[k] = [str(x) for x in v]
     
     # Custos extras: lista de { id, nome, tipo (fixo|percentual), valor, funcionario_ids: [] }
     if "custos_extras" in payload:
@@ -2903,6 +2924,18 @@ async def get_custos_rh():
     horas_mes = int(cfg.get("horas_mes") or 220)
     custos_extras = cfg.get("custos_extras") or []
     
+    # Listas de funcionário_ids para cada campo padrão (vazio = aplica a todos)
+    fgts_fids = set(cfg.get("fgts_funcionario_ids") or [])
+    inss_fids = set(cfg.get("inss_patronal_funcionario_ids") or [])
+    vt_fids = set(cfg.get("vale_transporte_funcionario_ids") or [])
+    va_fids = set(cfg.get("vale_alimentacao_funcionario_ids") or [])
+    ps_fids = set(cfg.get("plano_saude_funcionario_ids") or [])
+    outros_fids = set(cfg.get("outros_beneficios_funcionario_ids") or [])
+    epis_fids = set(cfg.get("epis_custo_mensal_funcionario_ids") or [])
+    
+    def _aplica(fid: str, lista: set) -> bool:
+        return (not lista) or (fid in lista)
+    
     custos_funcionarios = []
     total_salarios = 0
     total_encargos = 0
@@ -2913,10 +2946,14 @@ async def get_custos_rh():
     async for func in funcionarios_collection.find({"status": "ativo"}):
         salario = float(func.get("salario", 0) or 0)
         fid = func["id"]
-        fgts = salario * (fgts_aliq / 100)
-        inss_patronal = salario * (inss_aliq / 100)
-        beneficios = vt + va + ps + outros
-        epis_custo = epis_padrao
+        fgts = (salario * (fgts_aliq / 100)) if _aplica(fid, fgts_fids) else 0.0
+        inss_patronal = (salario * (inss_aliq / 100)) if _aplica(fid, inss_fids) else 0.0
+        vt_f = vt if _aplica(fid, vt_fids) else 0.0
+        va_f = va if _aplica(fid, va_fids) else 0.0
+        ps_f = ps if _aplica(fid, ps_fids) else 0.0
+        outros_f = outros if _aplica(fid, outros_fids) else 0.0
+        beneficios = vt_f + va_f + ps_f + outros_f
+        epis_custo = epis_padrao if _aplica(fid, epis_fids) else 0.0
         
         # Aplicar custos extras: se funcionario_ids vazio = aplica a todos; senão só aos listados
         extras_funcionario = []
@@ -2974,12 +3011,19 @@ async def get_custos_rh():
         },
         "config": {
             "fgts_aliquota": fgts_aliq,
+            "fgts_funcionario_ids": list(fgts_fids),
             "inss_patronal_aliquota": inss_aliq,
+            "inss_patronal_funcionario_ids": list(inss_fids),
             "vale_transporte": vt,
+            "vale_transporte_funcionario_ids": list(vt_fids),
             "vale_alimentacao": va,
+            "vale_alimentacao_funcionario_ids": list(va_fids),
             "plano_saude": ps,
+            "plano_saude_funcionario_ids": list(ps_fids),
             "outros_beneficios": outros,
+            "outros_beneficios_funcionario_ids": list(outros_fids),
             "epis_custo_mensal": epis_padrao,
+            "epis_custo_mensal_funcionario_ids": list(epis_fids),
             "horas_mes": horas_mes,
             "custos_extras": custos_extras,
         },

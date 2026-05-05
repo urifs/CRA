@@ -26,6 +26,24 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// Botão reutilizável para mostrar a quantos funcionários um campo se aplica
+function BotaoAplicaA({ fids, onClick, testId }) {
+  const total = (fids || []).length;
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="w-full mt-1 h-7 text-[11px] justify-start text-gray-600 hover:bg-emerald-50"
+      onClick={onClick}
+      data-testid={testId}
+    >
+      <Users size={11} className="mr-1" />
+      {total === 0 ? "Aplica a todos os ativos" : `Aplica a ${total} func.`}
+    </Button>
+  );
+}
+
 export default function CustosPage() {
   const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,18 +66,26 @@ export default function CustosPage() {
   // Configuração editável de custos
   const [configCustos, setConfigCustos] = useState({
     fgts_aliquota: 8.0,
+    fgts_funcionario_ids: [],
     inss_patronal_aliquota: 20.0,
+    inss_patronal_funcionario_ids: [],
     vale_transporte: 0,
+    vale_transporte_funcionario_ids: [],
     vale_alimentacao: 0,
+    vale_alimentacao_funcionario_ids: [],
     plano_saude: 0,
+    plano_saude_funcionario_ids: [],
     outros_beneficios: 150,
+    outros_beneficios_funcionario_ids: [],
     epis_custo_mensal: 50,
+    epis_custo_mensal_funcionario_ids: [],
     horas_mes: 220,
     custos_extras: [],
   });
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
   const [extraEditandoFuncs, setExtraEditandoFuncs] = useState(null); // { extra_id }
+  const [campoPadraoEditandoFuncs, setCampoPadraoEditandoFuncs] = useState(null); // string nome do campo
 
   useEffect(() => {
     fetchFuncionarios();
@@ -72,12 +98,19 @@ export default function CustosPage() {
       const { data } = await axios.get(`${API}/rh/custos/config`);
       setConfigCustos({
         fgts_aliquota: data.fgts_aliquota ?? 8,
+        fgts_funcionario_ids: data.fgts_funcionario_ids ?? [],
         inss_patronal_aliquota: data.inss_patronal_aliquota ?? 20,
+        inss_patronal_funcionario_ids: data.inss_patronal_funcionario_ids ?? [],
         vale_transporte: data.vale_transporte ?? 0,
+        vale_transporte_funcionario_ids: data.vale_transporte_funcionario_ids ?? [],
         vale_alimentacao: data.vale_alimentacao ?? 0,
+        vale_alimentacao_funcionario_ids: data.vale_alimentacao_funcionario_ids ?? [],
         plano_saude: data.plano_saude ?? 0,
+        plano_saude_funcionario_ids: data.plano_saude_funcionario_ids ?? [],
         outros_beneficios: data.outros_beneficios ?? 0,
+        outros_beneficios_funcionario_ids: data.outros_beneficios_funcionario_ids ?? [],
         epis_custo_mensal: data.epis_custo_mensal ?? 0,
+        epis_custo_mensal_funcionario_ids: data.epis_custo_mensal_funcionario_ids ?? [],
         horas_mes: data.horas_mes ?? 220,
         custos_extras: data.custos_extras ?? [],
       });
@@ -511,6 +544,7 @@ export default function CustosPage() {
               Estes valores são aplicados automaticamente a todos os funcionários ativos no cálculo do custo real e nas simulações.
             </p>
             <div className="grid grid-cols-2 gap-4">
+              {/* FGTS */}
               <div>
                 <Label>FGTS (%)</Label>
                 <DecimalInput
@@ -519,7 +553,13 @@ export default function CustosPage() {
                   placeholder="8,00"
                   data-testid="input-config-fgts"
                 />
+                <BotaoAplicaA
+                  fids={configCustos.fgts_funcionario_ids}
+                  onClick={() => setCampoPadraoEditandoFuncs("fgts_funcionario_ids")}
+                  testId="btn-aplica-fgts"
+                />
               </div>
+              {/* INSS */}
               <div>
                 <Label>INSS Patronal (%)</Label>
                 <DecimalInput
@@ -528,7 +568,13 @@ export default function CustosPage() {
                   placeholder="20,00"
                   data-testid="input-config-inss"
                 />
+                <BotaoAplicaA
+                  fids={configCustos.inss_patronal_funcionario_ids}
+                  onClick={() => setCampoPadraoEditandoFuncs("inss_patronal_funcionario_ids")}
+                  testId="btn-aplica-inss"
+                />
               </div>
+              {/* VT */}
               <div>
                 <Label>Vale Transporte (R$/mês)</Label>
                 <DecimalInput
@@ -537,7 +583,13 @@ export default function CustosPage() {
                   placeholder="0,00"
                   data-testid="input-config-vt"
                 />
+                <BotaoAplicaA
+                  fids={configCustos.vale_transporte_funcionario_ids}
+                  onClick={() => setCampoPadraoEditandoFuncs("vale_transporte_funcionario_ids")}
+                  testId="btn-aplica-vt"
+                />
               </div>
+              {/* VA */}
               <div>
                 <Label>Vale Alimentação (R$/mês)</Label>
                 <DecimalInput
@@ -546,7 +598,13 @@ export default function CustosPage() {
                   placeholder="0,00"
                   data-testid="input-config-va"
                 />
+                <BotaoAplicaA
+                  fids={configCustos.vale_alimentacao_funcionario_ids}
+                  onClick={() => setCampoPadraoEditandoFuncs("vale_alimentacao_funcionario_ids")}
+                  testId="btn-aplica-va"
+                />
               </div>
+              {/* Plano Saúde */}
               <div>
                 <Label>Plano de Saúde (R$/mês)</Label>
                 <DecimalInput
@@ -555,7 +613,13 @@ export default function CustosPage() {
                   placeholder="0,00"
                   data-testid="input-config-saude"
                 />
+                <BotaoAplicaA
+                  fids={configCustos.plano_saude_funcionario_ids}
+                  onClick={() => setCampoPadraoEditandoFuncs("plano_saude_funcionario_ids")}
+                  testId="btn-aplica-saude"
+                />
               </div>
+              {/* Outros */}
               <div>
                 <Label>Outros Benefícios (R$/mês)</Label>
                 <DecimalInput
@@ -564,7 +628,13 @@ export default function CustosPage() {
                   placeholder="0,00"
                   data-testid="input-config-outros"
                 />
+                <BotaoAplicaA
+                  fids={configCustos.outros_beneficios_funcionario_ids}
+                  onClick={() => setCampoPadraoEditandoFuncs("outros_beneficios_funcionario_ids")}
+                  testId="btn-aplica-outros"
+                />
               </div>
+              {/* EPIs */}
               <div>
                 <Label>EPIs (R$/mês)</Label>
                 <DecimalInput
@@ -572,6 +642,11 @@ export default function CustosPage() {
                   onChange={(v) => setConfigCustos({ ...configCustos, epis_custo_mensal: v })}
                   placeholder="0,00"
                   data-testid="input-config-epis"
+                />
+                <BotaoAplicaA
+                  fids={configCustos.epis_custo_mensal_funcionario_ids}
+                  onClick={() => setCampoPadraoEditandoFuncs("epis_custo_mensal_funcionario_ids")}
+                  testId="btn-aplica-epis"
                 />
               </div>
               <div>
@@ -760,6 +835,78 @@ export default function CustosPage() {
           })()}
           <DialogFooter>
             <Button onClick={() => setExtraEditandoFuncs(null)} className="bg-emerald-600 hover:bg-emerald-700">
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Mini-dialog: selecionar funcionários para um CAMPO PADRÃO */}
+      <Dialog open={!!campoPadraoEditandoFuncs} onOpenChange={(o) => !o && setCampoPadraoEditandoFuncs(null)}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Aplicar este custo a quais funcionários?
+            </DialogTitle>
+          </DialogHeader>
+          {campoPadraoEditandoFuncs && (() => {
+            const campo = campoPadraoEditandoFuncs;
+            const fids = configCustos[campo] || [];
+            const todos = fids.length === 0;
+            const setFids = (novo) => setConfigCustos({ ...configCustos, [campo]: novo });
+            const labelMap = {
+              fgts_funcionario_ids: "FGTS",
+              inss_patronal_funcionario_ids: "INSS Patronal",
+              vale_transporte_funcionario_ids: "Vale Transporte",
+              vale_alimentacao_funcionario_ids: "Vale Alimentação",
+              plano_saude_funcionario_ids: "Plano de Saúde",
+              outros_beneficios_funcionario_ids: "Outros Benefícios",
+              epis_custo_mensal_funcionario_ids: "EPIs",
+            };
+            const toggleFunc = (id) => {
+              const novo = fids.includes(id) ? fids.filter(x => x !== id) : [...fids, id];
+              setFids(novo);
+            };
+            return (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">
+                  Custo: <strong>{labelMap[campo]}</strong>
+                </p>
+                <label className="flex items-center gap-2 p-2 bg-emerald-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={todos}
+                    onChange={() => setFids(todos ? [funcionarios[0]?.id || ""].filter(Boolean) : [])}
+                    data-testid="check-todos-funcs-padrao"
+                  />
+                  <span className="text-sm font-semibold text-emerald-700">
+                    Aplicar a todos os funcionários ativos
+                  </span>
+                </label>
+                {!todos && (
+                  <div className="border rounded divide-y max-h-80 overflow-y-auto">
+                    {funcionarios.length === 0 ? (
+                      <p className="p-4 text-center text-sm text-gray-400">Nenhum funcionário ativo</p>
+                    ) : funcionarios.map((f) => (
+                      <label key={f.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={fids.includes(f.id)}
+                          onChange={() => toggleFunc(f.id)}
+                          data-testid={`check-func-padrao-${f.id}`}
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{f.nome}</p>
+                          <p className="text-xs text-gray-500">{f.cargo}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button onClick={() => setCampoPadraoEditandoFuncs(null)} className="bg-emerald-600 hover:bg-emerald-700">
               OK
             </Button>
           </DialogFooter>
