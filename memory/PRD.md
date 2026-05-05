@@ -1,5 +1,37 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Feature - 04/05/2026 (Sessão 43.3) — 🟢 Abonos + Observações no Ponto Eletrônico
+
+### Implementado
+- **Sistema de Abonos** por dia (atestado médico, justificativa, folga compensada, feriado, férias, outros):
+  - Coluna "Ações" no modal de detalhamento com botão "Abonar" em qualquer dia com falta/incompleto.
+  - Form inline com seleção de tipo + motivo livre.
+  - Dia abonado: linha em destaque amarelo, badge no lugar das batidas, saldo "ABONADO" e ícone para remoção.
+  - **Saldo do dia abonado é neutralizado** (vira 0) → reduz faltas, ajusta saldo do mês e banco de horas acumulado (em todos os meses).
+- **Observações livres por funcionário/mês** com textarea no modal, salvo via botão "Salvar". Texto persistido aparece no PDF.
+- **PDF atualizado**: dia abonado mostra `[ABONO TIPO] motivo` no lugar das batidas, fundo amarelo na linha, "ABONADO" no saldo. Adicionada seção "ABONOS DO MÊS" e seção "OBSERVAÇÕES" em destaque amarelo entre os abonos e as assinaturas.
+
+### Backend
+- Novas collections: `ponto_abonos` e `ponto_observacoes`.
+- Endpoints novos:
+  - `POST /api/rh/ponto/abono`
+  - `GET /api/rh/ponto/abonos?funcionario_id=&mes=&ano=`
+  - `DELETE /api/rh/ponto/abono/{id}`
+  - `POST /api/rh/ponto/observacao` (upsert; texto vazio = remove)
+  - `GET /api/rh/ponto/observacao?funcionario_id=&mes=&ano=`
+- `GET /rh/ponto/dashboard-mensal` agora retorna `abonos[]`, `observacao` e `dias_abonados` por funcionário, e neutraliza saldo dos dias abonados (incluindo no banco acumulado de meses anteriores).
+- `GET /rh/ponto/relatorio-pdf` reflete abonos + observações no PDF.
+
+### Frontend
+- `PontoQuadroTab.jsx` ganhou: `observacaoDraft`, `abonoForm`, `salvandoObs`; funções `salvarObservacao`, `criarAbono`, `removerAbono`, `recarregarFuncDetalhe`.
+- Modal expandido com nova coluna "Ações" + form inline de abono + Card "Observações do mês".
+
+### Validação
+- Curl backend: criação de abono em 03/04 + salvamento de observação → saldo Gustavo passou de -155h22min → -147h22min, faltas 13 → 12.
+- PDF gerado com seções ABONOS DO MÊS e OBSERVAÇÕES corretas.
+- Frontend visual: 26 botões "Abonar" detectados, modal de detalhe com formulário e textarea funcionais.
+
+
 ## Feature - 04/05/2026 (Sessão 43.2) — 🟢 PDF Espelho de Ponto Mensal
 
 ### Implementado

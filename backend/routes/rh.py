@@ -27,6 +27,8 @@ db = client[os.environ['DB_NAME']]
 # Collections
 funcionarios_collection = db["funcionarios"]
 ponto_collection = db["ponto_registros"]
+ponto_abonos_collection = db["ponto_abonos"]
+ponto_observacoes_collection = db["ponto_observacoes"]
 folha_pagamento_collection = db["folha_pagamento"]
 ferias_collection = db["ferias"]
 epi_fichas_collection = db["epi_fichas"]
@@ -934,6 +936,30 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
     ]):
         banco_acumulado_por_func[reg["_id"]] = int(reg.get("total", 0) or 0)
     
+    # Carregar TODOS os abonos (não só do mês) para neutralizar saldos no banco acumulado
+    abonos_global_por_func_data = {}
+    async for ab in ponto_abonos_collection.find({}, {"_id": 0}):
+        abonos_global_por_func_data[(ab["funcionario_id"], ab["data"])] = ab
+    
+    # Para cada (funcionario, dia abonado em qualquer época), descontar do banco acumulado o saldo
+    # daquele dia (que provavelmente é negativo) para neutralizá-lo.
+    if abonos_global_por_func_data:
+        async for r in ponto_collection.find(
+            {"data": {"$lt": fim_mes}}, {"_id": 0, "funcionario_id": 1, "data": 1, "saldo_minutos": 1}
+        ):
+            chave = (r["funcionario_id"], r["data"])
+            if chave in abonos_global_por_func_data:
+                banco_acumulado_por_func[r["funcionario_id"]] = (
+                    banco_acumulado_por_func.get(r["funcionario_id"], 0)
+                    - int(r.get("saldo_minutos", 0) or 0)
+                )
+    
+    # Carregar abonos do mês (chave: (funcionario_id, data))
+    abonos_por_func_data = {
+        k: v for k, v in abonos_global_por_func_data.items()
+        if inicio_mes <= k[1] < fim_mes
+    }
+    
     funcionarios_dashboard = []
     for fid, registros in por_func.items():
         # Tentar achar funcionário
@@ -958,26 +984,83 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
                 cargo = "(Funcionário removido)"
                 cadastrado = False
         
-        total_trab = sum(int(r.get("minutos_trabalhados", 0) or 0) for r in registros)
+        # Aplicar abonos: dias abonados têm saldo neutralizado para 0 (trabalhadas tratadas como previstas)
+        total_trab_real = sum(int(r.get("minutos_trabalhados", 0) or 0) for r in registros)
         total_prev = sum(int(r.get("minutos_previstos", 0) or 0) for r in registros)
-        saldo_mes = total_trab - total_prev
+        
+        # Soma saldos dia a dia, neutralizando dias abonados
+        saldo_mes = 0
+        dias_abonados = 0
+        for r in registros:
+            data_r = r.get("data")
+            ab = abonos_por_func_data.get((fid, data_r))
+            if ab:
+                # Dia abonado: contribuição zero para o saldo
+                dias_abonados += 1
+            else:
+                saldo_mes += int(r.get("saldo_minutos", 0) or 0)
+        
+        # total_trab "efetivo" considera abonos como horas previstas cumpridas
+        minutos_abonados = sum(
+            int(r.get("minutos_previstos", 0) or 0)
+            for r in registros
+            if (fid, r.get("data")) in abonos_por_func_data
+        )
+        # Horas trabalhadas exibidas: realmente trabalhadas + abonadas (pra barra fechar)
+        total_trab = total_trab_real + max(0, minutos_abonados - sum(
+            int(r.get("minutos_trabalhados", 0) or 0)
+            for r in registros
+            if (fid, r.get("data")) in abonos_por_func_data
+        ))
         
         dias_com_registro = sum(1 for r in registros if r.get("minutos_trabalhados", 0) > 0)
-        dias_incompletos = sum(1 for r in registros if r.get("status_dia") == "incompleto")
-        dias_falta = sum(1 for r in registros if r.get("status_dia") == "sem_registro" and r.get("dia_semana", 6) <= 5)
+        dias_incompletos = sum(
+            1 for r in registros
+            if r.get("status_dia") == "incompleto" and (fid, r.get("data")) not in abonos_por_func_data
+        )
+        dias_falta = sum(
+            1 for r in registros
+            if r.get("status_dia") == "sem_registro" and r.get("dia_semana", 6) <= 5
+            and (fid, r.get("data")) not in abonos_por_func_data
+        )
         
-        # Detalhamento dia a dia
+        # Detalhamento dia a dia (com info de abono)
         detalhe = []
         for r in registros:
+            data_r = r.get("data")
+            ab = abonos_por_func_data.get((fid, data_r))
+            saldo_dia = int(r.get("saldo_minutos", 0) or 0)
+            if ab:
+                saldo_dia = 0  # Abono neutraliza
             detalhe.append({
-                "data": r.get("data"),
+                "data": data_r,
                 "dia_semana": r.get("dia_semana"),
                 "batidas": r.get("batidas", []),
                 "minutos_trabalhados": r.get("minutos_trabalhados", 0),
                 "minutos_previstos": r.get("minutos_previstos", 0),
-                "saldo_minutos": r.get("saldo_minutos", 0),
-                "status_dia": r.get("status_dia"),
+                "saldo_minutos": saldo_dia,
+                "status_dia": "abonado" if ab else r.get("status_dia"),
+                "abono": (
+                    {"tipo": ab["tipo"], "motivo": ab["motivo"], "id": ab["id"]}
+                    if ab else None
+                ),
             })
+        
+        # Banco acumulado: já vem com os abonos neutralizados de todos os meses
+        banco_total = banco_acumulado_por_func.get(fid, 0)
+        
+        # Carrega observação do mês para este funcionário
+        obs_doc = await ponto_observacoes_collection.find_one(
+            {"funcionario_id": fid, "mes": mes, "ano": ano}, {"_id": 0}
+        )
+        observacao_texto = obs_doc.get("texto", "") if obs_doc else ""
+        
+        # Lista de abonos do mês desse funcionário
+        abonos_func = [
+            {**ab}
+            for k, ab in abonos_por_func_data.items()
+            if k[0] == fid
+        ]
         
         funcionarios_dashboard.append({
             "funcionario_id": fid,
@@ -988,11 +1071,14 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
             "minutos_trabalhados": total_trab,
             "minutos_previstos": total_prev,
             "saldo_mes_minutos": saldo_mes,
-            "banco_horas_acumulado_minutos": banco_acumulado_por_func.get(fid, 0),
+            "banco_horas_acumulado_minutos": banco_total,
             "dias_com_registro": dias_com_registro,
             "dias_incompletos": dias_incompletos,
             "dias_falta": dias_falta,
+            "dias_abonados": dias_abonados,
             "detalhe_dias": detalhe,
+            "observacao": observacao_texto,
+            "abonos": abonos_func,
         })
     
     # Ordenar: cadastrados primeiro, por nome
@@ -1173,6 +1259,14 @@ def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
             saldo = d.get("saldo_minutos", 0)
             saldo_lbl = ("+" if saldo > 0 else "") + _fmt_min_pdf(saldo)
             
+            # Marcador de abono na coluna de batidas
+            ab = d.get("abono")
+            if ab:
+                tipo_lbl = (ab.get("tipo") or "abono").upper()
+                motivo_lbl = ab.get("motivo") or ""
+                batidas_str = f"[ABONO {tipo_lbl}] {motivo_lbl}"[:80]
+                saldo_lbl = "ABONADO"
+            
             linhas.append([
                 data_br,
                 dia_lbl,
@@ -1198,16 +1292,73 @@ def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
             ("TOPPADDING", (0, 0), (-1, -1), 3),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
         ])
-        # Colorir saldos da última coluna
+        # Cores por status: saldo positivo verde, negativo vermelho, abonado amarelo
         for i, d in enumerate(f.get("detalhe_dias", []), start=1):
-            saldo = d.get("saldo_minutos", 0)
-            if saldo > 0:
-                ts.add("TEXTCOLOR", (5, i), (5, i), colors.HexColor("#10B981"))
-            elif saldo < 0:
-                ts.add("TEXTCOLOR", (5, i), (5, i), colors.HexColor("#dc2626"))
+            ab = d.get("abono")
+            if ab:
+                ts.add("BACKGROUND", (0, i), (-1, i), colors.HexColor("#fef3c7"))
+                ts.add("TEXTCOLOR", (5, i), (5, i), colors.HexColor("#a16207"))
+                ts.add("FONTNAME", (5, i), (5, i), "Helvetica-Bold")
+            else:
+                saldo = d.get("saldo_minutos", 0)
+                if saldo > 0:
+                    ts.add("TEXTCOLOR", (5, i), (5, i), colors.HexColor("#10B981"))
+                elif saldo < 0:
+                    ts.add("TEXTCOLOR", (5, i), (5, i), colors.HexColor("#dc2626"))
         t_dias.setStyle(ts)
         elements.append(t_dias)
-        elements.append(Spacer(1, 14))
+        elements.append(Spacer(1, 8))
+        
+        # Lista detalhada de abonos
+        abonos = f.get("abonos") or []
+        if abonos:
+            elements.append(Paragraph("ABONOS DO MÊS", section_style))
+            ab_cab = ["Data", "Tipo", "Motivo / Justificativa"]
+            ab_linhas = [ab_cab]
+            for ab in sorted(abonos, key=lambda x: x.get("data", "")):
+                d_br = "/".join(reversed(ab.get("data", "").split("-")))
+                ab_linhas.append([
+                    d_br,
+                    (ab.get("tipo") or "").upper(),
+                    ab.get("motivo") or "",
+                ])
+            t_ab = Table(ab_linhas, colWidths=[2.5 * cm, 3 * cm, 12.5 * cm])
+            t_ab.setStyle(TableStyle([
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#a16207")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (2, 1), (2, -1), "LEFT"),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#e2e8f0")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]))
+            elements.append(t_ab)
+            elements.append(Spacer(1, 8))
+        
+        # Observações livres do mês
+        obs_texto = (f.get("observacao") or "").strip()
+        if obs_texto:
+            elements.append(Paragraph("OBSERVAÇÕES", section_style))
+            obs_para = Paragraph(obs_texto.replace("\n", "<br/>"), 
+                                 ParagraphStyle("Obs", parent=styles["Normal"], fontSize=8.5, leading=11))
+            t_obs = Table([[obs_para]], colWidths=[18 * cm])
+            t_obs.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fffbeb")),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#fbbf24")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(t_obs)
+            elements.append(Spacer(1, 12))
+        else:
+            elements.append(Spacer(1, 6))
         
         # Linhas de assinatura
         elements.append(Paragraph(
@@ -1272,6 +1423,132 @@ async def gerar_pdf_espelho_ponto(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+# ===== ABONOS DE PONTO (faltas justificadas / atestados / folgas / feriados) =====
+TIPOS_ABONO_VALIDOS = {"atestado", "justificativa", "feriado", "folga", "ferias", "outros"}
+
+
+@rh_router.post("/ponto/abono")
+async def criar_abono(payload: dict = Body(...)):
+    """Cria um abono para uma data específica de um funcionário.
+    Body: { funcionario_id, data (YYYY-MM-DD), tipo, motivo }
+    """
+    funcionario_id = (payload.get("funcionario_id") or "").strip()
+    data = (payload.get("data") or "").strip()
+    tipo = (payload.get("tipo") or "").strip().lower()
+    motivo = (payload.get("motivo") or "").strip()
+    
+    if not funcionario_id:
+        raise HTTPException(status_code=400, detail="funcionario_id é obrigatório")
+    if not data:
+        raise HTTPException(status_code=400, detail="data é obrigatória (YYYY-MM-DD)")
+    try:
+        datetime.strptime(data, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="data inválida (use YYYY-MM-DD)")
+    if tipo not in TIPOS_ABONO_VALIDOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"tipo inválido. Use um de: {', '.join(sorted(TIPOS_ABONO_VALIDOS))}",
+        )
+    if not motivo:
+        raise HTTPException(status_code=400, detail="motivo é obrigatório")
+    
+    # Substitui abono existente para mesmo (funcionario, data)
+    await ponto_abonos_collection.delete_many({
+        "funcionario_id": funcionario_id,
+        "data": data,
+    })
+    
+    doc = {
+        "id": str(uuid.uuid4()),
+        "funcionario_id": funcionario_id,
+        "data": data,
+        "tipo": tipo,
+        "motivo": motivo,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await ponto_abonos_collection.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@rh_router.get("/ponto/abonos")
+async def listar_abonos(
+    funcionario_id: Optional[str] = None,
+    mes: Optional[int] = None,
+    ano: Optional[int] = None,
+):
+    query = {}
+    if funcionario_id:
+        query["funcionario_id"] = funcionario_id
+    if mes and ano:
+        ini = f"{ano}-{mes:02d}-01"
+        if mes == 12:
+            fim = f"{ano + 1}-01-01"
+        else:
+            fim = f"{ano}-{mes + 1:02d}-01"
+        query["data"] = {"$gte": ini, "$lt": fim}
+    abonos = []
+    async for a in ponto_abonos_collection.find(query, {"_id": 0}).sort("data", 1):
+        abonos.append(a)
+    return abonos
+
+
+@rh_router.delete("/ponto/abono/{abono_id}")
+async def deletar_abono(abono_id: str):
+    res = await ponto_abonos_collection.delete_one({"id": abono_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Abono não encontrado")
+    return {"message": "Abono removido"}
+
+
+# ===== OBSERVAÇÕES DO MÊS POR FUNCIONÁRIO =====
+@rh_router.post("/ponto/observacao")
+async def upsert_observacao(payload: dict = Body(...)):
+    """Cria ou atualiza observação livre por funcionário/mês/ano.
+    Body: { funcionario_id, mes, ano, texto }
+    """
+    funcionario_id = (payload.get("funcionario_id") or "").strip()
+    mes = payload.get("mes")
+    ano = payload.get("ano")
+    texto = (payload.get("texto") or "").strip()
+    
+    if not funcionario_id:
+        raise HTTPException(status_code=400, detail="funcionario_id é obrigatório")
+    if not isinstance(mes, int) or not isinstance(ano, int):
+        raise HTTPException(status_code=400, detail="mes e ano (inteiros) são obrigatórios")
+    
+    chave = {"funcionario_id": funcionario_id, "mes": mes, "ano": ano}
+    
+    if not texto:
+        # Remove se vazio
+        await ponto_observacoes_collection.delete_many(chave)
+        return {"message": "Observação removida"}
+    
+    await ponto_observacoes_collection.update_one(
+        chave,
+        {"$set": {
+            **chave,
+            "texto": texto,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }, "$setOnInsert": {"id": str(uuid.uuid4())}},
+        upsert=True,
+    )
+    obs = await ponto_observacoes_collection.find_one(chave, {"_id": 0})
+    return obs or {"funcionario_id": funcionario_id, "mes": mes, "ano": ano, "texto": texto}
+
+
+@rh_router.get("/ponto/observacao")
+async def get_observacao(funcionario_id: str, mes: int, ano: int):
+    obs = await ponto_observacoes_collection.find_one(
+        {"funcionario_id": funcionario_id, "mes": mes, "ano": ano},
+        {"_id": 0},
+    )
+    return obs or {"funcionario_id": funcionario_id, "mes": mes, "ano": ano, "texto": ""}
+
+
 
 
 

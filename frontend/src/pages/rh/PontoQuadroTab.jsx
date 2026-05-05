@@ -17,6 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   TrendingUp,
   TrendingDown,
@@ -27,6 +29,10 @@ import {
   Loader2,
   Briefcase,
   FileDown,
+  CheckCircle2,
+  Trash2,
+  Save,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +54,86 @@ export default function PontoQuadroTab({ refreshKey }) {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(false);
   const [funcDetalhe, setFuncDetalhe] = useState(null);
+  const [observacaoDraft, setObservacaoDraft] = useState("");
+  const [salvandoObs, setSalvandoObs] = useState(false);
+  const [abonoForm, setAbonoForm] = useState(null); // { data, tipo, motivo }
+
+  // Quando abre o modal, carrega rascunho da observação
+  useEffect(() => {
+    if (funcDetalhe) {
+      setObservacaoDraft(funcDetalhe.observacao || "");
+      setAbonoForm(null);
+    }
+  }, [funcDetalhe]);
+
+  const recarregarFuncDetalhe = async () => {
+    // Recarrega o dashboard e atualiza funcDetalhe com novos dados
+    try {
+      const { data } = await axios.get(
+        `${API}/rh/ponto/dashboard-mensal?mes=${mes}&ano=${ano}`
+      );
+      setDashboard(data);
+      if (funcDetalhe) {
+        const novo = data.funcionarios.find(
+          (f) => f.funcionario_id === funcDetalhe.funcionario_id
+        );
+        if (novo) setFuncDetalhe(novo);
+      }
+    } catch (e) {
+      // silencioso
+    }
+  };
+
+  const salvarObservacao = async () => {
+    if (!funcDetalhe) return;
+    setSalvandoObs(true);
+    try {
+      await axios.post(`${API}/rh/ponto/observacao`, {
+        funcionario_id: funcDetalhe.funcionario_id,
+        mes,
+        ano,
+        texto: observacaoDraft,
+      });
+      toast.success("Observação salva");
+      await recarregarFuncDetalhe();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao salvar observação");
+    } finally {
+      setSalvandoObs(false);
+    }
+  };
+
+  const criarAbono = async () => {
+    if (!abonoForm || !funcDetalhe) return;
+    if (!abonoForm.tipo || !abonoForm.motivo?.trim()) {
+      toast.error("Preencha tipo e motivo");
+      return;
+    }
+    try {
+      await axios.post(`${API}/rh/ponto/abono`, {
+        funcionario_id: funcDetalhe.funcionario_id,
+        data: abonoForm.data,
+        tipo: abonoForm.tipo,
+        motivo: abonoForm.motivo.trim(),
+      });
+      toast.success(`Dia ${abonoForm.data.split("-").reverse().join("/")} abonado`);
+      setAbonoForm(null);
+      await recarregarFuncDetalhe();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao criar abono");
+    }
+  };
+
+  const removerAbono = async (abonoId, data) => {
+    if (!window.confirm(`Remover abono de ${data.split("-").reverse().join("/")}?`)) return;
+    try {
+      await axios.delete(`${API}/rh/ponto/abono/${abonoId}`);
+      toast.success("Abono removido");
+      await recarregarFuncDetalhe();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao remover abono");
+    }
+  };
 
   const fetchDashboard = async () => {
     setLoading(true);
@@ -441,43 +527,197 @@ export default function PontoQuadroTab({ refreshKey }) {
                       <th className="text-right p-2">Trabalhado</th>
                       <th className="text-right p-2">Previsto</th>
                       <th className="text-right p-2">Saldo</th>
+                      <th className="text-center p-2 w-24">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {funcDetalhe.detalhe_dias?.map((d, i) => (
-                      <tr key={i} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-mono">
-                          {d.data?.split("-").reverse().join("/")}
-                        </td>
-                        <td className="p-2 text-center text-gray-600">
-                          {DIAS_SEMANA[d.dia_semana]}
-                        </td>
-                        <td className="p-2 font-mono text-xs">
-                          {(d.batidas || []).join(" • ") || "—"}
-                        </td>
-                        <td className="p-2 text-right">
-                          {fmtMin(d.minutos_trabalhados)}
-                        </td>
-                        <td className="p-2 text-right text-gray-500">
-                          {fmtMin(d.minutos_previstos)}
-                        </td>
-                        <td
-                          className={`p-2 text-right font-medium ${
-                            d.saldo_minutos > 0
-                              ? "text-emerald-600"
-                              : d.saldo_minutos < 0
-                              ? "text-rose-600"
-                              : "text-gray-500"
+                    {funcDetalhe.detalhe_dias?.map((d, i) => {
+                      const isAbonado = !!d.abono;
+                      const podeAbonar =
+                        !isAbonado &&
+                        (d.status_dia === "sem_registro" || d.status_dia === "incompleto" ||
+                         d.minutos_trabalhados < d.minutos_previstos);
+                      return (
+                        <tr
+                          key={i}
+                          className={`border-b ${
+                            isAbonado ? "bg-amber-50" : "hover:bg-gray-50"
                           }`}
                         >
-                          {d.saldo_minutos > 0 ? "+" : ""}
-                          {fmtMin(d.saldo_minutos)}
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="p-2 font-mono">
+                            {d.data?.split("-").reverse().join("/")}
+                          </td>
+                          <td className="p-2 text-center text-gray-600">
+                            {DIAS_SEMANA[d.dia_semana]}
+                          </td>
+                          <td className="p-2 font-mono text-xs">
+                            {isAbonado ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-200 text-amber-900 rounded text-xs font-semibold">
+                                <ShieldCheck size={12} />
+                                {(d.abono.tipo || "").toUpperCase()}: {d.abono.motivo}
+                              </span>
+                            ) : (
+                              (d.batidas || []).join(" • ") || "—"
+                            )}
+                          </td>
+                          <td className="p-2 text-right">
+                            {fmtMin(d.minutos_trabalhados)}
+                          </td>
+                          <td className="p-2 text-right text-gray-500">
+                            {fmtMin(d.minutos_previstos)}
+                          </td>
+                          <td
+                            className={`p-2 text-right font-medium ${
+                              isAbonado
+                                ? "text-amber-700"
+                                : d.saldo_minutos > 0
+                                ? "text-emerald-600"
+                                : d.saldo_minutos < 0
+                                ? "text-rose-600"
+                                : "text-gray-500"
+                            }`}
+                          >
+                            {isAbonado ? (
+                              "ABONADO"
+                            ) : (
+                              <>
+                                {d.saldo_minutos > 0 ? "+" : ""}
+                                {fmtMin(d.saldo_minutos)}
+                              </>
+                            )}
+                          </td>
+                          <td className="p-2 text-center">
+                            {isAbonado ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-rose-600 h-7 px-2"
+                                onClick={() => removerAbono(d.abono.id, d.data)}
+                                data-testid={`btn-remover-abono-${d.data}`}
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            ) : podeAbonar ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                                onClick={() =>
+                                  setAbonoForm({
+                                    data: d.data,
+                                    tipo: "atestado",
+                                    motivo: "",
+                                  })
+                                }
+                                data-testid={`btn-abonar-${d.data}`}
+                              >
+                                Abonar
+                              </Button>
+                            ) : null}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+
+              {/* Formulário de criação de abono (modal-in-modal) */}
+              {abonoForm && (
+                <Card className="border-amber-300 bg-amber-50">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-amber-900 flex items-center gap-2">
+                        <ShieldCheck size={16} />
+                        Abonar dia {abonoForm.data.split("-").reverse().join("/")}
+                      </h4>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setAbonoForm(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs">Tipo</Label>
+                        <Select
+                          value={abonoForm.tipo}
+                          onValueChange={(v) =>
+                            setAbonoForm({ ...abonoForm, tipo: v })
+                          }
+                        >
+                          <SelectTrigger data-testid="select-tipo-abono">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="atestado">Atestado médico</SelectItem>
+                            <SelectItem value="justificativa">Justificativa</SelectItem>
+                            <SelectItem value="folga">Folga compensada</SelectItem>
+                            <SelectItem value="feriado">Feriado</SelectItem>
+                            <SelectItem value="ferias">Férias</SelectItem>
+                            <SelectItem value="outros">Outros</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs">Motivo / Justificativa</Label>
+                        <Input
+                          placeholder="Ex.: Atestado médico - clínica geral"
+                          value={abonoForm.motivo}
+                          onChange={(e) =>
+                            setAbonoForm({ ...abonoForm, motivo: e.target.value })
+                          }
+                          onKeyDown={(e) => e.key === "Enter" && criarAbono()}
+                          data-testid="input-motivo-abono"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-amber-600 hover:bg-amber-700"
+                        onClick={criarAbono}
+                        data-testid="btn-confirmar-abono"
+                      >
+                        <CheckCircle2 size={14} className="mr-2" />
+                        Confirmar abono
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Observações livres do mês */}
+              <Card>
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">Observações do mês</Label>
+                    <Button
+                      size="sm"
+                      onClick={salvarObservacao}
+                      disabled={salvandoObs || observacaoDraft === (funcDetalhe.observacao || "")}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                      data-testid="btn-salvar-observacao"
+                    >
+                      {salvandoObs ? (
+                        <Loader2 size={12} className="animate-spin mr-1" />
+                      ) : (
+                        <Save size={12} className="mr-1" />
+                      )}
+                      Salvar
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Anote informações relevantes do mês (ex: férias agendadas, treinamentos, atestados não apresentados...). Aparecerá no PDF."
+                    value={observacaoDraft}
+                    onChange={(e) => setObservacaoDraft(e.target.value)}
+                    rows={3}
+                    data-testid="textarea-observacao"
+                  />
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>
