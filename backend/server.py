@@ -5027,25 +5027,101 @@ class XMLExtractRequest(BaseModel):
 
 @api_router.post("/nf/extrair-xml")
 async def extrair_dados_xml(data: XMLExtractRequest, current_user: dict = Depends(get_current_user)):
-    """Extrai dados de um arquivo XML de NF-e para preenchimento automático"""
+    """Extrai dados de um arquivo XML de NF-e (portalfiscal) ou NFS-e (ABRASF)
+    para preenchimento automático no upload manual."""
     from xml.etree import ElementTree as ET
-    
+
     try:
-        # Decodificar o XML
-        xml_content = base64.b64decode(data.xml_base64).decode('utf-8')
-        
-        # Namespaces comuns de NF-e
+        xml_content = base64.b64decode(data.xml_base64).decode('utf-8', errors='replace')
+        root = ET.fromstring(xml_content)
+
+        # ============ Detecta NFS-e (ABRASF) e parseia ============
+        # Heurística: presença de <CompNfse>/<InfNfse>/<Nfse> ou namespace ABRASF.
+        is_nfse = False
+        for el in root.iter():
+            tag = el.tag.split('}')[-1] if '}' in el.tag else el.tag
+            if tag in ("InfNfse", "CompNfse", "Nfse", "ConsultarNfseServicoTomadoResposta"):
+                is_nfse = True
+                break
+
+        def first_text(elem, tag_name):
+            """Busca o primeiro descendente com tag local==tag_name e retorna texto."""
+            for child in elem.iter():
+                ctag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                if ctag == tag_name and child.text:
+                    return child.text.strip()
+            return ""
+
+        if is_nfse:
+            # Encontra o nó da nota
+            inf_nfse = None
+            for el in root.iter():
+                tag = el.tag.split('}')[-1] if '}' in el.tag else el.tag
+                if tag == "InfNfse":
+                    inf_nfse = el
+                    break
+            base = inf_nfse if inf_nfse is not None else root
+
+            # PRESTADOR (emitente)
+            prestador = None
+            tomador = None
+            for el in base.iter():
+                tag = el.tag.split('}')[-1] if '}' in el.tag else el.tag
+                if tag == "PrestadorServico":
+                    prestador = el
+                elif tag == "TomadorServico":
+                    tomador = el
+
+            cnpj_prest = first_text(prestador, "Cnpj") if prestador is not None else first_text(base, "Cnpj")
+            razao_prest = first_text(prestador, "RazaoSocial") if prestador is not None else ""
+            cnpj_tom = first_text(tomador, "Cnpj") if tomador is not None else ""
+            razao_tom = first_text(tomador, "RazaoSocial") if tomador is not None else ""
+
+            valor_servicos_str = first_text(base, "ValorServicos") or first_text(base, "ValorLiquidoNfse") or "0"
+            valor_total_str = valor_servicos_str
+            try:
+                valor_servicos = float(valor_servicos_str.replace(",", "."))
+                valor_total = float(valor_total_str.replace(",", "."))
+            except (ValueError, TypeError):
+                valor_servicos = valor_total = 0.0
+
+            data_emissao_raw = first_text(base, "DataEmissao") or ""
+            data_emissao = data_emissao_raw[:10] if data_emissao_raw else ""
+
+            discriminacao = first_text(base, "Discriminacao") or ""
+            codigo_verif = first_text(base, "CodigoVerificacao") or ""
+            numero = first_text(base, "Numero") or ""
+
+            return {
+                "sucesso": True,
+                "tipo_nota": "nfse",
+                "numero_nota": numero,
+                "serie": first_text(base, "Serie") or "1",
+                "chave_acesso": codigo_verif,
+                "data_emissao": data_emissao,
+                "cnpj_emitente": cnpj_prest,
+                "razao_social_emitente": razao_prest,
+                "uf_emitente": "",
+                "ie_emitente": first_text(prestador, "InscricaoMunicipal") if prestador is not None else "",
+                "cnpj_destinatario": cnpj_tom,
+                "razao_social_destinatario": razao_tom,
+                "valor_total": valor_total,
+                "valor_produtos": 0.0,
+                "valor_servicos": valor_servicos,
+                "valor_frete": 0.0,
+                "valor_desconto": 0.0,
+                "observacoes": discriminacao[:500] if discriminacao else "",
+                "itens": [],
+            }
+
+        # ============ NF-e (portalfiscal — mantido) ============
         ns = {
             'nfe': 'http://www.portalfiscal.inf.br/nfe',
             'ns': 'http://www.portalfiscal.inf.br/nfe'
         }
-        
-        root = ET.fromstring(xml_content)
-        
-        # Tentar encontrar o nó principal da NF-e
         nfe = root.find('.//nfe:NFe', ns) or root.find('.//NFe') or root
         inf_nfe = nfe.find('.//nfe:infNFe', ns) or nfe.find('.//infNFe') or root.find('.//infNFe')
-        
+
         resultado = {
             "sucesso": True,
             "tipo_nota": "nfe",

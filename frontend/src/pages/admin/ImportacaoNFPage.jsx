@@ -253,8 +253,10 @@ export default function ImportacaoNFPage() {
             razao_social_destinatario: dados.razao_social_destinatario || "",
             valor_total: dados.valor_total ? dados.valor_total.toFixed(2) : "",
             valor_produtos: dados.valor_produtos ? dados.valor_produtos.toFixed(2) : "",
+            valor_servicos: dados.valor_servicos ? dados.valor_servicos.toFixed(2) : "",
             valor_frete: dados.valor_frete ? dados.valor_frete.toFixed(2) : "0",
             valor_desconto: dados.valor_desconto ? dados.valor_desconto.toFixed(2) : "0",
+            observacoes: dados.observacoes || prev.observacoes || "",
             xml_base64: base64
           }));
           
@@ -263,7 +265,11 @@ export default function ImportacaoNFPage() {
             setXmlItens(dados.itens);
           }
           
-          toast.success(`Dados extraídos com sucesso! ${dados.itens?.length || 0} itens encontrados.`);
+          if (dados.tipo_nota === "nfse") {
+            toast.success("Dados da NFS-e extraídos com sucesso!");
+          } else {
+            toast.success(`Dados da NF-e extraídos! ${dados.itens?.length || 0} itens encontrados.`);
+          }
         } else {
           // Se falhou na extração, só salva o XML
           setManualForm(prev => ({...prev, xml_base64: base64}));
