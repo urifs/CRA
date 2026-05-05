@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner";
 import PontoImportarTab from "./PontoImportarTab";
 import PontoQuadroTab from "./PontoQuadroTab";
+import JornadasQuadro from "./JornadasQuadro";
 
 export default function PontoPage() {
   const today = new Date();
@@ -439,32 +440,8 @@ export default function PontoPage() {
         </Card>
       </div>
 
-      {/* Jornada de referência */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <Clock size={18} className="text-[#10B981]" />
-            Jornada de Trabalho
-          </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="font-medium mb-2">Segunda a Sexta</p>
-              <div className="flex items-center gap-4 text-gray-600">
-                <span>🟢 08:00 - 11:30</span>
-                <span>🍽️ Almoço</span>
-                <span>🟢 13:30 - 18:00</span>
-              </div>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="font-medium mb-2">Sábado</p>
-              <div className="flex items-center gap-4 text-gray-600">
-                <span>🟢 08:00 - 12:00</span>
-                <span className="text-yellow-600">(Carga reduzida)</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Jornadas de Trabalho — gerenciamento e atribuição */}
+      <JornadasQuadro />
 
       {/* Lista de registros */}
       {loading ? (

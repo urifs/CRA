@@ -374,6 +374,11 @@ export default function PontoQuadroTab({ refreshKey }) {
                         {f.departamento && (
                           <p className="text-xs text-gray-400">{f.departamento}</p>
                         )}
+                        {f.jornada_nome && (
+                          <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                            ⏱ {f.jornada_nome}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {!f.cadastrado && (

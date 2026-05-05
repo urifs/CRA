@@ -1,5 +1,38 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
+## Feature - 04/05/2026 (Sessão 43.6) — 🟢 Jornadas de Trabalho personalizáveis
+
+### Implementado
+- **Backend** — nova collection `jornadas_trabalho`, jornada Padrão criada automaticamente (Seg-Sex 08:00-11:30/13:30-18:00, Sábado 08:00-12:00):
+  - `GET /api/rh/jornadas` (com contagem de funcionários atribuídos e total semanal)
+  - `POST /api/rh/jornadas` (criar)
+  - `PUT /api/rh/jornadas/{id}` (atualizar)
+  - `DELETE /api/rh/jornadas/{id}` (bloqueia se há func. atribuídos ou se for Padrão)
+  - `POST /api/rh/jornadas/{id}/atribuir` (multi-funcionários)
+  - `GET /api/rh/jornadas/{id}/funcionarios` (Padrão inclui os sem jornada explícita)
+- Funcionário ganhou campo opcional `jornada_id`. Sem ele, herda Padrão.
+- **Cálculo retroativo**: `dashboard-mensal` recalcula `minutos_previstos`, `saldo_minutos` e `banco_horas_acumulado` on-the-fly usando a jornada CORRENTE de cada funcionário, em todos os meses já importados.
+- Jornada com 4 horários (entrada/saída-almoço/retorno-almoço/saída) por dia da semana — meio-período suportado deixando almoço vazio.
+
+### Frontend
+- Substituído card estático "Jornada de Trabalho" por componente novo `JornadasQuadro`:
+  - Lista cards com nome, descrição, horários por dia ativo e total semanal.
+  - Botão "Nova jornada" → dialog com tabela 7 dias × 4 inputs `time` + checkbox ativo + preview de horas em tempo real.
+  - Botão "atribuir N func." → dialog multi-select de funcionários ativos com pré-marcação dos atuais.
+  - Edit/Excluir por jornada (Padrão protegida).
+- Card de funcionário no Quadro Mensal mostra nome da jornada vigente.
+
+### Validação
+- Curl criou Padrão automaticamente + Diarista 6h, atribuição funcional, dashboard recalculou (Gustavo Padrão: 192h previstas, saldo -147h22min consistente).
+- Visual Playwright: 3 telas (quadro, form criação, dialog atribuição) renderizadas corretamente.
+
+### Arquivos
+- `backend/routes/rh.py` — helpers de jornada + 6 endpoints + uso no dashboard.
+- `frontend/src/pages/rh/JornadasQuadro.jsx` (NOVO).
+- `frontend/src/pages/rh/PontoPage.jsx` (substitui card estático).
+- `frontend/src/pages/rh/PontoQuadroTab.jsx` (mostra `jornada_nome` no card).
+
+
 ## Feature - 04/05/2026 (Sessão 43.5) — 📎 Upload de Atestado/Justificativa anexado ao Abono
 
 ### Implementado

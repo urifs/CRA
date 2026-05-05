@@ -29,6 +29,7 @@ funcionarios_collection = db["funcionarios"]
 ponto_collection = db["ponto_registros"]
 ponto_abonos_collection = db["ponto_abonos"]
 ponto_observacoes_collection = db["ponto_observacoes"]
+jornadas_collection = db["jornadas_trabalho"]
 folha_pagamento_collection = db["folha_pagamento"]
 ferias_collection = db["ferias"]
 epi_fichas_collection = db["epi_fichas"]
@@ -1033,13 +1034,28 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
             por_func[fid] = []
         por_func[fid].append(reg)
     
-    # Banco de horas acumulado (de TODOS os meses anteriores e atual): soma saldo_minutos de cada registro
+    # Banco de horas acumulado: vamos calcular usando a jornada CORRENTE de cada funcionário
+    # (aplicação retroativa). Para isso, precisamos primeiro carregar jornadas e funcionários.
+    jornada_padrao = await _get_or_create_jornada_padrao()
+    jornadas_map = {jornada_padrao["id"]: jornada_padrao}
+    async for j in jornadas_collection.find({}, {"_id": 0}):
+        jornadas_map[j["id"]] = j
+    
+    func_jornada_map = {}  # funcionario_id -> jornada_doc
+    async for f in funcionarios_collection.find({}, {"_id": 0, "id": 1, "jornada_id": 1}):
+        fjid = f.get("jornada_id")
+        func_jornada_map[f["id"]] = jornadas_map.get(fjid) if fjid else jornada_padrao
+    
     banco_acumulado_por_func = {}
-    async for reg in ponto_collection.aggregate([
-        {"$match": {"data": {"$lt": fim_mes}}},
-        {"$group": {"_id": "$funcionario_id", "total": {"$sum": "$saldo_minutos"}}},
-    ]):
-        banco_acumulado_por_func[reg["_id"]] = int(reg.get("total", 0) or 0)
+    async for r in ponto_collection.find(
+        {"data": {"$lt": fim_mes}},
+        {"_id": 0, "funcionario_id": 1, "data": 1, "minutos_trabalhados": 1, "dia_semana": 1},
+    ):
+        fid = r["funcionario_id"]
+        j_func = func_jornada_map.get(fid, jornada_padrao)
+        prev = _jornada_minutos_previstos(j_func, r.get("dia_semana", 6))
+        trab = int(r.get("minutos_trabalhados", 0) or 0)
+        banco_acumulado_por_func[fid] = banco_acumulado_por_func.get(fid, 0) + (trab - prev)
     
     # Carregar TODOS os abonos (não só do mês) para neutralizar saldos no banco acumulado
     abonos_global_por_func_data = {}
@@ -1050,14 +1066,16 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
     # daquele dia (que provavelmente é negativo) para neutralizá-lo.
     if abonos_global_por_func_data:
         async for r in ponto_collection.find(
-            {"data": {"$lt": fim_mes}}, {"_id": 0, "funcionario_id": 1, "data": 1, "saldo_minutos": 1}
+            {"data": {"$lt": fim_mes}}, {"_id": 0, "funcionario_id": 1, "data": 1, "minutos_trabalhados": 1, "dia_semana": 1}
         ):
             chave = (r["funcionario_id"], r["data"])
             if chave in abonos_global_por_func_data:
-                banco_acumulado_por_func[r["funcionario_id"]] = (
-                    banco_acumulado_por_func.get(r["funcionario_id"], 0)
-                    - int(r.get("saldo_minutos", 0) or 0)
-                )
+                fid = r["funcionario_id"]
+                j_func = func_jornada_map.get(fid, jornada_padrao)
+                prev = _jornada_minutos_previstos(j_func, r.get("dia_semana", 6))
+                trab = int(r.get("minutos_trabalhados", 0) or 0)
+                saldo_dia = trab - prev
+                banco_acumulado_por_func[fid] = banco_acumulado_por_func.get(fid, 0) - saldo_dia
     
     # Carregar abonos do mês (chave: (funcionario_id, data))
     abonos_por_func_data = {
@@ -1072,11 +1090,13 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
         cargo = ""
         departamento = ""
         cadastrado = False
+        jornada_func = None
         if fid.startswith("NAO_CADASTRADO::"):
             nome = registros[0].get("funcionario_nome_planilha", "")
             departamento = registros[0].get("departamento_planilha", "")
             cargo = "(Não cadastrado)"
             cadastrado = False
+            jornada_func = jornada_padrao  # Não cadastrados usam padrão
         else:
             func = await funcionarios_collection.find_one({"id": fid})
             if func:
@@ -1084,14 +1104,28 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
                 cargo = func.get("cargo", "")
                 departamento = func.get("departamento", "") or registros[0].get("departamento_planilha", "")
                 cadastrado = True
+                # Resolve jornada: se funcionário tem jornada_id válida, usa; senão padrão
+                fjid = func.get("jornada_id")
+                jornada_func = jornadas_map.get(fjid) if fjid else None
+                if not jornada_func:
+                    jornada_func = jornada_padrao
             else:
                 nome = registros[0].get("funcionario_nome_planilha", "?")
                 cargo = "(Funcionário removido)"
                 cadastrado = False
+                jornada_func = jornada_padrao
+        
+        # Garante consistência: usa também o map global (já calculado para o banco acumulado)
+        if cadastrado and not jornada_func:
+            jornada_func = func_jornada_map.get(fid, jornada_padrao)
         
         # Aplicar abonos: dias abonados têm saldo neutralizado para 0 (trabalhadas tratadas como previstas)
+        # Recalcular minutos_previstos via jornada do funcionário (substitui o calculado na importação)
         total_trab_real = sum(int(r.get("minutos_trabalhados", 0) or 0) for r in registros)
-        total_prev = sum(int(r.get("minutos_previstos", 0) or 0) for r in registros)
+        total_prev = sum(
+            _jornada_minutos_previstos(jornada_func, r.get("dia_semana", 6))
+            for r in registros
+        )
         
         # Soma saldos dia a dia, neutralizando dias abonados
         saldo_mes = 0
@@ -1103,21 +1137,11 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
                 # Dia abonado: contribuição zero para o saldo
                 dias_abonados += 1
             else:
-                saldo_mes += int(r.get("saldo_minutos", 0) or 0)
+                trab_dia = int(r.get("minutos_trabalhados", 0) or 0)
+                prev_dia = _jornada_minutos_previstos(jornada_func, r.get("dia_semana", 6))
+                saldo_mes += (trab_dia - prev_dia)
         
-        # total_trab "efetivo" considera abonos como horas previstas cumpridas
-        minutos_abonados = sum(
-            int(r.get("minutos_previstos", 0) or 0)
-            for r in registros
-            if (fid, r.get("data")) in abonos_por_func_data
-        )
-        # Horas trabalhadas exibidas: realmente trabalhadas + abonadas (pra barra fechar)
-        total_trab = total_trab_real + max(0, minutos_abonados - sum(
-            int(r.get("minutos_trabalhados", 0) or 0)
-            for r in registros
-            if (fid, r.get("data")) in abonos_por_func_data
-        ))
-        
+        # Dias incompletos / faltas considerando jornada
         dias_com_registro = sum(1 for r in registros if r.get("minutos_trabalhados", 0) > 0)
         dias_incompletos = sum(
             1 for r in registros
@@ -1125,7 +1149,8 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
         )
         dias_falta = sum(
             1 for r in registros
-            if r.get("status_dia") == "sem_registro" and r.get("dia_semana", 6) <= 5
+            if r.get("status_dia") == "sem_registro"
+            and _jornada_minutos_previstos(jornada_func, r.get("dia_semana", 6)) > 0
             and (fid, r.get("data")) not in abonos_por_func_data
         )
         
@@ -1134,15 +1159,17 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
         for r in registros:
             data_r = r.get("data")
             ab = abonos_por_func_data.get((fid, data_r))
-            saldo_dia = int(r.get("saldo_minutos", 0) or 0)
+            trab_dia = int(r.get("minutos_trabalhados", 0) or 0)
+            prev_dia = _jornada_minutos_previstos(jornada_func, r.get("dia_semana", 6))
+            saldo_dia = trab_dia - prev_dia
             if ab:
                 saldo_dia = 0  # Abono neutraliza
             detalhe.append({
                 "data": data_r,
                 "dia_semana": r.get("dia_semana"),
                 "batidas": r.get("batidas", []),
-                "minutos_trabalhados": r.get("minutos_trabalhados", 0),
-                "minutos_previstos": r.get("minutos_previstos", 0),
+                "minutos_trabalhados": trab_dia,
+                "minutos_previstos": prev_dia,
                 "saldo_minutos": saldo_dia,
                 "status_dia": "abonado" if ab else r.get("status_dia"),
                 "abono": (
@@ -1150,6 +1177,14 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
                     if ab else None
                 ),
             })
+        
+        # total_trab "efetivo" considera abonos como horas previstas cumpridas (visualmente fecha a barra)
+        minutos_abonados_compensados = sum(
+            _jornada_minutos_previstos(jornada_func, r.get("dia_semana", 6)) - int(r.get("minutos_trabalhados", 0) or 0)
+            for r in registros
+            if (fid, r.get("data")) in abonos_por_func_data
+        )
+        total_trab = total_trab_real + max(0, minutos_abonados_compensados)
         
         # Banco acumulado: já vem com os abonos neutralizados de todos os meses
         banco_total = banco_acumulado_por_func.get(fid, 0)
@@ -1173,6 +1208,8 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
             "cargo": cargo,
             "departamento": departamento,
             "cadastrado": cadastrado,
+            "jornada_id": jornada_func.get("id") if jornada_func else None,
+            "jornada_nome": jornada_func.get("nome") if jornada_func else "Padrão",
             "minutos_trabalhados": total_trab,
             "minutos_previstos": total_prev,
             "saldo_mes_minutos": saldo_mes,
@@ -1533,6 +1570,256 @@ async def gerar_pdf_espelho_ponto(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+
+# ===== JORNADAS DE TRABALHO PERSONALIZADAS =====
+DIAS_SEMANA_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+JORNADA_PADRAO_NOME = "Padrão"
+
+
+def _hhmm_to_min(s: str) -> int:
+    """Converte 'HH:MM' em minutos. Retorna 0 se inválido/vazio."""
+    if not s:
+        return 0
+    try:
+        h, m = s.split(":")
+        return int(h) * 60 + int(m)
+    except (ValueError, AttributeError):
+        return 0
+
+
+def _calc_minutos_dia_jornada(dia_cfg: dict) -> int:
+    """Calcula minutos previstos para um dia da jornada.
+    dia_cfg = { ativo, entrada, saida_almoco, retorno_almoco, saida }
+    Se almoço presente: (saida_almoco - entrada) + (saida - retorno_almoco)
+    Se sem almoço: saida - entrada
+    Retorna 0 se inativo ou inválido.
+    """
+    if not dia_cfg or not dia_cfg.get("ativo"):
+        return 0
+    e = _hhmm_to_min(dia_cfg.get("entrada"))
+    s = _hhmm_to_min(dia_cfg.get("saida"))
+    sa = _hhmm_to_min(dia_cfg.get("saida_almoco"))
+    ra = _hhmm_to_min(dia_cfg.get("retorno_almoco"))
+    if e <= 0 or s <= 0 or s <= e:
+        return 0
+    if sa > 0 and ra > 0 and sa < ra:
+        # Com almoço
+        return max(0, (sa - e) + (s - ra))
+    # Sem almoço
+    return max(0, s - e)
+
+
+def _jornada_minutos_previstos(jornada_doc: Optional[dict], dia_semana: int) -> int:
+    """Retorna minutos previstos para um dia_semana (0=Seg, 6=Dom) baseado na jornada.
+    Se jornada_doc é None, usa fallback hardcoded (Seg-Sex 8h, Sáb 4h, Dom 0h)."""
+    if jornada_doc and isinstance(jornada_doc.get("dias"), dict):
+        dia_cfg = jornada_doc["dias"].get(str(dia_semana))
+        return _calc_minutos_dia_jornada(dia_cfg or {})
+    # Fallback
+    if 0 <= dia_semana <= 4:
+        return 8 * 60
+    if dia_semana == 5:
+        return 4 * 60
+    return 0
+
+
+def _jornada_total_semanal_min(jornada_doc: dict) -> int:
+    if not jornada_doc or not isinstance(jornada_doc.get("dias"), dict):
+        return 0
+    total = 0
+    for d in range(7):
+        total += _calc_minutos_dia_jornada(jornada_doc["dias"].get(str(d)) or {})
+    return total
+
+
+async def _get_or_create_jornada_padrao() -> dict:
+    """Retorna a jornada Padrão, criando-a se não existir."""
+    j = await jornadas_collection.find_one({"nome": JORNADA_PADRAO_NOME}, {"_id": 0})
+    if j:
+        return j
+    novo = {
+        "id": str(uuid.uuid4()),
+        "nome": JORNADA_PADRAO_NOME,
+        "descricao": "Jornada padrão: Seg-Sex 08:00-17:00 (1h almoço) e Sábado 08:00-12:00",
+        "is_padrao": True,
+        "dias": {
+            "0": {"ativo": True, "entrada": "08:00", "saida_almoco": "11:30",
+                  "retorno_almoco": "13:30", "saida": "18:00"},
+            "1": {"ativo": True, "entrada": "08:00", "saida_almoco": "11:30",
+                  "retorno_almoco": "13:30", "saida": "18:00"},
+            "2": {"ativo": True, "entrada": "08:00", "saida_almoco": "11:30",
+                  "retorno_almoco": "13:30", "saida": "18:00"},
+            "3": {"ativo": True, "entrada": "08:00", "saida_almoco": "11:30",
+                  "retorno_almoco": "13:30", "saida": "18:00"},
+            "4": {"ativo": True, "entrada": "08:00", "saida_almoco": "11:30",
+                  "retorno_almoco": "13:30", "saida": "18:00"},
+            "5": {"ativo": True, "entrada": "08:00", "saida_almoco": "",
+                  "retorno_almoco": "", "saida": "12:00"},
+            "6": {"ativo": False, "entrada": "", "saida_almoco": "",
+                  "retorno_almoco": "", "saida": ""},
+        },
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await jornadas_collection.insert_one(novo)
+    novo.pop("_id", None)
+    return novo
+
+
+@rh_router.get("/jornadas")
+async def listar_jornadas():
+    """Lista todas as jornadas com contagem de funcionários atribuídos."""
+    await _get_or_create_jornada_padrao()
+    jornadas = []
+    async for j in jornadas_collection.find({}, {"_id": 0}).sort("nome", 1):
+        # Conta funcionários atribuídos
+        count = await funcionarios_collection.count_documents({"jornada_id": j["id"]})
+        # Inclui contagem de funcionários SEM jornada que receberão a padrão
+        if j.get("is_padrao"):
+            sem_jornada = await funcionarios_collection.count_documents(
+                {"$or": [{"jornada_id": {"$exists": False}}, {"jornada_id": None}, {"jornada_id": ""}]}
+            )
+            count += sem_jornada
+        j["funcionarios_count"] = count
+        j["total_semanal_minutos"] = _jornada_total_semanal_min(j)
+        jornadas.append(j)
+    return jornadas
+
+
+@rh_router.post("/jornadas")
+async def criar_jornada(payload: dict = Body(...)):
+    nome = (payload.get("nome") or "").strip()
+    descricao = (payload.get("descricao") or "").strip()
+    dias = payload.get("dias") or {}
+    
+    if not nome:
+        raise HTTPException(status_code=400, detail="Nome é obrigatório")
+    if await jornadas_collection.find_one({"nome": nome}):
+        raise HTTPException(status_code=400, detail="Já existe jornada com este nome")
+    
+    # Normaliza dias (chaves 0..6 como string)
+    dias_norm = {}
+    for d in range(7):
+        cfg = dias.get(str(d)) or dias.get(d) or {}
+        dias_norm[str(d)] = {
+            "ativo": bool(cfg.get("ativo", False)),
+            "entrada": (cfg.get("entrada") or "").strip(),
+            "saida_almoco": (cfg.get("saida_almoco") or "").strip(),
+            "retorno_almoco": (cfg.get("retorno_almoco") or "").strip(),
+            "saida": (cfg.get("saida") or "").strip(),
+        }
+    
+    doc = {
+        "id": str(uuid.uuid4()),
+        "nome": nome,
+        "descricao": descricao,
+        "is_padrao": False,
+        "dias": dias_norm,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await jornadas_collection.insert_one(doc)
+    doc.pop("_id", None)
+    doc["funcionarios_count"] = 0
+    doc["total_semanal_minutos"] = _jornada_total_semanal_min(doc)
+    return doc
+
+
+@rh_router.put("/jornadas/{jornada_id}")
+async def atualizar_jornada(jornada_id: str, payload: dict = Body(...)):
+    existing = await jornadas_collection.find_one({"id": jornada_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Jornada não encontrada")
+    
+    update = {}
+    if "nome" in payload:
+        novo_nome = (payload.get("nome") or "").strip()
+        if not novo_nome:
+            raise HTTPException(status_code=400, detail="Nome não pode ser vazio")
+        outro = await jornadas_collection.find_one({"nome": novo_nome, "id": {"$ne": jornada_id}})
+        if outro:
+            raise HTTPException(status_code=400, detail="Já existe outra jornada com este nome")
+        update["nome"] = novo_nome
+    if "descricao" in payload:
+        update["descricao"] = (payload.get("descricao") or "").strip()
+    if "dias" in payload:
+        dias_norm = {}
+        for d in range(7):
+            cfg = payload["dias"].get(str(d)) or payload["dias"].get(d) or {}
+            dias_norm[str(d)] = {
+                "ativo": bool(cfg.get("ativo", False)),
+                "entrada": (cfg.get("entrada") or "").strip(),
+                "saida_almoco": (cfg.get("saida_almoco") or "").strip(),
+                "retorno_almoco": (cfg.get("retorno_almoco") or "").strip(),
+                "saida": (cfg.get("saida") or "").strip(),
+            }
+        update["dias"] = dias_norm
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await jornadas_collection.update_one({"id": jornada_id}, {"$set": update})
+    j = await jornadas_collection.find_one({"id": jornada_id}, {"_id": 0})
+    j["funcionarios_count"] = await funcionarios_collection.count_documents({"jornada_id": jornada_id})
+    j["total_semanal_minutos"] = _jornada_total_semanal_min(j)
+    return j
+
+
+@rh_router.delete("/jornadas/{jornada_id}")
+async def deletar_jornada(jornada_id: str):
+    j = await jornadas_collection.find_one({"id": jornada_id})
+    if not j:
+        raise HTTPException(status_code=404, detail="Jornada não encontrada")
+    if j.get("is_padrao"):
+        raise HTTPException(status_code=400, detail="Não é possível excluir a jornada Padrão")
+    count = await funcionarios_collection.count_documents({"jornada_id": jornada_id})
+    if count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Não é possível excluir: {count} funcionário(s) ainda usam esta jornada. Remova ou troque a jornada deles primeiro.",
+        )
+    await jornadas_collection.delete_one({"id": jornada_id})
+    return {"message": "Jornada removida"}
+
+
+@rh_router.post("/jornadas/{jornada_id}/atribuir")
+async def atribuir_funcionarios_jornada(jornada_id: str, payload: dict = Body(...)):
+    """Atribui múltiplos funcionários a uma jornada.
+    Body: { funcionario_ids: [...] }
+    Substitui as jornadas atuais desses funcionários."""
+    j = await jornadas_collection.find_one({"id": jornada_id})
+    if not j:
+        raise HTTPException(status_code=404, detail="Jornada não encontrada")
+    func_ids = payload.get("funcionario_ids") or []
+    if not isinstance(func_ids, list):
+        raise HTTPException(status_code=400, detail="funcionario_ids deve ser uma lista")
+    
+    res = await funcionarios_collection.update_many(
+        {"id": {"$in": func_ids}},
+        {"$set": {"jornada_id": jornada_id}},
+    )
+    return {"message": f"{res.modified_count} funcionário(s) atribuído(s) à jornada", "modified": res.modified_count}
+
+
+@rh_router.get("/jornadas/{jornada_id}/funcionarios")
+async def listar_funcionarios_da_jornada(jornada_id: str):
+    """Lista funcionários atribuídos à jornada. Para a 'Padrão', inclui também os sem jornada definida."""
+    j = await jornadas_collection.find_one({"id": jornada_id})
+    if not j:
+        raise HTTPException(status_code=404, detail="Jornada não encontrada")
+    
+    if j.get("is_padrao"):
+        query = {"$or": [
+            {"jornada_id": jornada_id},
+            {"jornada_id": {"$exists": False}},
+            {"jornada_id": None},
+            {"jornada_id": ""},
+        ]}
+    else:
+        query = {"jornada_id": jornada_id}
+    
+    funcs = []
+    async for f in funcionarios_collection.find(query, {"_id": 0, "id": 1, "nome": 1, "cargo": 1, "departamento": 1}).sort("nome", 1):
+        funcs.append(f)
+    return funcs
 
 
 # ===== ABONOS DE PONTO (faltas justificadas / atestados / folgas / feriados) =====
