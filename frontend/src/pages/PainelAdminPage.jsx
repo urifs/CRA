@@ -63,7 +63,9 @@ import {
   AlertCircle,
   Paperclip,
   X as XIcon,
-  Download
+  Download,
+  KeyRound,
+  Copy
 } from "lucide-react";
 
 // Tipos de usuário
@@ -367,6 +369,37 @@ export default function PainelAdminPage() {
     }
   };
 
+  const [resetPasswordResult, setResetPasswordResult] = useState(null); // { name, password, copied }
+
+  const handleResetPassword = async (userId, userName, userEmail) => {
+    const escolha = window.prompt(
+      `Resetar senha de "${userName}".\n\n` +
+      `Digite a nova senha (mínimo 6 caracteres) ou deixe em branco para gerar automaticamente:`,
+      ""
+    );
+    if (escolha === null) return; // cancelado
+    if (escolha && escolha.trim().length > 0 && escolha.trim().length < 6) {
+      toast.error("A senha deve ter ao menos 6 caracteres");
+      return;
+    }
+    try {
+      const r = await axios.post(
+        `${API}/admin-panel/users/${userId}/reset-password`,
+        { new_password: escolha && escolha.trim().length >= 6 ? escolha.trim() : null },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setResetPasswordResult({
+        name: userName,
+        email: userEmail,
+        password: r.data.new_password,
+        gerada: r.data.gerada_automaticamente,
+      });
+      toast.success("Senha resetada com sucesso");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao resetar senha");
+    }
+  };
+
   const openEditRoleModal = (userToEdit) => {
     setEditingUser(userToEdit);
     setNewRole(userToEdit.role || "gerenciamento");
@@ -618,6 +651,7 @@ export default function PainelAdminPage() {
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={(e) => { e.stopPropagation(); fetchUserActivities(u.id, u.name, u.role); }} title="Ver atividades"><Eye size={16} /></Button>
                           <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300" onClick={(e) => { e.stopPropagation(); openEditRoleModal(u); }} title="Editar permissões"><Edit size={16} /></Button>
+                          <Button variant="ghost" size="sm" className="text-amber-400 hover:text-amber-300" onClick={(e) => { e.stopPropagation(); handleResetPassword(u.id, u.name, u.email); }} title="Resetar senha" data-testid={`btn-reset-password-${u.id}`}><KeyRound size={16} /></Button>
                           {u.id !== user?.id && <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300" onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id, u.name); }} title="Excluir"><Trash2 size={16} /></Button>}
                         </TableCell>
                       </TableRow>
@@ -1274,6 +1308,61 @@ export default function PainelAdminPage() {
                 </Button>
               </DialogFooter>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Senha Resetada */}
+      <Dialog open={!!resetPasswordResult} onOpenChange={(o) => !o && setResetPasswordResult(null)}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400">
+              <KeyRound size={20} />
+              Senha resetada
+            </DialogTitle>
+          </DialogHeader>
+          {resetPasswordResult && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4">
+                <p className="text-sm text-amber-200 mb-2">
+                  <strong>{resetPasswordResult.name}</strong> ({resetPasswordResult.email})
+                </p>
+                <p className="text-xs text-amber-300/80 mb-3">
+                  {resetPasswordResult.gerada
+                    ? "Senha gerada automaticamente. Compartilhe com o usuário por canal seguro."
+                    : "Senha definida manualmente conforme você digitou."}
+                </p>
+                <div className="flex items-center gap-2 bg-gray-950 rounded p-3 font-mono text-sm">
+                  <code className="flex-1 break-all text-emerald-300" data-testid="reset-password-value">
+                    {resetPasswordResult.password}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetPasswordResult.password);
+                      toast.success("Senha copiada para a área de transferência");
+                    }}
+                    data-testid="btn-copy-reset-password"
+                  >
+                    <Copy size={14} />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 italic">
+                ⚠️ Esta é a única vez que a senha em texto puro será exibida. Anote ou copie agora.
+              </p>
+              <DialogFooter>
+                <Button
+                  onClick={() => setResetPasswordResult(null)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white border-0"
+                  data-testid="btn-fechar-reset-modal"
+                >
+                  Entendi
+                </Button>
+              </DialogFooter>
+            </div>
           )}
         </DialogContent>
       </Dialog>

@@ -5878,6 +5878,68 @@ async def delete_user_admin(user_id: str, current_user: dict = Depends(get_curre
     
     return {"message": "Usuário excluído com sucesso"}
 
+
+class UserPasswordReset(BaseModel):
+    new_password: Optional[str] = None  # Se não vier, gera uma senha aleatória
+
+
+@api_router.post("/admin-panel/users/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: str,
+    data: UserPasswordReset,
+    current_user: dict = Depends(get_current_user),
+):
+    """Admin reseta a senha de um usuário. Se `new_password` não vier no body,
+    é gerada uma senha aleatória de 12 caracteres e devolvida na resposta para que
+    o admin compartilhe com o usuário. A nova senha é armazenada com bcrypt."""
+    admin_roles = ["admin", "programador"]
+    if current_user.get("role") not in admin_roles:
+        raise HTTPException(status_code=403, detail="Apenas administradores podem resetar senhas")
+
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    # Validar nova senha (mínimo 6 caracteres) ou gerar uma
+    if data.new_password:
+        if len(data.new_password) < 6:
+            raise HTTPException(status_code=400, detail="A senha deve ter pelo menos 6 caracteres")
+        nova_senha = data.new_password
+        gerada = False
+    else:
+        import secrets
+        import string
+        alfabeto = string.ascii_letters + string.digits
+        nova_senha = "".join(secrets.choice(alfabeto) for _ in range(12))
+        gerada = True
+
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "password": hash_password(nova_senha),
+            "password_reset_at": datetime.now(timezone.utc).isoformat(),
+            "password_reset_by": current_user.get("id"),
+        }},
+    )
+
+    await create_audit_log(
+        user=current_user,
+        action="resetar senha",
+        entity_type="usuário",
+        entity_id=user_id,
+        entity_name=user.get("name"),
+        details=f"Senha do usuário '{user.get('email')}' foi resetada pelo administrador"
+                + (" (senha gerada automaticamente)" if gerada else " (senha definida manualmente)"),
+        module="Painel Admin",
+    )
+
+    return {
+        "message": "Senha resetada com sucesso. Compartilhe a nova senha com o usuário com segurança.",
+        "new_password": nova_senha,
+        "gerada_automaticamente": gerada,
+    }
+
+
 @api_router.get("/admin-panel/audit-logs")
 async def get_audit_logs(current_user: dict = Depends(get_current_user)):
     """Retorna todos os logs de auditoria"""
