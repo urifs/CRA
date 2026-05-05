@@ -1,6 +1,43 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 05/05/2026 (Sessão 45.2) — 🧠 Base de Conhecimento RH (PCMSO/PGR/LTCAT/CCT) no Chat IA + 📐 Espaçamento
+
+### Implementado
+**Backend — Base de Conhecimento permanente (`routes/chatbot.py`):**
+- Nova coleção MongoDB `chat_knowledge_base` armazenando texto extraído de documentos normativos (PCMSO, PGR, LTCAT, CCT) com category `rh_normativos`.
+- Documentos iniciais carregados via script único:
+  - **CCT** (Convenção Coletiva 2025/2026 - Construção Pesada TO, 18p, OCR via Gemini 2.5 Flash): 45.7K chars
+  - **LTCAT** (CRA Apoio Administrativo, 18p): 21.8K chars
+  - **PCMSO** (CRA Apoio Administrativo, 30p): 34.6K chars
+  - **PGR** (CRA Apoio Administrativo, 15p): 14.2K chars
+- `_build_knowledge_base_context()`: helper async que concatena todos os textos no system_prompt, com cache de 10 minutos para reduzir latência.
+- O system_prompt foi atualizado com instrução obrigatória: para perguntas sobre exames, EPIs por função, riscos, pisos salariais, jornadas e benefícios CCT, o assistente DEVE consultar os documentos e citar a fonte (PCMSO/PGR/LTCAT/CCT).
+- **Endpoints admin** (`/api/chatbot/knowledge-base`):
+  - `GET` — lista os documentos disponíveis (sem o texto completo)
+  - `POST upload` — faz upload de novo PDF, extrai texto via PyPDF, cai para OCR via Gemini se PDF for escaneado
+  - `GET {id}/download` — devolve o PDF original
+  - `DELETE {id}` — remove documento e invalida o cache
+- PDFs originais persistidos em `/app/backend/storage/rh_normativos/`.
+
+**Frontend — Espaçamento de bolhas (`pages/rh/RHChatPage.jsx`):**
+- Trocado `space-y-16` por `flex flex-col gap-20 md:gap-24` (de 4rem para 5–6rem entre bolhas).
+- Padding interno aumentado de `px-4 py-3` para `px-5 py-4` + `shadow-sm` para dar respiro visual.
+
+### Validação
+- ✅ `GET /knowledge-base` retorna 4 documentos
+- ✅ Pergunta "Quais exames são exigidos no admissional para Auxiliar Administrativo?" → IA cita PCMSO página 13 com lista exata (Acuidade Visual, Audiometria Tonal, Avaliação Clínica)
+- ✅ Pergunta "Piso salarial Auxiliar Administrativo CCT?" → IA cita CCT 2025/2026 com valor exato (R$ 9,80/h e R$ 2.156,00/mês, vigência 01/05/2025)
+- ✅ Pergunta "EPIs PGR para Aux Admin?" → IA combina PGR e CCT e lista EPIs corretos (Óculos, Protetor Auricular, etc.)
+- ✅ Cache em memória funcionando (chamadas subsequentes não re-leem o DB)
+
+### Arquivos modificados/criados
+- `/app/backend/routes/chatbot.py`: helper KB + endpoints admin + injeção no system_prompt
+- `/app/backend/storage/rh_normativos/`: pasta com os 4 PDFs originais
+- `/app/frontend/src/pages/rh/RHChatPage.jsx`: espaçamento aumentado
+
+
+
 ## Feature - 05/05/2026 (Sessão 45.1) — 🤖 Chat IA: novas ferramentas Holerite + Espelho de Ponto
 
 ### Implementado

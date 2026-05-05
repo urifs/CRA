@@ -359,7 +359,7 @@ export default function RHChatPage() {
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto px-4 py-10 space-y-16">
+            <div className="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-20 md:gap-24">
               {messages.map((m) => (
                 <div
                   key={m.id}
@@ -376,7 +376,7 @@ export default function RHChatPage() {
                     {m.role === "user" ? <User size={16} /> : <Bot size={16} />}
                   </div>
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    className={`max-w-[85%] rounded-2xl px-5 py-4 text-sm leading-relaxed shadow-sm ${
                       m.role === "user"
                         ? "bg-emerald-600 text-white"
                         : "bg-[#1c1c1e] text-gray-100 border border-gray-800"

@@ -4,7 +4,7 @@ Chatbot Routes - AI Assistant for the platform
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import io
 import base64
@@ -57,6 +57,57 @@ class ChatMessage(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     context_used: List[str] = []
+
+
+# ============ BASE DE CONHECIMENTO RH ============
+# Documentos normativos (PCMSO, PGR, LTCAT, CCT) ficam permanentemente acessíveis
+# ao Chat IA do RH para responder sobre exames, EPIs, riscos, pisos, jornadas, etc.
+
+_KB_CACHE = {"loaded_at": None, "context_text": ""}
+_KB_TTL = timedelta(minutes=10)
+
+
+async def _build_knowledge_base_context() -> str:
+    """Concatena os textos extraídos dos documentos normativos para o system_prompt.
+    Cacheia em memória por 10 minutos."""
+    now = datetime.now(timezone.utc)
+    if (
+        _KB_CACHE["loaded_at"]
+        and (now - _KB_CACHE["loaded_at"]) < _KB_TTL
+        and _KB_CACHE["context_text"]
+    ):
+        return _KB_CACHE["context_text"]
+
+    docs = await db.chat_knowledge_base.find(
+        {"category": "rh_normativos"}, {"_id": 0}
+    ).sort("name", 1).to_list(20)
+
+    if not docs:
+        _KB_CACHE.update({"loaded_at": now, "context_text": ""})
+        return ""
+
+    parts = ["=" * 60, "DOCUMENTOS NORMATIVOS DE RH (consulte SEMPRE para perguntas sobre",
+             "exames ocupacionais, EPIs, riscos, pisos salariais, jornadas, benefícios CCT)",
+             "=" * 60]
+    for d in docs:
+        title = d.get("title") or d.get("name", "")
+        text = d.get("extracted_text") or ""
+        parts.append(f"\n\n>>> DOCUMENTO: {d.get('name','?')} — {title}")
+        parts.append(f">>> ({d.get('pages', '?')} páginas, atualizado em "
+                     f"{d.get('created_at','')[:10]})")
+        parts.append("-" * 60)
+        parts.append(text)
+        parts.append("-" * 60)
+
+    final = "\n".join(parts)
+    _KB_CACHE.update({"loaded_at": now, "context_text": final})
+    return final
+
+
+def _invalidate_kb_cache():
+    _KB_CACHE.update({"loaded_at": None, "context_text": ""})
+
+
 
 
 async def get_full_platform_context() -> str:
@@ -467,7 +518,127 @@ INSTRUÇÕES:
 # Conversas persistentes (estilo ChatGPT) — usadas pela tela principal do RH
 # ============================================================
 import uuid
-from datetime import timezone
+
+
+# ============ KNOWLEDGE BASE: ENDPOINTS ADMIN ============
+from fastapi.responses import FileResponse
+
+
+@chatbot_router.get("/knowledge-base")
+async def list_knowledge_base(current_user: dict = Depends(get_current_user)):
+    """Lista os documentos normativos disponíveis no Chat IA do RH."""
+    docs = await db.chat_knowledge_base.find(
+        {"category": "rh_normativos"}, {"_id": 0, "extracted_text": 0}
+    ).sort("name", 1).to_list(50)
+    return docs
+
+
+@chatbot_router.post("/knowledge-base/upload")
+async def upload_knowledge_base(
+    name: str = Form(...),
+    title: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Faz upload (ou substitui) um documento normativo (PCMSO, PGR, LTCAT, CCT, etc).
+    Aceita PDF. Extrai texto via PyPDF e, se vier vazio (PDF escaneado), faz OCR via Gemini."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Apenas PDFs são aceitos.")
+    storage_dir = "/app/backend/storage/rh_normativos"
+    os.makedirs(storage_dir, exist_ok=True)
+    name_safe = "".join(c for c in name if c.isalnum() or c in "_-").upper()[:32]
+    if not name_safe:
+        raise HTTPException(status_code=400, detail="Nome inválido.")
+    dst = os.path.join(storage_dir, f"{name_safe}.pdf")
+    raw = await file.read()
+    with open(dst, "wb") as f:
+        f.write(raw)
+
+    # Extrai texto
+    pages = 0
+    text = ""
+    try:
+        from pypdf import PdfReader
+        r = PdfReader(dst)
+        pages = len(r.pages)
+        text = "\n".join((p.extract_text() or "") for p in r.pages)
+    except Exception as e:
+        logging.warning(f"PyPDF falhou: {e}")
+
+    # Se PDF é escaneado (texto vazio), usa Gemini para OCR
+    if len(text.strip()) < 100:
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+            chat = LlmChat(
+                api_key=os.environ["EMERGENT_LLM_KEY"],
+                session_id=f"ocr-{name_safe}-{uuid.uuid4().hex[:6]}",
+                system_message="Extrator de texto de PDFs."
+            ).with_model("gemini", "gemini-2.5-flash")
+            fc = FileContentWithMimeType(file_path=dst, mime_type="application/pdf")
+            msg = UserMessage(
+                text=f"Extraia TODO o texto deste documento ({title}). Mantenha cláusulas, "
+                     "títulos, tabelas, valores e datas. Não invente, apenas extraia.",
+                file_contents=[fc],
+            )
+            text = await chat.send_message(msg)
+        except Exception as e:
+            logging.error(f"OCR Gemini falhou para {name_safe}: {e}")
+
+    # Substitui ou insere no DB
+    await db.chat_knowledge_base.delete_many(
+        {"category": "rh_normativos", "name": name_safe}
+    )
+    doc = {
+        "id": str(uuid.uuid4()),
+        "category": "rh_normativos",
+        "name": name_safe,
+        "title": title,
+        "extracted_text": text,
+        "pdf_path": dst,
+        "pdf_size": os.path.getsize(dst),
+        "pages": pages,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_by": current_user.get("id"),
+    }
+    await db.chat_knowledge_base.insert_one(dict(doc))
+    _invalidate_kb_cache()
+    return {
+        "id": doc["id"],
+        "name": doc["name"],
+        "title": doc["title"],
+        "pages": doc["pages"],
+        "extracted_chars": len(text),
+        "pdf_size": doc["pdf_size"],
+    }
+
+
+@chatbot_router.get("/knowledge-base/{doc_id}/download")
+async def download_knowledge_base(doc_id: str, current_user: dict = Depends(get_current_user)):
+    """Baixa o PDF original do documento normativo."""
+    d = await db.chat_knowledge_base.find_one({"id": doc_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Documento não encontrado")
+    pdf_path = d.get("pdf_path")
+    if not pdf_path or not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="Arquivo PDF original indisponível")
+    return FileResponse(pdf_path, media_type="application/pdf",
+                        filename=f"{d.get('name','documento')}.pdf")
+
+
+@chatbot_router.delete("/knowledge-base/{doc_id}")
+async def delete_knowledge_base(doc_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove um documento da base de conhecimento."""
+    d = await db.chat_knowledge_base.find_one({"id": doc_id})
+    if not d:
+        raise HTTPException(status_code=404, detail="Documento não encontrado")
+    if d.get("pdf_path") and os.path.exists(d["pdf_path"]):
+        try:
+            os.remove(d["pdf_path"])
+        except OSError:
+            pass
+    await db.chat_knowledge_base.delete_one({"id": doc_id})
+    _invalidate_kb_cache()
+    return {"deleted": True}
 
 
 class ConversationCreate(BaseModel):
@@ -1006,6 +1177,9 @@ async def send_message_in_conversation(
     # Contexto completo da plataforma
     platform_context = await get_full_platform_context()
 
+    # Base de conhecimento (PCMSO, PGR, LTCAT, CCT) — sempre disponível para o RH
+    kb_context = await _build_knowledge_base_context()
+
     # Module-aware system prompt (RH em destaque)
     foco_modulo = ""
     if conv.get("module") == "rh":
@@ -1024,6 +1198,8 @@ Você tem ACESSO COMPLETO a TODAS as informações do banco de dados.
 DADOS DO SISTEMA:
 {platform_context}
 
+{kb_context}
+
 HISTÓRICO RECENTE DESTA CONVERSA:
 {historico_txt or "(início da conversa)"}
 
@@ -1034,6 +1210,11 @@ INSTRUÇÕES:
 4. NÃO use markdown com asteriscos.
 5. Seja útil, direto e específico — cite números e nomes reais quando possível.
 6. Se a pergunta for ambígua, pergunte qual recorte o usuário quer.
+7. Para perguntas sobre EXAMES (admissional, periódico, mudança de função, demissional),
+   EPIs por função, RISCOS ocupacionais, CARGOS / pisos salariais, ADICIONAIS, BENEFÍCIOS
+   da convenção coletiva, JORNADAS regulamentares, FÉRIAS por CCT — SEMPRE consulte os
+   documentos normativos da seção "DOCUMENTOS NORMATIVOS DE RH" acima e cite o documento
+   de origem (PCMSO, PGR, LTCAT ou CCT) na resposta.
 
 FERRAMENTAS DISPONÍVEIS (você PODE executar ações reais na plataforma):
 
