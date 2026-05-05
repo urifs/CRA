@@ -8302,6 +8302,29 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"Falha ao inicializar object storage: {e}. Uploads ficarão indisponíveis até reinicializar.")
     
+    # Bootstrap da Base de Conhecimento do Chat IA do RH
+    # Idempotente: só baixa/insere o que ainda não existe na coleção.
+    try:
+        import asyncio as _asyncio
+        from routes.chatbot import bootstrap_knowledge_base
+
+        async def _run_kb_bootstrap():
+            try:
+                summary = await bootstrap_knowledge_base()
+                logger.info(
+                    f"[KB] Bootstrap concluído — adicionados: {summary.get('added', [])}, "
+                    f"já existentes: {summary.get('already_present', [])}, "
+                    f"erros: {summary.get('errors', [])}"
+                )
+            except Exception as e:
+                logger.error(f"[KB] Falha no bootstrap em background: {e}")
+
+        # Roda em background para não bloquear o startup
+        _asyncio.create_task(_run_kb_bootstrap())
+        logger.info("Bootstrap da Base de Conhecimento do Chat IA agendado em background")
+    except Exception as e:
+        logger.warning(f"Não foi possível agendar bootstrap KB: {e}")
+    
     # Agendar importação diária às 22:00 (horário de Brasília)
     scheduler.add_job(
         importacao_automatica_notas,

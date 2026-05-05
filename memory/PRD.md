@@ -1,6 +1,38 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 05/05/2026 (Sessão 45.4) — 🚀 Auto-bootstrap da Base de Conhecimento
+
+### Implementado
+**Backend (`routes/chatbot.py`):**
+- Função `bootstrap_knowledge_base()` que baixa os 4 PDFs normativos padrão da CRA Construtora a partir de URLs públicas fixas (`customer-assets.emergentagent.com`).
+- Lista hardcoded `_KB_BOOTSTRAP_URLS` com PCMSO, PGR, LTCAT e CCT.
+- **Idempotente**: cada documento só é baixado/processado se ainda não estiver na coleção `chat_knowledge_base`.
+- **OCR fallback**: PDFs com pouco texto extraível (ex: CCT escaneada) são automaticamente OCR'ados via Gemini 2.5 Flash.
+- Endpoint manual `POST /api/chatbot/knowledge-base/bootstrap` para forçar re-execução.
+
+**Backend (`server.py`):**
+- `startup_event()` agora dispara `bootstrap_knowledge_base()` em background (`asyncio.create_task`) para não bloquear o startup do servidor enquanto o OCR da CCT roda (~3 min).
+- Logging completo: indica para cada doc se foi adicionado, já estava presente, ou se houve erro.
+
+### Por quê
+Ambientes novos (preview, produção, staging) agora ficam prontos automaticamente. O usuário não precisa mais subir os 4 PDFs manualmente após cada deploy — o backend faz isso sozinho na primeira inicialização. Deploys subsequentes não duplicam: o bootstrap detecta documentos pré-existentes e pula.
+
+### Validação
+- ✅ Limpeza completa da coleção + manual trigger → 4 docs inseridos (PCMSO 2.5MB, PGR 645KB, LTCAT 868KB, CCT 14MB com OCR Gemini = 46K chars)
+- ✅ Re-execução do trigger → retorna `already_present: [PCMSO, PGR, LTCAT, CCT]` sem duplicar
+- ✅ Logs do startup mostram bootstrap rodando em background sem bloquear o boot
+- ✅ Smoke test: IA continua respondendo perguntas sobre PGR e EPIs com precisão
+
+### Próximo deploy
+Após o usuário fazer deploy desta versão para `construtoracra.com.br`, na primeira inicialização do backend:
+1. Os 4 PDFs serão baixados automaticamente
+2. Texto extraído (com OCR para CCT)
+3. Inseridos no MongoDB de produção
+4. A IA passa a responder com base nos documentos sem nenhuma ação manual
+
+
+
 ## Feature - 05/05/2026 (Sessão 45.3) — 🔧 Tela admin para Base de Conhecimento do Chat IA
 
 ### Implementado

@@ -108,6 +108,128 @@ def _invalidate_kb_cache():
     _KB_CACHE.update({"loaded_at": None, "context_text": ""})
 
 
+# ============ AUTO-BOOTSTRAP DA BASE DE CONHECIMENTO ============
+# URLs fixas dos 4 documentos normativos da CRA Construtora.
+# Na primeira inicialização de qualquer ambiente (preview, produção, staging),
+# os PDFs são baixados, o texto é extraído (com OCR via Gemini para escaneados)
+# e gravados no Mongo. Idempotente: se um documento já existe na coleção, pula.
+_KB_BOOTSTRAP_URLS = [
+    {
+        "name": "PCMSO",
+        "title": "PCMSO - Programa de Controle Médico de Saúde Ocupacional (CRA Apoio Administrativo)",
+        "url": "https://customer-assets.emergentagent.com/job_21e279ba-21c4-411a-94e8-db609ecbdb3a/artifacts/5u1qpo4w_PCMSO-%20CRA%20APOIO%20ADMINISTRATIVO.pdf",
+    },
+    {
+        "name": "PGR",
+        "title": "PGR - Programa de Gerenciamento de Riscos (CRA Apoio Administrativo)",
+        "url": "https://customer-assets.emergentagent.com/job_21e279ba-21c4-411a-94e8-db609ecbdb3a/artifacts/5jitxhuv_PGR-CRA%20-APOIO%20ADMINISTRATIVO.pdf",
+    },
+    {
+        "name": "LTCAT",
+        "title": "LTCAT - Laudo Técnico de Condições Ambientais (CRA Apoio Administrativo)",
+        "url": "https://customer-assets.emergentagent.com/job_21e279ba-21c4-411a-94e8-db609ecbdb3a/artifacts/qhcqhqew_LTCAT-APOIO%20ADMINISTRATIVO%20%281%29.pdf",
+    },
+    {
+        "name": "CCT",
+        "title": "Convenção Coletiva de Trabalho 2025/2026 - Construção Pesada TO",
+        "url": "https://customer-assets.emergentagent.com/job_21e279ba-21c4-411a-94e8-db609ecbdb3a/artifacts/6xw3fvgt_CONVEN%C3%87%C3%83O%20COLETIVA%20%281%29.pdf",
+    },
+]
+
+
+async def bootstrap_knowledge_base() -> dict:
+    """Garante que os 4 documentos normativos padrão estão carregados na coleção.
+    Idempotente: cada documento só é baixado/processado se ainda não existir."""
+    import httpx
+    storage_dir = "/app/backend/storage/rh_normativos"
+    os.makedirs(storage_dir, exist_ok=True)
+
+    summary = {"already_present": [], "added": [], "errors": []}
+
+    for spec in _KB_BOOTSTRAP_URLS:
+        name = spec["name"]
+        try:
+            existing = await db.chat_knowledge_base.find_one(
+                {"category": "rh_normativos", "name": name}, {"_id": 0, "extracted_text": 0}
+            )
+            if existing:
+                summary["already_present"].append(name)
+                continue
+
+            logging.info(f"[KB Bootstrap] Baixando {name} ...")
+            async with httpx.AsyncClient(timeout=60.0) as cli:
+                resp = await cli.get(spec["url"])
+                resp.raise_for_status()
+                pdf_bytes = resp.content
+
+            dst = os.path.join(storage_dir, f"{name}.pdf")
+            with open(dst, "wb") as f:
+                f.write(pdf_bytes)
+
+            # Extração de texto
+            pages = 0
+            text = ""
+            try:
+                from pypdf import PdfReader
+                r = PdfReader(dst)
+                pages = len(r.pages)
+                text = "\n".join((p.extract_text() or "") for p in r.pages)
+            except Exception as e:
+                logging.warning(f"[KB Bootstrap] PyPDF falhou para {name}: {e}")
+
+            # Fallback OCR via Gemini se texto for pobre (ex: PDF escaneado como CCT)
+            if len(text.strip()) < 100:
+                try:
+                    from emergentintegrations.llm.chat import (
+                        LlmChat, UserMessage, FileContentWithMimeType,
+                    )
+                    chat = LlmChat(
+                        api_key=os.environ["EMERGENT_LLM_KEY"],
+                        session_id=f"kb-bootstrap-{name}-{uuid.uuid4().hex[:6]}",
+                        system_message="Extrator de texto de PDFs.",
+                    ).with_model("gemini", "gemini-2.5-flash")
+                    fc = FileContentWithMimeType(file_path=dst, mime_type="application/pdf")
+                    msg = UserMessage(
+                        text=f"Extraia TODO o texto deste documento ({spec['title']}). "
+                             "Mantenha cláusulas, títulos, tabelas, valores e datas.",
+                        file_contents=[fc],
+                    )
+                    text = await chat.send_message(msg)
+                    logging.info(f"[KB Bootstrap] OCR Gemini extraiu {len(text)} chars para {name}")
+                except Exception as ocr_err:
+                    logging.error(f"[KB Bootstrap] OCR falhou para {name}: {ocr_err}")
+
+            await db.chat_knowledge_base.insert_one({
+                "id": str(uuid.uuid4()),
+                "category": "rh_normativos",
+                "name": name,
+                "title": spec["title"],
+                "extracted_text": text,
+                "pdf_path": dst,
+                "pdf_size": os.path.getsize(dst),
+                "pages": pages,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "uploaded_by": "system_bootstrap",
+            })
+            summary["added"].append(f"{name} ({len(text)} chars, {pages}p)")
+            logging.info(f"[KB Bootstrap] {name} inserido com sucesso.")
+        except Exception as e:
+            logging.error(f"[KB Bootstrap] Falha em {name}: {e}")
+            summary["errors"].append(f"{name}: {e}")
+
+    if summary["added"]:
+        _invalidate_kb_cache()
+    return summary
+
+
+@chatbot_router.post("/knowledge-base/bootstrap")
+async def trigger_bootstrap_knowledge_base(current_user: dict = Depends(get_current_user)):
+    """Endpoint manual para forçar o carregamento dos 4 documentos padrão.
+    Útil se o startup falhou ou os documentos foram removidos."""
+    summary = await bootstrap_knowledge_base()
+    return summary
+
+
 
 
 async def get_full_platform_context() -> str:
