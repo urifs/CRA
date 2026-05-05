@@ -359,7 +359,7 @@ export default function RHChatPage() {
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto px-4 py-8 space-y-10">
+            <div className="max-w-3xl mx-auto px-4 py-10 space-y-16">
               {messages.map((m) => (
                 <div
                   key={m.id}
