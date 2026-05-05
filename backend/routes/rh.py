@@ -4,13 +4,19 @@ RH Routes - Human Resources module endpoints
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Body, Form, Response
 from fastapi.responses import FileResponse
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 import os
 import io
 import json
 import shutil
+import logging
+import threading
 from pathlib import Path
+
+import httpx
+
+logger = logging.getLogger(__name__)
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
@@ -1271,11 +1277,13 @@ def _fmt_min_pdf(min_total: int) -> str:
 def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
     """Gera PDF de Espelho de Ponto. Aceita 1 ou N funcionários (cada um em uma seção)."""
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import cm
     from reportlab.platypus import (
-        Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, PageBreak,
+        Paragraph, Spacer, Table, TableStyle, PageBreak,
+    )
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer, BRAND_COLORS,
     )
     
     meses_pt = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -1283,29 +1291,25 @@ def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
     dias_semana_pt = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
     
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, pagesize=A4,
-        leftMargin=1.5 * cm, rightMargin=1.5 * cm,
-        topMargin=1.5 * cm, bottomMargin=1.5 * cm,
-        title=f"Espelho de Ponto {meses_pt[mes]}/{ano}",
-    )
+    doc = create_corporate_doc(buffer, title=f"Espelho de Ponto {meses_pt[mes]}/{ano}")
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle("Title", parent=styles["Heading1"],
-                                 fontSize=14, alignment=1, spaceAfter=4, textColor=colors.HexColor("#0f172a"))
-    subtitle_style = ParagraphStyle("Subtitle", parent=styles["Heading3"],
-                                    fontSize=10, alignment=1, spaceAfter=8, textColor=colors.HexColor("#475569"))
     section_style = ParagraphStyle("Section", parent=styles["Heading4"],
-                                   fontSize=10, spaceBefore=8, spaceAfter=4, textColor=colors.HexColor("#10B981"))
-    small = ParagraphStyle("Small", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#64748b"))
+                                   fontSize=10, spaceBefore=8, spaceAfter=4,
+                                   textColor=BRAND_COLORS["primary"])
+    small = ParagraphStyle("Small", parent=styles["Normal"], fontSize=7,
+                           textColor=BRAND_COLORS["muted"])
     
     elements = []
     for idx, f in enumerate(funcionarios):
         if idx > 0:
             elements.append(PageBreak())
         
-        # CABEÇALHO
-        elements.append(Paragraph("ESPELHO DE PONTO ELETRÔNICO", title_style))
-        elements.append(Paragraph(f"Competência: {meses_pt[mes]} / {ano}", subtitle_style))
+        # CABEÇALHO CORPORATIVO (logo + título + subtítulo + linha divisória)
+        add_corporate_header(
+            elements,
+            doc_title="ESPELHO DE PONTO ELETRÔNICO",
+            subtitle=f"Competência: {meses_pt[mes]} / {ano}",
+        )
         
         # Bloco de identificação do funcionário
         identif_data = [
@@ -1538,10 +1542,9 @@ def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
         ]))
         elements.append(t_sign)
         elements.append(Spacer(1, 8))
-        elements.append(Paragraph(
-            f"Documento gerado pelo Sistema CRA em {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-            small,
-        ))
+    
+    # Rodapé corporativo
+    add_footer(elements, "Sistema CRA · Espelho de Ponto Eletrônico")
     
     doc.build(elements)
     buffer.seek(0)
@@ -2230,7 +2233,7 @@ async def delete_folha_pagamento(folha_id: str):
 
 @rh_router.get("/folha-pagamento/{folha_id}/holerite")
 async def gerar_holerite(folha_id: str):
-    """Gerar PDF do holerite"""
+    """Gerar PDF do holerite com layout corporativo padronizado."""
     folha = await folha_pagamento_collection.find_one({"id": folha_id})
     if not folha:
         raise HTTPException(status_code=404, detail="Folha não encontrada")
@@ -2239,89 +2242,140 @@ async def gerar_holerite(folha_id: str):
     if not func:
         raise HTTPException(status_code=404, detail="Funcionário não encontrado")
     
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
     from reportlab.lib.units import cm
-    
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(2*cm, height - 2*cm, "HOLERITE DE PAGAMENTO")
-    
-    c.setFont("Helvetica", 10)
-    c.drawString(2*cm, height - 3*cm, f"Funcionário: {func['nome']}")
-    c.drawString(2*cm, height - 3.5*cm, f"CPF: {func.get('cpf', '-')}")
-    c.drawString(2*cm, height - 4*cm, f"Cargo: {func.get('cargo', '-')}")
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table, build_signatures_table,
+        BRAND_COLORS, header_table_style,
+    )
     
     meses = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
              "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-    c.drawString(12*cm, height - 3*cm, f"Competência: {meses[folha['mes']]}/{folha['ano']}")
     
-    y = height - 5.5*cm
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "PROVENTOS")
-    y -= 0.6*cm
-    c.setFont("Helvetica", 10)
+    def _brl(v):
+        try:
+            return f"R$ {float(v or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except Exception:
+            return "R$ 0,00"
     
+    buffer = io.BytesIO()
+    doc = create_corporate_doc(
+        buffer,
+        title=f"Holerite {meses[folha['mes']]}/{folha['ano']}",
+    )
+    styles = get_corporate_styles()
+    
+    elements = []
+    add_corporate_header(
+        elements,
+        doc_title="HOLERITE DE PAGAMENTO",
+        subtitle=f"Competência: {meses[folha['mes']]} / {folha['ano']}",
+    )
+    
+    # Identificação do funcionário
+    elements.append(Paragraph("IDENTIFICAÇÃO DO FUNCIONÁRIO", styles["section"]))
+    elements.append(build_data_table([
+        ("Funcionário:", func.get("nome", "-")),
+        ("CPF:", func.get("cpf", "-")),
+        ("Cargo:", func.get("cargo", "-")),
+        ("Departamento:", func.get("departamento", "-")),
+        ("Admissão:", func.get("data_admissao", "-")),
+    ]))
+    elements.append(Spacer(1, 12))
+    
+    # Tabela Proventos × Descontos
+    horas_extras_total = (folha.get("horas_extras", 0) or 0) * (folha.get("valor_hora_extra", 0) or 0)
     proventos = [
-        ("Salário Base", folha.get('salario_base', 0)),
-        ("Horas Extras", folha.get('horas_extras', 0) * folha.get('valor_hora_extra', 0)),
-        ("Adicional Noturno", folha.get('adicional_noturno', 0)),
-        ("Comissões", folha.get('comissoes', 0)),
+        ("Salário Base", folha.get("salario_base", 0)),
+        ("Horas Extras", horas_extras_total),
+        ("Adicional Noturno", folha.get("adicional_noturno", 0)),
+        ("Comissões", folha.get("comissoes", 0)),
     ]
-    
-    for desc, valor in proventos:
-        if valor > 0:
-            c.drawString(2*cm, y, desc)
-            c.drawString(14*cm, y, f"R$ {valor:,.2f}")
-            y -= 0.5*cm
-    
-    c.drawString(14*cm, y, f"R$ {folha.get('salario_bruto', 0):,.2f}")
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(2*cm, y, "Total Proventos:")
-    
-    y -= 1*cm
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, "DESCONTOS")
-    y -= 0.6*cm
-    c.setFont("Helvetica", 10)
-    
     descontos = [
-        ("INSS", folha.get('inss', 0)),
-        ("IRPF", folha.get('irpf', 0)),
-        ("Vale Transporte", folha.get('vale_transporte', 0)),
-        ("Vale Alimentação", folha.get('vale_alimentacao', 0)),
-        ("Plano de Saúde", folha.get('plano_saude', 0)),
-        ("Outros Descontos", folha.get('outros_descontos', 0)),
+        ("INSS", folha.get("inss", 0)),
+        ("IRPF", folha.get("irpf", 0)),
+        ("Vale Transporte", folha.get("vale_transporte", 0)),
+        ("Vale Alimentação", folha.get("vale_alimentacao", 0)),
+        ("Plano de Saúde", folha.get("plano_saude", 0)),
+        ("Outros Descontos", folha.get("outros_descontos", 0)),
     ]
     
-    for desc, valor in descontos:
-        if valor > 0:
-            c.drawString(2*cm, y, desc)
-            c.drawString(14*cm, y, f"R$ {valor:,.2f}")
-            y -= 0.5*cm
+    rows = [["Discriminação", "Proventos", "Descontos"]]
+    max_len = max(len(proventos), len(descontos))
+    proventos_filtrados = [(d, v) for d, v in proventos if v > 0]
+    descontos_filtrados = [(d, v) for d, v in descontos if v > 0]
+    max_len = max(len(proventos_filtrados), len(descontos_filtrados), 1)
+    for i in range(max_len):
+        if i < len(proventos_filtrados):
+            d_p, v_p = proventos_filtrados[i]
+            rows.append([d_p, _brl(v_p), ""])
+        elif i < len(descontos_filtrados):
+            d_d, v_d = descontos_filtrados[i]
+            rows.append([d_d, "", _brl(v_d)])
+    rows.append([
+        "TOTAIS",
+        _brl(folha.get("salario_bruto", 0)),
+        _brl(folha.get("total_descontos", 0)),
+    ])
     
-    c.drawString(14*cm, y, f"R$ {folha.get('total_descontos', 0):,.2f}")
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(2*cm, y, "Total Descontos:")
+    t_pd = Table(rows, colWidths=[8 * cm, 4 * cm, 4 * cm])
+    style = header_table_style()
+    style.add("ALIGN", (1, 1), (-1, -1), "RIGHT")
+    style.add("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold")
+    style.add("BACKGROUND", (0, -1), (-1, -1), BRAND_COLORS["label_bg"])
+    style.add("LINEABOVE", (0, -1), (-1, -1), 1, BRAND_COLORS["primary"])
+    t_pd.setStyle(style)
+    elements.append(t_pd)
+    elements.append(Spacer(1, 14))
     
-    y -= 1.5*cm
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(2*cm, y, f"SALÁRIO LÍQUIDO: R$ {folha.get('salario_liquido', 0):,.2f}")
+    # Total líquido em destaque
+    liquido = folha.get("salario_liquido", 0)
+    t_liq = Table(
+        [["SALÁRIO LÍQUIDO", _brl(liquido)]],
+        colWidths=[8 * cm, 8 * cm],
+    )
+    t_liq.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), BRAND_COLORS["primary"]),
+        ("TEXTCOLOR", (0, 0), (0, 0), colors.white),
+        ("BACKGROUND", (1, 0), (1, 0), BRAND_COLORS["accent"]),
+        ("TEXTCOLOR", (1, 0), (1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, 0), 14),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, 0), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+    ]))
+    elements.append(t_liq)
+    elements.append(Spacer(1, 14))
     
-    y -= 1*cm
-    c.setFont("Helvetica", 9)
-    c.drawString(2*cm, y, f"FGTS depositado: R$ {folha.get('fgts', 0):,.2f}")
+    # Informações complementares
+    elements.append(build_data_table([
+        ("Salário Bruto:", _brl(folha.get("salario_bruto", 0))),
+        ("Total Descontos:", _brl(folha.get("total_descontos", 0))),
+        ("FGTS Depositado:", _brl(folha.get("fgts", 0))),
+        ("Base INSS:", _brl(folha.get("base_inss", folha.get("salario_bruto", 0)))),
+    ]))
+    elements.append(Spacer(1, 24))
     
-    c.save()
+    # Assinaturas
+    elements.append(build_signatures_table(
+        left_label="Assinatura do Funcionário",
+        right_label="Assinatura do Empregador",
+    ))
+    
+    add_footer(elements, "Sistema CRA · Holerite de Pagamento")
+    
+    doc.build(elements)
     buffer.seek(0)
     
+    nome_seguro = (func.get("nome") or "funcionario").replace(" ", "_")[:40]
+    filename = f"Holerite_{nome_seguro}_{folha['mes']:02d}_{folha['ano']}.pdf"
     return Response(
         content=buffer.getvalue(),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=holerite_{func['nome']}_{folha['mes']}_{folha['ano']}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
 
@@ -2487,58 +2541,183 @@ async def delete_todas_ferias(confirmar: bool = False):
 
 
 # ===== EPI =====
-@rh_router.get("/epi/cbo/buscar")
-async def buscar_cbo(q: str):
-    """Buscar ocupação por código CBO ou nome"""
+# ----- CBO: integração com API pública (com fallback local) -----
+# Fonte primária: lucassmacedo/cbo-brasil (JSONs públicos com Ocupação, Família, Sinônimo).
+# Em caso de falha de rede, cai para o CBO_DATABASE local hardcoded.
+_CBO_REMOTE_URLS = {
+    "ocupacao": "https://raw.githubusercontent.com/lucassmacedo/cbo-brasil/master/json/CBO2002%20-%20Ocupacao.json",
+    "familia": "https://raw.githubusercontent.com/lucassmacedo/cbo-brasil/master/json/CBO2002%20-%20Familia.json",
+    "sinonimo": "https://raw.githubusercontent.com/lucassmacedo/cbo-brasil/master/json/CBO2002%20-%20Sinonimo.json",
+}
+_CBO_REMOTE_TTL = timedelta(hours=24)
+_cbo_remote_cache: dict = {
+    "loaded_at": None,
+    "ocupacoes": [],   # lista de {codigo, ocupacao, familia, sinonimos}
+    "available": False,
+}
+_cbo_remote_lock = threading.Lock()
+
+
+def _format_cbo_codigo(raw: str) -> str:
+    """Converte códigos do dataset (`010105`) para o formato exibido `0101-05`."""
+    s = (raw or "").strip().replace("-", "").replace(".", "")
+    if len(s) >= 6 and s.isdigit():
+        return f"{s[:4]}-{s[4:6]}"
+    return raw
+
+
+async def _carregar_cbo_remoto(force: bool = False) -> bool:
+    """Baixa (e cacheia em memória) os dados públicos da CBO.
+    Retorna True se o cache está disponível (dados carregados)."""
+    now = datetime.now(timezone.utc)
+    if (
+        not force
+        and _cbo_remote_cache["available"]
+        and _cbo_remote_cache["loaded_at"]
+        and (now - _cbo_remote_cache["loaded_at"]) < _CBO_REMOTE_TTL
+    ):
+        return True
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0, headers={"User-Agent": "CRA-ERP/1.0"}) as client:
+            resps = {}
+            for key, url in _CBO_REMOTE_URLS.items():
+                r = await client.get(url)
+                r.raise_for_status()
+                resps[key] = r.json()
+
+        # Indexa famílias por código (4 dígitos)
+        familias = {item["code"]: item["name"] for item in resps["familia"] if item.get("code")}
+        # Sinônimos agrupados por código de ocupação (6 dígitos)
+        sinonimos_por_codigo: dict = {}
+        for s in resps["sinonimo"]:
+            codigo = s.get("code")
+            nome = s.get("name")
+            if codigo and nome:
+                sinonimos_por_codigo.setdefault(codigo, []).append(nome)
+
+        ocupacoes = []
+        for o in resps["ocupacao"]:
+            codigo = o.get("code") or ""
+            nome = o.get("name") or ""
+            if not codigo or not nome:
+                continue
+            familia_codigo = codigo[:4]
+            ocupacoes.append({
+                "codigo": _format_cbo_codigo(codigo),
+                "codigo_raw": codigo,
+                "ocupacao": nome,
+                "familia": familias.get(familia_codigo, ""),
+                "sinonimos": sinonimos_por_codigo.get(codigo, []),
+            })
+
+        with _cbo_remote_lock:
+            _cbo_remote_cache["ocupacoes"] = ocupacoes
+            _cbo_remote_cache["loaded_at"] = now
+            _cbo_remote_cache["available"] = bool(ocupacoes)
+        logger.info("CBO remoto carregado: %d ocupações.", len(ocupacoes))
+        return _cbo_remote_cache["available"]
+    except Exception as e:
+        logger.warning("Falha ao carregar CBO remoto, usando fallback local: %s", e)
+        return False
+
+
+def _buscar_cbo_remoto(q: str) -> list:
+    """Busca em memória usando o cache remoto (já carregado). Não faz I/O."""
+    if not _cbo_remote_cache["available"]:
+        return []
+    q_lower = q.lower().strip()
+    q_norm = q_lower.replace("-", "").replace(".", "")
+    is_numeric = q_norm.isdigit() and len(q_norm) >= 2
+
+    exatos, parciais_codigo, por_nome = [], [], []
+    for item in _cbo_remote_cache["ocupacoes"]:
+        codigo_norm = item["codigo_raw"].lower()
+        codigo_disp = item["codigo"].lower()
+
+        # Exato por código
+        if is_numeric and (q_norm == codigo_norm or q_lower == codigo_disp):
+            exatos.append({**item, "match_type": "exact",
+                           "descricao": f"Família: {item['familia']}" if item["familia"] else ""})
+            continue
+
+        # Parcial por código (numérico)
+        if is_numeric and codigo_norm.startswith(q_norm):
+            parciais_codigo.append({**item, "match_type": "partial_code",
+                                    "descricao": f"Família: {item['familia']}" if item["familia"] else ""})
+            continue
+
+        # Nome ou sinônimos
+        if not is_numeric and len(q_lower) >= 2:
+            if q_lower in item["ocupacao"].lower() or any(q_lower in s.lower() for s in item["sinonimos"]):
+                por_nome.append({**item, "match_type": "name",
+                                 "descricao": f"Família: {item['familia']}" if item["familia"] else ""})
+
+    if exatos:
+        return exatos[:10]
+    if parciais_codigo:
+        return parciais_codigo[:10]
+    return por_nome[:10]
+
+
+def _buscar_cbo_local(q: str) -> list:
+    """Busca usando a base hardcoded local (fallback)."""
     resultados = []
     q_lower = q.lower().strip()
     q_normalized = q_lower.replace("-", "").replace(".", "")
-    
-    # Primeiro: busca exata por código CBO
+
     for codigo, info in CBO_DATABASE.items():
         codigo_normalized = codigo.lower().replace("-", "").replace(".", "")
         if q_normalized == codigo_normalized or q_lower == codigo.lower():
-            resultados.append({
-                "codigo": codigo,
-                "ocupacao": info["titulo"],
-                "familia": info["familia"],
-                "descricao": f"Família: {info['familia']}",
-                "match_type": "exact"
-            })
-    
-    # Se encontrou correspondência exata, retorna apenas ela
+            resultados.append({"codigo": codigo, "ocupacao": info["titulo"],
+                               "familia": info["familia"],
+                               "descricao": f"Família: {info['familia']}",
+                               "match_type": "exact"})
     if resultados:
         return resultados
-    
-    # Segundo: busca por código parcial (começa com)
+
     for codigo, info in CBO_DATABASE.items():
         codigo_normalized = codigo.lower().replace("-", "").replace(".", "")
         if codigo_normalized.startswith(q_normalized) or codigo.lower().startswith(q_lower):
-            resultados.append({
-                "codigo": codigo,
-                "ocupacao": info["titulo"],
-                "familia": info["familia"],
-                "descricao": f"Família: {info['familia']}",
-                "match_type": "partial_code"
-            })
-    
-    # Se encontrou por código parcial, retorna
+            resultados.append({"codigo": codigo, "ocupacao": info["titulo"],
+                               "familia": info["familia"],
+                               "descricao": f"Família: {info['familia']}",
+                               "match_type": "partial_code"})
     if resultados:
         return resultados[:10]
-    
-    # Terceiro: busca por nome da ocupação ou sinônimos
+
     for codigo, info in CBO_DATABASE.items():
         if (q_lower in info["titulo"].lower() or
-            any(q_lower in s.lower() for s in info.get("sinonimos", []))):
-            resultados.append({
-                "codigo": codigo,
-                "ocupacao": info["titulo"],
-                "familia": info["familia"],
-                "descricao": f"Família: {info['familia']}",
-                "match_type": "name"
-            })
-    
+                any(q_lower in s.lower() for s in info.get("sinonimos", []))):
+            resultados.append({"codigo": codigo, "ocupacao": info["titulo"],
+                               "familia": info["familia"],
+                               "descricao": f"Família: {info['familia']}",
+                               "match_type": "name"})
     return resultados[:10]
+
+
+@rh_router.get("/epi/cbo/buscar")
+async def buscar_cbo(q: str, refresh: bool = False):
+    """Buscar ocupação por código CBO ou nome.
+    Tenta primeiro a API pública (CBO 2002 oficial, ~2600 ocupações + sinônimos).
+    Em caso de falha de rede, cai para a base local."""
+    q = (q or "").strip()
+    if not q:
+        return []
+
+    # Tenta carregar/usar o dataset remoto
+    remoto_ok = await _carregar_cbo_remoto(force=refresh)
+    if remoto_ok:
+        resultados = _buscar_cbo_remoto(q)
+        if resultados:
+            # Remove campos internos antes de devolver
+            return [
+                {k: v for k, v in r.items() if k != "codigo_raw"}
+                for r in resultados
+            ]
+
+    # Fallback: base local
+    return _buscar_cbo_local(q)
 
 
 @rh_router.post("/epi/consultar-epis-cbo")

@@ -145,7 +145,9 @@ async def export_ordem_servico_pdf(ordem_id: str):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4,
                             leftMargin=0.8 * cm, rightMargin=0.8 * cm,
-                            topMargin=0.6 * cm, bottomMargin=0.6 * cm)
+                            topMargin=0.6 * cm, bottomMargin=0.6 * cm,
+                            title=f"OS {ordem.get('numero', ordem_id[:8])}",
+                            author="CRA Construtora")
     elements = []
 
     # Estilos
@@ -155,9 +157,19 @@ async def export_ordem_servico_pdf(ordem_id: str):
                                 textColor=colors.HexColor("#C62828"), alignment=1)
     style_section = ParagraphStyle("S", fontSize=9, fontName="Helvetica-Bold",
                                    textColor=colors.white, alignment=0)
+    style_brand = ParagraphStyle("Brand", fontSize=8, fontName="Helvetica-Bold",
+                                 textColor=colors.HexColor("#0f766e"), alignment=1, leading=10)
 
-    # Cabeçalho: identificação da OS + empresa
+    # Cabeçalho compacto: logo CRA à esquerda + identificação da OS + empresa
+    from reportlab.platypus import Image as RLImage
+    LOGO = "/app/frontend/public/logo.png"
+    if os.path.exists(LOGO):
+        logo_cell = RLImage(LOGO, width=1.6 * cm, height=1.6 * cm, kind="proportional")
+    else:
+        logo_cell = Paragraph("CRA", style_brand)
+
     cab_data = [[
+        logo_cell,
         Paragraph(
             f"<b>DAV-OS (ORDEM DE SERVIÇO) - N.: {ordem.get('numero', ordem_id[:8])}</b><br/>"
             f"<b>{emp_nome}</b><br/>{emp_fantasia} — CNPJ: {emp_cnpj}<br/>"
@@ -165,16 +177,25 @@ async def export_ordem_servico_pdf(ordem_id: str):
             style_value,
         )
     ]]
-    cab_table = Table(cab_data, colWidths=[19.4 * cm])
+    cab_table = Table(cab_data, colWidths=[2.0 * cm, 17.4 * cm])
     cab_table.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 1, colors.black),
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f5f5")),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LINEAFTER", (0, 0), (0, 0), 0.5, colors.HexColor("#cbd5e1")),
+        ("BACKGROUND", (1, 0), (-1, -1), colors.HexColor("#f5f5f5")),
+        ("BACKGROUND", (0, 0), (0, 0), colors.white),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (0, 0), "CENTER"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
     elements.append(cab_table)
-    elements.append(Spacer(1, 0.15 * cm))
+    # Linha divisória teal (identidade visual CRA)
+    div = Table([[""]], colWidths=[19.4 * cm])
+    div.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 1.2, colors.HexColor("#0f766e"))]))
+    elements.append(div)
+    elements.append(Spacer(1, 0.1 * cm))
     elements.append(Paragraph(
         "NÃO É DOCUMENTO FISCAL — NÃO É VÁLIDO COMO RECIBO E COMO GARANTIA DE MERCADORIA — NÃO COMPROVA PAGAMENTO",
         style_warn,
@@ -501,6 +522,17 @@ async def export_ordem_servico_pdf(ordem_id: str):
                                ("TOPPADDING", (0, 0), (-1, -1), 12),
                                ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
     elements.append(t_ass)
+
+    # Rodapé corporativo padronizado
+    elements.append(Spacer(1, 0.4 * cm))
+    style_footer = ParagraphStyle(
+        "Foot", fontSize=7, fontName="Helvetica", alignment=1,
+        textColor=colors.HexColor("#94a3b8"),
+    )
+    elements.append(Paragraph(
+        f"CRA Construtora · Documento gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')} pelo Sistema CRA",
+        style_footer,
+    ))
 
     doc.build(elements)
     buffer.seek(0)

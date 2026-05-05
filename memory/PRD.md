@@ -1,4 +1,33 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
+
+## Feature - 05/05/2026 (Sessão 45) — 🌐 API pública CBO + 📄 Padronização visual de PDFs (RH/Gerenciamento)
+
+### Implementado
+**Backend — CBO via API pública (`routes/rh.py`):**
+- Endpoint `GET /api/rh/epi/cbo/buscar?q=...` agora consulta o dataset oficial CBO 2002 do repositório `lucassmacedo/cbo-brasil` (Ocupação + Família + Sinônimo) em primeiro lugar, com cache em memória de 24h.
+- Cobertura saltou de 28 ocupações hardcoded para **2.614 ocupações + 7.569 sinônimos** oficiais.
+- Em caso de falha de rede, faz fallback automático para a base local `CBO_DATABASE` (zero impacto se a API ficar offline).
+- Suporte a `?refresh=true` para forçar reimportação do remoto.
+
+**Backend — Padronização de PDFs (RH e Gerenciamento) usando `utils/pdf_template.py`:**
+- **Espelho de Ponto** (`_build_espelho_ponto_pdf` em `routes/rh.py`): cabeçalho corporativo (logo CRA + título + subtítulo + linha divisória teal) + rodapé padronizado.
+- **Holerite** (`gerar_holerite` em `routes/rh.py`): reescrito do `canvas` baixo nível para `platypus` + template corporativo. Layout limpo com tabela Proventos × Descontos, Salário Líquido em destaque visual (banner teal/verde), assinaturas e rodapé.
+- **Ordem de Serviço (DAV-OS)** (`export_ordem_servico_pdf` em `routes/admin.py`): adicionado bloco de logo CRA na coluna esquerda do cabeçalho, linha divisória teal abaixo, e rodapé corporativo. Estrutura legal DAV-OS preservada.
+
+### Validação
+- ✅ Curl `GET /api/rh/epi/cbo/buscar?q=pedreiro`: 8 resultados (Pedreiro de edificações, Pedreiro de mineração, etc.)
+- ✅ Curl `?q=7152`: 6 ocupações da família 7152
+- ✅ Curl `?q=010105`: match exato com Oficial general da aeronáutica
+- ✅ Fallback local validado com cache zerado: 4 resultados retornam da base hardcoded
+- ✅ PDF Espelho de Ponto: 71KB, válido (`%PDF`), com cabeçalho corporativo
+- ✅ PDF Holerite: 38KB, validado pelo analyzer com TODOS os elementos (logo, título, tabela, salário líquido em destaque, assinaturas, rodapé)
+- ✅ PDF OS: 39KB, válido com logo + linha divisória + rodapé adicionados
+
+### Arquivos modificados
+- `/app/backend/routes/rh.py`: import httpx, lazy loader CBO, refactor `buscar_cbo`, refactor `_build_espelho_ponto_pdf`, refactor `gerar_holerite`
+- `/app/backend/routes/admin.py`: cabeçalho com logo + linha divisória + rodapé na DAV-OS
+
+
 ## Changelog - 30/04/2026 (Sessão 41) — 🐛 CNPJ bug + 📝 OS PDF completo + 🚜 Máquina em Contas
 ## Feature - 04/05/2026 (Sessão 43.9) — 🟢 Vinculação seletiva também nos campos padrão de Custos RH
 
