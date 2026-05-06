@@ -1,6 +1,34 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 06/05/2026 (Sessão 45.7) — 💼 Banco de Horas no menu lateral do RH
+
+### Implementado
+**Backend (`routes/rh.py`):**
+- `_calcular_banco_horas_por_funcionario(ate_data)`: helper que calcula saldo acumulado por funcionário a partir do Ponto Eletrônico, neutralizando dias com abono.
+- `GET /api/rh/banco-horas/resumo`: lista todos os funcionários com saldo acumulado, dias registrados e período. Retorna totais (crédito, débito, saldo líquido da empresa). Aceita `?ate_data=YYYY-MM-DD`.
+- `GET /api/rh/banco-horas/funcionarios/{id}/extrato`: extrato detalhado de um funcionário com evolução mês a mês + detalhe diário (batidas, saldo dia, saldo acumulado, abonos).
+- `GET /api/rh/banco-horas/funcionarios/{id}/extrato-pdf`: exporta o extrato em PDF com layout corporativo (`utils/pdf_template.py`).
+
+**Frontend:**
+- Nova página `/rh/banco-horas` (`pages/rh/BancoHorasPage.jsx`):
+  - 4 cards de resumo: total funcionários, crédito total, débito total, saldo líquido (verde/vermelho)
+  - Filtro de data "Apurado até"
+  - Busca por nome/cargo/departamento
+  - Tabela com saldo destacado (verde positivo / vermelho negativo / cinza zero)
+  - Botão "Ver Extrato" abre modal completo com evolução mensal + detalhe diário
+  - Botão de exportação PDF direto na linha + dentro do modal
+- Item "Banco de Horas" no sidebar do RH com ícone Wallet, posicionado entre "Ponto Eletrônico" e "Folha de Pagamento".
+- Rota registrada em `App.js`.
+
+### Validação
+- ✅ `/rh/banco-horas/resumo`: 9 funcionários, totais corretos (Crédito: 0 / Débito: 14.429 min / Saldo Líquido: -14.429 min)
+- ✅ Extrato Adelino: -956 min em 15 dias (abril/2026), evolução mensal correta
+- ✅ PDF Banco de Horas: 40KB, **6/6 elementos validados pelo analyzer** (cabeçalho, ID funcionário, banner saldo, tabela mensal, detalhe diário, rodapé)
+- ✅ Lint frontend passou em todos os arquivos
+
+
+
 ## Feature - 05/05/2026 (Sessão 45.6) — 🤖 Sugestão inteligente de EPIs com base no PGR/PCMSO/LTCAT da empresa
 
 ### Implementado

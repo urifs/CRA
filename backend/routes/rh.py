@@ -1261,6 +1261,367 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
     }
 
 
+# ============================================================
+# BANCO DE HORAS - Visão dedicada baseada nos dados do Ponto
+# ============================================================
+async def _calcular_banco_horas_por_funcionario(
+    ate_data: Optional[str] = None,
+) -> dict:
+    """Calcula o saldo acumulado do banco de horas de cada funcionário com base
+    nos registros de ponto até a data informada (default: hoje). Aplica abonos
+    para neutralizar saldos de dias justificados.
+    Retorna dict {funcionario_id: {"saldo_minutos": int, "primeiro_registro": str, "ultimo_registro": str, "dias_registrados": int}}.
+    """
+    if ate_data is None:
+        ate_data = datetime.now().strftime("%Y-%m-%d")
+    fim_str = ate_data + "T99"  # garante incluir o dia atual
+
+    # Carrega jornadas
+    jornada_padrao = await _get_or_create_jornada_padrao()
+    jornadas_map = {jornada_padrao["id"]: jornada_padrao}
+    async for j in jornadas_collection.find({}, {"_id": 0}):
+        jornadas_map[j["id"]] = j
+
+    func_jornada_map = {}
+    async for f in funcionarios_collection.find({}, {"_id": 0, "id": 1, "jornada_id": 1}):
+        fjid = f.get("jornada_id")
+        func_jornada_map[f["id"]] = jornadas_map.get(fjid) if fjid else jornada_padrao
+
+    # Acumular saldo dia a dia
+    resumo: dict = {}  # fid -> {saldo, primeiro, ultimo, dias}
+    async for r in ponto_collection.find(
+        {"data": {"$lte": ate_data}},
+        {"_id": 0, "funcionario_id": 1, "data": 1, "minutos_trabalhados": 1, "dia_semana": 1},
+    ):
+        fid = r["funcionario_id"]
+        j_func = func_jornada_map.get(fid, jornada_padrao)
+        prev = _jornada_minutos_previstos(j_func, r.get("dia_semana", 6))
+        trab = int(r.get("minutos_trabalhados", 0) or 0)
+        saldo_dia = trab - prev
+        if fid not in resumo:
+            resumo[fid] = {
+                "saldo_minutos": 0,
+                "primeiro_registro": r["data"],
+                "ultimo_registro": r["data"],
+                "dias_registrados": 0,
+            }
+        resumo[fid]["saldo_minutos"] += saldo_dia
+        if r["data"] < resumo[fid]["primeiro_registro"]:
+            resumo[fid]["primeiro_registro"] = r["data"]
+        if r["data"] > resumo[fid]["ultimo_registro"]:
+            resumo[fid]["ultimo_registro"] = r["data"]
+        resumo[fid]["dias_registrados"] += 1
+
+    # Neutraliza saldos de dias com abono
+    async for ab in ponto_abonos_collection.find({"data": {"$lte": ate_data}}, {"_id": 0}):
+        fid = ab["funcionario_id"]
+        if fid not in resumo:
+            continue
+        # Busca o registro de ponto daquele dia para conhecer o saldo a neutralizar
+        ponto_dia = await ponto_collection.find_one(
+            {"funcionario_id": fid, "data": ab["data"]}, {"_id": 0}
+        )
+        if not ponto_dia:
+            continue
+        j_func = func_jornada_map.get(fid, jornada_padrao)
+        prev = _jornada_minutos_previstos(j_func, ponto_dia.get("dia_semana", 6))
+        trab = int(ponto_dia.get("minutos_trabalhados", 0) or 0)
+        saldo_dia = trab - prev
+        resumo[fid]["saldo_minutos"] -= saldo_dia
+
+    return resumo
+
+
+@rh_router.get("/banco-horas/resumo")
+async def banco_horas_resumo(ate_data: Optional[str] = None):
+    """Lista todos os funcionários ativos com o saldo acumulado de banco de horas.
+    Parâmetro opcional `ate_data` (YYYY-MM-DD) para corte temporal."""
+    saldos = await _calcular_banco_horas_por_funcionario(ate_data)
+    
+    funcionarios = []
+    async for f in funcionarios_collection.find({}, {"_id": 0}):
+        s = saldos.get(f["id"], {})
+        funcionarios.append({
+            "funcionario_id": f["id"],
+            "nome": f.get("nome", "-"),
+            "cargo": f.get("cargo", "-"),
+            "departamento": f.get("departamento", "-"),
+            "status": f.get("status", "ativo"),
+            "data_admissao": f.get("data_admissao"),
+            "saldo_minutos": s.get("saldo_minutos", 0),
+            "dias_registrados": s.get("dias_registrados", 0),
+            "primeiro_registro": s.get("primeiro_registro"),
+            "ultimo_registro": s.get("ultimo_registro"),
+        })
+    funcionarios.sort(key=lambda x: x["nome"].lower())
+    
+    total_credito = sum(max(0, f["saldo_minutos"]) for f in funcionarios)
+    total_debito = sum(abs(min(0, f["saldo_minutos"])) for f in funcionarios)
+    
+    return {
+        "ate_data": ate_data or datetime.now().strftime("%Y-%m-%d"),
+        "total_funcionarios": len(funcionarios),
+        "total_credito_minutos": total_credito,
+        "total_debito_minutos": total_debito,
+        "saldo_liquido_minutos": total_credito - total_debito,
+        "funcionarios": funcionarios,
+    }
+
+
+@rh_router.get("/banco-horas/funcionarios/{funcionario_id}/extrato")
+async def banco_horas_extrato_funcionario(funcionario_id: str, ate_data: Optional[str] = None):
+    """Extrato detalhado do banco de horas de um funcionário específico.
+    Retorna evolução mês a mês + detalhe diário do mês atual."""
+    func = await funcionarios_collection.find_one({"id": funcionario_id}, {"_id": 0})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+
+    if ate_data is None:
+        ate_data = datetime.now().strftime("%Y-%m-%d")
+
+    # Resolve jornada
+    jornada_padrao = await _get_or_create_jornada_padrao()
+    jornada_func = jornada_padrao
+    if func.get("jornada_id"):
+        j_doc = await jornadas_collection.find_one({"id": func["jornada_id"]}, {"_id": 0})
+        if j_doc:
+            jornada_func = j_doc
+
+    # Carrega abonos do funcionário
+    abonos_data: dict = {}
+    async for ab in ponto_abonos_collection.find({"funcionario_id": funcionario_id}, {"_id": 0}):
+        abonos_data[ab["data"]] = ab
+
+    # Carrega TODOS os pontos do funcionário até `ate_data`
+    pontos = []
+    async for r in ponto_collection.find(
+        {"funcionario_id": funcionario_id, "data": {"$lte": ate_data}}, {"_id": 0}
+    ):
+        pontos.append(r)
+    pontos.sort(key=lambda x: x["data"])
+
+    # Detalhe diário
+    detalhe_dias = []
+    saldo_acumulado = 0
+    por_mes: dict = {}  # "YYYY-MM" -> agregados
+    for r in pontos:
+        prev = _jornada_minutos_previstos(jornada_func, r.get("dia_semana", 6))
+        trab = int(r.get("minutos_trabalhados", 0) or 0)
+        ab = abonos_data.get(r["data"])
+        saldo_dia = 0 if ab else (trab - prev)
+        saldo_acumulado += saldo_dia
+        detalhe_dias.append({
+            "data": r["data"],
+            "dia_semana": r.get("dia_semana"),
+            "batidas": r.get("batidas", []),
+            "minutos_trabalhados": trab,
+            "minutos_previstos": prev,
+            "saldo_dia_minutos": saldo_dia,
+            "saldo_acumulado_minutos": saldo_acumulado,
+            "status_dia": "abonado" if ab else r.get("status_dia"),
+            "abono": ({"tipo": ab["tipo"], "motivo": ab["motivo"]} if ab else None),
+        })
+        # Agregar por mês
+        mes_chave = r["data"][:7]
+        if mes_chave not in por_mes:
+            por_mes[mes_chave] = {
+                "mes": mes_chave,
+                "minutos_trabalhados": 0,
+                "minutos_previstos": 0,
+                "saldo_minutos": 0,
+                "dias": 0,
+                "abonos": 0,
+            }
+        por_mes[mes_chave]["minutos_trabalhados"] += trab
+        por_mes[mes_chave]["minutos_previstos"] += prev
+        por_mes[mes_chave]["saldo_minutos"] += saldo_dia
+        por_mes[mes_chave]["dias"] += 1
+        if ab:
+            por_mes[mes_chave]["abonos"] += 1
+
+    # Calcular saldo acumulado mês a mês (para o gráfico)
+    evolucao = []
+    saldo_corrente = 0
+    for mes_chave in sorted(por_mes.keys()):
+        item = por_mes[mes_chave]
+        saldo_corrente += item["saldo_minutos"]
+        evolucao.append({
+            **item,
+            "saldo_acumulado_minutos": saldo_corrente,
+        })
+
+    return {
+        "funcionario": {
+            "id": func["id"],
+            "nome": func.get("nome", "-"),
+            "cargo": func.get("cargo", "-"),
+            "departamento": func.get("departamento", "-"),
+            "data_admissao": func.get("data_admissao"),
+            "jornada_nome": jornada_func.get("nome", "Padrão"),
+        },
+        "ate_data": ate_data,
+        "saldo_total_minutos": saldo_acumulado,
+        "total_dias": len(detalhe_dias),
+        "total_abonos": sum(1 for d in detalhe_dias if d.get("abono")),
+        "evolucao_mensal": evolucao,
+        "detalhe_dias": detalhe_dias,
+    }
+
+
+@rh_router.get("/banco-horas/funcionarios/{funcionario_id}/extrato-pdf")
+async def exportar_extrato_banco_horas_pdf(funcionario_id: str, ate_data: Optional[str] = None):
+    """Exporta o extrato detalhado do banco de horas em PDF com layout corporativo."""
+    extrato = await banco_horas_extrato_funcionario(funcionario_id, ate_data)
+    pdf_bytes = _build_extrato_banco_horas_pdf(extrato)
+    func = extrato["funcionario"]
+    nome_safe = (func.get("nome") or "func").replace(" ", "_")[:40]
+    filename = f"BancoHoras_{nome_safe}_{extrato['ate_data']}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def _build_extrato_banco_horas_pdf(extrato: dict) -> bytes:
+    """Gera PDF do extrato de banco de horas com layout corporativo padronizado."""
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table, BRAND_COLORS, header_table_style,
+    )
+
+    func = extrato["funcionario"]
+    saldo_total = extrato["saldo_total_minutos"]
+    
+    def _br_date(s: str) -> str:
+        if not s:
+            return "-"
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+        except Exception:
+            return s
+
+    def _mes_label(s: str) -> str:
+        meses = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                 "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        try:
+            ano, mes = s.split("-")
+            return f"{meses[int(mes)]}/{ano}"
+        except Exception:
+            return s
+
+    buffer = io.BytesIO()
+    doc = create_corporate_doc(
+        buffer,
+        title=f"Banco de Horas - {func.get('nome','funcionario')}",
+    )
+    styles = get_corporate_styles()
+
+    elements = []
+    add_corporate_header(
+        elements,
+        doc_title="EXTRATO DE BANCO DE HORAS",
+        subtitle=f"Apuração até {_br_date(extrato['ate_data'])}",
+    )
+
+    # Identificação
+    elements.append(Paragraph("FUNCIONÁRIO", styles["section"]))
+    elements.append(build_data_table([
+        ("Nome:", func.get("nome", "-")),
+        ("Cargo:", func.get("cargo", "-")),
+        ("Departamento:", func.get("departamento", "-")),
+        ("Admissão:", _br_date(func.get("data_admissao", ""))),
+        ("Jornada:", func.get("jornada_nome", "Padrão")),
+    ]))
+    elements.append(Spacer(1, 14))
+
+    # Saldo destacado
+    cor_destaque = BRAND_COLORS["primary"] if saldo_total >= 0 else colors.HexColor("#dc2626")
+    label_saldo = "SALDO POSITIVO (CRÉDITO)" if saldo_total >= 0 else "SALDO NEGATIVO (DÉBITO)"
+    t_saldo = Table([
+        [label_saldo, _fmt_min_pdf(saldo_total)],
+    ], colWidths=[10 * cm, 6 * cm])
+    t_saldo.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), cor_destaque),
+        ("TEXTCOLOR", (0, 0), (0, 0), colors.white),
+        ("BACKGROUND", (1, 0), (1, 0), BRAND_COLORS["accent"]),
+        ("TEXTCOLOR", (1, 0), (1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, 0), 14),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, 0), 12),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+    ]))
+    elements.append(t_saldo)
+    elements.append(Spacer(1, 16))
+
+    # Evolução mensal
+    elements.append(Paragraph("EVOLUÇÃO MENSAL", styles["section"]))
+    rows = [["Mês", "Trabalhado", "Previsto", "Saldo Mês", "Saldo Acumulado", "Dias", "Abonos"]]
+    for ev in extrato.get("evolucao_mensal", []):
+        rows.append([
+            _mes_label(ev["mes"]),
+            _fmt_min_pdf(ev["minutos_trabalhados"]),
+            _fmt_min_pdf(ev["minutos_previstos"]),
+            _fmt_min_pdf(ev["saldo_minutos"]),
+            _fmt_min_pdf(ev["saldo_acumulado_minutos"]),
+            str(ev["dias"]),
+            str(ev["abonos"]),
+        ])
+    t_evo = Table(
+        rows,
+        colWidths=[2.4 * cm, 2.7 * cm, 2.7 * cm, 2.7 * cm, 3.0 * cm, 1.6 * cm, 1.8 * cm],
+        repeatRows=1,
+    )
+    style = header_table_style()
+    style.add("ALIGN", (1, 1), (-1, -1), "CENTER")
+    t_evo.setStyle(style)
+    elements.append(t_evo)
+    elements.append(Spacer(1, 14))
+
+    # Detalhe diário (limitar a últimos 90 dias para não estourar)
+    detalhe = extrato.get("detalhe_dias", [])[-90:]
+    if detalhe:
+        elements.append(Paragraph(
+            f"DETALHE DIÁRIO (últimos {len(detalhe)} registros)",
+            styles["section"],
+        ))
+        rows = [["Data", "Dia", "Batidas", "Trab.", "Previsto", "Saldo Dia", "Acum.", "Status"]]
+        dias_pt = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+        for d in detalhe:
+            ds = d.get("dia_semana")
+            dia_lbl = dias_pt[ds] if isinstance(ds, int) and 0 <= ds < 7 else "-"
+            batidas_str = " ".join(d.get("batidas") or []) or "-"
+            status = d.get("status_dia") or "-"
+            rows.append([
+                _br_date(d.get("data", "")),
+                dia_lbl,
+                batidas_str[:30],
+                _fmt_min_pdf(d.get("minutos_trabalhados", 0)),
+                _fmt_min_pdf(d.get("minutos_previstos", 0)),
+                _fmt_min_pdf(d.get("saldo_dia_minutos", 0)),
+                _fmt_min_pdf(d.get("saldo_acumulado_minutos", 0)),
+                status,
+            ])
+        t_det = Table(
+            rows,
+            colWidths=[2.0 * cm, 1.2 * cm, 3.5 * cm, 1.8 * cm, 1.8 * cm, 1.8 * cm, 2.0 * cm, 2.0 * cm],
+            repeatRows=1,
+        )
+        style = header_table_style()
+        style.add("ALIGN", (1, 1), (-1, -1), "CENTER")
+        style.add("FONTSIZE", (0, 0), (-1, -1), 7)
+        t_det.setStyle(style)
+        elements.append(t_det)
+
+    add_footer(elements, "Sistema CRA · Extrato de Banco de Horas")
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
 
 # ===== PDF: ESPELHO DE PONTO MENSAL =====
 def _fmt_min_pdf(min_total: int) -> str:

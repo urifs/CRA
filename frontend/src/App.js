@@ -63,6 +63,7 @@ import RHChatPage from "@/pages/rh/RHChatPage";
 import FuncionariosPage from "@/pages/rh/FuncionariosPage";
 import PontoPage from "@/pages/rh/PontoPage";
 import FolhaPagamentoPage from "@/pages/rh/FolhaPagamentoPage";
+import BancoHorasPage from "@/pages/rh/BancoHorasPage";
 import FeriasPage from "@/pages/rh/FeriasPage";
 import EPIPage from "@/pages/rh/EPIPage";
 import CustosPage from "@/pages/rh/CustosPage";
@@ -244,6 +245,7 @@ function App() {
             <Route path="funcionarios" element={<FuncionariosPage />} />
             <Route path="ponto" element={<PontoPage />} />
             <Route path="folha-pagamento" element={<FolhaPagamentoPage />} />
+            <Route path="banco-horas" element={<BancoHorasPage />} />
             <Route path="ferias" element={<FeriasPage />} />
             <Route path="epi" element={<EPIPage />} />
             <Route path="custos" element={<CustosPage />} />
