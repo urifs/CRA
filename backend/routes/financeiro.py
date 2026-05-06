@@ -33,6 +33,7 @@ class ContaPagarCreate(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção (IRRF/INSS/ISS) — descontada do valor total
     total_parcelas: Optional[int] = 1
     numero_parcela: Optional[int] = 1
     parcela_origem_id: Optional[str] = None
@@ -67,6 +68,7 @@ class ContaParceladaCreate(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção total (será dividida proporcionalmente)
     data_emissao: Optional[str] = None
     data_primeiro_vencimento: str
     total_parcelas: int
@@ -111,6 +113,7 @@ class ContaReceberCreate(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção (IRRF/INSS/ISS) — descontada do valor total
     total_parcelas: Optional[int] = 1
     numero_parcela: Optional[int] = 1
     parcela_origem_id: Optional[str] = None
@@ -146,6 +149,7 @@ class ContaReceberParceladaCreate(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção total (será dividida proporcionalmente)
     data_emissao: Optional[str] = None
     data_primeiro_vencimento: str
     total_parcelas: int
@@ -248,7 +252,13 @@ async def create_conta_pagar(
     data: ContaPagarCreate, current_user: dict = Depends(get_current_user)
 ):
     numero = await get_next_sequence("contas_pagar")
-    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    valor_final = (
+        data.valor
+        - (data.valor_desconto or 0)
+        + (data.valor_juros or 0)
+        + (data.valor_multa or 0)
+        - (data.valor_retencao or 0)
+    )
 
     conta = {
         "id": str(uuid.uuid4()),
@@ -276,6 +286,10 @@ async def create_conta_pagar_parcelada(
 
     valor_parcela = round(data.valor_total / data.total_parcelas, 2)
     valor_ultima_parcela = round(data.valor_total - (valor_parcela * (data.total_parcelas - 1)), 2)
+    # Distribui retenção proporcionalmente entre as parcelas
+    retencao_total = float(data.valor_retencao or 0)
+    retencao_parcela = round(retencao_total / data.total_parcelas, 2) if data.total_parcelas else 0
+    retencao_ultima = round(retencao_total - (retencao_parcela * (data.total_parcelas - 1)), 2)
     parcela_origem_id = str(uuid.uuid4())
 
     parcelas_criadas = []
@@ -284,6 +298,7 @@ async def create_conta_pagar_parcelada(
     for i in range(data.total_parcelas):
         numero_parcela = i + 1
         valor = valor_parcela if numero_parcela < data.total_parcelas else valor_ultima_parcela
+        retencao = retencao_parcela if numero_parcela < data.total_parcelas else retencao_ultima
         numero = await get_next_sequence("contas_pagar")
 
         conta = {
@@ -298,7 +313,8 @@ async def create_conta_pagar_parcelada(
             "valor_desconto": 0,
             "valor_juros": 0,
             "valor_multa": 0,
-            "valor_final": valor,
+            "valor_retencao": retencao,
+            "valor_final": valor - retencao,
             "total_parcelas": data.total_parcelas,
             "numero_parcela": numero_parcela,
             "parcela_origem_id": parcela_origem_id,
@@ -349,7 +365,13 @@ async def update_conta_pagar(
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
 
-    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    valor_final = (
+        data.valor
+        - (data.valor_desconto or 0)
+        + (data.valor_juros or 0)
+        + (data.valor_multa or 0)
+        - (data.valor_retencao or 0)
+    )
     update_data = data.model_dump()
     update_data["valor_final"] = valor_final
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -543,7 +565,13 @@ async def create_conta_receber(
     data: ContaReceberCreate, current_user: dict = Depends(get_current_user)
 ):
     numero = await get_next_sequence("contas_receber")
-    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    valor_final = (
+        data.valor
+        - (data.valor_desconto or 0)
+        + (data.valor_juros or 0)
+        + (data.valor_multa or 0)
+        - (data.valor_retencao or 0)
+    )
 
     conta = {
         "id": str(uuid.uuid4()),
@@ -570,6 +598,10 @@ async def create_conta_receber_parcelada(
 
     valor_parcela = round(data.valor_total / data.total_parcelas, 2)
     valor_ultima_parcela = round(data.valor_total - (valor_parcela * (data.total_parcelas - 1)), 2)
+    # Distribui retenção proporcionalmente entre as parcelas
+    retencao_total = float(data.valor_retencao or 0)
+    retencao_parcela = round(retencao_total / data.total_parcelas, 2) if data.total_parcelas else 0
+    retencao_ultima = round(retencao_total - (retencao_parcela * (data.total_parcelas - 1)), 2)
     parcela_origem_id = str(uuid.uuid4())
 
     parcelas_criadas = []
@@ -578,6 +610,7 @@ async def create_conta_receber_parcelada(
     for i in range(data.total_parcelas):
         numero_parcela = i + 1
         valor = valor_parcela if numero_parcela < data.total_parcelas else valor_ultima_parcela
+        retencao = retencao_parcela if numero_parcela < data.total_parcelas else retencao_ultima
         numero = await get_next_sequence("contas_receber")
 
         conta = {
@@ -592,7 +625,8 @@ async def create_conta_receber_parcelada(
             "valor_desconto": 0,
             "valor_juros": 0,
             "valor_multa": 0,
-            "valor_final": valor,
+            "valor_retencao": retencao,
+            "valor_final": valor - retencao,
             "total_parcelas": data.total_parcelas,
             "numero_parcela": numero_parcela,
             "parcela_origem_id": parcela_origem_id,
@@ -643,7 +677,13 @@ async def update_conta_receber(
     if not conta:
         raise HTTPException(status_code=404, detail="Conta não encontrada")
 
-    valor_final = data.valor - (data.valor_desconto or 0) + (data.valor_juros or 0) + (data.valor_multa or 0)
+    valor_final = (
+        data.valor
+        - (data.valor_desconto or 0)
+        + (data.valor_juros or 0)
+        + (data.valor_multa or 0)
+        - (data.valor_retencao or 0)
+    )
     update_data = data.model_dump()
     update_data["valor_final"] = valor_final
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()

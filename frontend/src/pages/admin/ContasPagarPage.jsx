@@ -75,7 +75,7 @@ export default function ContasPagarPage() {
   
   const [formData, setFormData] = useState({
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
-    valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0",
+    valor: "", valor_desconto: "0", valor_juros: "0", valor_multa: "0", valor_retencao: "0",
     data_emissao: "", data_vencimento: "",
     plano_conta_id: "", plano_conta_nome: "", 
     subconta_id: "", subconta_nome: "",
@@ -190,6 +190,7 @@ export default function ContasPagarPage() {
           valor_desconto: parseCurrency(formData.valor_desconto) || 0,
           valor_juros: parseCurrency(formData.valor_juros) || 0,
           valor_multa: parseCurrency(formData.valor_multa) || 0,
+          valor_retencao: parseCurrency(formData.valor_retencao) || 0,
           data_emissao: formData.data_emissao,
           data_primeiro_vencimento: formData.data_vencimento,
           total_parcelas: parseInt(totalParcelas),
@@ -220,6 +221,7 @@ export default function ContasPagarPage() {
           valor_desconto: parseCurrency(formData.valor_desconto) || 0,
           valor_juros: parseCurrency(formData.valor_juros) || 0,
           valor_multa: parseCurrency(formData.valor_multa) || 0,
+          valor_retencao: parseCurrency(formData.valor_retencao) || 0,
           numero_parcela: parseInt(formData.numero_parcela) || 1,
           total_parcelas: parseInt(formData.total_parcelas) || 1,
         };
@@ -362,7 +364,7 @@ export default function ContasPagarPage() {
       setEditingConta(null);
       setFormData({
         fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
-        valor: "", valor_desconto: "R$ 0,00", valor_juros: "R$ 0,00", valor_multa: "R$ 0,00",
+        valor: "", valor_desconto: "R$ 0,00", valor_juros: "R$ 0,00", valor_multa: "R$ 0,00", valor_retencao: "R$ 0,00",
         data_emissao: new Date().toISOString().split("T")[0], data_vencimento: "",
         plano_conta_id: "", plano_conta_nome: "", 
         subconta_id: "", subconta_nome: "",
@@ -387,13 +389,14 @@ export default function ContasPagarPage() {
 
   const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-  // Calcula valor final: Valor - Desconto + Juros + Multa
+  // Calcula valor final: Valor - Desconto + Juros + Multa - Retenção
   const calcularValorFinal = () => {
     const valor = parseCurrency(formData.valor) || 0;
     const desconto = parseCurrency(formData.valor_desconto) || 0;
     const juros = parseCurrency(formData.valor_juros) || 0;
     const multa = parseCurrency(formData.valor_multa) || 0;
-    return valor - desconto + juros + multa;
+    const retencao = parseCurrency(formData.valor_retencao) || 0;
+    return valor - desconto + juros + multa - retencao;
   };
 
   const getStatusInfo = (conta) => {
@@ -656,16 +659,17 @@ export default function ContasPagarPage() {
               <label className="form-label">Descrição *</label>
               <Input value={formData.descricao} onChange={(e) => setFormData({...formData, descricao: e.target.value})} required />
             </div>
-            <div className="grid grid-cols-4 gap-4">
-              <div><label className="form-label">Valor *</label><Input value={formData.valor} onChange={(e) => setFormData({...formData, valor: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" required /></div>
+            <div className="grid grid-cols-5 gap-4">
+              <div><label className="form-label">Valor *</label><Input value={formData.valor} onChange={(e) => setFormData({...formData, valor: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" required data-testid="contas-pagar-valor" /></div>
               <div><label className="form-label">Desconto</label><Input value={formData.valor_desconto} onChange={(e) => setFormData({...formData, valor_desconto: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" /></div>
               <div><label className="form-label">Juros</label><Input value={formData.valor_juros} onChange={(e) => setFormData({...formData, valor_juros: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" /></div>
               <div><label className="form-label">Multa</label><Input value={formData.valor_multa} onChange={(e) => setFormData({...formData, valor_multa: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" /></div>
+              <div title="Retenção tributária (IRRF, INSS, ISS) — desconta do valor total"><label className="form-label">Retenção</label><Input value={formData.valor_retencao} onChange={(e) => setFormData({...formData, valor_retencao: formatCurrencyInput(e.target.value)})} placeholder="R$ 0,00" data-testid="contas-pagar-retencao" /></div>
             </div>
             {/* Valor Final Calculado */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-between">
-              <span className="text-sm text-gray-600">Valor Final (Valor - Desconto + Juros + Multa):</span>
-              <span className="text-lg font-semibold text-gray-900">{formatCurrency(calcularValorFinal())}</span>
+              <span className="text-sm text-gray-600">Valor Final (Valor - Desconto + Juros + Multa - Retenção):</span>
+              <span className="text-lg font-semibold text-gray-900" data-testid="contas-pagar-valor-final">{formatCurrency(calcularValorFinal())}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className="form-label">Data Emissão</label><MaskedDateInput value={formData.data_emissao} onChange={(v) => setFormData({...formData, data_emissao: v})} /></div>

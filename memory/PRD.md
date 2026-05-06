@@ -1,6 +1,36 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 06/05/2026 (Sessão 45.8) — 💰 Campo "Retenção" em Contas a Pagar e Receber
+
+### Implementado
+**Backend (`routes/financeiro.py`):**
+- Novo campo opcional `valor_retencao: Optional[float] = 0` em `ContaPagarCreate`, `ContaReceberCreate`, `ContaParceladaCreate`, `ContaReceberParceladaCreate`.
+- Cálculo de `valor_final` agora considera a retenção: **`valor - desconto + juros + multa - retencao`**.
+- Endpoints atualizados: criação, edição e parcelamento (4 endpoints no total).
+- **Parcelamento inteligente**: a retenção informada é distribuída proporcionalmente entre todas as parcelas (com ajuste de centavos na última).
+
+**Frontend:**
+- `ContasPagarPage.jsx` e `ContasReceberPage.jsx`: novo campo "Retenção" no formulário (5ª coluna do grid de valores).
+- Tooltip explicativo: "Retenção tributária (IRRF, INSS, ISS) — desconta do valor total".
+- Função `calcularValorFinal()` atualizada para subtrair a retenção em tempo real.
+- Texto do "Valor Final" exibe a fórmula completa: "(Valor - Desconto + Juros + Multa - Retenção)".
+
+### Validação
+- ✅ Conta a Pagar com `valor=10.000 + juros=100 - retenção=1.500` → `valor_final=8.600`
+- ✅ Conta a Receber com `valor=5.000 - retenção=250` → `valor_final=4.750`
+- ✅ Parcelado de `R$ 12.000 com retenção R$ 600 em 3x` → 3 parcelas de `valor=4.000, retencao=200, final=3.800`
+- ✅ Lint passou em todos os arquivos
+
+### Como usar (após Deploy)
+1. Acessar **Financeiro → Contas a Pagar (ou Receber) → Nova Conta**
+2. Preencher Valor normalmente (ex: R$ 10.000,00)
+3. Preencher o campo **Retenção** (ex: R$ 1.500,00 de IRRF)
+4. O "Valor Final" no rodapé do form atualiza em tempo real (R$ 8.500,00 + ajustes)
+5. Salvar — o sistema persiste e mostra na lista o valor já com retenção descontada
+
+
+
 ## Feature - 06/05/2026 (Sessão 45.7) — 💼 Banco de Horas no menu lateral do RH
 
 ### Implementado

@@ -3123,6 +3123,7 @@ class ContaPagarCreate(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção (IRRF/INSS/ISS) — descontada do valor total
     
     # Parcelamento
     total_parcelas: Optional[int] = 1
@@ -3170,6 +3171,7 @@ class ContaPagarResponse(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção (IRRF/INSS/ISS) — descontada do valor total
     valor_final: Optional[float] = None
     # Parcelamento
     total_parcelas: Optional[int] = 1
@@ -3209,6 +3211,7 @@ class ContaReceberCreate(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção (IRRF/INSS/ISS) — descontada do valor total
     
     # Parcelamento
     total_parcelas: Optional[int] = 1
@@ -3259,6 +3262,7 @@ class ContaReceberResponse(BaseModel):
     valor_desconto: Optional[float] = 0
     valor_juros: Optional[float] = 0
     valor_multa: Optional[float] = 0
+    valor_retencao: Optional[float] = 0  # Retenção (IRRF/INSS/ISS) — descontada do valor total
     valor_final: Optional[float] = None
     # Parcelamento
     total_parcelas: Optional[int] = 1
