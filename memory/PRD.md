@@ -1,6 +1,32 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix - 06/05/2026 (Sessão 45.9) — 🔗 Desvínculo NF após delete + 🎨 NFS-e PDF padronizado
+
+### Problemas reportados
+1. Ao excluir uma Conta a Pagar/Receber vinculada a uma NF-e ou NFS-e, ao tentar gerar uma nova conta da mesma nota, o sistema dizia "nota já vinculada". O vínculo `conta_pagar_id`/`conta_receber_id` no documento da nota ficava órfão.
+2. Exportação de NFS-e (PDF fallback simplificado) usava layout genérico, fora do padrão visual da plataforma.
+
+### Causa raiz
+1. Os endpoints `DELETE /contas-pagar/{id}` e `DELETE /contas-receber/{id}` removiam apenas a conta, sem limpar a referência inversa nas coleções `nfe_importadas` e `nfse_importadas`.
+2. O fallback PDF em `routes/nfse.py::download_nfse_pdf` usava `SimpleDocTemplate` cru com estilos `getSampleStyleSheet`, sem o helper `utils/pdf_template.py`.
+
+### Implementado
+**Backend (`routes/financeiro.py`):**
+- `delete_conta_pagar`: agora roda `update_many({"conta_pagar_id": id}, {"$set": {"conta_pagar_id": None}})` em `nfe_importadas` E `nfse_importadas` antes do retorno.
+- `delete_conta_receber`: mesma lógica para `conta_receber_id`.
+
+**Backend (`routes/nfse.py`):**
+- Fallback do `download-pdf` reescrito usando `create_corporate_doc`, `add_corporate_header`, `add_footer`, `get_corporate_styles`, `build_data_table`, `header_table_style` e `BRAND_COLORS` do `utils/pdf_template.py`.
+- Layout agora inclui: cabeçalho corporativo CRA + linha teal, aviso "Documento informativo", blocos estruturados (Identificação, Prestador, Tomador, Discriminação) e tabela completa de valores com Base de Cálculo, ISS, IRRF, INSS, CSLL, COFINS, PIS e VALOR LÍQUIDO destacado em banner verde corporativo.
+
+### Validação
+- ✅ Bug 1: criado vínculo NF-e → conta_pagar; após `DELETE /contas-pagar/{id}`, `nfe.conta_pagar_id == None` confirmado
+- ✅ Bug 2: PDF NFS-e fallback gerado com 38KB, layout corporativo confirmado pelo analyzer (estrutura: cabeçalho, aviso, 4 blocos, tabela de valores, rodapé)
+- ✅ Lint passou em todos os arquivos
+
+
+
 ## Feature - 06/05/2026 (Sessão 45.8) — 💰 Campo "Retenção" em Contas a Pagar e Receber
 
 ### Implementado

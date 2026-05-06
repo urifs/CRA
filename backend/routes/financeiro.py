@@ -493,6 +493,18 @@ async def delete_conta_pagar(id: str, current_user: dict = Depends(get_current_u
         raise HTTPException(status_code=404, detail="Conta não encontrada")
 
     await db.contas_pagar.delete_one({"id": id})
+
+    # Desvincula NF-e e NFS-e que referenciavam esta conta para permitir
+    # criar uma nova conta a pagar a partir delas.
+    await db.nfe_importadas.update_many(
+        {"conta_pagar_id": id},
+        {"$set": {"conta_pagar_id": None}},
+    )
+    await db.nfse_importadas.update_many(
+        {"conta_pagar_id": id},
+        {"$set": {"conta_pagar_id": None}},
+    )
+
     await create_audit_log(current_user, "delete", "conta_pagar", id, conta["descricao"])
     return {"message": "Conta excluída"}
 
@@ -813,5 +825,16 @@ async def delete_conta_receber(id: str, current_user: dict = Depends(get_current
         raise HTTPException(status_code=404, detail="Conta não encontrada")
 
     await db.contas_receber.delete_one({"id": id})
+
+    # Desvincula NF-e e NFS-e que referenciavam esta conta a receber.
+    await db.nfe_importadas.update_many(
+        {"conta_receber_id": id},
+        {"$set": {"conta_receber_id": None}},
+    )
+    await db.nfse_importadas.update_many(
+        {"conta_receber_id": id},
+        {"$set": {"conta_receber_id": None}},
+    )
+
     await create_audit_log(current_user, "delete", "conta_receber", id, conta["descricao"])
     return {"message": "Conta excluída"}

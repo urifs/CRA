@@ -95,94 +95,136 @@ async def download_nfse_pdf(nfse_id: str, current_user: dict = Depends(get_curre
         except Exception as e:
             logging.warning(f"Erro ao decodificar PDF armazenado: {e}")
 
-    # Fallback: PDF simplificado via ReportLab
+    # Fallback: PDF padronizado com layout corporativo (NFS-e simplificada)
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import cm
-    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table, BRAND_COLORS, header_table_style,
+    )
+
+    def _br_money(v):
+        try:
+            return f"R$ {float(v or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except Exception:
+            return "R$ 0,00"
+
+    def _br_date(s: str) -> str:
+        if not s:
+            return "-"
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+        except Exception:
+            return s[:10]
 
     try:
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buffer, pagesize=A4,
-            leftMargin=1 * cm, rightMargin=1 * cm,
-            topMargin=1 * cm, bottomMargin=1 * cm,
+        doc = create_corporate_doc(
+            buffer, title=f"NFS-e {nfse.get('numero_nfse', '')}",
         )
-        styles = getSampleStyleSheet()
-        title_style = ParagraphStyle("Title", parent=styles["Heading1"], fontSize=14, spaceAfter=6, alignment=1)
-        subtitle_style = ParagraphStyle("Subtitle", parent=styles["Heading2"], fontSize=10, spaceAfter=4)
-        normal_style = ParagraphStyle("Normal", parent=styles["Normal"], fontSize=8)
-        small_style = ParagraphStyle("Small", parent=styles["Normal"], fontSize=7)
+        styles = get_corporate_styles()
 
-        elements = [
-            Paragraph("NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e", title_style),
-            Paragraph(
-                "<font color='red'><b>⚠ PDF gerado pelo sistema - Para obter a NFS-e oficial, consulte o portal da prefeitura</b></font>",
-                small_style,
-            ),
-            Spacer(1, 10),
-        ]
+        elements = []
+        add_corporate_header(
+            elements,
+            doc_title="NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e",
+            subtitle=f"Nº {nfse.get('numero_nfse', '-')} · Emissão {_br_date(nfse.get('data_emissao', ''))}",
+        )
 
-        valor_fmt = f"R$ {nfse.get('valor_servico', nfse.get('valor_total', 0)):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        data_emissao = (nfse.get("data_emissao") or "-")[:10]
+        # Aviso oficial
+        from reportlab.lib.styles import ParagraphStyle
+        aviso_style = ParagraphStyle(
+            "Aviso", fontSize=8, alignment=1,
+            textColor=colors.HexColor("#dc2626"),
+        )
+        elements.append(Paragraph(
+            "<b>DOCUMENTO INFORMATIVO — Para a NFS-e oficial, consulte o portal da prefeitura.</b>",
+            aviso_style,
+        ))
+        elements.append(Spacer(1, 12))
 
-        info = [
-            ["NFS-e Nº:", str(nfse.get("numero_nfse", "-")), "Data Emissão:", data_emissao],
-            ["Valor Total:", valor_fmt, "Status:", nfse.get("status", "-").upper()],
-        ]
-        t = Table(info, colWidths=[3 * cm, 5 * cm, 3 * cm, 5 * cm])
-        t.setStyle(TableStyle([
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-            ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
+        # Identificação principal
+        elements.append(Paragraph("IDENTIFICAÇÃO DA NOTA", styles["section"]))
+        elements.append(build_data_table([
+            ("Número da NFS-e:", str(nfse.get("numero_nfse", "-"))),
+            ("Código de Verificação:", str(nfse.get("codigo_verificacao", "-"))),
+            ("Data de Emissão:", _br_date(nfse.get("data_emissao", ""))),
+            ("Status:", (nfse.get("status", "-") or "-").upper()),
+            ("Município:", nfse.get("municipio_servico", nfse.get("municipio", "-"))),
+            ("Natureza Operação:", nfse.get("natureza_operacao", "-") or "-"),
         ]))
-        elements.append(t)
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 12))
 
         # Prestador
-        elements.append(Paragraph("<b>PRESTADOR DO SERVIÇO</b>", subtitle_style))
-        prestador_info = [
-            ["Razão Social:", nfse.get("prestador_nome", nfse.get("razao_social_prestador", "-"))],
-            ["CNPJ:", nfse.get("prestador_cnpj", nfse.get("cnpj_prestador", "-"))],
-        ]
-        t = Table(prestador_info, colWidths=[3 * cm, 13 * cm])
-        t.setStyle(TableStyle([
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        elements.append(Paragraph("PRESTADOR DO SERVIÇO", styles["section"]))
+        elements.append(build_data_table([
+            ("Razão Social:", nfse.get("prestador_nome") or nfse.get("razao_social_prestador") or "-"),
+            ("CNPJ:", nfse.get("prestador_cnpj") or nfse.get("cnpj_prestador") or "-"),
+            ("Inscrição Municipal:", nfse.get("prestador_im") or nfse.get("inscricao_municipal_prestador") or "-"),
+            ("Endereço:", nfse.get("prestador_endereco") or "-"),
         ]))
-        elements.append(t)
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 12))
 
         # Tomador
-        elements.append(Paragraph("<b>TOMADOR DO SERVIÇO</b>", subtitle_style))
-        tomador_info = [
-            ["Razão Social:", nfse.get("tomador_nome", nfse.get("razao_social_tomador", "-"))],
-            ["CNPJ/CPF:", nfse.get("tomador_cnpj", nfse.get("cnpj_tomador", "-"))],
-        ]
-        t = Table(tomador_info, colWidths=[3 * cm, 13 * cm])
-        t.setStyle(TableStyle([
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        elements.append(Paragraph("TOMADOR DO SERVIÇO", styles["section"]))
+        elements.append(build_data_table([
+            ("Razão Social:", nfse.get("tomador_nome") or nfse.get("razao_social_tomador") or "-"),
+            ("CNPJ/CPF:", nfse.get("tomador_cnpj") or nfse.get("cnpj_tomador") or "-"),
+            ("Endereço:", nfse.get("tomador_endereco") or "-"),
         ]))
-        elements.append(t)
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 12))
 
-        # Discriminação
-        elements.append(Paragraph("<b>DISCRIMINAÇÃO DO SERVIÇO</b>", subtitle_style))
-        discriminacao = nfse.get("descricao_servico", nfse.get("discriminacao", "Não informado"))
-        elements.append(Paragraph(discriminacao, normal_style))
-
-        elements.append(Spacer(1, 15))
+        # Discriminação do serviço
+        elements.append(Paragraph("DISCRIMINAÇÃO DO SERVIÇO", styles["section"]))
+        discriminacao = (
+            nfse.get("descricao_servico")
+            or nfse.get("discriminacao")
+            or "Não informado"
+        )
         elements.append(Paragraph(
-            f"<i>Documento gerado pelo Sistema CRA em {datetime.now().strftime('%d/%m/%Y %H:%M')}</i>",
-            normal_style,
+            str(discriminacao).replace("\n", "<br/>"),
+            styles["body"],
         ))
+        elements.append(Spacer(1, 12))
 
+        # Quadro de valores
+        elements.append(Paragraph("VALORES DO SERVIÇO", styles["section"]))
+        valor_servico = float(nfse.get("valor_servico", nfse.get("valor_total", 0)) or 0)
+        rows = [
+            ["Descrição", "Valor"],
+            ["Valor dos Serviços", _br_money(valor_servico)],
+            ["Deduções", _br_money(nfse.get("valor_deducoes", 0))],
+            ["Base de Cálculo", _br_money(nfse.get("base_calculo", valor_servico))],
+            ["ISS Retido", _br_money(nfse.get("iss_retido", nfse.get("valor_iss", 0)))],
+            ["IRRF", _br_money(nfse.get("valor_irrf", 0))],
+            ["INSS", _br_money(nfse.get("valor_inss", 0))],
+            ["CSLL", _br_money(nfse.get("valor_csll", 0))],
+            ["COFINS", _br_money(nfse.get("valor_cofins", 0))],
+            ["PIS", _br_money(nfse.get("valor_pis", 0))],
+            ["VALOR LÍQUIDO", _br_money(nfse.get("valor_liquido", valor_servico))],
+        ]
+        # Remove rows com valor zero (exceto Valor dos Serviços e Valor Líquido)
+        rows_filtradas = [rows[0]]
+        for r in rows[1:]:
+            if r[0] in ("Valor dos Serviços", "VALOR LÍQUIDO", "Base de Cálculo"):
+                rows_filtradas.append(r)
+            else:
+                # mantém apenas se valor != R$ 0,00
+                if r[1] != "R$ 0,00":
+                    rows_filtradas.append(r)
+
+        t_val = Table(rows_filtradas, colWidths=[10 * cm, 6 * cm])
+        style = header_table_style()
+        style.add("ALIGN", (1, 1), (1, -1), "RIGHT")
+        # Destaca a última linha (Valor Líquido)
+        style.add("BACKGROUND", (0, -1), (-1, -1), BRAND_COLORS["primary"])
+        style.add("TEXTCOLOR", (0, -1), (-1, -1), colors.white)
+        style.add("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold")
+        t_val.setStyle(style)
+        elements.append(t_val)
+
+        add_footer(elements, "Sistema CRA · Nota Fiscal de Serviços Eletrônica")
         doc.build(elements)
         buffer.seek(0)
 
