@@ -5,11 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -29,6 +31,7 @@ import {
   Plus,
   Minus,
   Trash2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,7 +81,7 @@ export default function BancoHorasPage() {
   const [ajusteOpen, setAjusteOpen] = useState(false);
   const [ajusteFunc, setAjusteFunc] = useState(null);
   const [ajusteForm, setAjusteForm] = useState({
-    operacao: "adicionar", // "adicionar" | "retirar"
+    operacao: "adicionar",
     horas: "",
     minutos: "",
     data: new Date().toISOString().slice(0, 10),
@@ -174,7 +177,6 @@ export default function BancoHorasPage() {
     try {
       await axios.delete(`${API}/rh/banco-horas/ajustes/${ajusteId}`);
       toast.success("Ajuste removido");
-      // Recarrega o extrato se estiver aberto
       if (extrato) {
         abrirExtrato(extrato.funcionario.id);
       }
@@ -247,9 +249,27 @@ export default function BancoHorasPage() {
             já neutralizados).
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-gray-500" />
+      </div>
+
+      {/* Filtros de Período */}
+      <Card className="border-gray-200">
+        <CardContent className="p-4 flex flex-wrap items-end gap-3">
+          <div className="flex flex-col">
+            <Label className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+              <Calendar size={12} /> De
+            </Label>
+            <Input
+              type="date"
+              value={deData}
+              onChange={(e) => setDeData(e.target.value)}
+              className="w-44"
+              data-testid="banco-horas-de-data"
+            />
+          </div>
+          <div className="flex flex-col">
+            <Label className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+              <Calendar size={12} /> Até
+            </Label>
             <Input
               type="date"
               value={ateData}
@@ -258,8 +278,40 @@ export default function BancoHorasPage() {
               data-testid="banco-horas-ate-data"
             />
           </div>
-        </div>
-      </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => aplicarPresetMes(0)}
+              data-testid="banco-horas-preset-mes-atual"
+            >
+              Mês atual
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => aplicarPresetMes(-1)}
+              data-testid="banco-horas-preset-mes-anterior"
+            >
+              Mês anterior
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={limparFiltro}
+              data-testid="banco-horas-limpar-filtro"
+            >
+              Limpar
+            </Button>
+          </div>
+          {deData && (
+            <p className="text-xs text-gray-500 ml-auto">
+              Período: <strong>{brDate(deData)}</strong> até{" "}
+              <strong>{brDate(ateData)}</strong>
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Cards de resumo */}
       {resumo && !loading && (
@@ -411,8 +463,7 @@ export default function BancoHorasPage() {
                             title="Adicionar/retirar horas manualmente"
                             data-testid={`ajuste-${f.funcionario_id}`}
                           >
-                            <Plus size={14} />
-                            <Minus size={14} className="-ml-1" />
+                            <SlidersHorizontal size={14} />
                           </Button>
                           <Button
                             size="sm"
@@ -433,6 +484,173 @@ export default function BancoHorasPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Ajuste Manual */}
+      <Dialog open={ajusteOpen} onOpenChange={setAjusteOpen}>
+        <DialogContent className="max-w-lg" data-testid="ajuste-modal">
+          <DialogHeader>
+            <DialogTitle>
+              Ajuste Manual — {ajusteFunc?.nome || "Funcionário"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-gray-600">Operação</Label>
+              <div className="flex gap-2 mt-1">
+                <Button
+                  type="button"
+                  variant={ajusteForm.operacao === "adicionar" ? "default" : "outline"}
+                  className={
+                    ajusteForm.operacao === "adicionar"
+                      ? "bg-emerald-600 hover:bg-emerald-700 flex-1"
+                      : "flex-1"
+                  }
+                  onClick={() =>
+                    setAjusteForm((f) => ({ ...f, operacao: "adicionar" }))
+                  }
+                  data-testid="ajuste-op-adicionar"
+                >
+                  <Plus size={14} className="mr-1" /> Adicionar horas
+                </Button>
+                <Button
+                  type="button"
+                  variant={ajusteForm.operacao === "retirar" ? "default" : "outline"}
+                  className={
+                    ajusteForm.operacao === "retirar"
+                      ? "bg-red-600 hover:bg-red-700 flex-1"
+                      : "flex-1"
+                  }
+                  onClick={() =>
+                    setAjusteForm((f) => ({ ...f, operacao: "retirar" }))
+                  }
+                  data-testid="ajuste-op-retirar"
+                >
+                  <Minus size={14} className="mr-1" /> Retirar horas
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-gray-600">Horas</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={ajusteForm.horas}
+                  onChange={(e) =>
+                    setAjusteForm((f) => ({ ...f, horas: e.target.value }))
+                  }
+                  data-testid="ajuste-horas"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Minutos</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  placeholder="0"
+                  value={ajusteForm.minutos}
+                  onChange={(e) =>
+                    setAjusteForm((f) => ({ ...f, minutos: e.target.value }))
+                  }
+                  data-testid="ajuste-minutos"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-gray-600">Data</Label>
+                <Input
+                  type="date"
+                  value={ajusteForm.data}
+                  onChange={(e) =>
+                    setAjusteForm((f) => ({ ...f, data: e.target.value }))
+                  }
+                  data-testid="ajuste-data"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600">Tipo</Label>
+                <Select
+                  value={ajusteForm.tipo}
+                  onValueChange={(v) =>
+                    setAjusteForm((f) => ({ ...f, tipo: v }))
+                  }
+                >
+                  <SelectTrigger data-testid="ajuste-tipo">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ajuste">Ajuste</SelectItem>
+                    <SelectItem value="compensacao">Compensação</SelectItem>
+                    <SelectItem value="hora_extra">Hora Extra</SelectItem>
+                    <SelectItem value="falta">Falta / Atraso</SelectItem>
+                    <SelectItem value="folga">Folga concedida</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs text-gray-600">
+                Motivo / Justificativa <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                placeholder="Descreva o motivo do ajuste manual..."
+                value={ajusteForm.motivo}
+                onChange={(e) =>
+                  setAjusteForm((f) => ({ ...f, motivo: e.target.value }))
+                }
+                rows={3}
+                data-testid="ajuste-motivo"
+              />
+            </div>
+
+            {(ajusteForm.horas || ajusteForm.minutos) && (
+              <div
+                className={`p-3 rounded text-sm text-center font-semibold ${
+                  ajusteForm.operacao === "adicionar"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
+                }`}
+              >
+                {ajusteForm.operacao === "adicionar" ? "+" : "-"}
+                {parseInt(ajusteForm.horas || 0)}h{" "}
+                {parseInt(ajusteForm.minutos || 0)}min serão{" "}
+                {ajusteForm.operacao === "adicionar" ? "adicionados ao" : "retirados do"}{" "}
+                banco de {ajusteFunc?.nome}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setAjusteOpen(false)}
+              disabled={savingAjuste}
+              data-testid="ajuste-cancelar"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={salvarAjuste}
+              disabled={savingAjuste}
+              className="bg-emerald-600 hover:bg-emerald-700"
+              data-testid="ajuste-salvar"
+            >
+              {savingAjuste ? (
+                <Loader2 className="animate-spin mr-2" size={14} />
+              ) : null}
+              Salvar Ajuste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Extrato */}
       <Dialog open={extratoOpen} onOpenChange={setExtratoOpen}>
@@ -493,6 +711,67 @@ export default function BancoHorasPage() {
                   {extrato.total_dias} dias registrados • {extrato.total_abonos} abono(s)
                 </p>
               </div>
+
+              {/* Ajustes manuais aplicados */}
+              {extrato.ajustes && extrato.ajustes.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2 text-gray-900">
+                    Ajustes manuais aplicados ({extrato.ajustes.length})
+                    {extrato.ajustes_minutos !== undefined && (
+                      <span
+                        className={`ml-2 text-sm ${
+                          extrato.ajustes_minutos >= 0
+                            ? "text-emerald-700"
+                            : "text-red-700"
+                        }`}
+                      >
+                        (Total: {extrato.ajustes_minutos >= 0 ? "+" : ""}
+                        {fmtMin(extrato.ajustes_minutos)})
+                      </span>
+                    )}
+                  </h3>
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="text-left p-2">Data</th>
+                          <th className="text-left p-2">Tipo</th>
+                          <th className="text-right p-2">Minutos</th>
+                          <th className="text-left p-2">Motivo</th>
+                          <th className="text-center p-2">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {extrato.ajustes.map((a) => (
+                          <tr key={a.id} className="border-b hover:bg-gray-50">
+                            <td className="p-2">{brDate(a.data)}</td>
+                            <td className="p-2 capitalize">{a.tipo}</td>
+                            <td
+                              className={`p-2 text-right font-semibold ${
+                                a.minutos > 0 ? "text-emerald-700" : "text-red-700"
+                              }`}
+                            >
+                              {a.minutos > 0 ? "+" : ""}
+                              {fmtMin(a.minutos)}
+                            </td>
+                            <td className="p-2 text-gray-700">{a.motivo}</td>
+                            <td className="p-2 text-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removerAjuste(a.id)}
+                                data-testid={`remover-ajuste-${a.id}`}
+                              >
+                                <Trash2 size={14} className="text-red-500" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Evolução mensal */}
               <div>
@@ -601,40 +880,6 @@ export default function BancoHorasPage() {
                           <td className="p-2">
                             {d.abono ? (
                               <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px]">
-                                Abono: {d.abono.tipo}
-                              </span>
-                            ) : (
-                              d.status_dia || "-"
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    baixarExtratoPDF(extrato.funcionario.id, extrato.funcionario.nome)
-                  }
-                  data-testid="extrato-modal-pdf-btn"
-                >
-                  <FileDown size={16} className="mr-2" />
-                  Exportar PDF
-                </Button>
-                <Button onClick={() => setExtratoOpen(false)}>Fechar</Button>
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-me="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px]">
                                 Abono: {d.abono.tipo}
                               </span>
                             ) : (

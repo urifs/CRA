@@ -1,0 +1,40 @@
+{
+  "summary": "End-to-end testing of Banco de Horas frontend (BancoHorasPage.jsx recriada) + backend RH (ajustes manuais e dispensar alertas de férias). Backend: 15/15 testes pytest passaram. Frontend: smoke, filtros de período, modal de ajuste manual com validações, integração POST /ajustes mudando saldo na tabela, extrato com array `ajustes`, e DELETE /ajustes/{id} via lixeira — todos funcionaram.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BancoHorasPage tabela", "issues": ["Hydration warning: existe um <span data-ve-dynamic='true' style='display:contents'> entre <tbody> e <tr> e entre <thead>/<tbody> — causa warning de hidratação no console. É injetado pelo runtime de source-mapping do Emergent (x-ve-dynamic), não pelo código. Não afeta funcionalidade, mas polui o console."]},
+      {"screen": "Modais (Ajuste Manual e Extrato)", "issues": ["DialogContent sem aria-describedby — warning de acessibilidade do Radix. Recomendado adicionar <DialogDescription> ou aria-describedby={undefined} explícito."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_banco_horas.py",
+    "/app/test_reports/pytest/pytest_banco_horas.xml"
+  ],
+  "action_items": [
+    "(Opcional) Adicionar <DialogDescription> nos dois Dialogs de BancoHorasPage para silenciar o warning de a11y do Radix.",
+    "(Opcional) O wrapper <span x-ve-dynamic> entre tbody e tr aparece apenas no preview/dev runtime do Emergent — verificar se afeta produção; se sim, considerar reportar."
+  ],
+  "critical_code_review_comments": [
+    "BancoHorasPage.jsx (~915 linhas) está no limite recomendado (<700). Considerar extrair Modal Extrato e Modal Ajuste em sub-componentes em refatoração futura.",
+    "fetchResumo é disparado por useEffect com deps [ateData, deData] — comportamento OK e cobertura de filtros validada.",
+    "Backend BancoHorasAjusteCreate aceita exatamente {funcionario_id, minutos, data?, motivo, tipo?} — frontend envia esse payload corretamente (verificado no teste de UI: saldo mudou de -15h56min para -13h26min ao adicionar 2h30min).",
+    "Extrato retorna `ajustes` (não `ajustes_manuais`) conforme spec — frontend lê extrato.ajustes corretamente.",
+    "Endpoints de dispensar alertas de férias (POST/DELETE /ferias/alertas/dispensar/{id}) funcionando; também há POST /dispensar-todos e GET /dispensados não solicitados mas presentes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_banco_horas.py (novo)"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (todos os fluxos críticos)"},
+  "test_credentials": "test@test.com / password",
+  "seed_data_creation": "Nenhuma criada permanentemente. Durante teste foram criados 2 ajustes manuais (TEST_) e ambos removidos via DELETE /ajustes/{id} no cleanup do pytest. UI também removeu o ajuste criado via teste.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "BancoHorasPage está estável. Backend ajustes endpoints idempotentes e validações OK. Para futuros testes: usar funcionario ADELINO (id na seed) ou primeiro funcionario_id retornado de GET /api/rh/funcionarios. Selectors data-testid relevantes: banco-horas-page, banco-horas-de-data, banco-horas-ate-data, banco-horas-preset-mes-atual/anterior, banco-horas-limpar-filtro, banco-horas-row-{id}, saldo-{id}, ajuste-{id}, ajuste-modal, ajuste-op-adicionar/retirar, ajuste-horas, ajuste-minutos, ajuste-motivo, ajuste-data, ajuste-tipo, ajuste-salvar/cancelar, ver-extrato-{id}, remover-ajuste-{ajusteId}.",
+  "rca of the issue": "N/A — nenhum bug crítico encontrado. Apenas dois warnings de console: (a) hydration warning causado pelo wrapper <span x-ve-dynamic> que o runtime de preview do Emergent injeta entre <tbody> e <tr>; (b) Radix Dialog sem aria-describedby. Nenhum dos dois afeta a funcionalidade."
+}
