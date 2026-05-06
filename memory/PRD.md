@@ -1,6 +1,33 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 06/05/2026 (Sessão 46.1) — ⏰ Abono em Massa no Ponto Eletrônico
+
+### Pedido do usuário
+> "adicionar uma opção de abono em massa, onde posso selecionar vários dias de um funcionário para abonar de uma vez, sem precisar ir de um por um"
+
+### Implementado
+**Backend (`routes/rh.py`):**
+- `POST /api/rh/ponto/abono-em-massa` — JSON `{funcionario_id, datas: [str], tipo, motivo, anexo?}`. Valida tipo (TIPOS_ABONO_VALIDOS), motivo, datas (deduplica e valida formato), depois `delete_many({"funcionario_id", "data": {"$in": datas}})` + `insert_many` em uma transação lógica. Retorna `{criados, datas, abonos}`.
+- `POST /api/rh/ponto/abono-em-massa-com-anexo` — multipart com `datas` como string JSON. Faz upload do arquivo UMA vez e compartilha o mesmo `storage_path` em todos os abonos (poupa storage e mantém auditoria).
+
+**Frontend (`PontoQuadroTab.jsx`):**
+- Estado novo: `modoSelecao`, `diasSelecionados`, `abonoMassaForm`, `salvandoMassa`.
+- Barra de ações na tabela do detalhe do funcionário: botão "Abono em massa" → ativa modo seleção (linha clicável + checkboxes amarelos só em dias com falta/incompleto/sem_registro).
+- Botões de apoio: "Selecionar todos faltantes" / "Limpar" / "Sair do modo".
+- Dialog "Abonar N dia(s) em massa" com badges das datas, select tipo, textarea motivo e file input opcional (compartilhado entre todas as datas).
+- Toast com contagem ao concluir; recarga automática do quadro mensal.
+
+### Validação
+- ✅ testing_agent_v3_fork iteration_36: backend 12/12 pytest (idempotência, validações, multipart, listagem, delete parcial), frontend E2E (15 dias selecionados em Abril/2026 para JOSÉ DA COSTA viraram ABONADO; saldo do mês foi de -96h para 0h após o submit).
+- ✅ Test file novo: `/app/backend/tests/test_abono_em_massa.py`
+
+### Arquivos alterados
+- `/app/backend/routes/rh.py` (adicionados 2 endpoints)
+- `/app/frontend/src/pages/rh/PontoQuadroTab.jsx` (state + UI de seleção em massa + Dialog)
+
+
+
 ## Feature - 06/05/2026 (Sessão 46) — 🕒 Banco de Horas: Filtros de Período + Modal de Ajuste Manual (UI finalizada)
 
 ### Contexto
