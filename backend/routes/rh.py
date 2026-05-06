@@ -2554,6 +2554,173 @@ async def criar_abono_com_anexo(
     return doc
 
 
+@rh_router.post("/ponto/abono-em-massa")
+async def criar_abono_em_massa(payload: dict = Body(...)):
+    """Cria abonos em massa para um funcionário em várias datas.
+    Body: { funcionario_id, datas: [str YYYY-MM-DD], tipo, motivo, anexo_storage_path?, anexo_meta? }
+    Substitui qualquer abono existente nos mesmos (funcionario, data).
+    Retorna: { criados: int, datas: [str], abonos: [...] }"""
+    funcionario_id = (payload.get("funcionario_id") or "").strip()
+    datas_raw = payload.get("datas") or []
+    tipo = (payload.get("tipo") or "").strip().lower()
+    motivo = (payload.get("motivo") or "").strip()
+    anexo_doc = payload.get("anexo") or None  # opcional: já uploadado por outra rota
+
+    if not funcionario_id:
+        raise HTTPException(status_code=400, detail="funcionario_id é obrigatório")
+    if not isinstance(datas_raw, list) or not datas_raw:
+        raise HTTPException(status_code=400, detail="datas deve ser uma lista não vazia")
+    if tipo not in TIPOS_ABONO_VALIDOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"tipo inválido. Use um de: {', '.join(sorted(TIPOS_ABONO_VALIDOS))}",
+        )
+    if not motivo:
+        raise HTTPException(status_code=400, detail="motivo é obrigatório")
+
+    # Valida e deduplica datas
+    datas_validas = []
+    seen = set()
+    for d in datas_raw:
+        d = (d or "").strip()
+        if not d or d in seen:
+            continue
+        try:
+            datetime.strptime(d, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"data inválida: {d}")
+        datas_validas.append(d)
+        seen.add(d)
+
+    if not datas_validas:
+        raise HTTPException(status_code=400, detail="Nenhuma data válida")
+
+    # Remove abonos existentes nas mesmas datas
+    await ponto_abonos_collection.delete_many({
+        "funcionario_id": funcionario_id,
+        "data": {"$in": datas_validas},
+    })
+
+    docs = []
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for d in datas_validas:
+        docs.append({
+            "id": str(uuid.uuid4()),
+            "funcionario_id": funcionario_id,
+            "data": d,
+            "tipo": tipo,
+            "motivo": motivo,
+            "anexo": anexo_doc,
+            "created_at": now_iso,
+        })
+    await ponto_abonos_collection.insert_many(docs)
+    for doc in docs:
+        doc.pop("_id", None)
+    return {
+        "criados": len(docs),
+        "datas": datas_validas,
+        "abonos": docs,
+    }
+
+
+@rh_router.post("/ponto/abono-em-massa-com-anexo")
+async def criar_abono_em_massa_com_anexo(
+    funcionario_id: str = Form(...),
+    datas: str = Form(...),  # JSON-encoded list de strings YYYY-MM-DD
+    tipo: str = Form(...),
+    motivo: str = Form(...),
+    arquivo: Optional[UploadFile] = File(None),
+):
+    """Versão multipart com anexo opcional COMPARTILHADO entre todas as datas.
+    `datas` deve ser uma string JSON (ex: '["2026-05-01","2026-05-02"]')."""
+    funcionario_id = (funcionario_id or "").strip()
+    tipo_l = (tipo or "").strip().lower()
+    motivo_s = (motivo or "").strip()
+    if not funcionario_id:
+        raise HTTPException(status_code=400, detail="funcionario_id é obrigatório")
+    if tipo_l not in TIPOS_ABONO_VALIDOS:
+        raise HTTPException(status_code=400, detail="tipo inválido")
+    if not motivo_s:
+        raise HTTPException(status_code=400, detail="motivo é obrigatório")
+    try:
+        datas_list = json.loads(datas) if isinstance(datas, str) else datas
+    except Exception:
+        raise HTTPException(status_code=400, detail="datas deve ser JSON: ['YYYY-MM-DD',...]")
+    if not isinstance(datas_list, list) or not datas_list:
+        raise HTTPException(status_code=400, detail="datas deve ser lista não vazia")
+
+    datas_validas = []
+    seen = set()
+    for d in datas_list:
+        d = (d or "").strip()
+        if not d or d in seen:
+            continue
+        try:
+            datetime.strptime(d, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"data inválida: {d}")
+        datas_validas.append(d)
+        seen.add(d)
+    if not datas_validas:
+        raise HTTPException(status_code=400, detail="Nenhuma data válida")
+
+    # Upload do anexo (uma vez, compartilhado entre todos)
+    anexo_doc = None
+    if arquivo and arquivo.filename:
+        ext = _ext_arquivo(arquivo.filename)
+        if ext not in ABONO_EXTS_VALIDAS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Extensão não permitida ({ext}). Use: {', '.join(sorted(ABONO_EXTS_VALIDAS))}",
+            )
+        conteudo = await arquivo.read()
+        if not conteudo:
+            raise HTTPException(status_code=400, detail="Arquivo vazio")
+        if len(conteudo) > ABONO_MAX_BYTES:
+            raise HTTPException(status_code=400, detail="Arquivo > 10MB")
+        from utils.storage import put_object, MIME_BY_EXT, APP_NAME
+        path = f"{APP_NAME}/abonos/{funcionario_id}/{uuid.uuid4()}.{ext}"
+        content_type = MIME_BY_EXT.get(ext, arquivo.content_type or "application/octet-stream")
+        try:
+            result = put_object(path, conteudo, content_type)
+            anexo_doc = {
+                "storage_path": result["path"],
+                "filename_original": arquivo.filename,
+                "content_type": content_type,
+                "size": result.get("size", len(conteudo)),
+                "ext": ext,
+            }
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Falha no upload: {e}")
+
+    await ponto_abonos_collection.delete_many({
+        "funcionario_id": funcionario_id,
+        "data": {"$in": datas_validas},
+    })
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    docs = []
+    for d in datas_validas:
+        docs.append({
+            "id": str(uuid.uuid4()),
+            "funcionario_id": funcionario_id,
+            "data": d,
+            "tipo": tipo_l,
+            "motivo": motivo_s,
+            "anexo": anexo_doc,
+            "created_at": now_iso,
+        })
+    await ponto_abonos_collection.insert_many(docs)
+    for doc in docs:
+        doc.pop("_id", None)
+    return {
+        "criados": len(docs),
+        "datas": datas_validas,
+        "anexo_compartilhado": bool(anexo_doc),
+        "abonos": docs,
+    }
+
+
 @rh_router.get("/ponto/abono/{abono_id}/anexo")
 async def baixar_anexo_abono(abono_id: str):
     """Baixa o arquivo anexo de um abono (PDF/imagem)."""

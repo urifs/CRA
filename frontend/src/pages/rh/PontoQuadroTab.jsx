@@ -35,6 +35,8 @@ import {
   ShieldCheck,
   Paperclip,
   ExternalLink,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,11 +62,19 @@ export default function PontoQuadroTab({ refreshKey }) {
   const [salvandoObs, setSalvandoObs] = useState(false);
   const [abonoForm, setAbonoForm] = useState(null); // { data, tipo, motivo }
 
+  // Seleção em massa para abono
+  const [modoSelecao, setModoSelecao] = useState(false);
+  const [diasSelecionados, setDiasSelecionados] = useState([]); // array de "YYYY-MM-DD"
+  const [abonoMassaForm, setAbonoMassaForm] = useState(null); // { tipo, motivo, arquivo }
+  const [salvandoMassa, setSalvandoMassa] = useState(false);
+
   // Quando abre o modal, carrega rascunho da observação
   useEffect(() => {
     if (funcDetalhe) {
       setObservacaoDraft(funcDetalhe.observacao || "");
       setAbonoForm(null);
+      setModoSelecao(false);
+      setDiasSelecionados([]);
     }
   }, [funcDetalhe]);
 
@@ -169,6 +179,85 @@ export default function PontoQuadroTab({ refreshKey }) {
       await recarregarFuncDetalhe();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao remover abono");
+    }
+  };
+
+  // ===== Seleção em massa =====
+  const podeAbonarDia = (d) =>
+    !d.abono &&
+    (d.status_dia === "sem_registro" ||
+      d.status_dia === "incompleto" ||
+      d.minutos_trabalhados < d.minutos_previstos);
+
+  const toggleDiaSelecionado = (data) => {
+    setDiasSelecionados((prev) =>
+      prev.includes(data) ? prev.filter((x) => x !== data) : [...prev, data]
+    );
+  };
+
+  const selecionarTodosFaltantes = () => {
+    if (!funcDetalhe?.detalhe_dias) return;
+    const datas = funcDetalhe.detalhe_dias.filter(podeAbonarDia).map((d) => d.data);
+    setDiasSelecionados(datas);
+  };
+
+  const limparSelecao = () => setDiasSelecionados([]);
+
+  const sairDoModoSelecao = () => {
+    setModoSelecao(false);
+    setDiasSelecionados([]);
+  };
+
+  const abrirModalMassa = () => {
+    if (diasSelecionados.length === 0) {
+      toast.error("Selecione ao menos um dia");
+      return;
+    }
+    setAbonoMassaForm({ tipo: "atestado", motivo: "", arquivo: null });
+  };
+
+  const confirmarAbonoMassa = async () => {
+    if (!abonoMassaForm || !funcDetalhe) return;
+    if (!abonoMassaForm.tipo || !abonoMassaForm.motivo?.trim()) {
+      toast.error("Preencha tipo e motivo");
+      return;
+    }
+    if (diasSelecionados.length === 0) {
+      toast.error("Nenhum dia selecionado");
+      return;
+    }
+
+    setSalvandoMassa(true);
+    try {
+      if (abonoMassaForm.arquivo) {
+        const fd = new FormData();
+        fd.append("funcionario_id", funcDetalhe.funcionario_id);
+        fd.append("datas", JSON.stringify(diasSelecionados));
+        fd.append("tipo", abonoMassaForm.tipo);
+        fd.append("motivo", abonoMassaForm.motivo.trim());
+        fd.append("arquivo", abonoMassaForm.arquivo);
+        await axios.post(`${API}/rh/ponto/abono-em-massa-com-anexo`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await axios.post(`${API}/rh/ponto/abono-em-massa`, {
+          funcionario_id: funcDetalhe.funcionario_id,
+          datas: diasSelecionados,
+          tipo: abonoMassaForm.tipo,
+          motivo: abonoMassaForm.motivo.trim(),
+        });
+      }
+      toast.success(
+        `${diasSelecionados.length} dia(s) abonado(s) para ${funcDetalhe.nome}`
+      );
+      setAbonoMassaForm(null);
+      setDiasSelecionados([]);
+      setModoSelecao(false);
+      await recarregarFuncDetalhe();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao abonar em massa");
+    } finally {
+      setSalvandoMassa(false);
     }
   };
 
@@ -560,9 +649,72 @@ export default function PontoQuadroTab({ refreshKey }) {
               </div>
 
               <div className="overflow-x-auto">
+                {/* Barra de ações em massa */}
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  {!modoSelecao ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                      onClick={() => setModoSelecao(true)}
+                      data-testid="btn-modo-selecao"
+                    >
+                      <CheckSquare size={14} className="mr-1" />
+                      Abono em massa
+                    </Button>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2 w-full">
+                      <span className="text-xs font-medium text-amber-800 bg-amber-100 px-2 py-1 rounded">
+                        {diasSelecionados.length} dia(s) selecionado(s)
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={selecionarTodosFaltantes}
+                        data-testid="btn-selecionar-faltantes"
+                      >
+                        Selecionar todos faltantes
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={limparSelecao}
+                        data-testid="btn-limpar-selecao"
+                      >
+                        Limpar
+                      </Button>
+                      <div className="ml-auto flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={sairDoModoSelecao}
+                          data-testid="btn-sair-selecao"
+                        >
+                          Sair do modo
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-amber-600 hover:bg-amber-700"
+                          onClick={abrirModalMassa}
+                          disabled={diasSelecionados.length === 0}
+                          data-testid="btn-abrir-modal-massa"
+                        >
+                          <ShieldCheck size={14} className="mr-1" />
+                          Abonar selecionados ({diasSelecionados.length})
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <table className="w-full text-sm">
                   <thead className="bg-gray-100">
                     <tr>
+                      {modoSelecao && (
+                        <th className="text-center p-2 w-10">
+                          <CheckSquare size={14} className="inline text-gray-500" />
+                        </th>
+                      )}
                       <th className="text-left p-2">Data</th>
                       <th className="text-center p-2">Dia</th>
                       <th className="text-left p-2">Batidas</th>
@@ -579,13 +731,47 @@ export default function PontoQuadroTab({ refreshKey }) {
                         !isAbonado &&
                         (d.status_dia === "sem_registro" || d.status_dia === "incompleto" ||
                          d.minutos_trabalhados < d.minutos_previstos);
+                      const selecionado = diasSelecionados.includes(d.data);
                       return (
                         <tr
                           key={i}
                           className={`border-b ${
-                            isAbonado ? "bg-amber-50" : "hover:bg-gray-50"
-                          }`}
+                            isAbonado
+                              ? "bg-amber-50"
+                              : selecionado
+                                ? "bg-amber-100/60"
+                                : "hover:bg-gray-50"
+                          } ${modoSelecao && podeAbonar ? "cursor-pointer" : ""}`}
+                          onClick={() => {
+                            if (modoSelecao && podeAbonar) toggleDiaSelecionado(d.data);
+                          }}
+                          data-testid={`row-dia-${d.data}`}
                         >
+                          {modoSelecao && (
+                            <td className="p-2 text-center">
+                              {podeAbonar ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleDiaSelecionado(d.data);
+                                  }}
+                                  className="inline-flex"
+                                  data-testid={`check-dia-${d.data}`}
+                                >
+                                  {selecionado ? (
+                                    <CheckSquare
+                                      size={18}
+                                      className="text-amber-600"
+                                    />
+                                  ) : (
+                                    <Square size={18} className="text-gray-400" />
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="text-gray-300 text-xs">—</span>
+                              )}
+                            </td>
+                          )}
                           <td className="p-2 font-mono">
                             {d.data?.split("-").reverse().join("/")}
                           </td>
@@ -801,6 +987,128 @@ export default function PontoQuadroTab({ refreshKey }) {
                 >
                   <CheckCircle2 size={14} className="mr-2" />
                   Confirmar abono
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Abono em Massa (multi-data) */}
+      <Dialog
+        open={!!abonoMassaForm}
+        onOpenChange={(o) => !o && !salvandoMassa && setAbonoMassaForm(null)}
+      >
+        <DialogContent className="max-w-lg" data-testid="dialog-abono-massa">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-900">
+              <ShieldCheck size={18} />
+              Abonar {diasSelecionados.length} dia(s) em massa
+            </DialogTitle>
+          </DialogHeader>
+          {abonoMassaForm && (
+            <div className="space-y-3">
+              <div className="bg-amber-50 border border-amber-200 rounded p-3 text-xs max-h-32 overflow-y-auto">
+                <p className="font-semibold text-amber-900 mb-1">Datas selecionadas:</p>
+                <div className="flex flex-wrap gap-1">
+                  {diasSelecionados.sort().map((d) => (
+                    <span
+                      key={d}
+                      className="px-2 py-0.5 bg-amber-200 text-amber-900 rounded font-mono text-[11px]"
+                    >
+                      {d.split("-").reverse().join("/")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Tipo (aplicado em todas as datas)</Label>
+                <Select
+                  value={abonoMassaForm.tipo}
+                  onValueChange={(v) =>
+                    setAbonoMassaForm({ ...abonoMassaForm, tipo: v })
+                  }
+                >
+                  <SelectTrigger data-testid="select-tipo-abono-massa">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="atestado">Atestado médico</SelectItem>
+                    <SelectItem value="justificativa">Justificativa</SelectItem>
+                    <SelectItem value="folga">Folga compensada</SelectItem>
+                    <SelectItem value="feriado">Feriado</SelectItem>
+                    <SelectItem value="ferias">Férias</SelectItem>
+                    <SelectItem value="outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Motivo / Justificativa</Label>
+                <Textarea
+                  placeholder="Ex.: Atestado médico (5 dias) - clínica geral"
+                  value={abonoMassaForm.motivo}
+                  onChange={(e) =>
+                    setAbonoMassaForm({
+                      ...abonoMassaForm,
+                      motivo: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  data-testid="input-motivo-abono-massa"
+                />
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1">
+                  <Paperclip size={12} />
+                  Anexar atestado/justificativa (compartilhado entre todas as datas)
+                </Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"
+                  onChange={(e) =>
+                    setAbonoMassaForm({
+                      ...abonoMassaForm,
+                      arquivo: e.target.files?.[0] || null,
+                    })
+                  }
+                  className="cursor-pointer"
+                  data-testid="input-arquivo-abono-massa"
+                />
+                {abonoMassaForm.arquivo && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {abonoMassaForm.arquivo.name} (
+                    {(abonoMassaForm.arquivo.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
+                <p className="text-[10px] text-amber-600 mt-1">
+                  Formatos: PDF, JPG, PNG, WEBP, HEIC. Máximo 10MB. O mesmo arquivo
+                  será vinculado a todos os dias selecionados.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAbonoMassaForm(null)}
+                  disabled={salvandoMassa}
+                  data-testid="btn-cancelar-abono-massa"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700"
+                  onClick={confirmarAbonoMassa}
+                  disabled={salvandoMassa}
+                  data-testid="btn-confirmar-abono-massa"
+                >
+                  {salvandoMassa ? (
+                    <Loader2 size={14} className="animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle2 size={14} className="mr-2" />
+                  )}
+                  Confirmar abono em massa
                 </Button>
               </div>
             </div>
