@@ -1,6 +1,42 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 06/05/2026 (Sessão 46) — 🕒 Banco de Horas: Filtros de Período + Modal de Ajuste Manual (UI finalizada)
+
+### Contexto
+Last Working Item da sessão anterior pendente: o arquivo `/app/frontend/src/pages/rh/BancoHorasPage.jsx` estava corrompido (lixo após o fechamento) e faltava render do filtro `de_data` + presets e do Modal de Ajuste Manual. Backend já estava 100% pronto.
+
+### Implementado
+**Frontend (`BancoHorasPage.jsx` recriado limpo, ~915 linhas):**
+- Bloco de filtros: inputs `De` e `Até` + botões "Mês atual" / "Mês anterior" / "Limpar"; recarrega o resumo automaticamente via `useEffect([ateData, deData])`.
+- Modal de Ajuste Manual (Shadcn `Dialog`) acionado por botão `<SlidersHorizontal/>` em cada linha da tabela:
+  - Toggle Operação Adicionar (verde) / Retirar (vermelho)
+  - Inputs Horas + Minutos
+  - Date picker + Select de Tipo (ajuste, compensação, hora extra, falta, folga, outro)
+  - Textarea Motivo (obrigatório)
+  - Preview da operação ("+2h 30min serão adicionados ao banco de Fulano")
+  - Validações: bloqueia salvar se total = 0 ou motivo vazio; toast de erro exibido
+- Modal Extrato: nova seção "Ajustes manuais aplicados" com tabela (data, tipo, minutos, motivo) e botão lixeira por ajuste (DELETE /banco-horas/ajustes/{id}); mostra também total agregado em badge.
+- `DialogDescription` adicionado nos dois Dialogs (a11y do Radix).
+
+### Endpoints utilizados (já existentes no backend)
+- `POST /api/rh/banco-horas/ajustes` — payload `{funcionario_id, minutos (int +/-), data?, motivo, tipo?}`
+- `DELETE /api/rh/banco-horas/ajustes/{ajuste_id}`
+- `GET /api/rh/banco-horas/resumo?ate_data&de_data`
+- `GET /api/rh/banco-horas/funcionarios/{id}/extrato?ate_data&de_data` (retorna campo `ajustes` no payload)
+
+### Validação
+- ✅ Smoke test: página renderiza com filtros e tabela de 9 funcionários
+- ✅ Modal abre, validações funcionando, salvar dispara POST e atualiza saldo (-15h56min → -13h26min em teste de adição de 2h30min)
+- ✅ testing_agent_v3_fork iteration_35: backend 15/15 pytest ok, frontend todos fluxos críticos ok
+- ✅ Test file criado: `/app/backend/tests/test_banco_horas.py`
+
+### Arquivos alterados
+- `/app/frontend/src/pages/rh/BancoHorasPage.jsx` (recriado)
+- `/app/backend/tests/test_banco_horas.py` (novo, pelo testing agent)
+
+
+
 ## Bug Fix - 06/05/2026 (Sessão 45.9) — 🔗 Desvínculo NF após delete + 🎨 NFS-e PDF padronizado
 
 ### Problemas reportados

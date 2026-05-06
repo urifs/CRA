@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -492,6 +493,9 @@ export default function BancoHorasPage() {
             <DialogTitle>
               Ajuste Manual — {ajusteFunc?.nome || "Funcionário"}
             </DialogTitle>
+            <DialogDescription>
+              Adicione ou retire horas do banco com motivo registrado.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -660,6 +664,9 @@ export default function BancoHorasPage() {
               Extrato de Banco de Horas
               {extrato?.funcionario?.nome && ` — ${extrato.funcionario.nome}`}
             </DialogTitle>
+            <DialogDescription>
+              Saldo, evolução mensal e detalhe diário no período selecionado.
+            </DialogDescription>
           </DialogHeader>
 
           {loadingExtrato ? (
