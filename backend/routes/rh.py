@@ -311,20 +311,53 @@ async def get_rh_dashboard():
                     pass
         
         alertas_ferias = []
+        # Carrega dispensas: funcionários cujos alertas o admin marcou para ocultar
+        dispensados_ids = set()
+        async for d in db.ferias_alertas_dispensados.find({}, {"_id": 0, "funcionario_id": 1}):
+            dispensados_ids.add(d.get("funcionario_id"))
+
+        # Carrega última férias de cada funcionário — usado para evitar alertar quem já saiu de férias
+        ultima_ferias_por_func = {}
+        async for fe in db.ferias.find(
+            {}, {"_id": 0, "funcionario_id": 1, "data_inicio": 1, "data_fim": 1}
+        ).sort("data_inicio", -1):
+            fid = fe.get("funcionario_id")
+            if fid and fid not in ultima_ferias_por_func:
+                ultima_ferias_por_func[fid] = fe.get("data_fim") or fe.get("data_inicio")
+
         async for func in funcionarios_collection.find({"status": "ativo"}):
-            if func.get("data_admissao"):
-                try:
+            if func.get("id") in dispensados_ids:
+                continue  # admin descartou esse alerta
+            try:
+                ultima = ultima_ferias_por_func.get(func.get("id"))
+                if ultima:
+                    # Conta a partir do fim das últimas férias
+                    base_data = datetime.strptime(ultima[:10], "%Y-%m-%d")
+                    meses_desde_ultima = (
+                        (hoje.year - base_data.year) * 12 + (hoje.month - base_data.month)
+                    )
+                    if meses_desde_ultima >= 11:
+                        alertas_ferias.append({
+                            "funcionario_id": func.get("id"),
+                            "nome": func["nome"],
+                            "meses": meses_desde_ultima,
+                            "mensagem": f"{meses_desde_ultima} meses desde a última férias",
+                        })
+                elif func.get("data_admissao"):
+                    # Nunca teve férias registradas — usa admissão como base
                     data_adm = datetime.strptime(func["data_admissao"], "%Y-%m-%d")
-                    meses_trabalhados = (hoje.year - data_adm.year) * 12 + (hoje.month - data_adm.month)
-                    
+                    meses_trabalhados = (
+                        (hoje.year - data_adm.year) * 12 + (hoje.month - data_adm.month)
+                    )
                     if meses_trabalhados >= 11:
                         alertas_ferias.append({
+                            "funcionario_id": func.get("id"),
                             "nome": func["nome"],
                             "meses": meses_trabalhados,
-                            "mensagem": f"Completou {meses_trabalhados} meses"
+                            "mensagem": f"Completou {meses_trabalhados} meses sem férias registradas",
                         })
-                except:
-                    pass
+            except Exception:
+                pass
         
         alertas_epi = []
         async for ficha in epi_fichas_collection.find({}):
@@ -398,6 +431,62 @@ async def get_rh_dashboard():
                 "atrasados": 0
             }
         }
+
+
+# ===== ALERTAS DE FÉRIAS — DISPENSA =====
+@rh_router.post("/ferias/alertas/dispensar/{funcionario_id}")
+async def dispensar_alerta_ferias(funcionario_id: str):
+    """Marca o alerta de férias deste funcionário como dispensado.
+    O alerta não voltará no Dashboard até que o admin o reabilite ou o funcionário tenha
+    novas férias registradas que mudem a base de cálculo."""
+    func = await funcionarios_collection.find_one({"id": funcionario_id}, {"_id": 0})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    await db.ferias_alertas_dispensados.update_one(
+        {"funcionario_id": funcionario_id},
+        {"$set": {
+            "funcionario_id": funcionario_id,
+            "nome": func.get("nome"),
+            "dispensado_em": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"ok": True, "funcionario_id": funcionario_id, "nome": func.get("nome")}
+
+
+@rh_router.delete("/ferias/alertas/dispensar/{funcionario_id}")
+async def reativar_alerta_ferias(funcionario_id: str):
+    """Reabilita os alertas de férias para um funcionário (remove a dispensa)."""
+    res = await db.ferias_alertas_dispensados.delete_one({"funcionario_id": funcionario_id})
+    return {"ok": True, "removidos": res.deleted_count}
+
+
+@rh_router.post("/ferias/alertas/dispensar-todos")
+async def dispensar_todos_alertas_ferias():
+    """Dispensa em massa TODOS os alertas de férias atualmente ativos."""
+    hoje = datetime.now()
+    count = 0
+    async for func in funcionarios_collection.find({"status": "ativo"}, {"_id": 0}):
+        await db.ferias_alertas_dispensados.update_one(
+            {"funcionario_id": func["id"]},
+            {"$set": {
+                "funcionario_id": func["id"],
+                "nome": func.get("nome"),
+                "dispensado_em": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+        count += 1
+    return {"ok": True, "dispensados": count}
+
+
+@rh_router.get("/ferias/alertas/dispensados")
+async def listar_dispensados_ferias():
+    """Lista os funcionários com alertas dispensados."""
+    docs = []
+    async for d in db.ferias_alertas_dispensados.find({}, {"_id": 0}):
+        docs.append(d)
+    return docs
 
 
 # ===== FUNCIONARIOS =====
@@ -1266,15 +1355,21 @@ async def get_ponto_dashboard_mensal(mes: int, ano: int):
 # ============================================================
 async def _calcular_banco_horas_por_funcionario(
     ate_data: Optional[str] = None,
+    de_data: Optional[str] = None,
 ) -> dict:
-    """Calcula o saldo acumulado do banco de horas de cada funcionário com base
-    nos registros de ponto até a data informada (default: hoje). Aplica abonos
-    para neutralizar saldos de dias justificados.
-    Retorna dict {funcionario_id: {"saldo_minutos": int, "primeiro_registro": str, "ultimo_registro": str, "dias_registrados": int}}.
+    """Calcula o saldo do banco de horas de cada funcionário com base nos
+    registros de ponto entre `de_data` e `ate_data` (ambos inclusive).
+    Sempre soma os AJUSTES MANUAIS (banco_horas_ajustes) feitos no período.
+    Retorna dict {funcionario_id: {"saldo_minutos", "primeiro_registro", "ultimo_registro", "dias_registrados", "ajustes_minutos"}}.
     """
     if ate_data is None:
         ate_data = datetime.now().strftime("%Y-%m-%d")
     fim_str = ate_data + "T99"  # garante incluir o dia atual
+
+    # Filtro de data sobre `data` (string YYYY-MM-DD funciona com $lte/$gte)
+    data_filter: dict = {"$lte": ate_data}
+    if de_data:
+        data_filter["$gte"] = de_data
 
     # Carrega jornadas
     jornada_padrao = await _get_or_create_jornada_padrao()
@@ -1288,9 +1383,9 @@ async def _calcular_banco_horas_por_funcionario(
         func_jornada_map[f["id"]] = jornadas_map.get(fjid) if fjid else jornada_padrao
 
     # Acumular saldo dia a dia
-    resumo: dict = {}  # fid -> {saldo, primeiro, ultimo, dias}
+    resumo: dict = {}  # fid -> {saldo, primeiro, ultimo, dias, ajustes}
     async for r in ponto_collection.find(
-        {"data": {"$lte": ate_data}},
+        {"data": data_filter},
         {"_id": 0, "funcionario_id": 1, "data": 1, "minutos_trabalhados": 1, "dia_semana": 1},
     ):
         fid = r["funcionario_id"]
@@ -1304,6 +1399,7 @@ async def _calcular_banco_horas_por_funcionario(
                 "primeiro_registro": r["data"],
                 "ultimo_registro": r["data"],
                 "dias_registrados": 0,
+                "ajustes_minutos": 0,
             }
         resumo[fid]["saldo_minutos"] += saldo_dia
         if r["data"] < resumo[fid]["primeiro_registro"]:
@@ -1313,11 +1409,13 @@ async def _calcular_banco_horas_por_funcionario(
         resumo[fid]["dias_registrados"] += 1
 
     # Neutraliza saldos de dias com abono
-    async for ab in ponto_abonos_collection.find({"data": {"$lte": ate_data}}, {"_id": 0}):
+    abonos_filter: dict = {"data": {"$lte": ate_data}}
+    if de_data:
+        abonos_filter["data"]["$gte"] = de_data
+    async for ab in ponto_abonos_collection.find(abonos_filter, {"_id": 0}):
         fid = ab["funcionario_id"]
         if fid not in resumo:
             continue
-        # Busca o registro de ponto daquele dia para conhecer o saldo a neutralizar
         ponto_dia = await ponto_collection.find_one(
             {"funcionario_id": fid, "data": ab["data"]}, {"_id": 0}
         )
@@ -1329,14 +1427,35 @@ async def _calcular_banco_horas_por_funcionario(
         saldo_dia = trab - prev
         resumo[fid]["saldo_minutos"] -= saldo_dia
 
+    # Aplica ajustes manuais do banco de horas
+    ajustes_filter: dict = {"data": {"$lte": ate_data}}
+    if de_data:
+        ajustes_filter["data"]["$gte"] = de_data
+    async for aj in db.banco_horas_ajustes.find(ajustes_filter, {"_id": 0}):
+        fid = aj.get("funcionario_id")
+        if not fid:
+            continue
+        if fid not in resumo:
+            resumo[fid] = {
+                "saldo_minutos": 0, "primeiro_registro": aj.get("data"),
+                "ultimo_registro": aj.get("data"), "dias_registrados": 0,
+                "ajustes_minutos": 0,
+            }
+        delta = int(aj.get("minutos") or 0)
+        resumo[fid]["saldo_minutos"] += delta
+        resumo[fid]["ajustes_minutos"] += delta
+
     return resumo
 
 
 @rh_router.get("/banco-horas/resumo")
-async def banco_horas_resumo(ate_data: Optional[str] = None):
-    """Lista todos os funcionários ativos com o saldo acumulado de banco de horas.
-    Parâmetro opcional `ate_data` (YYYY-MM-DD) para corte temporal."""
-    saldos = await _calcular_banco_horas_por_funcionario(ate_data)
+async def banco_horas_resumo(
+    ate_data: Optional[str] = None,
+    de_data: Optional[str] = None,
+):
+    """Lista todos os funcionários com saldo acumulado de banco de horas no
+    período informado. `de_data` opcional para apurar apenas um intervalo."""
+    saldos = await _calcular_banco_horas_por_funcionario(ate_data=ate_data, de_data=de_data)
     
     funcionarios = []
     async for f in funcionarios_collection.find({}, {"_id": 0}):
@@ -1349,6 +1468,7 @@ async def banco_horas_resumo(ate_data: Optional[str] = None):
             "status": f.get("status", "ativo"),
             "data_admissao": f.get("data_admissao"),
             "saldo_minutos": s.get("saldo_minutos", 0),
+            "ajustes_minutos": s.get("ajustes_minutos", 0),
             "dias_registrados": s.get("dias_registrados", 0),
             "primeiro_registro": s.get("primeiro_registro"),
             "ultimo_registro": s.get("ultimo_registro"),
@@ -1359,6 +1479,7 @@ async def banco_horas_resumo(ate_data: Optional[str] = None):
     total_debito = sum(abs(min(0, f["saldo_minutos"])) for f in funcionarios)
     
     return {
+        "de_data": de_data,
         "ate_data": ate_data or datetime.now().strftime("%Y-%m-%d"),
         "total_funcionarios": len(funcionarios),
         "total_credito_minutos": total_credito,
@@ -1368,10 +1489,71 @@ async def banco_horas_resumo(ate_data: Optional[str] = None):
     }
 
 
+# ============ AJUSTES MANUAIS DE BANCO DE HORAS ============
+class BancoHorasAjusteCreate(BaseModel):
+    funcionario_id: str
+    minutos: int  # positivo: adiciona; negativo: retira
+    data: Optional[str] = None  # YYYY-MM-DD; default = hoje
+    motivo: str
+    tipo: Optional[str] = None  # "credito" | "debito" | "compensacao" | "ajuste"
+
+
+@rh_router.post("/banco-horas/ajustes")
+async def criar_ajuste_banco_horas(data: BancoHorasAjusteCreate):
+    """Cria um ajuste manual no banco de horas de um funcionário.
+    `minutos` positivo adiciona crédito, negativo registra débito.
+    Use isso para acertos legais (compensação, decisão judicial, fechamento contábil)."""
+    func = await funcionarios_collection.find_one({"id": data.funcionario_id}, {"_id": 0})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+    if not data.motivo or not data.motivo.strip():
+        raise HTTPException(status_code=400, detail="Motivo é obrigatório")
+    if data.minutos == 0:
+        raise HTTPException(status_code=400, detail="Quantidade de minutos não pode ser 0")
+
+    doc = {
+        "id": str(uuid.uuid4()),
+        "funcionario_id": data.funcionario_id,
+        "funcionario_nome": func.get("nome"),
+        "minutos": int(data.minutos),
+        "data": data.data or datetime.now().strftime("%Y-%m-%d"),
+        "motivo": data.motivo.strip(),
+        "tipo": data.tipo or ("credito" if data.minutos > 0 else "debito"),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.banco_horas_ajustes.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@rh_router.get("/banco-horas/ajustes")
+async def listar_ajustes_banco_horas(funcionario_id: Optional[str] = None):
+    """Lista ajustes manuais (filtrado opcionalmente por funcionário)."""
+    q: dict = {}
+    if funcionario_id:
+        q["funcionario_id"] = funcionario_id
+    docs = []
+    async for d in db.banco_horas_ajustes.find(q, {"_id": 0}).sort("data", -1):
+        docs.append(d)
+    return docs
+
+
+@rh_router.delete("/banco-horas/ajustes/{ajuste_id}")
+async def deletar_ajuste_banco_horas(ajuste_id: str):
+    """Remove um ajuste manual de banco de horas."""
+    res = await db.banco_horas_ajustes.delete_one({"id": ajuste_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Ajuste não encontrado")
+    return {"ok": True}
+
+
 @rh_router.get("/banco-horas/funcionarios/{funcionario_id}/extrato")
-async def banco_horas_extrato_funcionario(funcionario_id: str, ate_data: Optional[str] = None):
-    """Extrato detalhado do banco de horas de um funcionário específico.
-    Retorna evolução mês a mês + detalhe diário do mês atual."""
+async def banco_horas_extrato_funcionario(
+    funcionario_id: str,
+    ate_data: Optional[str] = None,
+    de_data: Optional[str] = None,
+):
+    """Extrato detalhado do banco de horas de um funcionário no período."""
     func = await funcionarios_collection.find_one({"id": funcionario_id}, {"_id": 0})
     if not func:
         raise HTTPException(status_code=404, detail="Funcionário não encontrado")
@@ -1392,18 +1574,27 @@ async def banco_horas_extrato_funcionario(funcionario_id: str, ate_data: Optiona
     async for ab in ponto_abonos_collection.find({"funcionario_id": funcionario_id}, {"_id": 0}):
         abonos_data[ab["data"]] = ab
 
-    # Carrega TODOS os pontos do funcionário até `ate_data`
+    # Carrega TODOS os pontos do funcionário no período
+    data_filter: dict = {"$lte": ate_data}
+    if de_data:
+        data_filter["$gte"] = de_data
     pontos = []
     async for r in ponto_collection.find(
-        {"funcionario_id": funcionario_id, "data": {"$lte": ate_data}}, {"_id": 0}
+        {"funcionario_id": funcionario_id, "data": data_filter}, {"_id": 0}
     ):
         pontos.append(r)
     pontos.sort(key=lambda x: x["data"])
 
+    # Carrega ajustes manuais do funcionário no período
+    ajustes_filter: dict = {"funcionario_id": funcionario_id, "data": data_filter}
+    ajustes_list = []
+    async for aj in db.banco_horas_ajustes.find(ajustes_filter, {"_id": 0}).sort("data", 1):
+        ajustes_list.append(aj)
+
     # Detalhe diário
     detalhe_dias = []
     saldo_acumulado = 0
-    por_mes: dict = {}  # "YYYY-MM" -> agregados
+    por_mes: dict = {}
     for r in pontos:
         prev = _jornada_minutos_previstos(jornada_func, r.get("dia_semana", 6))
         trab = int(r.get("minutos_trabalhados", 0) or 0)
@@ -1421,7 +1612,6 @@ async def banco_horas_extrato_funcionario(funcionario_id: str, ate_data: Optiona
             "status_dia": "abonado" if ab else r.get("status_dia"),
             "abono": ({"tipo": ab["tipo"], "motivo": ab["motivo"]} if ab else None),
         })
-        # Agregar por mês
         mes_chave = r["data"][:7]
         if mes_chave not in por_mes:
             por_mes[mes_chave] = {
@@ -1439,7 +1629,21 @@ async def banco_horas_extrato_funcionario(funcionario_id: str, ate_data: Optiona
         if ab:
             por_mes[mes_chave]["abonos"] += 1
 
-    # Calcular saldo acumulado mês a mês (para o gráfico)
+    # Aplica ajustes manuais ao saldo total e por mês
+    total_ajustes = 0
+    for aj in ajustes_list:
+        delta = int(aj.get("minutos") or 0)
+        saldo_acumulado += delta
+        total_ajustes += delta
+        mes_chave = (aj.get("data") or "")[:7]
+        if mes_chave not in por_mes:
+            por_mes[mes_chave] = {
+                "mes": mes_chave, "minutos_trabalhados": 0, "minutos_previstos": 0,
+                "saldo_minutos": 0, "dias": 0, "abonos": 0,
+            }
+        por_mes[mes_chave]["saldo_minutos"] += delta
+
+    # Calcular saldo acumulado mês a mês
     evolucao = []
     saldo_corrente = 0
     for mes_chave in sorted(por_mes.keys()):
@@ -1459,19 +1663,26 @@ async def banco_horas_extrato_funcionario(funcionario_id: str, ate_data: Optiona
             "data_admissao": func.get("data_admissao"),
             "jornada_nome": jornada_func.get("nome", "Padrão"),
         },
+        "de_data": de_data,
         "ate_data": ate_data,
         "saldo_total_minutos": saldo_acumulado,
+        "ajustes_minutos": total_ajustes,
         "total_dias": len(detalhe_dias),
         "total_abonos": sum(1 for d in detalhe_dias if d.get("abono")),
         "evolucao_mensal": evolucao,
         "detalhe_dias": detalhe_dias,
+        "ajustes": ajustes_list,
     }
 
 
 @rh_router.get("/banco-horas/funcionarios/{funcionario_id}/extrato-pdf")
-async def exportar_extrato_banco_horas_pdf(funcionario_id: str, ate_data: Optional[str] = None):
-    """Exporta o extrato detalhado do banco de horas em PDF com layout corporativo."""
-    extrato = await banco_horas_extrato_funcionario(funcionario_id, ate_data)
+async def exportar_extrato_banco_horas_pdf(
+    funcionario_id: str,
+    ate_data: Optional[str] = None,
+    de_data: Optional[str] = None,
+):
+    """Exporta o extrato detalhado do banco de horas em PDF."""
+    extrato = await banco_horas_extrato_funcionario(funcionario_id, ate_data, de_data)
     pdf_bytes = _build_extrato_banco_horas_pdf(extrato)
     func = extrato["funcionario"]
     nome_safe = (func.get("nome") or "func").replace(" ", "_")[:40]

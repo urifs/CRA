@@ -4,12 +4,20 @@ import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Wallet,
   Search,
@@ -18,6 +26,9 @@ import {
   Loader2,
   FileDown,
   Calendar,
+  Plus,
+  Minus,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,22 +68,36 @@ export default function BancoHorasPage() {
   const [resumo, setResumo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
+  const [deData, setDeData] = useState("");
   const [ateData, setAteData] = useState(new Date().toISOString().slice(0, 10));
   const [extratoOpen, setExtratoOpen] = useState(false);
   const [extrato, setExtrato] = useState(null);
   const [loadingExtrato, setLoadingExtrato] = useState(false);
 
+  // Modal de Ajuste Manual
+  const [ajusteOpen, setAjusteOpen] = useState(false);
+  const [ajusteFunc, setAjusteFunc] = useState(null);
+  const [ajusteForm, setAjusteForm] = useState({
+    operacao: "adicionar", // "adicionar" | "retirar"
+    horas: "",
+    minutos: "",
+    data: new Date().toISOString().slice(0, 10),
+    motivo: "",
+    tipo: "ajuste",
+  });
+  const [savingAjuste, setSavingAjuste] = useState(false);
+
   useEffect(() => {
     fetchResumo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ateData]);
+  }, [ateData, deData]);
 
   const fetchResumo = async () => {
     setLoading(true);
     try {
-      const r = await axios.get(`${API}/rh/banco-horas/resumo`, {
-        params: { ate_data: ateData },
-      });
+      const params = { ate_data: ateData };
+      if (deData) params.de_data = deData;
+      const r = await axios.get(`${API}/rh/banco-horas/resumo`, { params });
       setResumo(r.data);
     } catch (e) {
       toast.error("Erro ao carregar banco de horas");
@@ -81,14 +106,94 @@ export default function BancoHorasPage() {
     }
   };
 
+  const aplicarPresetMes = (offset = 0) => {
+    const hoje = new Date();
+    const ref = new Date(hoje.getFullYear(), hoje.getMonth() + offset, 1);
+    const ano = ref.getFullYear();
+    const mes = String(ref.getMonth() + 1).padStart(2, "0");
+    const ultimoDia = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
+    setDeData(`${ano}-${mes}-01`);
+    setAteData(`${ano}-${mes}-${String(ultimoDia).padStart(2, "0")}`);
+  };
+
+  const limparFiltro = () => {
+    setDeData("");
+    setAteData(new Date().toISOString().slice(0, 10));
+  };
+
+  const abrirAjuste = (func) => {
+    setAjusteFunc(func);
+    setAjusteForm({
+      operacao: "adicionar",
+      horas: "",
+      minutos: "",
+      data: new Date().toISOString().slice(0, 10),
+      motivo: "",
+      tipo: "ajuste",
+    });
+    setAjusteOpen(true);
+  };
+
+  const salvarAjuste = async () => {
+    const horas = parseInt(ajusteForm.horas) || 0;
+    const minutos = parseInt(ajusteForm.minutos) || 0;
+    if (horas === 0 && minutos === 0) {
+      toast.error("Informe horas e/ou minutos");
+      return;
+    }
+    if (!ajusteForm.motivo.trim()) {
+      toast.error("Motivo é obrigatório");
+      return;
+    }
+    let total = horas * 60 + minutos;
+    if (ajusteForm.operacao === "retirar") total = -total;
+
+    setSavingAjuste(true);
+    try {
+      await axios.post(`${API}/rh/banco-horas/ajustes`, {
+        funcionario_id: ajusteFunc.funcionario_id,
+        minutos: total,
+        data: ajusteForm.data,
+        motivo: ajusteForm.motivo,
+        tipo: ajusteForm.tipo,
+      });
+      toast.success(
+        `${ajusteForm.operacao === "adicionar" ? "Adicionado" : "Retirado"} ${horas}h ${minutos}min do banco de ${ajusteFunc.nome}`,
+      );
+      setAjusteOpen(false);
+      fetchResumo();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao salvar ajuste");
+    } finally {
+      setSavingAjuste(false);
+    }
+  };
+
+  const removerAjuste = async (ajusteId) => {
+    if (!window.confirm("Remover este ajuste manual?")) return;
+    try {
+      await axios.delete(`${API}/rh/banco-horas/ajustes/${ajusteId}`);
+      toast.success("Ajuste removido");
+      // Recarrega o extrato se estiver aberto
+      if (extrato) {
+        abrirExtrato(extrato.funcionario.id);
+      }
+      fetchResumo();
+    } catch (e) {
+      toast.error("Erro ao remover ajuste");
+    }
+  };
+
   const abrirExtrato = async (funcId) => {
     setExtratoOpen(true);
     setExtrato(null);
     setLoadingExtrato(true);
     try {
+      const params = { ate_data: ateData };
+      if (deData) params.de_data = deData;
       const r = await axios.get(
         `${API}/rh/banco-horas/funcionarios/${funcId}/extrato`,
-        { params: { ate_data: ateData } },
+        { params },
       );
       setExtrato(r.data);
     } catch (e) {
@@ -101,9 +206,11 @@ export default function BancoHorasPage() {
 
   const baixarExtratoPDF = async (funcId, nome) => {
     try {
+      const params = { ate_data: ateData };
+      if (deData) params.de_data = deData;
       const r = await axios.get(
         `${API}/rh/banco-horas/funcionarios/${funcId}/extrato-pdf`,
-        { params: { ate_data: ateData }, responseType: "blob" },
+        { params, responseType: "blob" },
       );
       const url = window.URL.createObjectURL(new Blob([r.data], { type: "application/pdf" }));
       const a = document.createElement("a");
@@ -300,6 +407,16 @@ export default function BancoHorasPage() {
                           <Button
                             size="sm"
                             variant="outline"
+                            onClick={() => abrirAjuste(f)}
+                            title="Adicionar/retirar horas manualmente"
+                            data-testid={`ajuste-${f.funcionario_id}`}
+                          >
+                            <Plus size={14} />
+                            <Minus size={14} className="-ml-1" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => baixarExtratoPDF(f.funcionario_id, f.nome)}
                             title="Exportar PDF"
                             data-testid={`pdf-extrato-${f.funcionario_id}`}
@@ -484,6 +601,40 @@ export default function BancoHorasPage() {
                           <td className="p-2">
                             {d.abono ? (
                               <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px]">
+                                Abono: {d.abono.tipo}
+                              </span>
+                            ) : (
+                              d.status_dia || "-"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    baixarExtratoPDF(extrato.funcionario.id, extrato.funcionario.nome)
+                  }
+                  data-testid="extrato-modal-pdf-btn"
+                >
+                  <FileDown size={16} className="mr-2" />
+                  Exportar PDF
+                </Button>
+                <Button onClick={() => setExtratoOpen(false)}>Fechar</Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+me="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px]">
                                 Abono: {d.abono.tipo}
                               </span>
                             ) : (
