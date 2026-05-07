@@ -1,6 +1,25 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix - 07/05/2026 (Sessão 47.1) — 🔔 Botão "Abrir tela" na notificação do sino (TasksInbox)
+
+### Reclamação do cliente
+> "o botão de notificação do admin não leva pra aprovar"
+
+### Fix aplicado
+- `TasksInbox.jsx` agora resolve `origem.rota` ou faz fallback por `origem.tipo` (`solicitacao_folha`, `folha_importada`, `folha_aceita`, `folha_rejeitada`) e renderiza o botão **"Abrir solicitação no Financeiro"** dentro do detalhe da notificação, navegando via `useNavigate` para a rota correspondente.
+- Backend (`folha_importacao.py`) já envia `origem.rota = "/administrativo/solicitacoes-folha"` ao criar a tarefa de solicitação.
+
+### Validação
+- ✅ Lint JS OK.
+- ✅ Smoke test (login page) renderiza sem regressão.
+- `data-testid="btn-abrir-origem-task"` presente.
+
+### Arquivos
+- `/app/frontend/src/components/TasksInbox.jsx`
+
+
+
 ## Bug Fix - 07/05/2026 (Sessão 46.11) — 🐛 Dropdown de funcionários sem funcionar dentro do modal
 
 ### Reclamação do cliente
