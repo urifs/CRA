@@ -43,6 +43,31 @@ plano_contas_collection = db["plano_contas"]
 folha_router = APIRouter(prefix="/folha-pagamento", tags=["folha-pagamento"])
 
 
+# =================== Notificações (tasks inbox) ===================
+async def _criar_task(target_system: str, title: str, message: str,
+                      priority: str = "media", origem: dict | None = None):
+    """Insere notificação na inbox (sino) de um sistema. Reaproveita coleção 'tasks'."""
+    try:
+        doc = {
+            "id": str(uuid.uuid4()),
+            "target_system": target_system,
+            "priority": priority,
+            "title": title,
+            "message": message,
+            "attachments": [],
+            "created_by_id": "system",
+            "created_by_name": "Sistema (Folha)",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "read": False,
+            "read_at": None,
+            "read_by": None,
+            "origem": origem or {},
+        }
+        await db["tasks"].insert_one(doc)
+    except Exception as e:
+        logger.warning(f"Falha ao criar task '{title}': {e}")
+
+
 # =================== Helpers ===================
 def _normalize(s: str) -> str:
     if not s:
@@ -336,6 +361,23 @@ async def _processar_folha_background(folha_id: str, pdf_bytes: bytes, filename:
                 "concluida_em": datetime.now(timezone.utc).isoformat(),
             }},
         )
+
+        # Notifica o RH que a folha está pronta para revisão
+        mes = int(parsed.get("mes_competencia") or 0)
+        ano = int(parsed.get("ano_competencia") or 0)
+        comp_str = f"{mes:02d}/{ano}" if mes else "—"
+        sem_match = sum(1 for x in funcs_persist if not x.get("funcionario_id"))
+        await _criar_task(
+            target_system="rh",
+            title=f"Folha {comp_str} pronta para revisão",
+            message=(
+                f"{len(funcs_persist)} funcionário(s) extraído(s) — Total "
+                f"R$ {float(total_geral):.2f}."
+                + (f" Atenção: {sem_match} sem vínculo identificado." if sem_match else "")
+            ),
+            priority="alta" if sem_match > 0 else "media",
+            origem={"tipo": "folha_importada", "folha_id": folha_id},
+        )
     except Exception as e:
         logger.exception("Erro inesperado processando folha")
         await _atualiza(100, "erro", status="erro", erro=str(e))
@@ -589,6 +631,29 @@ async def enviar_financeiro(folha_id: str, payload: EnviarFinanceiroPayload):
         }},
     )
     sol.pop("_id", None)
+
+    # Notifica o Financeiro
+    mes = sol.get("mes_competencia") or 0
+    ano = sol.get("ano_competencia") or 0
+    comp_str = f"{mes:02d}/{ano}" if mes else "—"
+    modo_label = "folha cheia" if payload.modo == "cheio" else "individual"
+    await _criar_task(
+        target_system="administrativo",
+        title=f"Solicitação de Folha {comp_str} — aguardando aprovação",
+        message=(
+            f"{folha.get('empresa') or 'Folha'} | "
+            f"{folha.get('total_funcionarios')} funcionário(s) | "
+            f"R$ {float(folha.get('total_geral_liquido') or 0):.2f} | "
+            f"Modo: {modo_label}."
+        ),
+        priority="alta",
+        origem={
+            "tipo": "solicitacao_folha",
+            "solicitacao_id": sol_id,
+            "folha_id": folha_id,
+            "rota": "/administrativo/solicitacoes-folha",
+        },
+    )
     return sol
 
 
@@ -835,6 +900,21 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
         {"id": sol["folha_id"]},
         {"$set": {"status": "aceita", "contas_pagar_ids": contas_criadas}},
     )
+
+    # Notifica o RH do retorno positivo
+    mes = sol.get("mes_competencia") or 0
+    ano = sol.get("ano_competencia") or 0
+    comp_str = f"{mes:02d}/{ano}" if mes else "—"
+    await _criar_task(
+        target_system="rh",
+        title=f"Folha {comp_str} aceita — {len(contas_criadas)} conta(s) lançada(s)",
+        message=(
+            f"O Financeiro aceitou a folha. Vencimento: {payload.data_vencimento}. "
+            f"Plano: {plano.get('nome') or '—'}."
+        ),
+        priority="media",
+        origem={"tipo": "folha_aceita", "folha_id": sol["folha_id"]},
+    )
     return {"ok": True, "modo": sol["modo"], "contas_criadas": contas_criadas, "total": len(contas_criadas)}
 
 
@@ -858,5 +938,16 @@ async def rejeitar_solicitacao(sol_id: str, body: dict = Body(default={})):
     await folhas_importadas_collection.update_one(
         {"id": sol["folha_id"]},
         {"$set": {"status": "rejeitada"}},
+    )
+    # Notifica o RH do retorno negativo
+    mes = sol.get("mes_competencia") or 0
+    ano = sol.get("ano_competencia") or 0
+    comp_str = f"{mes:02d}/{ano}" if mes else "—"
+    await _criar_task(
+        target_system="rh",
+        title=f"Folha {comp_str} foi rejeitada pelo Financeiro",
+        message=motivo or "Sem motivo informado. Revise e reenvie.",
+        priority="alta",
+        origem={"tipo": "folha_rejeitada", "folha_id": sol["folha_id"]},
     )
     return {"ok": True}

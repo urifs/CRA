@@ -1,6 +1,39 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 07/05/2026 (Sessão 46.8) — 🔔 Sino de notificações para o fluxo de Folha de Pagamento
+
+### Pedido do usuário
+> "pode realizar a evolução natural"
+Evolução proposta: sino piscando no header do RH e do Financeiro avisando quando uma folha é processada / enviada / aceita / rejeitada, para que o usuário possa trabalhar em qualquer parte do sistema e ser avisado em tempo real.
+
+### Implementado
+**Backend:**
+- `server.py`: aceita "rh" como `target_system` válido em `POST /admin-panel/tasks` e `GET /tasks?system=rh` + `GET /tasks/unread-count?system=rh` (antes só "gerenciamento" e "administrativo").
+- `routes/folha_importacao.py`: helper `_criar_task(target_system, title, message, priority, origem)` insere notificação direto na coleção `tasks` (mesma que alimenta o sino).
+- 4 disparos automáticos:
+  1. **Folha processada** → task no sino do RH (prioridade alta se houver sem-match, média senão). Título: "Folha MM/AAAA pronta para revisão". Mensagem: "N funcionário(s) extraído(s) — Total R$ X. Atenção: K sem vínculo identificado."
+  2. **RH envia ao Financeiro** → task no sino do Administrativo (alta). Título: "Solicitação de Folha MM/AAAA — aguardando aprovação". Mensagem com modo (cheio/individual) + total + funcionários.
+  3. **Financeiro aceita** → task no sino do RH (média). Título: "Folha MM/AAAA aceita — N conta(s) lançada(s)". Mensagem com vencimento e plano de contas.
+  4. **Financeiro rejeita** → task no sino do RH (alta). Título: "Folha MM/AAAA foi rejeitada pelo Financeiro". Mensagem com o motivo.
+
+**Frontend:**
+- `TasksInbox.jsx`: polling de `unread-count` reduzido de 30s → **15s** para feedback em tempo quase real.
+- Nada a alterar no RHLayout/AdminLayout — sino existente já está pronto e agora recebe os novos eventos automaticamente.
+
+### Validação E2E (cURL)
+- ✅ Importação → sino RH: `unread-count: 1`, "Folha 04/2026 pronta para revisão" (alta porque 2 sem match)
+- ✅ Envio → sino Admin: `unread-count: 2`, "Solicitação de Folha 04/2026 — aguardando aprovação" (alta)
+- ✅ Aceite → sino RH: 2 tasks de folha listadas, nova "Folha 04/2026 aceita — 6 conta(s) lançada(s)" (média)
+- ✅ Rejeição testada também — task RH com motivo
+
+### Arquivos alterados
+- `/app/backend/server.py` (validação target_system aceita "rh")
+- `/app/backend/routes/folha_importacao.py` (helper + 4 disparos)
+- `/app/frontend/src/components/TasksInbox.jsx` (polling 15s)
+
+
+
 ## Bug Fix + Feature - 07/05/2026 (Sessão 46.7) — 🪟 Modal cortado + ⚙️ Processamento em background
 
 ### 1) Bug do modal cortado

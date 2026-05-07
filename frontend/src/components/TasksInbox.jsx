@@ -54,7 +54,7 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
 
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 15000); // Check every 15 seconds
     return () => clearInterval(interval);
   }, [system]);
 

@@ -6888,7 +6888,7 @@ async def create_task(
     if current_user.get("role") not in ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Apenas administradores podem criar tarefas")
     
-    if task.target_system not in ["gerenciamento", "administrativo"]:
+    if task.target_system not in ["gerenciamento", "administrativo", "rh"]:
         raise HTTPException(status_code=400, detail="Sistema alvo inválido")
     
     if task.priority not in ["baixa", "media", "alta"]:
@@ -7007,7 +7007,7 @@ async def list_tasks_for_system(
     """List tasks for a specific system"""
     current_user = await get_current_user(credentials)
     
-    if system not in ["gerenciamento", "administrativo"]:
+    if system not in ["gerenciamento", "administrativo", "rh"]:
         raise HTTPException(status_code=400, detail="Sistema inválido")
     
     tasks = await db.tasks.find({"target_system": system}).sort("created_at", -1).to_list(1000)
@@ -7025,7 +7025,7 @@ async def get_unread_task_count(
     """Get count of unread tasks for a system"""
     await get_current_user(credentials)
     
-    if system not in ["gerenciamento", "administrativo"]:
+    if system not in ["gerenciamento", "administrativo", "rh"]:
         raise HTTPException(status_code=400, detail="Sistema inválido")
     
     count = await db.tasks.count_documents({"target_system": system, "read": False})
