@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { API } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,8 @@ import {
   Image,
   File,
   Clock,
-  User
+  User,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +47,7 @@ const getFileIcon = (contentType) => {
 };
 
 export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -149,6 +152,43 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
       hour: "2-digit",
       minute: "2-digit"
     });
+  };
+
+  // Resolve a rota e o label do botão "Abrir tela" baseado em origem.tipo
+  const getOrigemAction = (task) => {
+    const origem = task?.origem;
+    if (!origem || typeof origem !== "object") return null;
+    if (origem.rota) {
+      const labels = {
+        solicitacao_folha: "Abrir solicitação no Financeiro",
+        folha_importada: "Ver folha importada",
+        folha_aceita: "Ver folha lançada",
+        folha_rejeitada: "Ver folha rejeitada",
+      };
+      return {
+        rota: origem.rota,
+        label: labels[origem.tipo] || "Abrir tela relacionada",
+      };
+    }
+    // Fallback para tipos conhecidos sem campo `rota`
+    const map = {
+      folha_importada: { rota: "/rh/folha-importacao", label: "Ver folha importada" },
+      folha_aceita: { rota: "/rh/folha-importacao", label: "Ver folha lançada" },
+      folha_rejeitada: { rota: "/rh/folha-importacao", label: "Ver folha rejeitada" },
+      solicitacao_folha: {
+        rota: "/administrativo/solicitacoes-folha",
+        label: "Abrir solicitação no Financeiro",
+      },
+    };
+    return map[origem.tipo] || null;
+  };
+
+  const handleAbrirOrigem = (task) => {
+    const action = getOrigemAction(task);
+    if (!action) return;
+    setShowTaskDetail(false);
+    setIsOpen(false);
+    navigate(action.rota);
   };
 
   return (
@@ -337,6 +377,21 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
                   </div>
                 )}
               </div>
+
+              {/* Botão de ação para abrir tela relacionada */}
+              {getOrigemAction(selectedTask) && (
+                <div className="border-t pt-3 mt-2 flex justify-end">
+                  <Button
+                    onClick={() => handleAbrirOrigem(selectedTask)}
+                    className="text-white"
+                    style={{ backgroundColor: accentColor }}
+                    data-testid="btn-abrir-origem-task"
+                  >
+                    <ExternalLink size={16} className="mr-2" />
+                    {getOrigemAction(selectedTask).label}
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </DialogContent>
