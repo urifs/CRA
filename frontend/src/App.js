@@ -40,6 +40,7 @@ import ContasReceberPage from "@/pages/admin/ContasReceberPage";
 import PlanoContasPage from "@/pages/admin/PlanoContasPage";
 import NFEPage from "@/pages/admin/NFEPage";
 import ImportacaoNFPage from "@/pages/admin/ImportacaoNFPage";
+import SolicitacoesFolhaPage from "@/pages/admin/SolicitacoesFolhaPage";
 import EmissaoNFPage from "@/pages/admin/EmissaoNFPage";
 import MovimentacoesPage from "@/pages/admin/MovimentacoesPage";
 import CadastrosPage from "@/pages/admin/CadastrosPage";
@@ -63,6 +64,7 @@ import RHChatPage from "@/pages/rh/RHChatPage";
 import FuncionariosPage from "@/pages/rh/FuncionariosPage";
 import PontoPage from "@/pages/rh/PontoPage";
 import FolhaPagamentoPage from "@/pages/rh/FolhaPagamentoPage";
+import FolhaImportacaoPage from "@/pages/rh/FolhaImportacaoPage";
 import BancoHorasPage from "@/pages/rh/BancoHorasPage";
 import FeriasPage from "@/pages/rh/FeriasPage";
 import EPIPage from "@/pages/rh/EPIPage";
@@ -228,6 +230,7 @@ function App() {
             <Route path="notificacoes" element={<AdminNotificacoesPage />} />
             <Route path="nfe" element={<NFEPage />} />
             <Route path="importacao-nf" element={<ImportacaoNFPage />} />
+            <Route path="solicitacoes-folha" element={<SolicitacoesFolhaPage />} />
             <Route path="emissao-nf" element={<EmissaoNFPage />} />
             <Route path="movimentacoes" element={<MovimentacoesPage />} />
             <Route path="cadastros" element={<CadastrosPage />} />
@@ -245,6 +248,7 @@ function App() {
             <Route path="funcionarios" element={<FuncionariosPage />} />
             <Route path="ponto" element={<PontoPage />} />
             <Route path="folha-pagamento" element={<FolhaPagamentoPage />} />
+            <Route path="folha-importacao" element={<FolhaImportacaoPage />} />
             <Route path="banco-horas" element={<BancoHorasPage />} />
             <Route path="ferias" element={<FeriasPage />} />
             <Route path="epi" element={<EPIPage />} />

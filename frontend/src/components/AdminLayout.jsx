@@ -22,6 +22,7 @@ import {
   CreditCard,
   FileDown,
   FileInput,
+  Inbox,
   ArrowLeftRight,
   FilePlus
 } from "lucide-react";
@@ -79,6 +80,7 @@ export const AdminLayout = () => {
     { path: "/administrativo/alugueis", icon: Truck, label: "Aluguéis Máquinas" },
     { path: "/administrativo/imoveis", icon: Building2, label: "Imóveis" },
     { path: "/administrativo/importacao-nf", icon: FileInput, label: "Importação NF" },
+    { path: "/administrativo/solicitacoes-folha", icon: Inbox, label: "Solicitações de Folha" },
     { path: "/administrativo/emissao-nf", icon: FilePlus, label: "Emissão NF" },
     { path: "/administrativo/plano-contas", icon: DollarSign, label: "Plano de Contas" },
     { path: "/administrativo/centro-custo", icon: Building2, label: "Centro de Custo" },

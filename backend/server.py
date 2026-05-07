@@ -65,6 +65,7 @@ load_dotenv(ROOT_DIR / '.env')
 from routes.rh import rh_router
 from routes.admin import admin_router
 from routes.chatbot import chatbot_router
+from routes.folha_importacao import folha_router as folha_importacao_router, fin_folha_router as fin_folha_solicitacoes_router
 from routes.storage import storage_router
 from routes.exports import export_router
 from routes.stock import stock_router
@@ -7961,6 +7962,8 @@ async def rename_storage_item(
 api_router.include_router(rh_router)
 api_router.include_router(admin_router)
 api_router.include_router(chatbot_router)
+api_router.include_router(folha_importacao_router)
+api_router.include_router(fin_folha_solicitacoes_router)
 api_router.include_router(storage_router)
 api_router.include_router(export_router)
 api_router.include_router(stock_router)

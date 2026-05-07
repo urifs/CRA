@@ -71,6 +71,7 @@ export const RHLayout = () => {
     { path: "/rh/ponto", icon: Clock, label: "Ponto Eletrônico" },
     { path: "/rh/banco-horas", icon: Wallet, label: "Banco de Horas" },
     { path: "/rh/folha-pagamento", icon: DollarSign, label: "Folha de Pagamento" },
+    { path: "/rh/folha-importacao", icon: FileText, label: "Importar Folha (PDF)" },
     { path: "/rh/ferias", icon: Calendar, label: "Férias e Escalas" },
     { path: "/rh/epi", icon: HardHat, label: "Gestão de EPI/EPC" },
     { path: "/rh/custos", icon: Calculator, label: "Gestão de Custos" },
