@@ -661,6 +661,22 @@ export default function ImportacaoNFPage() {
     );
   };
 
+  // Badge informando que a NF (NFe ou NFSe) já tem conta lançada — evita duplicidade
+  const getContaVinculadaBadge = (item) => {
+    const vinculada = !!(item?.conta_pagar_id || item?.conta_receber_id);
+    if (!vinculada) return null;
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300"
+        title="Já existe um lançamento financeiro vinculado a esta nota"
+        data-testid={`badge-conta-lancada-${item?.id}`}
+      >
+        <CheckCircle size={10} />
+        Conta lançada
+      </span>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -835,8 +851,14 @@ export default function ImportacaoNFPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {nfesImportadas.map((nfe) => (
-                      <tr key={nfe.id} className="hover:bg-gray-50">
+                    {nfesImportadas.map((nfe) => {
+                      const vinculada = !!nfe.conta_pagar_id;
+                      return (
+                      <tr
+                        key={nfe.id}
+                        className={vinculada ? "bg-emerald-50/60 hover:bg-emerald-50" : "hover:bg-gray-50"}
+                        data-testid={`nfe-row-${nfe.id}`}
+                      >
                         <td className="px-4 py-3">
                           <div>
                             <span className="font-bold text-black">Nº {nfe.numero_nf}</span>
@@ -851,7 +873,12 @@ export default function ImportacaoNFPage() {
                         </td>
                         <td className="px-4 py-3 text-gray-600">{formatDate(nfe.data_emissao)}</td>
                         <td className="px-4 py-3 text-right font-bold text-black">{formatCurrency(nfe.valor_total)}</td>
-                        <td className="px-4 py-3 text-center">{getStatusBadge(nfe.status)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            {getStatusBadge(nfe.status)}
+                            {getContaVinculadaBadge(nfe)}
+                          </div>
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-center gap-1">
                             <Button 
@@ -891,6 +918,15 @@ export default function ImportacaoNFPage() {
                                 <CreditCard size={16} />
                               </Button>
                             )}
+                            {nfe.conta_pagar_id && (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default"
+                                title="Conta a pagar já lançada para esta NF-e"
+                                data-testid={`indicador-conta-${nfe.id}`}
+                              >
+                                <CheckCircle size={12} /> Conta OK
+                              </span>
+                            )}
                             {nfe.status === "nova" && (
                               <Button 
                                 variant="ghost" 
@@ -905,7 +941,8 @@ export default function ImportacaoNFPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </CardContent>
@@ -954,8 +991,14 @@ export default function ImportacaoNFPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {nfsesImportadas.map((nfse) => (
-                        <tr key={nfse.id} className="hover:bg-gray-50">
+                      {nfsesImportadas.map((nfse) => {
+                        const vinculadaNfse = !!nfse.conta_pagar_id;
+                        return (
+                        <tr
+                          key={nfse.id}
+                          className={vinculadaNfse ? "bg-emerald-50/60 hover:bg-emerald-50" : "hover:bg-gray-50"}
+                          data-testid={`nfse-row-${nfse.id}`}
+                        >
                           <td className="px-4 py-3">
                             <div className="font-medium text-gray-900">Nº {nfse.numero_nfse || "-"}</div>
                             <div className="text-xs text-gray-500">Série {nfse.serie || "U"}</div>
@@ -984,16 +1027,19 @@ export default function ImportacaoNFPage() {
                             }).format(nfse.valor_servico || nfse.valor_total || 0)}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                              nfse.status === "nova" ? "bg-blue-100 text-blue-700" :
-                              nfse.status === "processada" ? "bg-green-100 text-green-700" :
-                              "bg-gray-100 text-gray-700"
-                            }`}>
-                              {nfse.status === "nova" && <AlertTriangle size={12} />}
-                              {nfse.status === "processada" && <CheckCircle size={12} />}
-                              {nfse.status === "ignorada" && <XCircle size={12} />}
-                              {nfse.status === "nova" ? "Nova" : nfse.status === "processada" ? "Processada" : "Ignorada"}
-                            </span>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                nfse.status === "nova" ? "bg-blue-100 text-blue-700" :
+                                nfse.status === "processada" ? "bg-green-100 text-green-700" :
+                                "bg-gray-100 text-gray-700"
+                              }`}>
+                                {nfse.status === "nova" && <AlertTriangle size={12} />}
+                                {nfse.status === "processada" && <CheckCircle size={12} />}
+                                {nfse.status === "ignorada" && <XCircle size={12} />}
+                                {nfse.status === "nova" ? "Nova" : nfse.status === "processada" ? "Processada" : "Ignorada"}
+                              </span>
+                              {getContaVinculadaBadge(nfse)}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-center gap-1">
@@ -1034,10 +1080,20 @@ export default function ImportacaoNFPage() {
                                   <CreditCard size={16} />
                                 </Button>
                               )}
+                              {nfse.conta_pagar_id && (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default"
+                                  title="Conta a pagar já lançada para esta NFS-e"
+                                  data-testid={`indicador-conta-${nfse.id}`}
+                                >
+                                  <CheckCircle size={12} /> Conta OK
+                                </span>
+                              )}
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </CardContent>
@@ -1856,9 +1912,10 @@ export default function ImportacaoNFPage() {
       <Dialog open={!!showNFeDetail} onOpenChange={() => setShowNFeDetail(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
               <FileText className="text-[#D4A000]" size={24} />
               NF-e Nº {showNFeDetail?.numero_nf}
+              {getContaVinculadaBadge(showNFeDetail || {})}
             </DialogTitle>
           </DialogHeader>
 

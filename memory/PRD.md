@@ -1,6 +1,29 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 07/05/2026 (Sessão 46.4) — 🏷️ Sinalização visual de NF com conta já lançada
+
+### Pedido do usuário
+> "Colocar uma sinalização nas notas fiscais que já tenham contas lançadas vinculadas a ela, tem que ter algum indicativo que a conta já foi lançada, para evitar duplicidade"
+
+Antes: o botão "Criar conta a pagar" simplesmente sumia quando a NF tinha vínculo, mas não havia feedback visual claro — o usuário podia achar que "tava faltando o botão", ou pior, gerar duplicidade ao não enxergar o vínculo de relance.
+
+### Implementado (`pages/admin/ImportacaoNFPage.jsx`)
+- Helper `getContaVinculadaBadge(item)` — retorna `<span>` verde "✓ Conta lançada" quando há `conta_pagar_id` ou `conta_receber_id`.
+- **Lista NF-e** (Compras): linha inteira ganha fundo `bg-emerald-50/60`; coluna Status agora mostra o status original + badge "Conta lançada" empilhado; coluna Ações substitui o botão "Criar conta" oculto por um indicador verde **"✓ Conta OK"** com tooltip "Conta a pagar já lançada para esta NF-e".
+- **Lista NFS-e** (Serviços): mesmo tratamento — linha verde, dois badges na coluna Status, indicador "Conta OK" nas ações.
+- **Modal de detalhe**: o título do Dialog "NF-e Nº X" passa a mostrar o badge "Conta lançada" ao lado.
+- `data-testid` adicionados: `nfe-row-{id}`, `nfse-row-{id}`, `badge-conta-lancada-{id}`, `indicador-conta-{id}`.
+
+### Validação
+- ✅ Smoke E2E: criada conta a pagar via `POST /api/nfe/importadas/{id}/criar-conta-pagar` para a NF nº 8 → screenshot mostra a linha destacada em verde, badge "Conta lançada" sob "Processada" e botão "✓ Conta OK" na coluna Ações; outras 154 NFs permanecem normais.
+- ✅ Conta de teste removida no fim; vínculo limpo automaticamente (fix sessão 45.9).
+
+### Arquivos alterados
+- `/app/frontend/src/pages/admin/ImportacaoNFPage.jsx`
+
+
+
 ## Feature - 07/05/2026 (Sessão 46.3) — 🔢 Contador de itens por subcategoria na Exportação
 
 ### Pedido do usuário
