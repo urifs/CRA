@@ -1,6 +1,29 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix - 07/05/2026 (Sessão 46.9) — 🪟 Modal cortado pelo sidebar (causa raiz: z-index)
+
+### Reclamação do cliente
+> "Ainda está com a tela cortada"
+Mesmo após o ajuste anterior em `max-w-[min(95vw,1400px)]`, o modal continuava com a primeira coluna escondida atrás do menu lateral preto do RH (visível na captura).
+
+### Causa raiz
+O sidebar dos layouts (RH e Admin) tem `z-index: 60` em `App.css` (`.admin-sidebar`), enquanto o componente Shadcn `Dialog` em `components/ui/dialog.jsx` usava `z-50` no overlay e no content. Como 50 < 60, o modal renderizava **embaixo** do sidebar, parecendo "cortado".
+
+### Fix definitivo
+- `components/ui/dialog.jsx`: trocado `z-50` por `z-[70]` no `DialogOverlay` e no `DialogContent`.
+- Solução global (afeta todos os ~200 usos do Dialog) — qualquer modal em qualquer página com sidebar agora renderiza por cima.
+
+### Validação
+- ✅ Screenshot: modal posicionado em x=260 (logo após o sidebar de 256px), w=1400, h=788, primeira coluna em x=313 (totalmente visível com nomes longos como "ANICESIO DE JESUS FRANCISCO RIBEIRO").
+- ✅ Asserção automática `th_box['x'] >= 256` passou.
+- ✅ Lint OK.
+
+### Arquivos alterados
+- `/app/frontend/src/components/ui/dialog.jsx` (z-index 50 → 70 em overlay + content)
+
+
+
 ## Feature - 07/05/2026 (Sessão 46.8) — 🔔 Sino de notificações para o fluxo de Folha de Pagamento
 
 ### Pedido do usuário
