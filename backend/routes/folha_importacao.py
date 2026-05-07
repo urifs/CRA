@@ -345,10 +345,21 @@ async def resolver_matches(folha_id: str, payload: ResolverMatchPayload):
             fid = overrides[lid]
             if fid:
                 doc = await funcionarios_collection.find_one({"id": fid}, {"_id": 0, "nome": 1})
+                if not doc:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Funcionário {fid} não encontrado",
+                    )
                 f["funcionario_id"] = fid
-                f["match_nome_db"] = (doc or {}).get("nome")
+                f["match_nome_db"] = doc.get("nome")
                 f["match_score"] = 100
                 f["match_status"] = "manual"
+            else:
+                # explicit clear (override = '' / None)
+                f["funcionario_id"] = None
+                f["match_nome_db"] = None
+                f["match_score"] = 0
+                f["match_status"] = "low"
         new_funcs.append(f)
     await folhas_importadas_collection.update_one(
         {"id": folha_id}, {"$set": {"funcionarios": new_funcs}}
@@ -361,8 +372,21 @@ async def enviar_financeiro(folha_id: str, payload: EnviarFinanceiroPayload):
     folha = await folhas_importadas_collection.find_one({"id": folha_id}, {"_id": 0})
     if not folha:
         raise HTTPException(status_code=404, detail="Folha não encontrada")
-    if folha["status"] not in ("em_revisao", "enviada", "rejeitada"):
-        raise HTTPException(status_code=400, detail=f"Folha em status {folha['status']}, não pode reenviar")
+    if folha["status"] not in ("em_revisao", "rejeitada"):
+        # Permite reenviar somente se foi rejeitada ou ainda em revisão.
+        # Bloqueia se está 'enviada' com solicitação pendente ativa (evita duplicidade).
+        sol_pendente = await solicitacoes_folha_collection.find_one(
+            {"folha_id": folha_id, "status": "pendente"}, {"_id": 0, "id": 1}
+        )
+        if sol_pendente:
+            raise HTTPException(
+                status_code=400,
+                detail="Já existe uma solicitação pendente no Financeiro para esta folha",
+            )
+        if folha["status"] == "aceita":
+            raise HTTPException(
+                status_code=400, detail="Folha já foi aceita; não pode ser reenviada"
+            )
 
     # Bloqueia se houver linhas low (sem match)
     sem_match = [

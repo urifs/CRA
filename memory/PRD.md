@@ -1,6 +1,56 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature MAJOR - 07/05/2026 (Sessão 46.6) — 📑 Importação de Folha de Pagamento (RH → Financeiro)
+
+### Pedido completo do cliente
+> "Folha de pagamento: botão de importar PDF, reconhecer todos os funcionários da folha, anexar holerite a cada um, RH envia pro Financeiro como folha cheia ou individual, Financeiro recebe notificação, aceita escolhendo individual/cheio, e cria contas a pagar com os PDFs anexados."
+
+Decisões do cliente: **fuzzy match com confirmação manual** + **data vencimento configurável no aceite** + **qualquer user financeiro aprova** + **PDF inteiro + holerites individuais como anexos** + **plano de contas escolhido no aceite**.
+
+### Implementado
+
+**Backend (`routes/folha_importacao.py` — novo, ~540 linhas):**
+- `POST /api/folha-pagamento/importar` (multipart): upload PDF → OCR via Gemini Flash 2.5 (emergentintegrations) → extrai estrutura JSON com 6 funcionários únicos, valor líquido, vencimentos, descontos, INSS, FGTS, IRRF e índices de páginas → fuzzy match com `funcionarios_collection` via rapidfuzz (token_sort_ratio: high≥92, medium 70-91, low<70) → split do PDF em N PDFs separados (PyPDF2) e upload de cada um no object storage.
+- `GET /api/folha-pagamento` lista todas; `GET /api/folha-pagamento/{id}` detalhe; `GET /api/folha-pagamento/{id}/master-pdf` baixa original; `GET /api/folha-pagamento/{id}/holerite/{linha_id}` baixa individual.
+- `POST /api/folha-pagamento/{id}/resolver-matches`: corrige vínculos manualmente (com 404 se funcionario_id inexistente).
+- `POST /api/folha-pagamento/{id}/enviar-financeiro` body `{modo: "cheio"|"individual", observacao?}`: cria registro em `solicitacoes_folha_financeiro` status="pendente"; bloqueia se houver linhas sem match. Anti-duplicidade: bloqueia reenvio se já existe solicitação pendente ativa.
+- `DELETE /api/folha-pagamento/{id}` (com proteção: não exclui se já aceita).
+- `GET /api/financeiro/solicitacoes-folha?status=pendente|aceita|rejeitada`
+- `POST /api/financeiro/solicitacoes-folha/{id}/aceitar` body `{plano_contas_id, data_vencimento, conta_bancaria_id?, forma_pagamento?, observacao?}`: cria N contas a pagar (1 por funcionário no modo individual, ou 1 conta consolidada com PDF mestre + 6 holerites como anexos no modo cheio); marca solicitação como aceita.
+- `POST /api/financeiro/solicitacoes-folha/{id}/rejeitar` body `{motivo}`: marca rejeitada e libera folha para reedição/reenvio.
+
+**Frontend RH (`pages/rh/FolhaImportacaoPage.jsx`):**
+- Botão "Importar Folha (PDF)" no canto superior; lista folhas importadas com competência, empresa, total, status colorido.
+- Modal de detalhe: tabela colorida (verde=match high/manual, amarelo=medium, vermelho=sem match), dropdown de Select para mapear funcionários manualmente, badges com sugestão e score%, botões para baixar holerite individual.
+- Modal "Enviar ao Financeiro": cartões clicáveis (Folha cheia / Individual) + observação livre.
+- Status visual: Em revisão (amarelo) → Enviada (azul) → Aceita (verde) ou Rejeitada (vermelho).
+
+**Frontend Financeiro (`pages/admin/SolicitacoesFolhaPage.jsx`):**
+- Nova entrada no menu "Solicitações de Folha" (ícone Inbox) em `/administrativo/solicitacoes-folha`.
+- Filtros por status (pendente/aceita/rejeitada/todas) com badge de contagem de pendentes no header.
+- Botões "Aceitar" (verde) e "Rejeitar" (vermelho) por linha.
+- Modal Aceitar: pode trocar o modo (override individual ↔ cheio com aviso amarelo); auto-sugere data (5º dia do próximo mês) e plano de contas (regex /folha|salário|pessoal/); selects de plano, vencimento, conta bancária e forma de pagamento.
+
+### Validação
+- ✅ E2E via cURL: PDF do cliente (6 func, R$ 22.215,20, layout brasileiro) processado em ~30s, 4 match exato + 2 low (não cadastrados), envio individual + aceite criou 6 contas R$ 22.215,20 total com vencimento configurável e 1 anexo PDF cada.
+- ✅ testing_agent_v3_fork iteration_37: backend 14/14 pytest + frontend 3/3 critical paths. Suite em `/app/backend/tests/test_folha_importacao.py`.
+- ✅ Melhorias pós-teste aplicadas: anti-duplicidade no reenvio + 404 quando funcionario_id inválido.
+
+### Arquivos novos/alterados
+- **Novo**: `/app/backend/routes/folha_importacao.py` (540 linhas)
+- **Novo**: `/app/frontend/src/pages/rh/FolhaImportacaoPage.jsx`
+- **Novo**: `/app/frontend/src/pages/admin/SolicitacoesFolhaPage.jsx`
+- **Novo**: `/app/backend/tests/test_folha_importacao.py`
+- Editado: `server.py` (registro de routers)
+- Editado: `App.js` (rotas), `RHLayout.jsx` + `AdminLayout.jsx` (itens de menu)
+- Dependências: `rapidfuzz` instalado e congelado em requirements.txt
+
+### Backlog/futuro (do testing agent)
+- ⏰ Processar OCR em background (status="processando") para evitar 502 do gateway em PDFs grandes — hoje OCR síncrono ~30-60s.
+
+
+
 ## Bug Fix - 07/05/2026 (Sessão 46.5) — 🗑️ UI de "dispensar alertas de férias" estava desconectada do backend
 
 ### Reclamação do cliente
