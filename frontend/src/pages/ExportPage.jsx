@@ -84,6 +84,10 @@ export default function ExportPage({ module = "gerenciamento" }) {
   // Estado para seleção múltipla de itens individuais
   const [selectedIndividualItems, setSelectedIndividualItems] = useState({});  // {subcategoryId: [itemIds]}
 
+  // Contagem de itens por subcategoria (respeitando filtro global)
+  const [subcategoryCounts, setSubcategoryCounts] = useState({}); // {sub_id: number}
+  const [loadingCounts, setLoadingCounts] = useState(false);
+
   const accentColor = module === "gerenciamento" ? "#E31A1A" : "#D4A000";
 
   // Categorias que suportam recibo/duplicata
@@ -156,6 +160,35 @@ export default function ExportPage({ module = "gerenciamento" }) {
     fetchFormasPagamento();
   }, [module]);
 
+  // Busca contagem de itens por subcategoria (respeitando filtro global de período)
+  const fetchSubcategoryCounts = async () => {
+    if (!categories || categories.length === 0) return;
+    // Coleta todos os sub.id que são "expandable" (têm itens contáveis)
+    const ids = new Set();
+    categories.forEach((cat) => {
+      (cat.subcategories || []).forEach((sub) => {
+        if (EXPANDABLE_SUBCATEGORIES.includes(sub.id)) ids.add(sub.id);
+      });
+    });
+    if (ids.size === 0) return;
+    setLoadingCounts(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("collections", Array.from(ids).join(","));
+      if (globalDataInicio) params.append("data_inicio", globalDataInicio);
+      if (globalDataFim) params.append("data_fim", globalDataFim);
+      const r = await axios.get(`${API}/export/items-count?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSubcategoryCounts(r.data || {});
+    } catch (e) {
+      // silencioso — contador é informativo, não bloqueia exportação
+      console.warn("Falha ao buscar contagens:", e?.message);
+    } finally {
+      setLoadingCounts(false);
+    }
+  };
+
   // Quando o período global muda, invalida cache de itens já carregados
   // e re-busca para subcategorias atualmente expandidas (mantém UX consistente)
   useEffect(() => {
@@ -170,6 +203,13 @@ export default function ExportPage({ module = "gerenciamento" }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [globalDataInicio, globalDataFim]);
+
+  // Atualiza contagens de itens por subcategoria sempre que categorias carregam
+  // ou o filtro global de período é alterado.
+  useEffect(() => {
+    fetchSubcategoryCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, globalDataInicio, globalDataFim]);
 
   const fetchFormasPagamento = async () => {
     try {
@@ -1142,8 +1182,27 @@ export default function ExportPage({ module = "gerenciamento" }) {
                             }}
                           />
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${isSubSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                            <p className={`text-sm flex items-center gap-2 ${isSubSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
                               {sub.label}
+                              {canExpand && subcategoryCounts[sub.id] !== undefined && subcategoryCounts[sub.id] >= 0 && (
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                    (globalDataInicio || globalDataFim)
+                                      ? subcategoryCounts[sub.id] === 0
+                                        ? "bg-gray-100 text-gray-400"
+                                        : "bg-indigo-100 text-indigo-700"
+                                      : "bg-gray-100 text-gray-600"
+                                  }`}
+                                  title={
+                                    (globalDataInicio || globalDataFim)
+                                      ? `${subcategoryCounts[sub.id]} item(ns) no período selecionado`
+                                      : `${subcategoryCounts[sub.id]} item(ns) no total`
+                                  }
+                                  data-testid={`count-${sub.id}`}
+                                >
+                                  {subcategoryCounts[sub.id]}
+                                </span>
+                              )}
                             </p>
                             <p className="text-xs text-gray-500">{sub.description}</p>
                           </div>

@@ -1,6 +1,36 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 07/05/2026 (Sessão 46.3) — 🔢 Contador de itens por subcategoria na Exportação
+
+### Pedido do usuário
+> "Colocar o contador de itens"
+
+Sequência da fix de período (46.2): exibir o número de itens encontrados em cada subcategoria, refletindo o filtro global, para que o usuário enxergue imediatamente se o filtro está pegando.
+
+### Implementado
+**Backend (`routes/exports_all.py`):**
+- Novo endpoint `GET /api/export/items-count?collections=a,b,c&data_inicio&data_fim` retorna `{<sub_id>: <count>}` em uma única chamada (mais leve que listar). Aplica `_apply_period_filter` por coleção, considera "vencidas" via `data_vencimento < hoje` e filtros estáticos (status: em_aberto/quitada/etc).
+- Config compartilhada `_EXPORT_ITEMS_CONFIG` com 24 subcategorias mapeadas (espelha `get_export_items`).
+
+**Frontend (`pages/ExportPage.jsx`):**
+- State `subcategoryCounts` populado por `fetchSubcategoryCounts()`, disparado em `useEffect([categories, globalDataInicio, globalDataFim])`.
+- Badge ao lado do `sub.label`:
+  - Cinza (`bg-gray-100`) quando sem filtro ou contagem = 0
+  - Azul indigo (`bg-indigo-100`) quando filtro de período ativo e há itens
+  - `data-testid="count-{sub_id}"` em cada badge
+
+### Validação
+- ✅ curl `/items-count` sem filtro → `{contas_pagar_pendente: 15, contas_pagar_vencidas: 5, ...}`
+- ✅ curl com filtro Abril/2026 → `{contas_pagar_pendente: 2, contas_pagar_vencidas: 2, contas_receber_pendente: 0, ...}`
+- ✅ Screenshot mostra badges atualizando dinamicamente ao trocar o período (15→2, 4→0, 39→5).
+
+### Arquivos alterados
+- `/app/backend/routes/exports_all.py` (novo endpoint + config compartilhada)
+- `/app/frontend/src/pages/ExportPage.jsx` (state + useEffect + render do badge)
+
+
+
 ## Bug Fix - 07/05/2026 (Sessão 46.2) — 🐛 Filtro de período ignorado em "Itens individuais" da Exportação
 
 ### Reclamação do cliente (via WhatsApp)

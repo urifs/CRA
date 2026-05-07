@@ -1257,6 +1257,77 @@ async def get_export_items(
     return result
 
 
+# ============ CONTAGEM EM MASSA DE ITENS POR COLEÇÃO (com filtro de período) ============
+# Mesma config compartilhada — espelha o que está em get_export_items para resolver "vencidas",
+# filtros estáticos e o campo de data principal de cada coleção.
+_EXPORT_ITEMS_CONFIG = {
+    "plano_contas": {"collection": "plano_contas"},
+    "centros_custo": {"collection": "centros_custo"},
+    "fleets": {"collection": "fleets"},
+    "cadastros": {"collection": "cadastros"},
+    "formas_pagamento": {"collection": "formas_pagamento"},
+    "contas_bancarias": {"collection": "contas_bancarias"},
+    "contas_pagar": {"collection": "contas_pagar"},
+    "contas_pagar_pendente": {"collection": "contas_pagar", "filter": {"status": "em_aberto"}},
+    "contas_pagar_quitadas": {"collection": "contas_pagar", "filter": {"status": "quitada"}},
+    "contas_pagar_vencidas": {"collection": "contas_pagar", "filter": {"status": "em_aberto"}, "vencidas": True},
+    "contas_receber": {"collection": "contas_receber"},
+    "contas_receber_pendente": {"collection": "contas_receber", "filter": {"status": "em_aberto"}},
+    "contas_receber_recebidas": {"collection": "contas_receber", "filter": {"status": "quitada"}},
+    "contas_receber_vencidas": {"collection": "contas_receber", "filter": {"status": "em_aberto"}, "vencidas": True},
+    "machines": {"collection": "machines"},
+    "maintenances": {"collection": "maintenances"},
+    "stock_items": {"collection": "stock_items"},
+    "obras": {"collection": "obras"},
+    "alugueis": {"collection": "alugueis"},
+    "imoveis": {"collection": "imoveis"},
+    "imoveis_ativo": {"collection": "imoveis", "filter": {"status": "ativo"}},
+    "imoveis_pendente": {"collection": "imoveis", "filter": {"status": "pendente"}},
+    "usuarios": {"collection": "users"},
+    "extrato_bancario": {"collection": "contas_bancarias"},
+}
+
+
+@exports_all_router.get("/export/items-count")
+async def get_export_items_count(
+    collections: str = Query(..., description="Lista de subcategorias separadas por vírgula"),
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Retorna a contagem de itens de várias subcategorias em uma única chamada,
+    aplicando o mesmo filtro de período que `/export/items/{collection}`.
+    Body de resposta: { "<subcategoria>": <int>, ... }. Subcategorias inválidas/inexistentes
+    saem com -1 (UI ignora ou esconde)."""
+    ids = [s.strip() for s in (collections or "").split(",") if s.strip()]
+    if not ids:
+        return {}
+
+    out: dict = {}
+    for sub_id in ids:
+        cfg = _EXPORT_ITEMS_CONFIG.get(sub_id)
+        if not cfg:
+            out[sub_id] = -1
+            continue
+        db_collection = cfg["collection"]
+        query_filter = dict(cfg.get("filter") or {})
+        if cfg.get("vencidas"):
+            hoje = datetime.now().strftime("%Y-%m-%d")
+            existing = query_filter.get("data_vencimento") or {}
+            if isinstance(existing, dict):
+                existing.update({"$lt": hoje})
+                query_filter["data_vencimento"] = existing
+            else:
+                query_filter["data_vencimento"] = {"$lt": hoje}
+        query_filter = _apply_period_filter(db_collection, query_filter, data_inicio, data_fim)
+        try:
+            count = await db[db_collection].count_documents(query_filter)
+        except Exception:
+            count = -1
+        out[sub_id] = count
+    return out
+
+
 @exports_all_router.get("/export/individual/{category}/{item_id}")
 async def export_individual_item(category: str, item_id: str, current_user: dict = Depends(get_current_user)):
     """Exporta um item individual em PDF"""
