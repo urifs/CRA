@@ -1,6 +1,38 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix - 07/05/2026 (Sessão 46.11) — 🐛 Dropdown de funcionários sem funcionar dentro do modal
+
+### Reclamação do cliente
+> "quando abro a folha de pagamento importada, clico em ver, o dropdown de nomes não está funcionando"
+
+### Causa raiz (efeito colateral da fix 46.9)
+Para corrigir o modal cortado pelo sidebar, subi o z-index do `Dialog` para `z-[70]`. Mas os componentes Radix que **abrem dropdowns por cima** (Select, DropdownMenu, Popover, Tooltip, etc.) continuavam com `z-50` padrão — então o conteúdo do Select renderizava **atrás** do Dialog, ficando invisível e inclicável.
+
+### Fix
+Subi o z-index para `z-[80]` em todos os 8 componentes Radix de overlay/portal:
+- `select.jsx` (era o crítico do bug)
+- `dropdown-menu.jsx` (2 ocorrências: content + sub-content)
+- `popover.jsx`, `tooltip.jsx`, `context-menu.jsx`, `hover-card.jsx`, `menubar.jsx`
+
+Resultado: 80 (popovers) > 70 (dialog) > 60 (sidebar) — hierarquia limpa.
+
+### Validação
+- ✅ E2E Playwright: 6 selects renderizados, 10 opções visíveis no dropdown, clique selecionou "João Silva" no campo de ADELINO e a UI atualizou corretamente.
+- ✅ Lint OK.
+
+### Arquivos alterados
+- `/app/frontend/src/components/ui/select.jsx`
+- `/app/frontend/src/components/ui/dropdown-menu.jsx`
+- `/app/frontend/src/components/ui/popover.jsx`
+- `/app/frontend/src/components/ui/tooltip.jsx`
+- `/app/frontend/src/components/ui/context-menu.jsx`
+- `/app/frontend/src/components/ui/hover-card.jsx`
+- `/app/frontend/src/components/ui/menubar.jsx`
+- `/app/frontend/src/components/ui/alert-dialog.jsx`
+
+
+
 ## Feature - 07/05/2026 (Sessão 46.10) — 📄 PDF de NFS-e padronizado no layout WebISS Palmas
 
 ### Pedido do cliente
