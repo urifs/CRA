@@ -1,6 +1,35 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix - 07/05/2026 (Sessão 46.5) — 🗑️ UI de "dispensar alertas de férias" estava desconectada do backend
+
+### Reclamação do cliente
+> "Já tinha lhe pedido anteriormente para ter a função de apagar essas notificações de agendamento de férias, cadê?"
+
+Cliente reportou via produção (`construtoracra.com.br/rh/ferias`). Os alertas de "Período Aquisitivo" mostravam apenas o botão "Agendar", sem opção de descartar.
+
+### Causa raiz
+O backend de descarte (`POST /api/rh/ferias/alertas/dispensar/{id}` e `dispensar-todos`) foi implementado em sessões anteriores, mas a UI em `FeriasPage.jsx` nunca foi atualizada — apenas o card simples com botão "Agendar". Item ficou pendente.
+
+### Implementado
+**Backend (`routes/rh.py`):** novo endpoint `DELETE /api/rh/ferias/alertas/dispensar-todos` para reativar em massa.
+
+**Frontend (`pages/rh/FeriasPage.jsx`):**
+- 3 funções: `handleDispensarAlerta(id, nome)`, `handleDispensarTodos()`, `handleReativarDispensados()`.
+- Card de alertas reformulado: badge com contagem ao lado do título; barra de ações com botões "Mostrar dispensados" e "Dispensar todos".
+- Cada alerta individual ganhou ícone de lixeira (data-testid `btn-dispensar-alerta-{id}`) ao lado do botão "Agendar".
+- `window.confirm` em todas as ações destrutivas; toasts "Alerta dispensado" / "N alertas dispensados" / "Alertas reativados".
+
+### Validação
+- ✅ Smoke E2E: tela mostra badge "2", botões "Mostrar dispensados", "Dispensar todos" e lixeira por alerta. Clique em lixeira → confirm → toast "Alerta dispensado" → lista atualiza. "Mostrar dispensados" reativa.
+- ✅ Lint OK.
+
+### Arquivos alterados
+- `/app/backend/routes/rh.py` (DELETE em massa)
+- `/app/frontend/src/pages/rh/FeriasPage.jsx` (UI completa)
+
+
+
 ## Feature - 07/05/2026 (Sessão 46.4) — 🏷️ Sinalização visual de NF com conta já lançada
 
 ### Pedido do usuário

@@ -78,6 +78,39 @@ export default function FeriasPage() {
     }
   };
 
+  const handleDispensarAlerta = async (funcionarioId, nome) => {
+    if (!window.confirm(`Dispensar o alerta de ${nome}? Você pode reativá-lo depois pelo botão "Mostrar dispensados".`)) return;
+    try {
+      await axios.post(`${API}/rh/ferias/alertas/dispensar/${funcionarioId}`);
+      toast.success("Alerta dispensado");
+      fetchAlertas();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao dispensar alerta");
+    }
+  };
+
+  const handleDispensarTodos = async () => {
+    if (alertas.length === 0) return;
+    if (!window.confirm(`Dispensar todos os ${alertas.length} alertas de período aquisitivo?`)) return;
+    try {
+      await axios.post(`${API}/rh/ferias/alertas/dispensar-todos`);
+      toast.success(`${alertas.length} alerta(s) dispensado(s)`);
+      fetchAlertas();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao dispensar alertas");
+    }
+  };
+
+  const handleReativarDispensados = async () => {
+    try {
+      await axios.delete(`${API}/rh/ferias/alertas/dispensar-todos`);
+      toast.success("Alertas dispensados foram reativados");
+      fetchAlertas();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Erro ao reativar alertas");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -260,10 +293,38 @@ export default function FeriasPage() {
       {alertas.length > 0 && (
         <Card className="mb-6 border-orange-200 bg-orange-50">
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-3 flex items-center gap-2 text-orange-600">
-              <AlertTriangle size={18} />
-              Alertas de Período Aquisitivo
-            </h3>
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <h3 className="font-semibold flex items-center gap-2 text-orange-600">
+                <AlertTriangle size={18} />
+                Alertas de Período Aquisitivo
+                <span className="px-2 py-0.5 bg-orange-200 text-orange-900 rounded-full text-xs font-bold">
+                  {alertas.length}
+                </span>
+              </h3>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                  onClick={handleReativarDispensados}
+                  title="Reativar todos os alertas que foram dispensados"
+                  data-testid="btn-reativar-dispensados"
+                >
+                  Mostrar dispensados
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={handleDispensarTodos}
+                  title="Dispensar todos os alertas"
+                  data-testid="btn-dispensar-todos"
+                >
+                  <Trash2 size={14} className="mr-1" />
+                  Dispensar todos
+                </Button>
+              </div>
+            </div>
             <div className="space-y-2">
               {alertas.map((alerta, idx) => (
                 <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg border border-orange-200">
@@ -271,12 +332,29 @@ export default function FeriasPage() {
                     <p className="font-medium">{alerta.funcionario_nome}</p>
                     <p className="text-sm text-gray-500">{alerta.mensagem}</p>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => {
-                    setFormData({ ...formData, funcionario_id: alerta.funcionario_id });
-                    setIsModalOpen(true);
-                  }}>
-                    Agendar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setFormData({ ...formData, funcionario_id: alerta.funcionario_id });
+                        setIsModalOpen(true);
+                      }}
+                      data-testid={`btn-agendar-alerta-${alerta.funcionario_id}`}
+                    >
+                      Agendar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleDispensarAlerta(alerta.funcionario_id, alerta.funcionario_nome)}
+                      title="Dispensar este alerta"
+                      data-testid={`btn-dispensar-alerta-${alerta.funcionario_id}`}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

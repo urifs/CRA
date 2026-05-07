@@ -480,6 +480,13 @@ async def dispensar_todos_alertas_ferias():
     return {"ok": True, "dispensados": count}
 
 
+@rh_router.delete("/ferias/alertas/dispensar-todos")
+async def reativar_todos_alertas_ferias():
+    """Reabilita TODOS os alertas dispensados (limpa a coleção de dispensados)."""
+    res = await db.ferias_alertas_dispensados.delete_many({})
+    return {"ok": True, "reativados": res.deleted_count}
+
+
 @rh_router.get("/ferias/alertas/dispensados")
 async def listar_dispensados_ferias():
     """Lista os funcionários com alertas dispensados."""
