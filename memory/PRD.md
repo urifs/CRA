@@ -1,6 +1,40 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix - 07/05/2026 (Sessão 46.2) — 🐛 Filtro de período ignorado em "Itens individuais" da Exportação
+
+### Reclamação do cliente (via WhatsApp)
+> "Bom dia. O sistema mesmo eu colocando o periodo de hoje, está filtrando todas em aberto. Eu preciso que os relatórios saiam por periodo."
+
+Ao colocar Data Início = Data Fim = hoje (07/05/2026) na Exportação de Relatórios e expandir "Contas Pendentes", a lista de itens individuais continuava mostrando contas com vencimento de Abril (02/04/2026 e 10/04/2026), ignorando o filtro global.
+
+### Causa raiz
+O endpoint `GET /api/export/items/{collection}` (que popula a lista de itens individuais selecionáveis) **não aceitava** os parâmetros `data_inicio` e `data_fim`. O endpoint usado para gerar o PDF da categoria toda (`/api/export/pdf/{category}`) já filtrava corretamente, mas a lista UI exibia tudo, induzindo o cliente a achar que o filtro não funcionava.
+
+### Implementado
+**Backend (`routes/exports_all.py`):**
+- `get_export_items` agora aceita `data_inicio` e `data_fim` como query params e roda `_apply_period_filter(db_collection, query_filter, data_inicio, data_fim)` antes da query MongoDB.
+
+**Frontend (`pages/ExportPage.jsx`):**
+- `fetchSubcategoryItems` agora passa `data_inicio`/`data_fim` (do banner global) na URL.
+- Novo `useEffect([globalDataInicio, globalDataFim])` que invalida o cache de itens já carregados, limpa seleções e re-busca para subcategorias atualmente expandidas — garantindo que ao mudar o período, a lista UI atualiza sem precisar fechar/abrir.
+
+### Validação
+- ✅ curl: filtro `2026-05-07/2026-05-07` retorna **0 itens** (antes retornava 15)
+- ✅ curl: filtro `2026-04-01/2026-04-30` retorna apenas as 2 contas que de fato vencem em abril
+- ✅ pytest 4/4 — `/app/backend/tests/test_export_filtro_periodo.py`
+- ✅ PDF de exportação por período continua funcionando (HTTP 200, 36KB)
+
+### Arquivos alterados
+- `/app/backend/routes/exports_all.py` (assinatura de `get_export_items` + chamada `_apply_period_filter`)
+- `/app/frontend/src/pages/ExportPage.jsx` (`fetchSubcategoryItems` + useEffect de invalidação)
+- `/app/backend/tests/test_export_filtro_periodo.py` (novo)
+
+### Lembrete para o cliente
+A correção está no **Preview**. Para refletir em `construtoracra.com.br`, é necessário clicar em **"Deploy"** na plataforma Emergent.
+
+
+
 ## Feature - 06/05/2026 (Sessão 46.1) — ⏰ Abono em Massa no Ponto Eletrônico
 
 ### Pedido do usuário

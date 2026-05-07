@@ -156,6 +156,21 @@ export default function ExportPage({ module = "gerenciamento" }) {
     fetchFormasPagamento();
   }, [module]);
 
+  // Quando o período global muda, invalida cache de itens já carregados
+  // e re-busca para subcategorias atualmente expandidas (mantém UX consistente)
+  useEffect(() => {
+    const expandedIds = Object.keys(expandedSubcategories).filter(
+      (id) => expandedSubcategories[id]
+    );
+    if (expandedIds.length === 0) return;
+    // Limpa seleções para evitar exportar item filtrado que não está mais visível
+    setSelectedItems({});
+    expandedIds.forEach((id) => {
+      fetchSubcategoryItems(id);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalDataInicio, globalDataFim]);
+
   const fetchFormasPagamento = async () => {
     try {
       const response = await axios.get(`${API}/formas-pagamento`, {
@@ -287,10 +302,15 @@ export default function ExportPage({ module = "gerenciamento" }) {
       'extrato_bancario': 'contas_bancarias',
     };
     const collection = collectionMap[subcategoryId] || subcategoryId;
-    
+
     setLoadingSubcategory(prev => ({...prev, [subcategoryId]: true}));
     try {
-      const response = await axios.get(`${API}/export/items/${collection}`, {
+      const params = new URLSearchParams();
+      if (globalDataInicio) params.append("data_inicio", globalDataInicio);
+      if (globalDataFim) params.append("data_fim", globalDataFim);
+      const qs = params.toString();
+      const url = `${API}/export/items/${collection}${qs ? `?${qs}` : ""}`;
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSubcategoryItems(prev => ({

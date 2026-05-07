@@ -1185,8 +1185,16 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
 
 # Endpoint para listar itens específicos para filtro de exportação
 @exports_all_router.get("/export/items/{collection}")
-async def get_export_items(collection: str, status: str = None, current_user: dict = Depends(get_current_user)):
-    """Retorna itens de uma coleção para seleção em exportação"""
+async def get_export_items(
+    collection: str,
+    status: str = None,
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Retorna itens de uma coleção para seleção em exportação.
+    Aceita filtro de período opcional (data_inicio/data_fim em YYYY-MM-DD) — quando passado,
+    filtra pelo campo de data principal da coleção (ex.: data_vencimento p/ contas)."""
     valid_collections = {
         "plano_contas": {"name_field": "nome", "id_field": "id", "collection": "plano_contas"},
         "centros_custo": {"name_field": "nome", "id_field": "id", "collection": "centros_custo"},
@@ -1225,7 +1233,10 @@ async def get_export_items(collection: str, status: str = None, current_user: di
     if config.get("vencidas"):
         hoje = datetime.now().strftime("%Y-%m-%d")
         query_filter["data_vencimento"] = {"$lt": hoje}
-    
+
+    # Aplicar filtro de período (global) sobre o campo de data principal da coleção
+    query_filter = _apply_period_filter(db_collection, query_filter, data_inicio, data_fim)
+
     projection = {"_id": 0, config["id_field"]: 1, config["name_field"]: 1}
     for field in config.get("extra_fields", []):
         projection[field] = 1
