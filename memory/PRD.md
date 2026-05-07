@@ -1,6 +1,43 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 07/05/2026 (Sessão 46.10) — 📄 PDF de NFS-e padronizado no layout WebISS Palmas
+
+### Pedido do cliente
+> "A NFS-e, no sistema financeiro, quando eu clicar em download PDF, ele deve seguir os padrões desse modelo que anexei aqui, apenas substituindo os dados, tem que ser padrão esse modelo"
+Anexou modelo oficial WebISS Palmas (NFS-e 202000000000074, código 6Q82-X388).
+
+### Implementado em `routes/nfse.py`
+Reescrito completamente o gerador de PDF do endpoint `GET /api/nfse/importadas/{id}/download-pdf` para replicar o layout WebISS:
+
+- **Cabeçalho**: bloco esquerdo "MUNICÍPIO DE PALMAS / Secretaria Municipal de Finanças / Diretoria de Fiscalização" + endereço + telefone; box à direita com "Nota: NNNNNN" + número grande + "Código Verificação" + valor.
+- **Título**: "NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e" centralizado.
+- **Infos gerais**: 5 colunas (Emissão Brasília, Período Competência, Reg. Especial Tributação, Exigibilidade ISS, Município de Prestação).
+- **PRESTADOR DE SERVIÇOS**: bloco com cabeçalho cinza, CPF/CNPJ + IM + IE em linha, Razão Social + Nome Fantasia, Simples Nacional + Incentivador Cultural + Email + Fone, Endereço.
+- **TOMADOR DE SERVIÇOS**: mesma estrutura.
+- **SERVIÇO PRESTADO**: código + descrição + CNAE.
+- **DESCRIÇÃO DOS SERVIÇOS**: texto longo + Forma de Pagamento.
+- **RETENÇÕES FEDERAIS**: 6 colunas (PIS, COFINS, INSS, IR, CSLL, Outras).
+- **VALORES**: 3×3 grid (Deduções/Desc Cond/Desc Incond — Valor Serviços/Base ISS/Alíquota — ISS/ISS Retido `*****` se não retido/Valor Líquido).
+- **Valor Total da Nota**: destaque em fundo cinza claro com fonte 12pt.
+- **OUTRAS INFORMAÇÕES**: tributação aproximada IBPT auto-calculada (13,45% federal + alíquota municipal).
+- **Footer**: "Visualizado em: DD/MM/AAAA HH:MM" + link validação `http://palmasto.webiss.com.br/externo/nfse/validar` + texto autodeclaratório.
+
+### Mudança de comportamento
+- **Antes**: o endpoint priorizava `pdf_base64` (PDF original anexado pelo prestador via XML). Cliente queria padrão único.
+- **Depois**: SEMPRE gera o template WebISS com os dados da nota. O PDF original permanece disponível em novo endpoint `GET /api/nfse/importadas/{id}/download-pdf-original` para auditoria.
+
+### Validação
+- ✅ E2E cURL: HTTP 200, 4727 bytes, PDF válido
+- ✅ Análise estrutural via Gemini: 100% das seções do modelo presentes (cabeçalho oficial, box verificação, infos, Prestador/Tomador/Serviço/Descrição/Retenções/Valores/Total/Outras Info/Footer com link)
+- ✅ Tributação IBPT calculada automaticamente
+- ✅ "*****" corretamente exibido em ISS Retido quando flag false
+
+### Arquivos alterados
+- `/app/backend/routes/nfse.py` (~340 linhas reescritas)
+
+
+
 ## Bug Fix - 07/05/2026 (Sessão 46.9) — 🪟 Modal cortado pelo sidebar (causa raiz: z-index)
 
 ### Reclamação do cliente
