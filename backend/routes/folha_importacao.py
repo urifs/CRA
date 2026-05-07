@@ -215,9 +215,138 @@ class AceitarSolicitacaoPayload(BaseModel):
     observacao: Optional[str] = None
 
 
+# =================== Background Processing ===================
+async def _processar_folha_background(folha_id: str, pdf_bytes: bytes, filename: str):
+    """Roda em asyncio.create_task — atualiza folha conforme progresso.
+    Etapas:
+      1. validando (10%)  -> PDF aberto
+      2. ocr (30%)        -> pedindo extração ao Gemini
+      3. matching (75%)   -> fuzzy match com cadastro
+      4. dividindo (90%)  -> split + upload dos holerites
+      5. concluida (100%) -> status='em_revisao'
+    Em qualquer falha, marca status='erro' com mensagem.
+    """
+    async def _atualiza(progresso: int, etapa: str, **extra):
+        update = {"progresso": progresso, "etapa": etapa, **extra}
+        await folhas_importadas_collection.update_one(
+            {"id": folha_id}, {"$set": update}
+        )
+
+    try:
+        # 1. Validação básica (PDF + storage do master)
+        await _atualiza(5, "validando")
+        try:
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            total_paginas = len(reader.pages)
+        except Exception as e:
+            await _atualiza(100, "erro", status="erro", erro=f"PDF inválido: {e}")
+            return
+        if total_paginas == 0:
+            await _atualiza(100, "erro", status="erro", erro="PDF sem páginas")
+            return
+
+        master_path = f"{APP_NAME}/folha-importada/{folha_id}/master.pdf"
+        put_object(master_path, pdf_bytes, "application/pdf")
+        await _atualiza(15, "ocr_iniciando", master_pdf_path=master_path, total_paginas=total_paginas)
+
+        # 2. OCR via Gemini (a parte mais demorada — 30-60s)
+        try:
+            parsed = await _ocr_folha_pdf(pdf_bytes)
+        except HTTPException as e:
+            await _atualiza(100, "erro", status="erro", erro=e.detail)
+            return
+        except Exception as e:
+            await _atualiza(100, "erro", status="erro", erro=f"OCR falhou: {e}")
+            return
+
+        funcionarios_pdf = parsed.get("funcionarios") or []
+        if not funcionarios_pdf:
+            await _atualiza(100, "erro", status="erro", erro="Nenhum holerite identificado")
+            return
+
+        await _atualiza(60, "matching")
+
+        # 3. Match fuzzy + split por funcionário
+        candidatos = await _all_funcionarios_norm()
+        total_func = len(funcionarios_pdf)
+        funcs_persist = []
+        for idx, f in enumerate(funcionarios_pdf):
+            nome_pdf = f.get("nome") or f"Funcionário #{idx+1}"
+            match = _fuzzy_pick(nome_pdf, candidatos)
+            paginas = f.get("paginas") or []
+            anexo_path = None
+            if paginas:
+                try:
+                    sub_pdf = _split_pdf_pages(pdf_bytes, paginas)
+                    anexo_path = f"{APP_NAME}/folha-importada/{folha_id}/func-{idx+1}.pdf"
+                    put_object(anexo_path, sub_pdf, "application/pdf")
+                except Exception as e:
+                    logger.warning(f"Split falhou para {nome_pdf}: {e}")
+            funcs_persist.append({
+                "linha_id": str(uuid.uuid4()),
+                "nome_pdf": nome_pdf,
+                "codigo_pdf": f.get("codigo"),
+                "funcao_pdf": f.get("funcao"),
+                "departamento_pdf": f.get("departamento"),
+                "admissao_pdf": f.get("admissao"),
+                "valor_liquido": float(f.get("valor_liquido") or 0),
+                "total_vencimentos": float(f.get("total_vencimentos") or 0),
+                "total_descontos": float(f.get("total_descontos") or 0),
+                "salario_base": float(f.get("salario_base") or 0),
+                "base_inss": float(f.get("base_inss") or 0),
+                "base_fgts": float(f.get("base_fgts") or 0),
+                "fgts_mes": float(f.get("fgts_mes") or 0),
+                "base_irrf": float(f.get("base_irrf") or 0),
+                "vencimentos_detalhados": f.get("vencimentos_detalhados") or [],
+                "descontos_detalhados": f.get("descontos_detalhados") or [],
+                "paginas": paginas,
+                "anexo_holerite_path": anexo_path,
+                "funcionario_id": match["match_id"],
+                "match_nome_db": match["nome_db"],
+                "match_score": match["score"],
+                "match_status": match["status"],
+            })
+            # Progresso 60 -> 95 enquanto faz split
+            await _atualiza(
+                60 + int(35 * (idx + 1) / max(total_func, 1)),
+                "split",
+            )
+
+        total_geral = parsed.get("total_geral_liquido")
+        if total_geral is None or total_geral == 0:
+            total_geral = sum(x["valor_liquido"] for x in funcs_persist)
+
+        # 4. Finaliza
+        await folhas_importadas_collection.update_one(
+            {"id": folha_id},
+            {"$set": {
+                "status": "em_revisao",
+                "progresso": 100,
+                "etapa": "concluida",
+                "empresa": parsed.get("empresa"),
+                "cnpj": parsed.get("cnpj"),
+                "mes_competencia": int(parsed.get("mes_competencia") or 0),
+                "ano_competencia": int(parsed.get("ano_competencia") or 0),
+                "total_geral_liquido": float(total_geral),
+                "total_funcionarios": len(funcs_persist),
+                "filename_original": filename,
+                "total_paginas": total_paginas,
+                "master_pdf_path": master_path,
+                "funcionarios": funcs_persist,
+                "concluida_em": datetime.now(timezone.utc).isoformat(),
+            }},
+        )
+    except Exception as e:
+        logger.exception("Erro inesperado processando folha")
+        await _atualiza(100, "erro", status="erro", erro=str(e))
+
+
 # =================== Endpoints RH ===================
 @folha_router.post("/importar")
 async def importar_folha(arquivo: UploadFile = File(...)):
+    """Inicia processamento em background. Retorna 202 com {id, status:'processando'}.
+    Cliente faz polling em GET /folha-pagamento/{id} para acompanhar progresso (0-100)."""
+    import asyncio
     if not arquivo.filename or not arquivo.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Envie um PDF")
     pdf_bytes = await arquivo.read()
@@ -226,35 +355,65 @@ async def importar_folha(arquivo: UploadFile = File(...)):
     if len(pdf_bytes) > 30 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Arquivo > 30MB")
 
-    # Validação rápida do PDF
+    folha_id = str(uuid.uuid4())
+    doc = {
+        "id": folha_id,
+        "status": "processando",
+        "progresso": 0,
+        "etapa": "fila",
+        "filename_original": arquivo.filename,
+        "total_funcionarios": 0,
+        "total_geral_liquido": 0,
+        "funcionarios": [],
+        "envio_financeiro": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await folhas_importadas_collection.insert_one(doc)
+
+    # Dispara task em background
+    asyncio.create_task(
+        _processar_folha_background(folha_id, pdf_bytes, arquivo.filename)
+    )
+
+    doc.pop("_id", None)
+    return doc
+
+
+@folha_router.post("/_legacy_importar_sync")
+async def importar_folha_sync(arquivo: UploadFile = File(...)):
+    """Endpoint legado SÍNCRONO (mantido apenas para testes/CLI). Retorna após processar tudo (~30-60s).
+    Para uso normal, use POST /importar (assíncrono)."""
+    if not arquivo.filename or not arquivo.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Envie um PDF")
+    pdf_bytes = await arquivo.read()
+    if not pdf_bytes:
+        raise HTTPException(status_code=400, detail="Arquivo vazio")
+    if len(pdf_bytes) > 30 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo > 30MB")
+
     try:
         reader = PdfReader(io.BytesIO(pdf_bytes))
         total_paginas = len(reader.pages)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"PDF inválido: {e}")
-
     if total_paginas == 0:
         raise HTTPException(status_code=400, detail="PDF sem páginas")
 
-    # OCR estruturado
     parsed = await _ocr_folha_pdf(pdf_bytes)
     funcionarios_pdf = parsed.get("funcionarios") or []
     if not funcionarios_pdf:
         raise HTTPException(status_code=422, detail="Nenhum holerite identificado no PDF")
 
-    # Storage do PDF mestre
     folha_id = str(uuid.uuid4())
     master_path = f"{APP_NAME}/folha-importada/{folha_id}/master.pdf"
     put_object(master_path, pdf_bytes, "application/pdf")
 
-    # Match fuzzy + split por funcionário
     candidatos = await _all_funcionarios_norm()
     funcs_persist = []
     for idx, f in enumerate(funcionarios_pdf):
         nome_pdf = f.get("nome") or f"Funcionário #{idx+1}"
         match = _fuzzy_pick(nome_pdf, candidatos)
         paginas = f.get("paginas") or []
-        # Split do PDF deste funcionário
         anexo_path = None
         if paginas:
             try:
@@ -282,11 +441,10 @@ async def importar_folha(arquivo: UploadFile = File(...)):
             "descontos_detalhados": f.get("descontos_detalhados") or [],
             "paginas": paginas,
             "anexo_holerite_path": anexo_path,
-            # match
             "funcionario_id": match["match_id"],
             "match_nome_db": match["nome_db"],
             "match_score": match["score"],
-            "match_status": match["status"],  # high|medium|low
+            "match_status": match["status"],
         })
 
     total_geral = parsed.get("total_geral_liquido")
@@ -305,7 +463,9 @@ async def importar_folha(arquivo: UploadFile = File(...)):
         "total_paginas": total_paginas,
         "master_pdf_path": master_path,
         "funcionarios": funcs_persist,
-        "status": "em_revisao",  # em_revisao -> enviada -> aceita / rejeitada
+        "status": "em_revisao",
+        "progresso": 100,
+        "etapa": "concluida",
         "envio_financeiro": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }

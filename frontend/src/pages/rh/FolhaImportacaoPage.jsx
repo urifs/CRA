@@ -42,10 +42,23 @@ const fmtBRL = (v) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
 const STATUS_CFG = {
+  processando: { label: "Processando", color: "bg-sky-100 text-sky-800 border-sky-300", icon: Loader2 },
   em_revisao: { label: "Em revisão", color: "bg-amber-100 text-amber-800 border-amber-300", icon: Clock },
   enviada: { label: "Enviada ao financeiro", color: "bg-blue-100 text-blue-800 border-blue-300", icon: Send },
   aceita: { label: "Aceita / Lançada", color: "bg-emerald-100 text-emerald-800 border-emerald-300", icon: CheckCircle2 },
   rejeitada: { label: "Rejeitada", color: "bg-red-100 text-red-800 border-red-300", icon: XCircle },
+  erro: { label: "Erro", color: "bg-red-100 text-red-800 border-red-300", icon: XCircle },
+};
+
+const ETAPA_LABEL = {
+  fila: "Aguardando processamento...",
+  validando: "Validando PDF...",
+  ocr_iniciando: "Lendo PDF com IA (Gemini Flash)...",
+  ocr: "Extraindo dados via IA...",
+  matching: "Casando funcionários com cadastro...",
+  split: "Dividindo holerites...",
+  concluida: "Concluído",
+  erro: "Erro no processamento",
 };
 
 export default function FolhaImportacaoPage() {
@@ -53,6 +66,10 @@ export default function FolhaImportacaoPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Polling de processamento em background
+  const [processandoIds, setProcessandoIds] = useState(new Set());
+  const pollingRef = useRef(null);
 
   // Visualização / mapeamento manual
   const [folhaAtual, setFolhaAtual] = useState(null);
@@ -70,6 +87,62 @@ export default function FolhaImportacaoPage() {
     fetchFolhas();
     fetchFuncionarios();
   }, []);
+
+  // Polling em background quando há folhas processando
+  useEffect(() => {
+    const ativas = folhas.filter((f) => f.status === "processando").map((f) => f.id);
+    if (ativas.length === 0) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+    if (pollingRef.current) return; // já tem polling rodando
+    pollingRef.current = setInterval(async () => {
+      try {
+        const r = await axios.get(`${API}/folha-pagamento`);
+        const novas = r.data || [];
+        setFolhas(novas);
+        // Detecta conclusões para abrir automaticamente
+        novas.forEach((nf) => {
+          if (
+            processandoIds.has(nf.id) &&
+            nf.status !== "processando" &&
+            nf.status !== "erro"
+          ) {
+            // Acabou de concluir
+            setProcessandoIds((prev) => {
+              const ns = new Set(prev);
+              ns.delete(nf.id);
+              return ns;
+            });
+            toast.success(
+              `Folha pronta: ${nf.total_funcionarios} funcionário(s) — ${fmtBRL(nf.total_geral_liquido)}`,
+            );
+            // Abre detalhe automaticamente
+            abrirFolha(nf.id);
+          } else if (processandoIds.has(nf.id) && nf.status === "erro") {
+            setProcessandoIds((prev) => {
+              const ns = new Set(prev);
+              ns.delete(nf.id);
+              return ns;
+            });
+            toast.error(`Falha ao processar: ${nf.erro || "erro desconhecido"}`);
+          }
+        });
+      } catch (e) {
+        // silencioso
+      }
+    }, 2500);
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folhas, processandoIds]);
 
   const fetchFolhas = async () => {
     setLoading(true);
@@ -112,21 +185,18 @@ export default function FolhaImportacaoPage() {
     try {
       const r = await axios.post(`${API}/folha-pagamento/importar`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 180000,
+        timeout: 60000,
       });
       toast.success(
-        `Folha importada: ${r.data.total_funcionarios} funcionário(s) — ${fmtBRL(r.data.total_geral_liquido)}`,
+        "Folha em processamento — você será avisado quando terminar (~30-60s)",
       );
+      // Registra para polling
+      if (r.data?.id) {
+        setProcessandoIds((prev) => new Set(prev).add(r.data.id));
+      }
       fetchFolhas();
-      // Abre detalhe imediatamente para o RH revisar
-      setFolhaAtual(r.data);
-      const initial = {};
-      (r.data.funcionarios || []).forEach((linha) => {
-        if (linha.funcionario_id) initial[linha.linha_id] = linha.funcionario_id;
-      });
-      setMapping(initial);
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Erro ao importar folha");
+      toast.error(err.response?.data?.detail || "Erro ao iniciar importação");
     } finally {
       setUploading(false);
     }
@@ -314,53 +384,106 @@ export default function FolhaImportacaoPage() {
                   {folhas.map((f) => {
                     const cfg = STATUS_CFG[f.status] || STATUS_CFG.em_revisao;
                     const Icon = cfg.icon;
+                    const isProcessing = f.status === "processando";
+                    const isError = f.status === "erro";
                     return (
                       <tr
                         key={f.id}
-                        className="border-b hover:bg-gray-50"
+                        className={`border-b ${isProcessing ? "bg-sky-50/40" : isError ? "bg-red-50/40" : "hover:bg-gray-50"}`}
                         data-testid={`folha-row-${f.id}`}
                       >
                         <td className="p-3 font-medium">
-                          {String(f.mes_competencia).padStart(2, "0")}/{f.ano_competencia}
+                          {f.mes_competencia
+                            ? `${String(f.mes_competencia).padStart(2, "0")}/${f.ano_competencia}`
+                            : <span className="text-gray-400 text-xs">—</span>}
                         </td>
                         <td className="p-3 text-gray-700">
-                          {f.empresa || "—"}
-                          <div className="text-xs text-gray-400">{f.cnpj}</div>
+                          {f.empresa || (
+                            <span className="text-gray-400 text-xs">
+                              {f.filename_original || "—"}
+                            </span>
+                          )}
+                          {f.cnpj && <div className="text-xs text-gray-400">{f.cnpj}</div>}
                         </td>
                         <td className="p-3 text-center">
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-semibold">
-                            {f.total_funcionarios}
-                          </span>
+                          {f.total_funcionarios > 0 ? (
+                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-semibold">
+                              {f.total_funcionarios}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
                         </td>
                         <td className="p-3 text-right font-bold text-emerald-700">
-                          {fmtBRL(f.total_geral_liquido)}
+                          {f.total_geral_liquido > 0 ? fmtBRL(f.total_geral_liquido) : "—"}
                         </td>
                         <td className="p-3 text-center">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${cfg.color}`}
-                          >
-                            <Icon size={12} />
-                            {cfg.label}
-                          </span>
+                          {isProcessing ? (
+                            <div className="space-y-1 min-w-[160px]">
+                              <div className="flex items-center gap-2">
+                                <Loader2 size={12} className="animate-spin text-sky-600" />
+                                <span className="text-xs font-medium text-sky-800">
+                                  {f.progresso || 0}%
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-sky-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-sky-500 transition-all duration-500"
+                                  style={{ width: `${f.progresso || 0}%` }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-sky-700">
+                                {ETAPA_LABEL[f.etapa] || f.etapa || "..."}
+                              </p>
+                            </div>
+                          ) : isError ? (
+                            <div className="space-y-1">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${cfg.color}`}
+                              >
+                                <Icon size={12} />
+                                Erro
+                              </span>
+                              {f.erro && (
+                                <p
+                                  className="text-[10px] text-red-700 max-w-[200px] truncate"
+                                  title={f.erro}
+                                >
+                                  {f.erro}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${cfg.color}`}
+                            >
+                              <Icon size={12} />
+                              {cfg.label}
+                            </span>
+                          )}
                         </td>
                         <td className="p-3 text-center">
                           <div className="flex gap-1 justify-center">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => abrirFolha(f.id)}
-                              data-testid={`btn-abrir-folha-${f.id}`}
-                            >
-                              <Eye size={14} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => baixarMaster(f.id)}
-                              title="Baixar PDF original"
-                            >
-                              <Download size={14} />
-                            </Button>
+                            {!isProcessing && f.total_funcionarios > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => abrirFolha(f.id)}
+                                data-testid={`btn-abrir-folha-${f.id}`}
+                              >
+                                <Eye size={14} />
+                              </Button>
+                            )}
+                            {f.master_pdf_path && !isProcessing && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => baixarMaster(f.id)}
+                                title="Baixar PDF original"
+                              >
+                                <Download size={14} />
+                              </Button>
+                            )}
                             {f.status !== "aceita" && (
                               <Button
                                 size="sm"
@@ -385,7 +508,10 @@ export default function FolhaImportacaoPage() {
 
       {/* Modal de detalhe / mapeamento */}
       <Dialog open={!!folhaAtual} onOpenChange={(o) => !o && setFolhaAtual(null)}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" data-testid="folha-detalhe-modal">
+        <DialogContent
+          className="max-w-[min(95vw,1400px)] w-[min(95vw,1400px)] max-h-[90vh] overflow-y-auto p-4 sm:p-6"
+          data-testid="folha-detalhe-modal"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText size={20} className="text-indigo-600" />
@@ -433,7 +559,7 @@ export default function FolhaImportacaoPage() {
 
               {/* Tabela de funcionários */}
               <div className="overflow-x-auto border rounded">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[860px]">
                   <thead className="bg-gray-100 border-b">
                     <tr>
                       <th className="text-left p-2">Nome no PDF</th>

@@ -1,6 +1,48 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Bug Fix + Feature - 07/05/2026 (Sessão 46.7) — 🪟 Modal cortado + ⚙️ Processamento em background
+
+### 1) Bug do modal cortado
+Ao abrir uma folha importada o modal `max-w-6xl` estourava a viewport quando o sidebar do RH estava expandido (~256px), escondendo a primeira coluna ("Nome no PDF").
+
+**Fix em `pages/rh/FolhaImportacaoPage.jsx`:**
+- DialogContent: trocado `max-w-6xl` por `max-w-[min(95vw,1400px)] w-[min(95vw,1400px)]` + padding responsivo `p-4 sm:p-6`.
+- Tabela interna: `min-w-[860px]` para forçar scroll horizontal em telas estreitas mantendo todas as colunas legíveis.
+
+Validado via screenshot: modal agora ocupa exatamente 1400px (x=260, posicionado após o sidebar) e todas as 7 colunas aparecem completas.
+
+### 2) Processamento em background com barra de progresso
+
+Antes: `POST /folha-pagamento/importar` rodava OCR + match + split de forma síncrona (~30-60s), com risco de 502 do gateway preview.
+
+**Implementado em `routes/folha_importacao.py`:**
+- Função `_processar_folha_background(folha_id, pdf_bytes, filename)` rodando via `asyncio.create_task`.
+- Endpoint `/importar` agora:
+  1. Valida tipo/tamanho do arquivo (síncrono, rápido)
+  2. Insere registro com `status="processando", progresso=0, etapa="fila"`
+  3. Dispara task em background e retorna 202 imediatamente (~0s)
+- Etapas com progresso: validando(5%) → ocr_iniciando(15%) → matching(60%) → split(60→95%) → concluida(100%)
+- Em caso de falha, marca `status="erro"` com mensagem em `erro` (visível ao usuário).
+- Endpoint legado `POST /_legacy_importar_sync` mantido para CLI/testes.
+
+**Frontend `FolhaImportacaoPage.jsx`:**
+- Após upload, registra ID em `processandoIds` e `setInterval` de 2.5s faz polling em `GET /folha-pagamento`.
+- Linha da tabela mostra **barra de progresso azul** com porcentagem + texto da etapa atual ("Lendo PDF com IA...", "Casando funcionários com cadastro...", "Dividindo holerites...").
+- Quando termina, toast verde "Folha pronta" + abre modal de detalhe automaticamente.
+- Em caso de erro, badge vermelho com a mensagem.
+
+### Validação
+- ✅ E2E cURL: `/importar` retornou em **0s** com status="processando"; polling capturou 60% → 83% → 100% (~12s total). Antes: requisição síncrona de 35s.
+- ✅ Lint Python e JavaScript OK.
+- ✅ Smoke screenshot: modal de detalhe agora exibe todas as 7 colunas completas (1400px x 788px, x=260).
+
+### Arquivos alterados
+- `/app/backend/routes/folha_importacao.py` (nova função background + endpoint async + legado sync)
+- `/app/frontend/src/pages/rh/FolhaImportacaoPage.jsx` (polling + barra de progresso + modal responsive)
+
+
+
 ## Feature MAJOR - 07/05/2026 (Sessão 46.6) — 📑 Importação de Folha de Pagamento (RH → Financeiro)
 
 ### Pedido completo do cliente
