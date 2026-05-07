@@ -349,7 +349,7 @@ export default function SolicitacoesFolhaPage() {
 
       {/* Modal Aceitar */}
       <Dialog open={!!aceitarSol} onOpenChange={(o) => !aceitando && !o && setAceitarSol(null)}>
-        <DialogContent className="max-w-3xl" data-testid="dialog-aceitar">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-aceitar">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 size={20} className="text-emerald-600" />
@@ -360,7 +360,7 @@ export default function SolicitacoesFolhaPage() {
             </DialogDescription>
           </DialogHeader>
           {aceitarSol && (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-4">
               <div className="p-3 bg-indigo-50 border border-indigo-200 rounded text-sm space-y-1">
                 <p>
                   <strong>Competência:</strong>{" "}
