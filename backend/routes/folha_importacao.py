@@ -651,7 +651,7 @@ async def enviar_financeiro(folha_id: str, payload: EnviarFinanceiroPayload):
             "tipo": "solicitacao_folha",
             "solicitacao_id": sol_id,
             "folha_id": folha_id,
-            "rota": "/administrativo/solicitacoes-folha",
+            "rota": f"/administrativo/solicitacoes-folha?abrir={sol_id}",
         },
     )
     return sol

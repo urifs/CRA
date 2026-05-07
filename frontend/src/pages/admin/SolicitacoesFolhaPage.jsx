@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,9 +44,11 @@ const STATUS_CFG = {
 };
 
 export default function SolicitacoesFolhaPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [solicitacoes, setSolicitacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("pendente");
+  const [autoOpenedId, setAutoOpenedId] = useState(null);
 
   // Aceitar
   const [aceitarSol, setAceitarSol] = useState(null);
@@ -71,6 +74,33 @@ export default function SolicitacoesFolhaPage() {
     fetchSolicitacoes();
     fetchAuxiliares();
   }, [filtroStatus]);
+
+  // Quando vindo do sino de notificações: ?abrir=<sol_id>
+  useEffect(() => {
+    const abrir = searchParams.get("abrir");
+    if (!abrir || autoOpenedId === abrir) return;
+    if (loading) return;
+    const sol = solicitacoes.find((s) => s.id === abrir);
+    if (sol) {
+      // Garante visibilidade independente do filtro
+      if (sol.status !== filtroStatus && filtroStatus !== "todas") {
+        setFiltroStatus("todas");
+        return;
+      }
+      if (sol.status === "pendente") {
+        abrirAceitar(sol);
+      }
+      setAutoOpenedId(abrir);
+      // Limpa o query param após abrir
+      const next = new URLSearchParams(searchParams);
+      next.delete("abrir");
+      setSearchParams(next, { replace: true });
+    } else if (filtroStatus !== "todas") {
+      // Solicitação pode estar em outro status — tenta visualizar todas
+      setFiltroStatus("todas");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, solicitacoes, loading]);
 
   const fetchSolicitacoes = async () => {
     setLoading(true);
@@ -319,18 +349,18 @@ export default function SolicitacoesFolhaPage() {
 
       {/* Modal Aceitar */}
       <Dialog open={!!aceitarSol} onOpenChange={(o) => !aceitando && !o && setAceitarSol(null)}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-aceitar">
+        <DialogContent className="max-w-3xl" data-testid="dialog-aceitar">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 size={20} className="text-emerald-600" />
-              Aceitar Folha — gerar contas a pagar
+              Detalhes da Folha de Pagamento
             </DialogTitle>
             <DialogDescription>
-              Confirme o modo de lançamento e os parâmetros financeiros.
+              Confira os funcionários e valores. Após confirmar, as contas a pagar serão geradas.
             </DialogDescription>
           </DialogHeader>
           {aceitarSol && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               <div className="p-3 bg-indigo-50 border border-indigo-200 rounded text-sm space-y-1">
                 <p>
                   <strong>Competência:</strong>{" "}
@@ -342,6 +372,68 @@ export default function SolicitacoesFolhaPage() {
                   <strong>{aceitarSol.total_funcionarios}</strong> funcionário(s)
                 </p>
               </div>
+
+              {/* Detalhes dos funcionários */}
+              {Array.isArray(aceitarSol.funcionarios_preview) && aceitarSol.funcionarios_preview.length > 0 && (
+                <div className="border rounded-lg" data-testid="folha-funcionarios-detalhe">
+                  <div className="px-3 py-2 bg-gray-50 border-b flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                      <Users size={14} /> Funcionários da folha ({aceitarSol.funcionarios_preview.length})
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Confira os valores antes de confirmar
+                    </span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 border-b sticky top-0">
+                        <tr>
+                          <th className="text-left p-2 font-medium text-gray-600">#</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Nome (PDF)</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Vinculado</th>
+                          <th className="text-right p-2 font-medium text-gray-600">Valor Líquido</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aceitarSol.funcionarios_preview.map((f, idx) => (
+                          <tr key={f.linha_id || idx} className="border-b last:border-0 hover:bg-gray-50">
+                            <td className="p-2 text-gray-500">{idx + 1}</td>
+                            <td className="p-2 font-medium text-gray-800">{f.nome_pdf || "—"}</td>
+                            <td className="p-2 text-gray-600">
+                              {f.match_nome_db ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-700">
+                                  <CheckCircle2 size={11} />
+                                  {f.match_nome_db}
+                                </span>
+                              ) : f.funcionario_id ? (
+                                <span className="text-gray-500">Vinculado</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-amber-700">
+                                  <AlertCircle size={11} />
+                                  Sem vínculo
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2 text-right font-semibold text-emerald-700">
+                              {fmtBRL(f.valor_liquido)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50 border-t">
+                        <tr>
+                          <td colSpan={3} className="p-2 text-right font-semibold text-gray-700">
+                            Total Geral
+                          </td>
+                          <td className="p-2 text-right font-bold text-emerald-700">
+                            {fmtBRL(aceitarSol.total_geral_liquido)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Modo (override permitido) */}
               <div>
@@ -493,7 +585,7 @@ export default function SolicitacoesFolhaPage() {
               data-testid="btn-confirmar-aceitar"
             >
               {aceitando && <Loader2 size={14} className="animate-spin mr-2" />}
-              Aceitar e Criar Contas
+              Confirmar Folha de Pagamento
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,31 @@
 # CRA Construtora - Sistema de Gestão Empresarial (ERP)
 
 
+## Feature - 07/05/2026 (Sessão 47.2) — 📋 Detalhamento da Folha antes de confirmar (via sino)
+
+### Pedido do cliente
+> "quando eu clicar na notificação da folha de pagamento no financeiro, deve abrir as informações detalhadas da folha de pagamento antes de gerar as contas a pagar e deve ter o botão 'Confirmar Folha de Pagamento'"
+
+### Implementação
+1. **Backend** (`folha_importacao.py`): A `origem.rota` da task de "solicitação de folha" agora inclui o `solicitacao_id`:
+   `/administrativo/solicitacoes-folha?abrir=<sol_id>`
+2. **Frontend** (`SolicitacoesFolhaPage.jsx`):
+   - Lê `?abrir=<sol_id>` via `useSearchParams` e abre automaticamente o modal de detalhe (mesmo se o status for diferente do filtro atual — alterna para "Todas" se necessário).
+   - Modal agora exibe **tabela completa de funcionários** (nome PDF, vínculo no sistema, valor líquido) com totalizador antes do formulário de plano/vencimento. Container com scroll para folhas grandes.
+   - Título do modal: "Detalhes da Folha de Pagamento".
+   - Botão renomeado para **"Confirmar Folha de Pagamento"** (data-testid `btn-confirmar-aceitar`).
+   - Modal aumentado para `max-w-3xl` para acomodar a tabela.
+
+### Validação
+- ✅ Lint JS limpo. Smoke test e2e OK (página renderiza sem regressão).
+- Endpoint `GET /api/financeiro/solicitacoes-folha` já enriquece com `funcionarios_preview` (linha_id, nome_pdf, funcionario_id, valor_liquido, match_nome_db) — usado direto na UI.
+
+### Arquivos
+- `/app/backend/routes/folha_importacao.py`
+- `/app/frontend/src/pages/admin/SolicitacoesFolhaPage.jsx`
+
+
+
 ## Bug Fix - 07/05/2026 (Sessão 47.1) — 🔔 Botão "Abrir tela" na notificação do sino (TasksInbox)
 
 ### Reclamação do cliente
