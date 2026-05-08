@@ -87,6 +87,14 @@ class ContaParceladaCreate(BaseModel):
     conta_bancaria_id: Optional[str] = None
     conta_bancaria_nome: Optional[str] = None
     observacoes: Optional[str] = None
+    # Campos de linhagem/origem — preservados ao parcelar uma conta existente
+    nfe_id: Optional[str] = None
+    nfse_id: Optional[str] = None
+    anexos: Optional[list] = None
+    origem: Optional[str] = None
+    folha_id: Optional[str] = None
+    ordem_servico_id: Optional[str] = None
+    contrato_id: Optional[str] = None
 
 
 class QuitarContaRequest(BaseModel):
@@ -169,6 +177,13 @@ class ContaReceberParceladaCreate(BaseModel):
     conta_bancaria_nome: Optional[str] = None
     faturamento: Optional[str] = None
     observacoes: Optional[str] = None
+    # Campos de linhagem/origem
+    nfe_id: Optional[str] = None
+    nfse_id: Optional[str] = None
+    anexos: Optional[list] = None
+    origem: Optional[str] = None
+    ordem_servico_id: Optional[str] = None
+    contrato_id: Optional[str] = None
 
 
 class QuitarContaReceberRequest(BaseModel):
@@ -338,6 +353,12 @@ async def create_conta_pagar_parcelada(
             "created_by": current_user["id"],
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
+        # Propaga campos de linhagem/origem para cada parcela
+        for fld in ("nfe_id", "nfse_id", "anexos", "origem", "folha_id",
+                    "ordem_servico_id", "contrato_id"):
+            val = getattr(data, fld, None)
+            if val is not None:
+                conta[fld] = val
         await db.contas_pagar.insert_one(conta)
         conta.pop("_id", None)
         parcelas_criadas.append(conta)
@@ -663,6 +684,12 @@ async def create_conta_receber_parcelada(
             "created_by": current_user["id"],
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
+        # Propaga campos de linhagem/origem para cada parcela
+        for fld in ("nfe_id", "nfse_id", "anexos", "origem",
+                    "ordem_servico_id", "contrato_id"):
+            val = getattr(data, fld, None)
+            if val is not None:
+                conta[fld] = val
         await db.contas_receber.insert_one(conta)
         conta.pop("_id", None)
         parcelas_criadas.append(conta)

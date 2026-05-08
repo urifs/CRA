@@ -189,6 +189,33 @@ export default function ContasReceberPage() {
           toast.error("Número de parcelas deve ser entre 2 e 360");
           return;
         }
+
+        let observacoesEnriched = formData.observacoes || "";
+        if (editingConta) {
+          const o = editingConta;
+          const fmt = (v) => (typeof v === "number" ? v.toFixed(2).replace(".", ",") : v);
+          const blocoOrigem = [
+            "── Origem (conta única convertida em parcelas) ──",
+            o.descricao && `Descrição original: ${o.descricao}`,
+            o.numero_doc && `Nº Documento/NF: ${o.numero_doc}`,
+            o.documento && `Documento: ${o.documento}`,
+            (o.cliente_nome || o.cliente_cnpj) &&
+              `Cliente: ${o.cliente_nome || ""} ${o.cliente_cnpj ? "(" + o.cliente_cnpj + ")" : ""}`.trim(),
+            o.valor != null && `Valor original cheio: R$ ${fmt(o.valor_final ?? o.valor)}`,
+            o.data_emissao && `Data emissão: ${o.data_emissao}`,
+            o.data_vencimento && `Vencimento original: ${o.data_vencimento}`,
+            o.nfe_id && `NF-e vinculada (ID): ${o.nfe_id}`,
+            o.nfse_id && `NFS-e vinculada (ID): ${o.nfse_id}`,
+            o.ordem_servico_id && `Ordem de Serviço (ID): ${o.ordem_servico_id}`,
+            o.contrato_id && `Contrato (ID): ${o.contrato_id}`,
+            (o.anexos && o.anexos.length) && `Anexos: ${o.anexos.length} arquivo(s) preservado(s)`,
+            o.observacoes && `Observações originais: ${o.observacoes}`,
+          ]
+            .filter(Boolean)
+            .join("\n");
+          observacoesEnriched = `${blocoOrigem}\n────\n${observacoesEnriched}`.trim();
+        }
+
         const dataParcelado = {
           cliente_id: formData.cliente_id,
           cliente_nome: formData.cliente_nome,
@@ -218,7 +245,15 @@ export default function ContasReceberPage() {
           conta_bancaria_id: formData.conta_bancaria_id,
           conta_bancaria_nome: formData.conta_bancaria_nome,
           faturamento: formData.faturamento,
-          observacoes: formData.observacoes
+          observacoes: observacoesEnriched,
+          ...(editingConta ? {
+            nfe_id: editingConta.nfe_id || null,
+            nfse_id: editingConta.nfse_id || null,
+            anexos: editingConta.anexos || null,
+            origem: editingConta.origem || null,
+            ordem_servico_id: editingConta.ordem_servico_id || null,
+            contrato_id: editingConta.contrato_id || null,
+          } : {}),
         };
 
         const response = await axios.post(`${API}/admin/contas-receber/parcelado`, dataParcelado);
