@@ -3215,8 +3215,15 @@ async def get_ferias_alertas():
     """Alertas de período aquisitivo"""
     alertas = []
     hoje = datetime.now()
-    
+
+    # Carrega IDs dispensados pelo admin (não exibir nos alertas)
+    dispensados_ids = set()
+    async for d in db.ferias_alertas_dispensados.find({}, {"_id": 0, "funcionario_id": 1}):
+        dispensados_ids.add(d.get("funcionario_id"))
+
     async for func in funcionarios_collection.find({"status": "ativo"}):
+        if func.get("id") in dispensados_ids:
+            continue  # admin descartou esse alerta
         if func.get("data_admissao"):
             try:
                 data_adm = datetime.strptime(func["data_admissao"], "%Y-%m-%d")
