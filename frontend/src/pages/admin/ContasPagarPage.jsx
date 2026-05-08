@@ -172,9 +172,19 @@ export default function ContasPagarPage() {
     e.preventDefault();
     try {
       const valorTotal = parseCurrency(formData.valor) || 0;
-      
-      // Se for parcelado e não for edição
-      if (isParcelado && !editingConta && parseInt(totalParcelas) > 1) {
+      const querParcelar = isParcelado && parseInt(totalParcelas) > 1;
+
+      // Se for editar uma conta com pagamento em andamento, não permite parcelar
+      if (querParcelar && editingConta) {
+        const jaPago = (editingConta.valor_pago || 0) > 0;
+        const statusBloq = ["quitada", "cancelada", "perdida", "parcial"].includes(editingConta.status);
+        if (jaPago || statusBloq) {
+          toast.error("Não é possível parcelar uma conta com pagamento já registrado. Cancele os pagamentos antes.");
+          return;
+        }
+      }
+
+      if (querParcelar) {
         const numParcelas = parseInt(totalParcelas);
         if (!Number.isFinite(numParcelas) || numParcelas < 2 || numParcelas > 360) {
           toast.error("Número de parcelas deve ser entre 2 e 360");
@@ -193,7 +203,7 @@ export default function ContasPagarPage() {
           valor_retencao: parseCurrency(formData.valor_retencao) || 0,
           data_emissao: formData.data_emissao,
           data_primeiro_vencimento: formData.data_vencimento,
-          total_parcelas: parseInt(totalParcelas),
+          total_parcelas: numParcelas,
           intervalo_dias: parseInt(intervaloDias),
           plano_conta_id: formData.plano_conta_id,
           plano_conta_nome: formData.plano_conta_nome,
@@ -210,11 +220,21 @@ export default function ContasPagarPage() {
           conta_bancaria_nome: formData.conta_bancaria_nome,
           observacoes: formData.observacoes
         };
-        
+
         const response = await axios.post(`${API}/admin/contas-pagar/parcelado`, dataParcelado);
+
+        // Se estava editando uma conta única, exclui a original após gerar as parcelas
+        if (editingConta) {
+          try {
+            await axios.delete(`${API}/admin/contas-pagar/${editingConta.id}`);
+          } catch (delErr) {
+            console.error("Falha ao excluir conta original após parcelar:", delErr);
+            toast.warning("Parcelas criadas, mas a conta original não pôde ser excluída. Verifique e remova manualmente.");
+          }
+        }
         toast.success(`${response.data.parcelas.length} parcelas criadas com sucesso!`);
       } else {
-        // Conta única ou edição
+        // Conta única ou edição sem parcelar
         const dataToSend = {
           ...formData,
           valor: valorTotal,
