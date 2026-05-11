@@ -60,8 +60,8 @@ const ICONS = {
 
 // Subcategorias que suportam expansão para itens individuais
 const EXPANDABLE_SUBCATEGORIES = [
-  'contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
-  'contas_receber', 'contas_receber_pendente', 'contas_receber_recebidas', 'contas_receber_vencidas',
+  'contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitada', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
+  'contas_receber', 'contas_receber_pendente', 'contas_receber_quitada', 'contas_receber_recebidas', 'contas_receber_vencidas',
   'machines', 'maintenances', 'stock_items', 'obras', 'alugueis', 'imoveis', 'imoveis_ativo', 'imoveis_pendente',
   'plano_contas', 'centros_custo', 'cadastros', 'contas_bancarias', 'formas_pagamento',
   'fleets', 'extrato_bancario'
@@ -91,8 +91,8 @@ export default function ExportPage({ module = "gerenciamento" }) {
   const accentColor = module === "gerenciamento" ? "#E31A1A" : "#D4A000";
 
   // Categorias que suportam recibo/duplicata
-  const RECEIPT_CATEGORIES = ['contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
-    'contas_receber', 'contas_receber_pendente', 'contas_receber_recebidas', 'contas_receber_vencidas',
+  const RECEIPT_CATEGORIES = ['contas_pagar', 'contas_pagar_pendente', 'contas_pagar_quitada', 'contas_pagar_quitadas', 'contas_pagar_vencidas',
+    'contas_receber', 'contas_receber_pendente', 'contas_receber_quitada', 'contas_receber_recebidas', 'contas_receber_vencidas',
     'alugueis', 'imoveis', 'imoveis_ativo', 'imoveis_pendente'];
 
   // State para extrato bancário
