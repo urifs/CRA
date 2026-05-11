@@ -1292,7 +1292,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                 />
                                 <Input
                                   type="text"
-                                  placeholder="Buscar por descrição, fornecedor, cliente, valor, placa..."
+                                  placeholder="Buscar por descrição, fornecedor, cliente, Nº NF, valor, placa..."
                                   value={itemSearch[sub.id] || ""}
                                   onChange={(e) =>
                                     setItemSearch({ ...itemSearch, [sub.id]: e.target.value })
@@ -1360,6 +1360,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                         item.name,
                                         item.fornecedor_nome,
                                         item.cliente_nome,
+                                        item.numero_doc,
                                         item.model,
                                         item.plate,
                                         item.banco,
@@ -1418,6 +1419,9 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                           )}
                                           {item.data_vencimento && (
                                             <span>Venc: {item.data_vencimento}</span>
+                                          )}
+                                          {item.numero_doc && (
+                                            <span className="font-mono text-blue-600" title="Nº Documento/NF">NF {item.numero_doc}</span>
                                           )}
                                           {item.fornecedor_nome && (
                                             <span title={item.fornecedor_nome}>{item.fornecedor_nome}</span>
