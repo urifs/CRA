@@ -1150,9 +1150,11 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
     # Normalizar categoria para o mapeamento do generate_pdf_report
     CATEGORY_NORMALIZE = {
         "contas_pagar_pendente": "contas_pagar",
+        "contas_pagar_quitada": "contas_pagar",
         "contas_pagar_quitadas": "contas_pagar",
         "contas_pagar_vencidas": "contas_pagar",
         "contas_receber_pendente": "contas_receber",
+        "contas_receber_quitada": "contas_receber",
         "contas_receber_recebidas": "contas_receber",
         "contas_receber_vencidas": "contas_receber",
         "cadastros_clientes": "cadastros",
@@ -1271,10 +1273,12 @@ _EXPORT_ITEMS_CONFIG = {
     "contas_bancarias": {"collection": "contas_bancarias"},
     "contas_pagar": {"collection": "contas_pagar"},
     "contas_pagar_pendente": {"collection": "contas_pagar", "filter": {"status": "em_aberto"}},
+    "contas_pagar_quitada": {"collection": "contas_pagar", "filter": {"status": "quitada"}},
     "contas_pagar_quitadas": {"collection": "contas_pagar", "filter": {"status": "quitada"}},
     "contas_pagar_vencidas": {"collection": "contas_pagar", "filter": {"status": "em_aberto"}, "vencidas": True},
     "contas_receber": {"collection": "contas_receber"},
     "contas_receber_pendente": {"collection": "contas_receber", "filter": {"status": "em_aberto"}},
+    "contas_receber_quitada": {"collection": "contas_receber", "filter": {"status": "quitada"}},
     "contas_receber_recebidas": {"collection": "contas_receber", "filter": {"status": "quitada"}},
     "contas_receber_vencidas": {"collection": "contas_receber", "filter": {"status": "em_aberto"}, "vencidas": True},
     "machines": {"collection": "machines"},
@@ -1344,10 +1348,12 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
     category_config = {
         "contas_pagar": {"collection": "contas_pagar", "title": "Conta a Pagar"},
         "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Conta a Pagar (Pendente)"},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Conta a Pagar (Quitada)"},
         "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Conta a Pagar (Quitada)"},
         "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Conta a Pagar (Vencida)"},
         "contas_receber": {"collection": "contas_receber", "title": "Conta a Receber"},
         "contas_receber_pendente": {"collection": "contas_receber", "title": "Conta a Receber (Pendente)"},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Conta a Receber (Recebida)"},
         "contas_receber_recebidas": {"collection": "contas_receber", "title": "Conta a Receber (Recebida)"},
         "contas_receber_vencidas": {"collection": "contas_receber", "title": "Conta a Receber (Vencida)"},
         "machines": {"collection": "machines", "title": "Máquina"},
@@ -1965,10 +1971,12 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     category_config = {
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar"},
         "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes"},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas"},
         "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas"},
         "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas a Pagar Vencidas"},
         "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber"},
         "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes"},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas"},
         "contas_receber_recebidas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas"},
         "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas a Receber Vencidas"},
         "machines": {"collection": "machines", "title": "Máquinas"},
@@ -2048,10 +2056,10 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
                  Paragraph("Status:", label_style), Paragraph("Quitada" if item.get("status") == "quitada" else "Em Aberto", value_style)],
                 [Paragraph("Fornecedor/Cliente:", label_style), Paragraph(fornecedor_nome, value_style),
                  Paragraph("CNPJ/CPF:", label_style), Paragraph(item.get("fornecedor_cnpj") or item.get("cliente_cnpj") or "-", value_style)],
-                [Paragraph("Documento:", label_style), Paragraph(item.get("documento", "-"), value_style),
-                 Paragraph("Nº Doc:", label_style), Paragraph(item.get("numero_doc", "-"), value_style)],
-                [Paragraph("Data Emissão:", label_style), Paragraph(item.get("data_emissao", "-"), value_style),
-                 Paragraph("Data Vencimento:", label_style), Paragraph(item.get("data_vencimento", "-"), value_style)],
+                [Paragraph("Documento:", label_style), Paragraph(item.get("documento") or "-", value_style),
+                 Paragraph("Nº Doc:", label_style), Paragraph(item.get("numero_doc") or "-", value_style)],
+                [Paragraph("Data Emissão:", label_style), Paragraph(item.get("data_emissao") or "-", value_style),
+                 Paragraph("Data Vencimento:", label_style), Paragraph(item.get("data_vencimento") or "-", value_style)],
                 [Paragraph("Valor Original:", label_style), Paragraph(fmt_valor(item.get("valor", 0)), value_style),
                  Paragraph("Valor Final:", label_style), Paragraph(fmt_valor(item.get("valor_final") or item.get("valor", 0)), value_style)],
                 [Paragraph("Juros:", label_style), Paragraph(fmt_valor(item.get("juros", 0)), value_style),
@@ -2441,9 +2449,9 @@ async def export_recibo(
     
     collection_map = {
         "contas_pagar": "contas_pagar", "contas_pagar_pendente": "contas_pagar",
-        "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
+        "contas_pagar_quitada": "contas_pagar", "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
         "contas_receber": "contas_receber", "contas_receber_pendente": "contas_receber",
-        "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
+        "contas_receber_quitada": "contas_receber", "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
         "alugueis": "alugueis",
         "imoveis": "imoveis", "imoveis_ativo": "imoveis", "imoveis_pendente": "imoveis"
     }
@@ -2770,9 +2778,9 @@ async def export_duplicata(category: str, item_id: str, empresa: str = "locadora
     
     collection_map = {
         "contas_pagar": "contas_pagar", "contas_pagar_pendente": "contas_pagar",
-        "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
+        "contas_pagar_quitada": "contas_pagar", "contas_pagar_quitadas": "contas_pagar", "contas_pagar_vencidas": "contas_pagar",
         "contas_receber": "contas_receber", "contas_receber_pendente": "contas_receber",
-        "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
+        "contas_receber_quitada": "contas_receber", "contas_receber_recebidas": "contas_receber", "contas_receber_vencidas": "contas_receber",
         "alugueis": "alugueis",
         "imoveis": "imoveis", "imoveis_ativo": "imoveis", "imoveis_pendente": "imoveis"
     }
