@@ -13,7 +13,7 @@ import uuid
 
 import requests
 
-API = os.environ.get("REACT_APP_BACKEND_URL", "https://os-multiplos-valores.preview.emergentagent.com")
+API = os.environ.get("REACT_APP_BACKEND_URL", "https://erp-financeiro-fixes.preview.emergentagent.com")
 URL = f"{API}/api"
 
 PDF_TEST_URL = (

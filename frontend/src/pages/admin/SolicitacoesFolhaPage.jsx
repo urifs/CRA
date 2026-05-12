@@ -122,8 +122,27 @@ export default function SolicitacoesFolhaPage() {
         axios.get(`${API}/admin/contas-bancarias`),
         axios.get(`${API}/admin/formas-pagamento`),
       ]);
-      // Sugere contas de despesa/folha
-      setPlanos((p.data || []).filter((x) => x.tipo === "despesa" || !x.tipo));
+      // Mostra TODOS os planos (despesa, receita e sem tipo) para evitar que
+      // dropdown fique vazio quando o plano de contas não estiver classificado.
+      // A ordenação prioriza contas de despesa (folha/salário/pessoal) no topo,
+      // depois demais despesas, depois sem tipo e por fim receitas.
+      const todos = Array.isArray(p.data) ? p.data : [];
+      const peso = (x) => {
+        const nome = (x.nome || "").toLowerCase();
+        if (/folha|sal[áa]rio|pessoal/.test(nome)) return 0;
+        if (x.tipo === "despesa") return 1;
+        if (!x.tipo) return 2;
+        return 3; // receita por último
+      };
+      const ordenados = [...todos].sort((a, b) => {
+        const pa = peso(a);
+        const pb = peso(b);
+        if (pa !== pb) return pa - pb;
+        const ca = String(a.codigo || "");
+        const cb = String(b.codigo || "");
+        return ca.localeCompare(cb, "pt-BR", { numeric: true });
+      });
+      setPlanos(ordenados);
       setContasBancarias(c.data || []);
       setFormasPagamento(f.data || []);
     } catch (e) {
@@ -149,6 +168,18 @@ export default function SolicitacoesFolhaPage() {
     });
     setAceitarSol(sol);
   };
+
+  // Reaplica auto-sugestão de plano quando `planos` for carregado APÓS
+  // o modal abrir (race condition no fluxo vindo da notificação ?abrir=).
+  useEffect(() => {
+    if (!aceitarSol) return;
+    if (aceitarForm.plano_contas_id) return;
+    if (!planos.length) return;
+    const sug =
+      planos.find((p) => /folha|sal[áa]rio|pessoal/i.test(p.nome || ""))?.id || "";
+    if (sug) setAceitarForm((prev) => ({ ...prev, plano_contas_id: sug }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planos, aceitarSol]);
 
   const confirmarAceitar = async () => {
     if (!aceitarSol) return;
@@ -487,14 +518,22 @@ export default function SolicitacoesFolhaPage() {
                     }
                   >
                     <SelectTrigger data-testid="select-plano-contas">
-                      <SelectValue placeholder="Selecione..." />
+                      <SelectValue placeholder={planos.length === 0 ? "Carregando..." : "Selecione..."} />
                     </SelectTrigger>
-                    <SelectContent>
-                      {planos.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.nome}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="z-[100]">
+                      {planos.length === 0 ? (
+                        <div className="px-3 py-2 text-xs text-gray-500">
+                          Nenhum plano de contas cadastrado.
+                        </div>
+                      ) : (
+                        planos.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.codigo ? `${p.codigo} - ` : ""}
+                            {p.nome}
+                            {p.tipo === "receita" ? " (receita)" : ""}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
