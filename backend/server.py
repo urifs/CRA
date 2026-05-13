@@ -7341,6 +7341,211 @@ class RenameItem(BaseModel):
     path: str
     new_name: str
 
+
+# =========================================================================
+# PASTAS VIRTUAIS POR SISTEMA / FERRAMENTA
+# Reúne automaticamente, sob "/Sistemas/<sistema>/<ferramenta>/", todos os
+# arquivos anexados nas ferramentas dos sistemas Financeiro, RH e Gerenciamento.
+# Os arquivos NÃO são copiados — apontam para os endpoints originais via
+# download_url, evitando duplicação de armazenamento.
+# =========================================================================
+
+VIRTUAL_ROOT = "Sistemas"
+
+# Estrutura: sistema -> { label, ferramentas: [(slug, label, entity_types)] }
+SYSTEM_TOOLS_MAP = {
+    "Financeiro": [
+        ("Contas a Pagar", ["contas_pagar"]),
+        ("Contas a Receber", ["contas_receber"]),
+        ("Movimentações Bancárias", ["movimentacoes_bancarias", "movimentacoes"]),
+        ("Importação NF (NF-e / NFS-e)", ["nfe_importadas", "nfse_importadas"]),
+        ("Solicitações de Folha", ["solicitacoes_folha_financeiro"]),
+        ("Aluguéis de Máquinas", ["alugueis"]),
+        ("Ordens de Serviço", ["ordens_servico"]),
+    ],
+    "RH": [
+        ("Funcionários", ["funcionarios"]),
+        ("Folhas de Pagamento (Importadas)", ["folhas_importadas"]),
+        ("Holerites", ["holerites"]),
+        ("Férias", ["ferias"]),
+        ("Ponto", ["ponto"]),
+        ("EPIs", ["epi_fichas"]),
+        ("Atestados", ["atestados"]),
+        ("Chat IA - PDFs gerados", ["__chat_artifacts__"]),
+    ],
+    "Gerenciamento": [
+        ("Máquinas", ["maquinas"]),
+        ("Manutenções", ["manutencoes"]),
+        ("Abastecimentos", ["abastecimentos"]),
+        ("Notas Fiscais (Frota)", ["notas_fiscais_frota"]),
+        ("Caixa de Tarefas", ["__tasks__"]),
+    ],
+}
+
+
+def _slug(s: str) -> str:
+    """Sanitiza string para uso como segmento de path virtual."""
+    import re
+    out = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE).strip()
+    return re.sub(r"[\s_-]+", "-", out)
+
+
+async def _count_files_in_tool(entity_types: list[str]) -> int:
+    """Conta quantos arquivos (anexos) existem para uma ferramenta."""
+    total = 0
+    for et in entity_types:
+        if et == "__chat_artifacts__":
+            total += await db.chat_artifacts.count_documents({})
+        elif et == "__tasks__":
+            # tarefas com array de attachments não-vazio
+            total += await db.tasks.count_documents({"attachments": {"$exists": True, "$ne": []}})
+        else:
+            total += await db.attachments.count_documents({"entity_type": et})
+    return total
+
+
+async def _list_virtual_files(entity_types: list[str]) -> list[dict]:
+    """Devolve os arquivos virtuais de uma ferramenta no formato esperado pelo
+    /storage/list, incluindo um download_url que aponta para o endpoint real."""
+    items = []
+    for et in entity_types:
+        if et == "__chat_artifacts__":
+            cursor = db.chat_artifacts.find(
+                {}, {"_id": 0, "id": 1, "filename": 1, "content_type": 1, "created_at": 1}
+            ).sort("created_at", -1)
+            async for a in cursor:
+                items.append({
+                    "name": a.get("filename") or f"artefato_{a['id'][:8]}.bin",
+                    "type": "file",
+                    "path": f"/{VIRTUAL_ROOT}/__virtual__/chat_artifact/{a['id']}",
+                    "size": 0,
+                    "modified_at": a.get("created_at"),
+                    "download_url": f"/api/chatbot/artifacts/{a['id']}",
+                    "virtual": True,
+                    "origem": "Chat IA",
+                })
+        elif et == "__tasks__":
+            cursor = db.tasks.find(
+                {"attachments": {"$exists": True, "$ne": []}},
+                {"_id": 0, "id": 1, "title": 1, "attachments": 1, "created_at": 1},
+            ).sort("created_at", -1)
+            async for t in cursor:
+                for att in t.get("attachments", []) or []:
+                    items.append({
+                        "name": att.get("name") or att.get("filename") or "arquivo",
+                        "type": "file",
+                        "path": f"/{VIRTUAL_ROOT}/__virtual__/task/{t['id']}/{att.get('name')}",
+                        "size": att.get("size", 0),
+                        "modified_at": t.get("created_at"),
+                        "download_url": f"/api/tasks/{t['id']}/attachments/{att.get('name')}",
+                        "virtual": True,
+                        "origem": f"Tarefa: {t.get('title','-')[:40]}",
+                    })
+        else:
+            cursor = db.attachments.find(
+                {"entity_type": et},
+                {"_id": 0, "id": 1, "filename": 1, "file_size": 1, "file_type": 1,
+                 "entity_id": 1, "created_at": 1, "uploaded_by_name": 1},
+            ).sort("created_at", -1)
+            async for a in cursor:
+                items.append({
+                    "name": a.get("filename") or f"anexo_{a['id'][:8]}",
+                    "type": "file",
+                    "path": f"/{VIRTUAL_ROOT}/__virtual__/attachment/{a['id']}",
+                    "size": a.get("file_size", 0),
+                    "modified_at": a.get("created_at"),
+                    "download_url": f"/api/attachments/download/{a['id']}",
+                    "virtual": True,
+                    "origem": f"{et} #{(a.get('entity_id') or '')[:8]}",
+                    "uploaded_by": a.get("uploaded_by_name"),
+                })
+    return items
+
+
+async def _virtual_storage_list(path: str) -> list[dict] | None:
+    """Se o `path` é virtual (raiz /, /Sistemas, /Sistemas/<sis>, /Sistemas/<sis>/<fer>),
+    devolve a listagem virtual. Caso contrário, retorna None para o caller seguir
+    o fluxo padrão de listagem física."""
+    parts = [p for p in path.split("/") if p]
+
+    # Raiz: injeta a pasta virtual /Sistemas junto com os itens físicos.
+    # O caller faz o merge com a lista física. Aqui retornamos só o item virtual.
+    if len(parts) == 0:
+        total = 0
+        for sis_tools in SYSTEM_TOOLS_MAP.values():
+            for _, ents in sis_tools:
+                total += await _count_files_in_tool(ents)
+        return [{
+            "name": VIRTUAL_ROOT,
+            "type": "folder",
+            "path": f"/{VIRTUAL_ROOT}",
+            "items_count": len(SYSTEM_TOOLS_MAP),
+            "modified_at": datetime.now(timezone.utc).isoformat(),
+            "has_password": False,
+            "virtual": True,
+            "description": f"Arquivos das ferramentas dos sistemas ({total} no total)",
+        }]
+
+    if parts[0] != VIRTUAL_ROOT:
+        return None  # não é virtual
+
+    # /Sistemas → lista os 3 sistemas
+    if len(parts) == 1:
+        out = []
+        for sistema, tools in SYSTEM_TOOLS_MAP.items():
+            count_total = 0
+            for _, ents in tools:
+                count_total += await _count_files_in_tool(ents)
+            out.append({
+                "name": sistema,
+                "type": "folder",
+                "path": f"/{VIRTUAL_ROOT}/{sistema}",
+                "items_count": len(tools),
+                "modified_at": datetime.now(timezone.utc).isoformat(),
+                "has_password": False,
+                "virtual": True,
+                "description": f"{count_total} arquivo(s) total",
+            })
+        return out
+
+    # /Sistemas/<sistema> → lista as ferramentas daquele sistema
+    if len(parts) == 2:
+        sistema = parts[1]
+        if sistema not in SYSTEM_TOOLS_MAP:
+            raise HTTPException(status_code=404, detail=f"Sistema '{sistema}' não existe")
+        out = []
+        for ferramenta, ents in SYSTEM_TOOLS_MAP[sistema]:
+            cnt = await _count_files_in_tool(ents)
+            out.append({
+                "name": ferramenta,
+                "type": "folder",
+                "path": f"/{VIRTUAL_ROOT}/{sistema}/{ferramenta}",
+                "items_count": cnt,
+                "modified_at": datetime.now(timezone.utc).isoformat(),
+                "has_password": False,
+                "virtual": True,
+                "description": f"{cnt} arquivo(s)",
+            })
+        return out
+
+    # /Sistemas/<sistema>/<ferramenta> → lista os arquivos virtuais
+    if len(parts) == 3:
+        sistema, ferramenta = parts[1], parts[2]
+        if sistema not in SYSTEM_TOOLS_MAP:
+            raise HTTPException(status_code=404, detail=f"Sistema '{sistema}' não existe")
+        ents = None
+        for fname, fents in SYSTEM_TOOLS_MAP[sistema]:
+            if fname == ferramenta:
+                ents = fents
+                break
+        if ents is None:
+            raise HTTPException(status_code=404, detail=f"Ferramenta '{ferramenta}' não existe em '{sistema}'")
+        return await _list_virtual_files(ents)
+
+    # Mais profundo que isso → vazio (somos 3 níveis: Sistemas/Sistema/Ferramenta)
+    return []
+
+
 @api_router.get("/storage/list")
 async def list_storage_items(
     path: str = "/",
@@ -7352,6 +7557,15 @@ async def list_storage_items(
     # Normalize path
     if not path.startswith("/"):
         path = "/" + path
+    
+    # Pasta virtual /Sistemas — consolida anexos de todas as ferramentas
+    virtual_items = await _virtual_storage_list(path)
+    if path.rstrip("/") == "" or path == "/":
+        # Raiz: vamos exibir a pasta virtual junto com o conteúdo físico abaixo
+        pass
+    elif virtual_items is not None:
+        # Está dentro de /Sistemas — retorna apenas a listagem virtual
+        return virtual_items
     
     # Build absolute path
     abs_path = STORAGE_DIR / path.lstrip("/")
@@ -7393,7 +7607,12 @@ async def list_storage_items(
     
     # Sort: folders first, then files, both alphabetically
     items.sort(key=lambda x: (0 if x["type"] == "folder" else 1, x["name"].lower()))
-    
+
+    # Na raiz, prepende a pasta virtual /Sistemas no topo
+    if path.rstrip("/") == "" or path == "/":
+        if virtual_items:
+            items = virtual_items + items
+
     return items
 
 @api_router.post("/storage/folder")

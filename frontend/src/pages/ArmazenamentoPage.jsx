@@ -471,19 +471,32 @@ export default function ArmazenamentoPage() {
 
   const handleDownload = async (item) => {
     try {
-      const response = await axios.get(`${API}/storage/download`, {
-        params: { path: item.path },
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob"
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // Arquivos virtuais (de Sistemas/Ferramentas) já trazem download_url
+      // apontando para o endpoint específico — usa-o em vez do /storage/download.
+      const url = item.download_url
+        ? `${API}${item.download_url.startsWith("/api") ? item.download_url.slice(4) : item.download_url}`
+        : null;
+      let response;
+      if (url) {
+        response = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        });
+      } else {
+        response = await axios.get(`${API}/storage/download`, {
+          params: { path: item.path },
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        });
+      }
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
-      link.href = url;
+      link.href = blobUrl;
       link.setAttribute("download", item.name);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       toast.error("Erro ao baixar arquivo");
     }
@@ -506,12 +519,22 @@ export default function ArmazenamentoPage() {
         });
         setPreviewBlobUrl(response.data.html); // Store HTML content in blobUrl state
       } else {
-        // Use blob for images, PDFs, videos
-        const response = await axios.get(`${API}/storage/download`, {
-          params: { path: item.path },
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: "blob"
-        });
+        // Use blob for images, PDFs, videos.
+        // Arquivos virtuais já trazem download_url do endpoint específico.
+        let response;
+        if (item.download_url) {
+          const url = `${API}${item.download_url.startsWith("/api") ? item.download_url.slice(4) : item.download_url}`;
+          response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${token}` },
+            responseType: "blob",
+          });
+        } else {
+          response = await axios.get(`${API}/storage/download`, {
+            params: { path: item.path },
+            headers: { Authorization: `Bearer ${token}` },
+            responseType: "blob",
+          });
+        }
         const blobUrl = window.URL.createObjectURL(response.data);
         setPreviewBlobUrl(blobUrl);
       }
