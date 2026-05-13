@@ -108,6 +108,157 @@ def _invalidate_kb_cache():
     _KB_CACHE.update({"loaded_at": None, "context_text": ""})
 
 
+# ========================================================================
+# UPLOAD DE ANEXOS NO CHAT — Suporta PDF, imagem, Excel/CSV, Word, texto
+# ========================================================================
+
+CHAT_UPLOADS_DIR = Path("/app/backend/uploads/chat_attachments")
+CHAT_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+# MIMEs que o Gemini lê nativamente (passar direto via FileContentWithMimeType)
+GEMINI_NATIVE_MIMES = {
+    "application/pdf",
+    "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
+    "text/plain", "text/csv", "text/html", "text/markdown",
+    "audio/mpeg", "audio/wav", "audio/aac", "audio/ogg", "audio/flac",
+    "video/mp4", "video/mpeg", "video/mov", "video/avi", "video/wmv",
+}
+
+
+def _extrair_texto_excel(path: str, max_rows: int = 2000) -> str:
+    """Converte .xlsx para texto tabular legível pela IA."""
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+        partes = []
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            partes.append(f"\n═══ Planilha: {sheet_name} ═══")
+            row_count = 0
+            for row in ws.iter_rows(values_only=True):
+                row_count += 1
+                if row_count > max_rows:
+                    partes.append(f"... (planilha truncada em {max_rows} linhas)")
+                    break
+                cells = [str(c) if c is not None else "" for c in row]
+                if any(cells):
+                    partes.append(" | ".join(cells))
+        wb.close()
+        return "\n".join(partes)
+    except Exception as e:
+        return f"[Erro ao ler Excel: {e}]"
+
+
+def _extrair_texto_docx(path: str) -> str:
+    """Converte .docx para texto."""
+    try:
+        from docx import Document
+        doc = Document(path)
+        partes = []
+        for p in doc.paragraphs:
+            if p.text.strip():
+                partes.append(p.text)
+        for table in doc.tables:
+            partes.append("\n--- Tabela ---")
+            for row in table.rows:
+                partes.append(" | ".join(c.text.strip() for c in row.cells))
+        return "\n".join(partes)
+    except Exception as e:
+        return f"[Erro ao ler Word: {e}]"
+
+
+def _extrair_texto_csv(path: str, max_rows: int = 5000) -> str:
+    """Lê CSV e retorna como texto tabular."""
+    import csv as _csv
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            reader = _csv.reader(f)
+            rows = []
+            for i, r in enumerate(reader):
+                if i >= max_rows:
+                    rows.append(f"... (truncado em {max_rows} linhas)")
+                    break
+                rows.append(" | ".join(r))
+        return "\n".join(rows)
+    except Exception as e:
+        return f"[Erro ao ler CSV: {e}]"
+
+
+async def _processar_anexo_chat(upload_file, conv_id: str) -> dict:
+    """Salva o arquivo no disco e retorna metadados + estratégia de inclusão na IA.
+
+    Retorna dict com:
+      - filename: nome original
+      - mime: detectado
+      - path: caminho salvo
+      - inline_text: se != None, deve ser concatenado ao prompt
+      - gemini_file: se != None, deve ser passado em file_contents (FileContentWithMimeType)
+    """
+    import mimetypes
+    raw = await upload_file.read()
+    safe_name = upload_file.filename.replace("/", "_").replace("\\", "_")[:120]
+    file_id = uuid.uuid4().hex[:12]
+    target = CHAT_UPLOADS_DIR / f"{conv_id}_{file_id}_{safe_name}"
+    with open(target, "wb") as f:
+        f.write(raw)
+
+    mime = upload_file.content_type or mimetypes.guess_type(safe_name)[0] or "application/octet-stream"
+    ext = (safe_name.rsplit(".", 1)[-1] or "").lower()
+
+    info = {
+        "id": file_id,
+        "filename": safe_name,
+        "mime": mime,
+        "path": str(target),
+        "size": len(raw),
+        "inline_text": None,
+        "gemini_file": None,
+    }
+
+    # Estratégia por tipo
+    if mime in GEMINI_NATIVE_MIMES or ext in ("pdf", "jpg", "jpeg", "png", "webp", "txt", "md"):
+        info["gemini_file"] = {"path": str(target), "mime": mime if mime in GEMINI_NATIVE_MIMES else "application/pdf"}
+        if ext == "txt" or ext == "md":
+            try:
+                with open(target, "r", encoding="utf-8", errors="replace") as f:
+                    info["inline_text"] = f.read()[:50000]
+                info["gemini_file"] = None  # texto inline é mais barato
+            except Exception:
+                pass
+    elif ext in ("xlsx", "xlsm", "xls"):
+        info["inline_text"] = _extrair_texto_excel(str(target))
+    elif ext == "csv":
+        info["inline_text"] = _extrair_texto_csv(str(target))
+    elif ext in ("docx", "doc"):
+        info["inline_text"] = _extrair_texto_docx(str(target))
+    else:
+        # Fallback: tenta ler como texto puro
+        try:
+            with open(target, "r", encoding="utf-8", errors="replace") as f:
+                info["inline_text"] = f.read()[:30000]
+        except Exception:
+            info["inline_text"] = f"[Arquivo não suportado para leitura: {ext}]"
+
+    return info
+
+
+def _detectar_pedido_alteracao(texto: str) -> bool:
+    """Heurística simples: detecta se o usuário pediu alteração do arquivo."""
+    if not texto:
+        return False
+    t = texto.lower()
+    palavras = [
+        "altere", "alterar", "modifique", "modificar", "atualize", "atualizar",
+        "edite", "editar", "corrija", "corrigir", "ajuste", "ajustar",
+        "remova", "remover", "exclua", "excluir", "delete",
+        "adicione", "adicionar", "insira", "inserir",
+        "substitua", "substituir", "troque", "trocar",
+        "gere uma versão", "gere o arquivo", "gerar novo arquivo",
+        "salve as alterações", "salve em", "gere um novo", "exporte",
+    ]
+    return any(p in t for p in palavras)
+
+
 # ============ AUTO-BOOTSTRAP DA BASE DE CONHECIMENTO ============
 # URLs fixas dos 4 documentos normativos da CRA Construtora.
 # Na primeira inicialização de qualquer ambiente (preview, produção, staging),
@@ -787,6 +938,7 @@ class MessageOut(BaseModel):
     content: str
     created_at: str
     artifact: Optional[dict] = None  # {download_url, label, type} quando IA gera arquivo
+    attachments: Optional[List[dict]] = None  # anexos enviados pelo usuário
 
 
 @chatbot_router.get("/conversations", response_model=List[ConversationOut])
@@ -1452,3 +1604,255 @@ Se a folha de pagamento ainda não existir para o período, INFORME ao usuário 
     await db.chat_conversations.update_one({"id": conv_id}, {"$set": update_fields})
 
     return MessageOut(**{k: v for k, v in assistant_msg.items() if k != "conversation_id"})
+
+
+# ========================================================================
+# CHAT COM ANEXOS (multipart) — leitura e alteração de arquivos
+# ========================================================================
+
+@chatbot_router.post("/conversations/{conv_id}/messages-with-files", response_model=MessageOut)
+async def send_message_with_files(
+    conv_id: str,
+    content: str = Form(""),
+    files: List[UploadFile] = File(default=[]),
+    current_user: dict = Depends(get_current_user),
+):
+    """Envia mensagem com anexos. Suporta PDF, imagem, Excel/CSV, Word, texto.
+
+    A IA lê o conteúdo dos arquivos junto com o prompt e responde. Se o usuário
+    pedir alteração no arquivo, a IA gera uma nova versão e a disponibiliza
+    para download (artifact com URL).
+    """
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+
+    conv = await db.chat_conversations.find_one(
+        {"id": conv_id, "user_id": current_user["id"]}, {"_id": 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversa não encontrada")
+
+    if not content and not files:
+        raise HTTPException(status_code=400, detail="Envie uma mensagem ou anexe um arquivo")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Processa cada anexo
+    anexos_info: List[dict] = []
+    for f in files:
+        if not f.filename:
+            continue
+        info = await _processar_anexo_chat(f, conv_id)
+        anexos_info.append(info)
+
+    # Lista de file_contents para Gemini (PDFs, imagens nativas)
+    gemini_files = [
+        FileContentWithMimeType(file_path=a["gemini_file"]["path"], mime_type=a["gemini_file"]["mime"])
+        for a in anexos_info if a.get("gemini_file")
+    ]
+
+    # Texto inline (Excel, CSV, Word, txt)
+    blocos_inline = []
+    for a in anexos_info:
+        if a.get("inline_text"):
+            blocos_inline.append(
+                f"\n\n════ ARQUIVO ANEXADO: {a['filename']} ({a['mime']}) ════\n{a['inline_text']}"
+            )
+    texto_inline = "".join(blocos_inline)
+
+    # Persistir mensagem do usuário (com anexos referenciados)
+    user_msg = {
+        "id": str(uuid.uuid4()),
+        "conversation_id": conv_id,
+        "role": "user",
+        "content": content or "(Sem texto — apenas arquivos anexados)",
+        "attachments": [
+            {"id": a["id"], "filename": a["filename"], "mime": a["mime"], "size": a["size"]}
+            for a in anexos_info
+        ],
+        "created_at": now_iso,
+    }
+    await db.chat_messages.insert_one(dict(user_msg))
+
+    # Histórico recente (textual)
+    msgs_anteriores = await db.chat_messages.find(
+        {"conversation_id": conv_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(60)
+    historico_txt = "\n".join(
+        f"[{m['role'].upper()}]: {m.get('content','')[:1000]}" for m in msgs_anteriores[:-1]
+    )
+
+    # Detecta pedido de alteração
+    pediu_alteracao = _detectar_pedido_alteracao(content)
+    arquivo_alvo = next(
+        (a for a in anexos_info if a["filename"].rsplit(".", 1)[-1].lower() in ("csv", "txt", "md", "xlsx", "xls", "docx")),
+        None,
+    )
+
+    # System prompt
+    instrucoes_alteracao = ""
+    if pediu_alteracao and arquivo_alvo:
+        ext = arquivo_alvo["filename"].rsplit(".", 1)[-1].lower()
+        formato_saida = {
+            "csv": "CSV (separador vírgula)",
+            "txt": "texto puro",
+            "md": "Markdown",
+            "xlsx": "CSV (separador vírgula) que será convertido para Excel",
+            "xls": "CSV (separador vírgula) que será convertido para Excel",
+            "docx": "texto puro (será convertido para Word)",
+        }.get(ext, "texto puro")
+        instrucoes_alteracao = f"""
+INSTRUÇÃO ESPECIAL — O USUÁRIO PEDIU ALTERAÇÃO NO ARQUIVO `{arquivo_alvo['filename']}`:
+1. Explique brevemente em português o que você alterou.
+2. Em seguida, forneça o ARQUIVO COMPLETO ALTERADO entre os marcadores:
+   <<<ARTEFATO filename="{arquivo_alvo['filename']}" format="{ext}">>>
+   ...conteúdo completo em {formato_saida}, sem nenhum comentário extra...
+   <<<FIM_ARTEFATO>>>
+3. NÃO use blocos de código markdown dentro do artefato. Apenas o conteúdo cru.
+4. Mantenha cabeçalhos/estrutura originais quando possível.
+"""
+
+    system_message = f"""Você é o assistente virtual inteligente da CRA Construtora.
+Você lê arquivos anexados pelo usuário (PDF, imagem, Excel, CSV, Word, texto) e responde
+com base no conteúdo deles JUNTO com o prompt textual. NÃO faça alterações no sistema —
+você apenas lê e responde. SE o usuário pedir explicitamente para alterar o arquivo,
+gere a NOVA VERSÃO dentro dos marcadores especificados abaixo.
+
+HISTÓRICO RECENTE DA CONVERSA:
+{historico_txt or "(início)"}
+
+{instrucoes_alteracao}
+
+INSTRUÇÕES:
+- Responda em português brasileiro.
+- Cite trechos/valores do arquivo quando relevante.
+- Se vários arquivos foram anexados, mencione cada um.
+- Se o usuário não pediu alteração, apenas responda às perguntas sobre o conteúdo.
+"""
+
+    llm_key = os.environ.get("EMERGENT_LLM_KEY")
+    llm_chat = LlmChat(
+        api_key=llm_key,
+        session_id=f"conv-files-{conv_id}",
+        system_message=system_message,
+    ).with_model("gemini", "gemini-2.5-flash")
+
+    prompt_completo = (content or "(Analise os arquivos anexados)") + texto_inline
+
+    try:
+        if gemini_files:
+            user_message = UserMessage(text=prompt_completo, file_contents=gemini_files)
+        else:
+            user_message = UserMessage(text=prompt_completo)
+        ai_response = await llm_chat.send_message(user_message)
+    except Exception as e:
+        logging.error(f"Erro Gemini (multipart): {e}")
+        raise HTTPException(status_code=500, detail=f"Erro na IA: {str(e)[:200]}")
+
+    # Detecta artefato (arquivo alterado) na resposta
+    artifact = None
+    import re as _re
+    art_match = _re.search(
+        r'<<<ARTEFATO\s+filename="([^"]+)"\s+format="([^"]+)">>>(.*?)<<<FIM_ARTEFATO>>>',
+        ai_response,
+        _re.DOTALL,
+    )
+    if art_match:
+        art_filename = art_match.group(1)
+        art_format = art_match.group(2).lower()
+        art_content = art_match.group(3).strip()
+
+        # Salva o artefato no disco e cria URL pública
+        art_id = uuid.uuid4().hex[:12]
+        new_filename = f"alterado_{art_filename}"
+
+        try:
+            if art_format in ("xlsx", "xls"):
+                # Recebe CSV → converte para XLSX
+                import openpyxl as _xl, csv as _csv, io as _io
+                wb = _xl.Workbook()
+                ws = wb.active
+                ws.title = "Alterado"
+                reader = _csv.reader(_io.StringIO(art_content))
+                for row in reader:
+                    ws.append(row)
+                target = CHAT_UPLOADS_DIR / f"art_{conv_id}_{art_id}_{new_filename}"
+                wb.save(str(target))
+            elif art_format == "docx":
+                # Texto puro → Word
+                from docx import Document
+                doc = Document()
+                for line in art_content.split("\n"):
+                    doc.add_paragraph(line)
+                target = CHAT_UPLOADS_DIR / f"art_{conv_id}_{art_id}_{new_filename}"
+                doc.save(str(target))
+            else:
+                # csv / txt / md → grava direto
+                target = CHAT_UPLOADS_DIR / f"art_{conv_id}_{art_id}_{new_filename}"
+                with open(target, "w", encoding="utf-8") as f:
+                    f.write(art_content)
+            artifact = {
+                "type": "file",
+                "filename": new_filename,
+                "format": art_format,
+                "download_url": f"/api/chatbot/artifacts-file/{art_id}",
+                "size": target.stat().st_size,
+            }
+            # Persistir caminho para download
+            await db.chat_artifacts.insert_one({
+                "id": art_id,
+                "conversation_id": conv_id,
+                "filename": new_filename,
+                "path": str(target),
+                "mime": {
+                    "csv": "text/csv",
+                    "txt": "text/plain",
+                    "md": "text/markdown",
+                    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "xls": "application/vnd.ms-excel",
+                    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                }.get(art_format, "application/octet-stream"),
+                "created_at": now_iso,
+            })
+            # Remove o bloco do texto exibido ao usuário
+            ai_response = _re.sub(
+                r'<<<ARTEFATO[^>]+>>>.*?<<<FIM_ARTEFATO>>>', "", ai_response, flags=_re.DOTALL
+            ).strip()
+            ai_response += f"\n\n📎 Arquivo alterado pronto para download: **{new_filename}**"
+        except Exception as e:
+            logging.error(f"Erro ao gerar artefato: {e}")
+            ai_response += f"\n\n⚠️ Falha ao gerar o arquivo alterado: {str(e)[:200]}"
+
+    # Persistir resposta
+    assistant_msg = {
+        "id": str(uuid.uuid4()),
+        "conversation_id": conv_id,
+        "role": "assistant",
+        "content": ai_response,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "artifact": artifact,
+    }
+    await db.chat_messages.insert_one(dict(assistant_msg))
+
+    update_fields = {
+        "updated_at": assistant_msg["created_at"],
+        "last_message_preview": (ai_response or "")[:120],
+    }
+    if conv.get("title") in (None, "", "Nova conversa"):
+        title_auto = (content or "Anexo enviado").strip().split("\n")[0][:60]
+        update_fields["title"] = title_auto
+    await db.chat_conversations.update_one({"id": conv_id}, {"$set": update_fields})
+
+    return MessageOut(**{k: v for k, v in assistant_msg.items() if k != "conversation_id"})
+
+
+@chatbot_router.get("/artifacts-file/{art_id}")
+async def download_chat_artifact_file(art_id: str, current_user: dict = Depends(get_current_user)):
+    """Faz download de um arquivo gerado pelo chat (alteração de arquivo do usuário)."""
+    from fastapi.responses import FileResponse
+    art = await db.chat_artifacts.find_one({"id": art_id}, {"_id": 0})
+    if not art:
+        raise HTTPException(status_code=404, detail="Artefato não encontrado")
+    path = art.get("path")
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Arquivo expirado/removido")
+    return FileResponse(path, filename=art["filename"], media_type=art.get("mime"))

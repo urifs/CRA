@@ -780,12 +780,64 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
     if 1 <= mes <= 12:
         competencia_str = f"{nomes_meses[mes]}/{ano}"
 
+    # Helper para montar bloco de detalhes completos da folha (TODAS as informações)
+    def _bloco_detalhes_folha(funcionarios_lista):
+        linhas = []
+        linhas.append("════════ FOLHA DE PAGAMENTO — DETALHAMENTO COMPLETO ════════")
+        linhas.append(f"Competência: {competencia_str or f'{mes:02d}/{ano}'}")
+        linhas.append(f"Empresa: {folha.get('empresa') or '—'}")
+        if folha.get('cnpj'):
+            linhas.append(f"CNPJ: {folha.get('cnpj')}")
+        linhas.append(f"Solicitação RH: {sol_id[:8]}")
+        linhas.append(f"Folha ID: {sol['folha_id'][:8]}")
+        linhas.append(f"Modo: {sol['modo']}")
+        linhas.append(f"Total de funcionários: {len(funcionarios_lista)}")
+        total_venc = sum(float(x.get('total_vencimentos') or 0) for x in funcionarios_lista)
+        total_desc = sum(float(x.get('total_descontos') or 0) for x in funcionarios_lista)
+        total_liq = sum(float(x.get('valor_liquido') or 0) for x in funcionarios_lista)
+        linhas.append(f"Total vencimentos: R$ {total_venc:.2f}")
+        linhas.append(f"Total descontos: R$ {total_desc:.2f}")
+        linhas.append(f"Total líquido: R$ {total_liq:.2f}")
+        linhas.append("")
+        linhas.append("──────── FUNCIONÁRIOS ────────")
+        for idx, fnc in enumerate(funcionarios_lista, 1):
+            nome = fnc.get('match_nome_db') or fnc.get('nome_pdf') or 'Funcionário'
+            cpf = fnc.get('cpf') or fnc.get('cpf_pdf') or '—'
+            cargo = fnc.get('cargo') or fnc.get('cargo_pdf') or '—'
+            linhas.append(f"{idx}. {nome}")
+            linhas.append(f"   CPF: {cpf} | Cargo: {cargo}")
+            linhas.append(f"   Líquido: R$ {float(fnc.get('valor_liquido') or 0):.2f}")
+            linhas.append(f"   Vencimentos: R$ {float(fnc.get('total_vencimentos') or 0):.2f}")
+            linhas.append(f"   Descontos: R$ {float(fnc.get('total_descontos') or 0):.2f}")
+            if fnc.get('funcionario_id'):
+                linhas.append(f"   Vínculo DB: {fnc.get('funcionario_id')}")
+            else:
+                linhas.append("   Vínculo DB: NÃO VINCULADO")
+            # Detalhes de rubricas se existirem
+            rubricas = fnc.get('rubricas') or fnc.get('eventos') or []
+            if rubricas:
+                linhas.append("   Rubricas:")
+                for r in rubricas[:30]:
+                    rcod = r.get('codigo') or '—'
+                    rdesc = r.get('descricao') or '—'
+                    rref = r.get('referencia') or ''
+                    rval = float(r.get('valor') or 0)
+                    rtipo = r.get('tipo') or ''
+                    linhas.append(f"     • [{rcod}] {rdesc} {rref} {rtipo}: R$ {rval:.2f}")
+            obs_func = fnc.get('observacoes') or fnc.get('obs')
+            if obs_func:
+                linhas.append(f"   Obs: {obs_func}")
+        if payload.observacao:
+            linhas.append("")
+            linhas.append(f"──── Observação do financeiro: {payload.observacao}")
+        return "\n".join(linhas)
+
     contas_criadas: list[str] = []
     now_iso = datetime.now(timezone.utc).isoformat()
 
     if sol["modo"] == "cheio":
         # 1 conta agrupada com PDF mestre como anexo
-        descricao = f"Folha de Pagamento - {competencia_str or f'{mes:02d}/{ano}'}"
+        descricao = f"Folha de Pagamento - {competencia_str or f'{mes:02d}/{ano}'} - {folha.get('empresa') or 'Empresa'} - {sol['total_funcionarios']} func"
         conta_id = str(uuid.uuid4())
         anexos = []
         if folha.get("master_pdf_path"):
@@ -796,7 +848,8 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
                 "content_type": "application/pdf",
             })
         # Anexa também os holerites individuais
-        for f in (folha.get("funcionarios") or []):
+        funcionarios_lista = folha.get("funcionarios") or []
+        for f in funcionarios_lista:
             if f.get("anexo_holerite_path"):
                 anexos.append({
                     "id": str(uuid.uuid4()),
@@ -804,6 +857,23 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
                     "storage_path": f["anexo_holerite_path"],
                     "content_type": "application/pdf",
                 })
+        # Snapshot estruturado de TODOS os funcionários da folha
+        funcionarios_snapshot = []
+        for f in funcionarios_lista:
+            funcionarios_snapshot.append({
+                "funcionario_id": f.get("funcionario_id"),
+                "linha_id": f.get("linha_id"),
+                "nome_pdf": f.get("nome_pdf"),
+                "match_nome_db": f.get("match_nome_db"),
+                "cpf": f.get("cpf") or f.get("cpf_pdf"),
+                "cargo": f.get("cargo") or f.get("cargo_pdf"),
+                "valor_liquido": float(f.get("valor_liquido") or 0),
+                "total_vencimentos": float(f.get("total_vencimentos") or 0),
+                "total_descontos": float(f.get("total_descontos") or 0),
+                "rubricas": f.get("rubricas") or f.get("eventos") or [],
+                "anexo_holerite_path": f.get("anexo_holerite_path"),
+                "observacoes": f.get("observacoes") or f.get("obs"),
+            })
         nova_conta = {
             "id": conta_id,
             "descricao": descricao,
@@ -818,13 +888,27 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
             "data_vencimento": payload.data_vencimento,
             "status": "em_aberto",
             "plano_contas_id": payload.plano_contas_id,
+            "plano_conta_id": payload.plano_contas_id,
             "plano_contas_nome": plano.get("nome"),
+            "plano_conta_nome": plano.get("nome"),
             "conta_bancaria_id": payload.conta_bancaria_id,
             "forma_pagamento": payload.forma_pagamento,
-            "observacao": (
-                f"Solicitação RH #{sol_id[:8]} | {sol['total_funcionarios']} funcionário(s) | "
-                f"Competência {competencia_str}. {payload.observacao or ''}"
-            ).strip(),
+            "observacao": _bloco_detalhes_folha(funcionarios_lista),
+            "observacoes": _bloco_detalhes_folha(funcionarios_lista),
+            # Snapshot estruturado para uso pelo financeiro
+            "folha_detalhes": {
+                "competencia_str": competencia_str,
+                "mes_competencia": mes,
+                "ano_competencia": ano,
+                "empresa": folha.get("empresa"),
+                "cnpj_empresa": folha.get("cnpj"),
+                "modo": sol["modo"],
+                "total_funcionarios": sol['total_funcionarios'],
+                "total_vencimentos": sum(float(x.get('total_vencimentos') or 0) for x in funcionarios_lista),
+                "total_descontos": sum(float(x.get('total_descontos') or 0) for x in funcionarios_lista),
+                "total_liquido": float(folha.get("total_geral_liquido") or 0),
+                "funcionarios": funcionarios_snapshot,
+            },
             "anexos": anexos,
             "origem": "folha_pagamento",
             "folha_id": sol["folha_id"],
@@ -839,7 +923,9 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
         for f in (folha.get("funcionarios") or []):
             conta_id = str(uuid.uuid4())
             nome = f.get("match_nome_db") or f.get("nome_pdf") or "Funcionário"
-            descricao = f"Folha de Pagamento - {nome} - {competencia_str or f'{mes:02d}/{ano}'}"
+            cpf_func = f.get("cpf") or f.get("cpf_pdf")
+            cargo_func = f.get("cargo") or f.get("cargo_pdf")
+            descricao = f"Folha - {nome} - {competencia_str or f'{mes:02d}/{ano}'}"
             anexos = []
             if f.get("anexo_holerite_path"):
                 anexos.append({
@@ -848,11 +934,48 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
                     "storage_path": f["anexo_holerite_path"],
                     "content_type": "application/pdf",
                 })
+            # Bloco detalhado do funcionário individual
+            linhas_det = []
+            linhas_det.append("════════ HOLERITE — DETALHAMENTO COMPLETO ════════")
+            linhas_det.append(f"Competência: {competencia_str or f'{mes:02d}/{ano}'}")
+            linhas_det.append(f"Empresa: {folha.get('empresa') or '—'}")
+            if folha.get('cnpj'):
+                linhas_det.append(f"CNPJ Empresa: {folha.get('cnpj')}")
+            linhas_det.append(f"Funcionário: {nome}")
+            linhas_det.append(f"CPF: {cpf_func or '—'}")
+            linhas_det.append(f"Cargo: {cargo_func or '—'}")
+            if f.get('funcionario_id'):
+                linhas_det.append(f"Vínculo DB: {f.get('funcionario_id')}")
+            else:
+                linhas_det.append("Vínculo DB: NÃO VINCULADO")
+            linhas_det.append("")
+            linhas_det.append(f"Total vencimentos: R$ {float(f.get('total_vencimentos') or 0):.2f}")
+            linhas_det.append(f"Total descontos: R$ {float(f.get('total_descontos') or 0):.2f}")
+            linhas_det.append(f"Líquido a pagar: R$ {float(f.get('valor_liquido') or 0):.2f}")
+            rubricas = f.get('rubricas') or f.get('eventos') or []
+            if rubricas:
+                linhas_det.append("")
+                linhas_det.append("──── Rubricas ────")
+                for r in rubricas:
+                    rcod = r.get('codigo') or '—'
+                    rdesc = r.get('descricao') or '—'
+                    rref = r.get('referencia') or ''
+                    rval = float(r.get('valor') or 0)
+                    rtipo = r.get('tipo') or ''
+                    linhas_det.append(f"  • [{rcod}] {rdesc} {rref} {rtipo}: R$ {rval:.2f}")
+            obs_func = f.get('observacoes') or f.get('obs')
+            if obs_func:
+                linhas_det.append(f"\nObs do holerite: {obs_func}")
+            linhas_det.append(f"\nSolicitação RH: {sol_id[:8]} | Folha: {sol['folha_id'][:8]} | Linha: {f.get('linha_id') or '—'}")
+            if payload.observacao:
+                linhas_det.append(f"\n──── Observação financeiro: {payload.observacao}")
+            observacao_completa = "\n".join(linhas_det)
+
             nova_conta = {
                 "id": conta_id,
                 "descricao": descricao,
                 "fornecedor_nome": nome,
-                "fornecedor_cpf": None,
+                "fornecedor_cpf": cpf_func,
                 "funcionario_id": f.get("funcionario_id"),
                 "valor": float(f.get("valor_liquido") or 0),
                 "valor_desconto": 0,
@@ -863,14 +986,36 @@ async def aceitar_solicitacao(sol_id: str, payload: AceitarSolicitacaoPayload):
                 "data_vencimento": payload.data_vencimento,
                 "status": "em_aberto",
                 "plano_contas_id": payload.plano_contas_id,
+                "plano_conta_id": payload.plano_contas_id,
                 "plano_contas_nome": plano.get("nome"),
+                "plano_conta_nome": plano.get("nome"),
                 "conta_bancaria_id": payload.conta_bancaria_id,
                 "forma_pagamento": payload.forma_pagamento,
-                "observacao": (
-                    f"Holerite individual | Competência {competencia_str} | "
-                    f"Vencimentos R${f.get('total_vencimentos') or 0:.2f} | "
-                    f"Descontos R${f.get('total_descontos') or 0:.2f}. {payload.observacao or ''}"
-                ).strip(),
+                "observacao": observacao_completa,
+                "observacoes": observacao_completa,
+                # Snapshot estruturado do holerite individual
+                "folha_detalhes": {
+                    "competencia_str": competencia_str,
+                    "mes_competencia": mes,
+                    "ano_competencia": ano,
+                    "empresa": folha.get("empresa"),
+                    "cnpj_empresa": folha.get("cnpj"),
+                    "modo": "individual",
+                    "funcionario": {
+                        "funcionario_id": f.get("funcionario_id"),
+                        "linha_id": f.get("linha_id"),
+                        "nome_pdf": f.get("nome_pdf"),
+                        "match_nome_db": f.get("match_nome_db"),
+                        "cpf": cpf_func,
+                        "cargo": cargo_func,
+                        "valor_liquido": float(f.get("valor_liquido") or 0),
+                        "total_vencimentos": float(f.get("total_vencimentos") or 0),
+                        "total_descontos": float(f.get("total_descontos") or 0),
+                        "rubricas": rubricas,
+                        "anexo_holerite_path": f.get("anexo_holerite_path"),
+                        "observacoes": obs_func,
+                    },
+                },
                 "anexos": anexos,
                 "origem": "folha_pagamento",
                 "folha_id": sol["folha_id"],

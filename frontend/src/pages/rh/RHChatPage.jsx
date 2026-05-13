@@ -16,6 +16,8 @@ import {
   X,
   FileDown,
   BookOpen,
+  Paperclip,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -46,8 +48,10 @@ export default function RHChatPage() {
   const [loadingConv, setLoadingConv] = useState(false);
   const [sending, setSending] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]); // arquivos selecionados ainda não enviados
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -108,7 +112,8 @@ export default function RHChatPage() {
 
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || sending) return;
+    const hasFiles = pendingFiles.length > 0;
+    if ((!text && !hasFiles) || sending) return;
 
     let convId = activeId;
     if (!convId) {
@@ -131,30 +136,64 @@ export default function RHChatPage() {
     const userMsg = {
       id: `tmp-${Date.now()}`,
       role: "user",
-      content: text,
+      content: text || "(arquivos anexados)",
+      attachments: pendingFiles.map((f) => ({ filename: f.name, mime: f.type, size: f.size })),
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    const filesToSend = pendingFiles;
+    setPendingFiles([]);
     setSending(true);
 
     try {
-      const r = await axios.post(
-        `${API}/api/chatbot/conversations/${convId}/messages`,
-        { content: text },
-        { headers }
-      );
+      let r;
+      if (hasFiles) {
+        const fd = new FormData();
+        fd.append("content", text);
+        filesToSend.forEach((f) => fd.append("files", f, f.name));
+        r = await axios.post(
+          `${API}/api/chatbot/conversations/${convId}/messages-with-files`,
+          fd,
+          { headers: { ...headers, "Content-Type": "multipart/form-data" } }
+        );
+      } else {
+        r = await axios.post(
+          `${API}/api/chatbot/conversations/${convId}/messages`,
+          { content: text },
+          { headers }
+        );
+      }
       const assistantMsg = r.data;
       setMessages((prev) => [...prev, assistantMsg]);
-      // Atualizar conversa na sidebar (preview/título)
       fetchConversations();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao enviar mensagem");
       setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+      setPendingFiles(filesToSend); // restaura para o usuário tentar de novo
     } finally {
       setSending(false);
       setTimeout(() => textareaRef.current?.focus(), 80);
     }
+  };
+
+  const handleFilesSelected = (e) => {
+    const arr = Array.from(e.target.files || []);
+    if (arr.length === 0) return;
+    // Limite de tamanho ~25MB por arquivo
+    const validos = arr.filter((f) => {
+      if (f.size > 25 * 1024 * 1024) {
+        toast.error(`${f.name}: máximo 25MB`);
+        return false;
+      }
+      return true;
+    });
+    setPendingFiles((prev) => [...prev, ...validos]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removerPendingFile = (idx) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
   // Auto-scroll
@@ -398,6 +437,20 @@ export default function RHChatPage() {
                     <div
                       dangerouslySetInnerHTML={{ __html: formatMessage(m.content) }}
                     />
+                    {/* Chips de anexos enviados pelo usuário */}
+                    {m.role === "user" && Array.isArray(m.attachments) && m.attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {m.attachments.map((a, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 bg-emerald-900/40 border border-emerald-400/40 rounded-full px-2 py-0.5 text-[10px]"
+                          >
+                            <FileText size={10} />
+                            <span className="truncate max-w-[180px]">{a.filename}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {m.artifact && (
                       <div className="mt-3 pt-3 border-t border-gray-700">
                         <button
@@ -406,7 +459,7 @@ export default function RHChatPage() {
                           data-testid={`rhchat-artifact-${m.id}`}
                         >
                           <FileDown size={14} />
-                          {m.artifact.label || "Baixar arquivo gerado"}
+                          {m.artifact.label || m.artifact.filename || "Baixar arquivo gerado"}
                         </button>
                       </div>
                     )}
@@ -434,32 +487,76 @@ export default function RHChatPage() {
 
         {/* Input */}
         <div className="border-t border-gray-800 bg-[#171718] px-4 py-3">
-          <div className="max-w-3xl mx-auto flex items-end gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Pergunte algo sobre RH, finanças, dados da plataforma..."
-              rows={1}
-              className="resize-none bg-[#0f0f10] border-gray-800 text-gray-100 focus-visible:ring-emerald-500 max-h-40"
-              data-testid="rhchat-input"
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={!input.trim() || sending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 h-10 w-10 p-0 flex-shrink-0"
-              data-testid="rhchat-send"
-            >
-              {sending ? (
-                <Loader2 className="animate-spin" size={16} />
-              ) : (
-                <Send size={16} />
-              )}
-            </Button>
+          <div className="max-w-3xl mx-auto space-y-2">
+            {/* Chips dos arquivos pendentes */}
+            {pendingFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2" data-testid="chat-pending-files">
+                {pendingFiles.map((f, idx) => (
+                  <div
+                    key={`${f.name}-${idx}`}
+                    className="flex items-center gap-2 bg-emerald-900/40 border border-emerald-600 rounded-full px-3 py-1 text-xs text-emerald-100"
+                  >
+                    <FileText size={12} />
+                    <span className="truncate max-w-[200px]">{f.name}</span>
+                    <span className="text-emerald-300">({(f.size / 1024).toFixed(0)}KB)</span>
+                    <button
+                      type="button"
+                      onClick={() => removerPendingFile(idx)}
+                      className="hover:text-red-300"
+                      title="Remover"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md,.csv,.xlsx,.xls,.docx,.doc,application/pdf,image/*,text/*,.xlsx,.xls,.docx,.doc,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleFilesSelected}
+                className="hidden"
+                data-testid="rhchat-file-input"
+              />
+              <Button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending}
+                className="bg-[#0f0f10] hover:bg-[#252527] text-gray-300 border border-gray-800 h-10 w-10 p-0 flex-shrink-0"
+                title="Anexar arquivo (PDF, imagem, Excel, CSV, Word, texto)"
+                data-testid="rhchat-attach-btn"
+              >
+                <Paperclip size={16} />
+              </Button>
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={pendingFiles.length > 0 ? "Pergunte algo sobre os arquivos ou peça uma alteração..." : "Pergunte algo sobre RH, finanças, dados da plataforma..."}
+                rows={1}
+                className="resize-none bg-[#0f0f10] border-gray-800 text-gray-100 focus-visible:ring-emerald-500 max-h-40"
+                data-testid="rhchat-input"
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={(!input.trim() && pendingFiles.length === 0) || sending}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 h-10 w-10 p-0 flex-shrink-0"
+                data-testid="rhchat-send"
+              >
+                {sending ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Send size={16} />
+                )}
+              </Button>
+            </div>
           </div>
           <p className="text-[10px] text-center text-gray-500 mt-2">
-            Modelo: Gemini 2.5 Flash · Pode cometer erros — verifique informações importantes.
+            Modelo: Gemini 2.5 Flash · Anexe arquivos (PDF, imagem, Excel, CSV, Word, texto) e peça análise ou alterações. Pode cometer erros.
           </p>
         </div>
       </main>

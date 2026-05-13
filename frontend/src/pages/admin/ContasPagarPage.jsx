@@ -1035,9 +1035,157 @@ export default function ContasPagarPage() {
                 </Select>
               </div>
             </div>
+            {/* Card de Detalhes da Folha de Pagamento — exibido quando a conta vem do RH */}
+            {editingConta?.folha_detalhes && (
+              <div className="border-2 border-indigo-300 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 p-4 space-y-3" data-testid="card-folha-detalhes">
+                <div className="flex items-center justify-between border-b border-indigo-200 pb-2">
+                  <h4 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                    📋 Folha de Pagamento — Origem RH
+                  </h4>
+                  <span className="text-xs font-mono text-indigo-700">
+                    Sol #{(editingConta.solicitacao_folha_id || "").slice(0, 8)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <div className="text-gray-500">Competência</div>
+                    <div className="font-semibold">{editingConta.folha_detalhes.competencia_str || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Empresa</div>
+                    <div className="font-semibold truncate" title={editingConta.folha_detalhes.empresa}>{editingConta.folha_detalhes.empresa || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">CNPJ</div>
+                    <div className="font-mono">{editingConta.folha_detalhes.cnpj_empresa || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Modo</div>
+                    <div className="font-semibold uppercase">{editingConta.folha_detalhes.modo || "—"}</div>
+                  </div>
+                </div>
+
+                {/* Totais agregados (modo cheio) ou holerite (individual) */}
+                {editingConta.folha_detalhes.modo === "cheio" ? (
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-white p-2 rounded border">
+                      <div className="text-gray-500">Vencimentos</div>
+                      <div className="text-emerald-700 font-bold">{formatCurrency(editingConta.folha_detalhes.total_vencimentos || 0)}</div>
+                    </div>
+                    <div className="bg-white p-2 rounded border">
+                      <div className="text-gray-500">Descontos</div>
+                      <div className="text-red-700 font-bold">{formatCurrency(editingConta.folha_detalhes.total_descontos || 0)}</div>
+                    </div>
+                    <div className="bg-white p-2 rounded border">
+                      <div className="text-gray-500">Líquido total</div>
+                      <div className="text-indigo-700 font-bold">{formatCurrency(editingConta.folha_detalhes.total_liquido || 0)}</div>
+                    </div>
+                  </div>
+                ) : editingConta.folha_detalhes.funcionario && (
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-white p-2 rounded border">
+                      <div className="text-gray-500">Vencimentos</div>
+                      <div className="text-emerald-700 font-bold">{formatCurrency(editingConta.folha_detalhes.funcionario.total_vencimentos || 0)}</div>
+                    </div>
+                    <div className="bg-white p-2 rounded border">
+                      <div className="text-gray-500">Descontos</div>
+                      <div className="text-red-700 font-bold">{formatCurrency(editingConta.folha_detalhes.funcionario.total_descontos || 0)}</div>
+                    </div>
+                    <div className="bg-white p-2 rounded border">
+                      <div className="text-gray-500">Líquido</div>
+                      <div className="text-indigo-700 font-bold">{formatCurrency(editingConta.folha_detalhes.funcionario.valor_liquido || 0)}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Funcionários (modo cheio) */}
+                {editingConta.folha_detalhes.modo === "cheio" && (editingConta.folha_detalhes.funcionarios || []).length > 0 && (
+                  <details className="text-xs" data-testid="funcionarios-folha-detalhe">
+                    <summary className="cursor-pointer font-semibold text-indigo-800">
+                      👥 {editingConta.folha_detalhes.funcionarios.length} funcionário(s) — clique para ver detalhes
+                    </summary>
+                    <div className="mt-2 max-h-60 overflow-y-auto bg-white rounded border">
+                      <table className="w-full">
+                        <thead className="bg-indigo-100 sticky top-0">
+                          <tr>
+                            <th className="text-left p-2">Nome</th>
+                            <th className="text-left p-2">CPF</th>
+                            <th className="text-left p-2">Cargo</th>
+                            <th className="text-right p-2">Venc.</th>
+                            <th className="text-right p-2">Desc.</th>
+                            <th className="text-right p-2">Líquido</th>
+                            <th className="text-center p-2">Vínculo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {editingConta.folha_detalhes.funcionarios.map((fnc, idx) => (
+                            <tr key={idx} className="border-t hover:bg-indigo-50">
+                              <td className="p-2 font-medium">{fnc.match_nome_db || fnc.nome_pdf || "—"}</td>
+                              <td className="p-2 font-mono text-[10px]">{fnc.cpf || "—"}</td>
+                              <td className="p-2">{fnc.cargo || "—"}</td>
+                              <td className="p-2 text-right text-emerald-700">{formatCurrency(fnc.total_vencimentos || 0)}</td>
+                              <td className="p-2 text-right text-red-700">{formatCurrency(fnc.total_descontos || 0)}</td>
+                              <td className="p-2 text-right font-bold">{formatCurrency(fnc.valor_liquido || 0)}</td>
+                              <td className="p-2 text-center">
+                                {fnc.funcionario_id ? (
+                                  <span className="text-emerald-700">✓</span>
+                                ) : (
+                                  <span className="text-amber-600" title="Não vinculado">⚠</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                )}
+
+                {/* Holerite individual: dados do funcionário + rubricas */}
+                {editingConta.folha_detalhes.modo === "individual" && editingConta.folha_detalhes.funcionario && (
+                  <div className="text-xs bg-white rounded border p-2 space-y-1">
+                    <div className="font-semibold text-indigo-900">
+                      {editingConta.folha_detalhes.funcionario.match_nome_db || editingConta.folha_detalhes.funcionario.nome_pdf}
+                    </div>
+                    <div className="text-gray-600">
+                      CPF: <span className="font-mono">{editingConta.folha_detalhes.funcionario.cpf || "—"}</span> · Cargo: {editingConta.folha_detalhes.funcionario.cargo || "—"}
+                    </div>
+                    {(editingConta.folha_detalhes.funcionario.rubricas || []).length > 0 && (
+                      <details>
+                        <summary className="cursor-pointer font-semibold text-indigo-700">📑 {editingConta.folha_detalhes.funcionario.rubricas.length} rubricas — clique para ver</summary>
+                        <div className="mt-1 max-h-40 overflow-y-auto">
+                          <table className="w-full">
+                            <thead className="bg-indigo-50 sticky top-0">
+                              <tr><th className="text-left p-1">Cód</th><th className="text-left p-1">Descrição</th><th className="text-left p-1">Ref</th><th className="text-left p-1">Tipo</th><th className="text-right p-1">Valor</th></tr>
+                            </thead>
+                            <tbody>
+                              {editingConta.folha_detalhes.funcionario.rubricas.map((r, idx) => (
+                                <tr key={idx} className="border-t">
+                                  <td className="p-1 font-mono">{r.codigo || "—"}</td>
+                                  <td className="p-1">{r.descricao || "—"}</td>
+                                  <td className="p-1">{r.referencia || "—"}</td>
+                                  <td className="p-1">{r.tipo || "—"}</td>
+                                  <td className="p-1 text-right font-bold">{formatCurrency(r.valor || 0)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="form-label">Observações</label>
-              <Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} />
+              <Textarea
+                value={formData.observacoes}
+                onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                rows={editingConta?.folha_detalhes ? 12 : 3}
+                className="font-mono text-xs"
+              />
             </div>
             
             {/* Seção de Anexos */}
