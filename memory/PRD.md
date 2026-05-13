@@ -2912,3 +2912,44 @@ Novo sistema de Recursos Humanos adicionado à plataforma com:
 - Gemini AI (chatbot)
 - BrasilAPI, ViaCEP
 - reportlab, openpyxl, python-docx, python-ofxparse, PyPDF2
+
+---
+
+## Changelog — Fev/2026 (sessão atual)
+
+### Badge de Importação NF — Total Absoluto
+- Backend (`/app/backend/routes/nfe.py` e `/app/backend/routes/nfse.py`): endpoints
+  `GET /api/nfe/importadas` e `GET /api/nfse/importadas` agora retornam o campo
+  `total_geral` (contagem absoluta da collection, sem aplicar filtros).
+- Frontend (`/app/frontend/src/pages/admin/ImportacaoNFPage.jsx`): cards "NF-e
+  (Compras)" e "NFS-e (Serviços)" + badge da aba "Notas Importadas" passam a usar
+  `totalGeralNfe` / `totalGeralNfse` em vez de `nfesImportadas.length`. Assim, o
+  contador exibido nunca cai mesmo quando filtros/busca/paginação reduzem a
+  listagem visível.
+- Validação: filtro de busca com texto inexistente mantém o badge em "(158)" e
+  os cards em "155" e "3" — testado via Playwright (capturas em /tmp).
+
+### Chat IA com acesso completo ao banco (RH)
+- `/app/backend/routes/chatbot.py`: system prompt reforçado para o endpoint
+  `POST /api/chatbot/conversations/{id}/messages` e `messages-with-files`.
+- Regras explícitas adicionadas: PROIBIDO recusar respostas alegando "não tenho
+  acesso ao banco". OBRIGATÓRIO usar os dados injetados em DADOS DO SISTEMA
+  (snapshot live do MongoDB) para responder com nomes, IDs, valores reais.
+- O endpoint multipart (anexos) agora também recebe `platform_context` +
+  `kb_context`, permitindo cruzar dados de arquivo com dados do banco.
+- Validação via curl: pergunta "quantos funcionários ativos temos?" → "Temos 9
+  funcionários ativos no banco de dados. ..." (citando nomes reais).
+  Pergunta financeira: respondeu com totais e top-3 reais de contas a pagar/receber.
+
+## Tarefas P0 Concluídas
+1. ✅ Badge total absoluto de NFs
+2. ✅ Chat IA com respostas concretas baseadas em dados reais do banco
+
+## Próximos passos sugeridos
+- P1: Ordenação de colunas (Data, Valor, Emitente) na tabela de Importação NF.
+- P1: Fase 2 de refatoração do `server.py` (extrair rotas restantes).
+- P2: Parcelas automáticas em Contas a Receber para OSs recorrentes.
+- P2: Mini-histórico do cliente no dropdown da OS.
+- P3: Dashboard de Custo por Máquina.
+- P3: Links públicos de compartilhamento de PDFs.
+

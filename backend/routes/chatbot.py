@@ -1467,9 +1467,32 @@ async def send_message_in_conversation(
         )
 
     system_message = f"""{foco_modulo}Você é o assistente virtual inteligente da CRA Construtora.
-Você tem ACESSO COMPLETO a TODAS as informações do banco de dados.
 
-DADOS DO SISTEMA:
+⚠️ REGRA ABSOLUTA — LEIA ANTES DE QUALQUER COISA:
+Você TEM ACESSO COMPLETO E IRRESTRITO ao banco de dados desta empresa. Todos os
+dados que você precisa estão LITERALMENTE COLADOS abaixo, na seção "DADOS DO SISTEMA",
+em formato texto. Estes dados foram extraídos AGORA, em tempo real, das collections
+MongoDB do sistema. Ler esses dados NÃO é "acessar a internet" nem "consultar um
+sistema externo": é simplesmente LER o texto que está no seu próprio prompt.
+
+❌ PROIBIDO:
+• Dizer "não tenho acesso ao banco de dados".
+• Dizer "não posso ver os dados do sistema".
+• Dizer "você precisa consultar o sistema".
+• Dizer "não tenho permissão" ou "sou apenas um modelo de linguagem".
+• Dar respostas vagas/genéricas quando os dados estão disponíveis abaixo.
+• Inventar dados ou nomes que não estejam na seção DADOS DO SISTEMA.
+
+✅ OBRIGATÓRIO:
+• SEMPRE leia a seção DADOS DO SISTEMA abaixo antes de responder.
+• Cite nomes reais, IDs reais, valores reais e datas reais extraídos do contexto.
+• Se a pergunta puder ser respondida com os dados abaixo → responda com dados concretos.
+• Se a pergunta exigir um dado que NÃO está no contexto → diga exatamente qual dado falta
+  e em que módulo o usuário deve cadastrá-lo. NÃO diga "não tenho acesso".
+
+═══════════════════════════════════════════════════════════════
+DADOS DO SISTEMA (live snapshot do MongoDB — leia tudo com atenção):
+═══════════════════════════════════════════════════════════════
 {platform_context}
 
 {kb_context}
@@ -1477,12 +1500,12 @@ DADOS DO SISTEMA:
 HISTÓRICO RECENTE DESTA CONVERSA:
 {historico_txt or "(início da conversa)"}
 
-INSTRUÇÕES:
+INSTRUÇÕES DE FORMATAÇÃO:
 1. SEMPRE responda em português brasileiro.
 2. Use quebras de linha para separar parágrafos e listas com "•".
 3. Formate valores monetários como R$ 1.234,56.
 4. NÃO use markdown com asteriscos.
-5. Seja útil, direto e específico — cite números e nomes reais quando possível.
+5. Seja útil, direto e específico — cite números e nomes reais.
 6. Se a pergunta for ambígua, pergunte qual recorte o usuário quer.
 7. Para perguntas sobre EXAMES (admissional, periódico, mudança de função, demissional),
    EPIs por função, RISCOS ocupacionais, CARGOS / pisos salariais, ADICIONAIS, BENEFÍCIOS
@@ -1711,11 +1734,37 @@ INSTRUÇÃO ESPECIAL — O USUÁRIO PEDIU ALTERAÇÃO NO ARQUIVO `{arquivo_alvo[
 4. Mantenha cabeçalhos/estrutura originais quando possível.
 """
 
+    # Contexto completo da plataforma (mesmo no endpoint com anexos, o usuário
+    # pode fazer perguntas sobre o banco de dados — ex: "compare este Excel com
+    # nossos funcionários cadastrados"). Sem este contexto a IA tende a recusar.
+    platform_context = await get_full_platform_context()
+    kb_context = await _build_knowledge_base_context()
+
     system_message = f"""Você é o assistente virtual inteligente da CRA Construtora.
-Você lê arquivos anexados pelo usuário (PDF, imagem, Excel, CSV, Word, texto) e responde
-com base no conteúdo deles JUNTO com o prompt textual. NÃO faça alterações no sistema —
-você apenas lê e responde. SE o usuário pedir explicitamente para alterar o arquivo,
-gere a NOVA VERSÃO dentro dos marcadores especificados abaixo.
+
+⚠️ REGRA ABSOLUTA:
+Você TEM ACESSO COMPLETO E IRRESTRITO ao banco de dados desta empresa. Todos os
+dados estão LITERALMENTE COLADOS abaixo, na seção "DADOS DO SISTEMA". Estes dados
+foram extraídos AGORA das collections MongoDB. Ler esses dados é simplesmente LER
+o texto que está no seu próprio prompt — NÃO é acessar nada externo.
+
+❌ PROIBIDO: dizer "não tenho acesso ao banco", "sou apenas um modelo de linguagem",
+"não posso ver os dados" ou recusar respostas sobre dados que estão abaixo.
+✅ OBRIGATÓRIO: ler a seção DADOS DO SISTEMA e responder com nomes, IDs, valores
+e datas reais. Inventar dados é proibido — use APENAS o que está abaixo.
+
+Você lê arquivos anexados pelo usuário (PDF, imagem, Excel, CSV, Word, texto) e
+combina o conteúdo deles com os DADOS DO SISTEMA para responder.
+NÃO faça alterações no sistema — você apenas lê e responde. SE o usuário pedir
+explicitamente para alterar o arquivo, gere a NOVA VERSÃO dentro dos marcadores
+especificados abaixo.
+
+═══════════════════════════════════════════════════════════════
+DADOS DO SISTEMA (live snapshot do MongoDB):
+═══════════════════════════════════════════════════════════════
+{platform_context}
+
+{kb_context}
 
 HISTÓRICO RECENTE DA CONVERSA:
 {historico_txt or "(início)"}
@@ -1727,6 +1776,7 @@ INSTRUÇÕES:
 - Cite trechos/valores do arquivo quando relevante.
 - Se vários arquivos foram anexados, mencione cada um.
 - Se o usuário não pediu alteração, apenas responda às perguntas sobre o conteúdo.
+- Combine livremente dados dos arquivos com os DADOS DO SISTEMA (banco) acima.
 """
 
     llm_key = os.environ.get("EMERGENT_LLM_KEY")

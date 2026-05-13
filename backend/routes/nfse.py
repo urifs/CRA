@@ -81,6 +81,7 @@ async def list_nfses_importadas(
         return await db.nfse_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(5000)
 
     total = await db.nfse_importadas.count_documents(filtro)
+    total_geral = await db.nfse_importadas.count_documents({})
     items = await (
         db.nfse_importadas.find(filtro, {"_id": 0})
         .sort("data_emissao", -1)
@@ -88,7 +89,13 @@ async def list_nfses_importadas(
         .limit(int(limit))
         .to_list(int(limit))
     )
-    return {"items": items, "total": total, "limit": int(limit), "offset": int(offset)}
+    return {
+        "items": items,
+        "total": total,
+        "total_geral": total_geral,
+        "limit": int(limit),
+        "offset": int(offset),
+    }
 
 
 @nfse_router.get("/importadas/{nfse_id}")

@@ -142,7 +142,9 @@ export default function ImportacaoNFPage() {
   // Paginação real (server-side)
   const PAGE_SIZE = 50;
   const [pagina, setPagina] = useState(1);
-  const [totalServer, setTotalServer] = useState(0); // total da aba ativa
+  const [totalServer, setTotalServer] = useState(0); // total da aba ativa (com filtros aplicados)
+  const [totalGeralNfe, setTotalGeralNfe] = useState(0); // total absoluto de NF-e no banco
+  const [totalGeralNfse, setTotalGeralNfse] = useState(0); // total absoluto de NFS-e no banco
   const [carregandoLista, setCarregandoLista] = useState(false);
   
   // Estados para importação manual
@@ -242,11 +244,13 @@ export default function ImportacaoNFPage() {
         const data = r.data || {};
         setNfesImportadas(Array.isArray(data) ? data : data.items || []);
         setTotalServer(Array.isArray(data) ? data.length : (data.total || 0));
+        if (typeof data.total_geral === "number") setTotalGeralNfe(data.total_geral);
       } else {
         const r = await axios.get(`${API}/nfse/importadas`, { params: baseParams });
         const data = r.data || {};
         setNfsesImportadas(Array.isArray(data) ? data : data.items || []);
         setTotalServer(Array.isArray(data) ? data.length : (data.total || 0));
+        if (typeof data.total_geral === "number") setTotalGeralNfse(data.total_geral);
       }
     } catch (e) {
       console.error("Erro ao carregar notas:", e);
@@ -258,18 +262,36 @@ export default function ImportacaoNFPage() {
 
   // Compatibilidade: fetchData usado em outros pontos do código recarrega tudo
   const fetchData = async () => {
-    await Promise.all([fetchAuxiliares(), fetchListaPaginada()]);
+    await Promise.all([fetchAuxiliares(), fetchListaPaginada(), fetchTotaisGerais()]);
   };
 
-  // Carrega auxiliares uma vez no mount
+  // Busca os totais absolutos de NF-e e NFS-e no banco (sem filtros) para os cards e badge
+  const fetchTotaisGerais = async () => {
+    try {
+      const [rNfe, rNfse] = await Promise.all([
+        axios.get(`${API}/nfe/importadas`, { params: { limit: 1, offset: 0 } }).catch(() => ({ data: {} })),
+        axios.get(`${API}/nfse/importadas`, { params: { limit: 1, offset: 0 } }).catch(() => ({ data: {} })),
+      ]);
+      if (typeof rNfe.data?.total_geral === "number") setTotalGeralNfe(rNfe.data.total_geral);
+      if (typeof rNfse.data?.total_geral === "number") setTotalGeralNfse(rNfse.data.total_geral);
+    } catch (e) {
+      console.error("Erro ao carregar totais gerais:", e);
+    }
+  };
+
+  // Carrega auxiliares + totais gerais uma vez no mount
   useEffect(() => {
     fetchAuxiliares();
+    fetchTotaisGerais();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Recarrega a lista quando muda filtro/paginação/aba
   useEffect(() => {
     fetchListaPaginada();
+    // Mantém os totais absolutos atualizados sempre que recarrega a lista
+    // (cobre o caso de o usuário ter acabado de importar novas notas)
+    fetchTotaisGerais();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     tipoNota, pagina, selectedCertificado, selectedStatus,
@@ -949,7 +971,7 @@ export default function ImportacaoNFPage() {
         <TabsList>
           <TabsTrigger value="notas" data-testid="tab-notas">
             <FileText size={16} className="mr-2" />
-            Notas Importadas ({totalServer})
+            Notas Importadas ({(totalGeralNfe || 0) + (totalGeralNfse || 0)})
           </TabsTrigger>
           <TabsTrigger value="manual" data-testid="tab-manual">
             <Upload size={16} className="mr-2" />
@@ -981,7 +1003,7 @@ export default function ImportacaoNFPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-bold text-blue-600">{nfesImportadas.length}</p>
+                    <p className="text-3xl font-bold text-blue-600" data-testid="card-total-nfe">{totalGeralNfe}</p>
                     <p className="text-xs text-gray-500">notas importadas</p>
                   </div>
                 </div>
@@ -1004,7 +1026,7 @@ export default function ImportacaoNFPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-bold text-green-600">{nfsesImportadas.length}</p>
+                    <p className="text-3xl font-bold text-green-600" data-testid="card-total-nfse">{totalGeralNfse}</p>
                     <p className="text-xs text-gray-500">notas importadas</p>
                   </div>
                 </div>
