@@ -29,15 +29,66 @@ nfse_router = APIRouter(prefix="/nfse", tags=["NFS-e"])
 async def list_nfses_importadas(
     certificado_id: Optional[str] = None,
     status: Optional[str] = None,
+    busca: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    valor_min: Optional[float] = None,
+    valor_max: Optional[float] = None,
+    limit: int = 50,
+    offset: int = 0,
     current_user: dict = Depends(get_current_user),
 ):
-    """Lista todas as NFS-e (Notas de Serviço) importadas"""
+    """Lista NFS-e (Notas de Serviço) importadas com paginação real e filtros.
+
+    Quando `limit=0` ou negativo, retorna o legado (array completo).
+    Caso contrário, devolve `{"items": [...], "total": N, "limit": L, "offset": O}`.
+    """
     filtro: dict = {}
     if certificado_id:
         filtro["certificado_id"] = certificado_id
     if status:
         filtro["status"] = status
-    return await db.nfse_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(500)
+    if data_inicio:
+        filtro.setdefault("data_emissao", {})["$gte"] = data_inicio
+    if data_fim:
+        filtro.setdefault("data_emissao", {})["$lte"] = data_fim
+    if valor_min is not None:
+        filtro["$and"] = [
+            {"$or": [
+                {"valor_servico": {"$gte": float(valor_min)}},
+                {"valor_total": {"$gte": float(valor_min)}},
+            ]}
+        ]
+    if valor_max is not None:
+        anded = filtro.get("$and", [])
+        anded.append({"$or": [
+            {"valor_servico": {"$lte": float(valor_max)}},
+            {"valor_total": {"$lte": float(valor_max)}},
+        ]})
+        filtro["$and"] = anded
+    if busca:
+        import re as _re
+        rx = {"$regex": _re.escape(busca), "$options": "i"}
+        filtro["$or"] = [
+            {"numero_nfse": rx},
+            {"prestador_nome": rx},
+            {"razao_social_prestador": rx},
+            {"prestador_cnpj": rx},
+            {"cnpj_prestador": rx},
+        ]
+
+    if limit is None or limit <= 0:
+        return await db.nfse_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(5000)
+
+    total = await db.nfse_importadas.count_documents(filtro)
+    items = await (
+        db.nfse_importadas.find(filtro, {"_id": 0})
+        .sort("data_emissao", -1)
+        .skip(int(offset))
+        .limit(int(limit))
+        .to_list(int(limit))
+    )
+    return {"items": items, "total": total, "limit": int(limit), "offset": int(offset)}
 
 
 @nfse_router.get("/importadas/{nfse_id}")

@@ -248,15 +248,56 @@ async def delete_nfe_certificado(
 async def list_nfe_importadas(
     certificado_id: Optional[str] = None,
     status: Optional[str] = None,
+    busca: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    valor_min: Optional[float] = None,
+    valor_max: Optional[float] = None,
+    limit: int = 50,
+    offset: int = 0,
     current_user: dict = Depends(get_current_user),
 ):
-    """Lista todas as NF-e importadas"""
+    """Lista NF-e importadas com paginação real e filtros server-side.
+
+    Quando `limit=0` ou negativo, retorna a coleção COMPLETA (modo legado).
+    Caso contrário, devolve um dict `{"items": [...], "total": N, "limit": L, "offset": O}`.
+    """
     filtro: dict = {}
     if certificado_id:
         filtro["certificado_id"] = certificado_id
     if status:
         filtro["status"] = status
-    return await db.nfe_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(500)
+    if data_inicio:
+        filtro.setdefault("data_emissao", {})["$gte"] = data_inicio
+    if data_fim:
+        filtro.setdefault("data_emissao", {})["$lte"] = data_fim
+    if valor_min is not None:
+        filtro.setdefault("valor_total", {})["$gte"] = float(valor_min)
+    if valor_max is not None:
+        filtro.setdefault("valor_total", {})["$lte"] = float(valor_max)
+    if busca:
+        import re as _re
+        rx = {"$regex": _re.escape(busca), "$options": "i"}
+        filtro["$or"] = [
+            {"numero_nf": rx},
+            {"razao_social_emitente": rx},
+            {"cnpj_emitente": rx},
+            {"chave_acesso": rx},
+        ]
+
+    # Modo legado (sem paginação)
+    if limit is None or limit <= 0:
+        return await db.nfe_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(5000)
+
+    total = await db.nfe_importadas.count_documents(filtro)
+    items = await (
+        db.nfe_importadas.find(filtro, {"_id": 0})
+        .sort("data_emissao", -1)
+        .skip(int(offset))
+        .limit(int(limit))
+        .to_list(int(limit))
+    )
+    return {"items": items, "total": total, "limit": int(limit), "offset": int(offset)}
 
 
 @nfe_router.get("/importadas/{nfe_id}")

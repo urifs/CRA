@@ -139,6 +139,11 @@ export default function ImportacaoNFPage() {
   const [filtroValorMin, setFiltroValorMin] = useState("");
   const [filtroValorMax, setFiltroValorMax] = useState("");
   const [filtrosAvancadosAberto, setFiltrosAvancadosAberto] = useState(false);
+  // Paginação real (server-side)
+  const PAGE_SIZE = 50;
+  const [pagina, setPagina] = useState(1);
+  const [totalServer, setTotalServer] = useState(0); // total da aba ativa
+  const [carregandoLista, setCarregandoLista] = useState(false);
   
   // Estados para importação manual
   const [centrosCusto, setCentrosCusto] = useState([]);
@@ -201,40 +206,81 @@ export default function ImportacaoNFPage() {
     "SP", "SE", "TO"
   ];
 
-  useEffect(() => {
-    fetchData();
-  }, [selectedCertificado, selectedStatus, tipoNota]);
-
-  const fetchData = async () => {
+  // Carregamento de auxiliares (certificados, centros, plano) — uma vez
+  const fetchAuxiliares = async () => {
     try {
-      const [certsRes, nfesRes, nfsesRes, centrosRes, planoRes] = await Promise.all([
-        axios.get(`${API}/nfe/certificados`).catch((e) => { console.error("Erro certificados:", e); return { data: [] }; }),
-        axios.get(`${API}/nfe/importadas`, {
-          params: {
-            certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
-            status: selectedStatus !== "todos" ? selectedStatus : undefined
-          }
-        }).catch((e) => { console.error("Erro NF-e:", e); return { data: [] }; }),
-        axios.get(`${API}/nfse/importadas`, {
-          params: {
-            certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
-            status: selectedStatus !== "todos" ? selectedStatus : undefined
-          }
-        }).catch(() => ({ data: [] })),
+      const [certsRes, centrosRes, planoRes] = await Promise.all([
+        axios.get(`${API}/nfe/certificados`).catch(() => ({ data: [] })),
         axios.get(`${API}/admin/centros-custo`).catch(() => ({ data: [] })),
-        axios.get(`${API}/admin/plano-contas`).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/plano-contas`).catch(() => ({ data: [] })),
       ]);
-      setCertificados(certsRes.data);
-      setNfesImportadas(nfesRes.data);
-      setNfsesImportadas(nfsesRes.data || []);
+      setCertificados(certsRes.data || []);
       setCentrosCusto(centrosRes.data || []);
       setPlanoContas(planoRes.data || []);
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+    } catch (e) {
+      console.error("Erro auxiliares:", e);
+    }
+  };
+
+  // Carrega as notas da aba ativa com paginação server-side
+  const fetchListaPaginada = async () => {
+    setCarregandoLista(true);
+    try {
+      const baseParams = {
+        certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
+        status: selectedStatus !== "todos" ? selectedStatus : undefined,
+        busca: buscaNotas?.trim() || undefined,
+        data_inicio: filtroDataInicio || undefined,
+        data_fim: filtroDataFim || undefined,
+        valor_min: filtroValorMin !== "" ? Number(String(filtroValorMin).replace(",", ".")) : undefined,
+        valor_max: filtroValorMax !== "" ? Number(String(filtroValorMax).replace(",", ".")) : undefined,
+        limit: PAGE_SIZE,
+        offset: (pagina - 1) * PAGE_SIZE,
+      };
+      if (tipoNota === "nfe") {
+        const r = await axios.get(`${API}/nfe/importadas`, { params: baseParams });
+        const data = r.data || {};
+        setNfesImportadas(Array.isArray(data) ? data : data.items || []);
+        setTotalServer(Array.isArray(data) ? data.length : (data.total || 0));
+      } else {
+        const r = await axios.get(`${API}/nfse/importadas`, { params: baseParams });
+        const data = r.data || {};
+        setNfsesImportadas(Array.isArray(data) ? data : data.items || []);
+        setTotalServer(Array.isArray(data) ? data.length : (data.total || 0));
+      }
+    } catch (e) {
+      console.error("Erro ao carregar notas:", e);
     } finally {
+      setCarregandoLista(false);
       setLoading(false);
     }
   };
+
+  // Compatibilidade: fetchData usado em outros pontos do código recarrega tudo
+  const fetchData = async () => {
+    await Promise.all([fetchAuxiliares(), fetchListaPaginada()]);
+  };
+
+  // Carrega auxiliares uma vez no mount
+  useEffect(() => {
+    fetchAuxiliares();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Recarrega a lista quando muda filtro/paginação/aba
+  useEffect(() => {
+    fetchListaPaginada();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    tipoNota, pagina, selectedCertificado, selectedStatus,
+    buscaNotas, filtroDataInicio, filtroDataFim, filtroValorMin, filtroValorMax,
+  ]);
+
+  // Quando muda qualquer filtro/aba, volta para a página 1
+  useEffect(() => {
+    setPagina(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoNota, selectedCertificado, selectedStatus, buscaNotas, filtroDataInicio, filtroDataFim, filtroValorMin, filtroValorMax]);
 
   // Função para extrair dados do XML automaticamente
   const handleXmlExtract = async (file) => {
@@ -903,7 +949,7 @@ export default function ImportacaoNFPage() {
         <TabsList>
           <TabsTrigger value="notas" data-testid="tab-notas">
             <FileText size={16} className="mr-2" />
-            Notas Importadas ({nfesImportadas.length + nfsesImportadas.length})
+            Notas Importadas ({totalServer})
           </TabsTrigger>
           <TabsTrigger value="manual" data-testid="tab-manual">
             <Upload size={16} className="mr-2" />
@@ -1087,6 +1133,41 @@ export default function ImportacaoNFPage() {
           </div>
 
           {/* Lista de NF-e ou NFS-e baseado no tipo selecionado */}
+          {totalServer > 0 && (
+            <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm">
+              <div className="text-gray-700">
+                {carregandoLista ? (
+                  <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Carregando...</span>
+                ) : (
+                  <>Mostrando <strong>{Math.min((pagina - 1) * PAGE_SIZE + 1, totalServer)}</strong>–<strong>{Math.min(pagina * PAGE_SIZE, totalServer)}</strong> de <strong>{totalServer}</strong> {tipoNota === "nfe" ? "NF-e" : "NFS-e"}</>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                  disabled={pagina <= 1 || carregandoLista}
+                  data-testid="pag-anterior"
+                >
+                  ← Anterior
+                </Button>
+                <span className="text-xs text-gray-500 px-2">
+                  Página {pagina} / {Math.max(1, Math.ceil(totalServer / PAGE_SIZE))}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPagina((p) => p + 1)}
+                  disabled={pagina * PAGE_SIZE >= totalServer || carregandoLista}
+                  data-testid="pag-proxima"
+                >
+                  Próxima →
+                </Button>
+              </div>
+            </div>
+          )}
+
           {tipoNota === "nfe" ? (
             // Lista de NF-e (Compras)
             nfesImportadasFiltradas.length > 0 ? (
