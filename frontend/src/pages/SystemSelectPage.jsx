@@ -46,14 +46,6 @@ export default function SystemSelectPage() {
     toast.success("Logout realizado com sucesso!");
   };
 
-  const handleAdminPanelClick = () => {
-    if (canAccessAdminPanel) {
-      navigate("/painel-admin");
-    } else {
-      toast.error("Acesso negado. Apenas administradores podem acessar este painel.");
-    }
-  };
-
   const systems = [
     {
       id: "gerenciamento",
@@ -122,6 +114,24 @@ export default function SystemSelectPage() {
         { icon: Upload, label: "Upload" },
         { icon: FileText, label: "Documentos" },
       ]
+    },
+    {
+      id: "painel-admin",
+      title: "Painel Admin",
+      description: "Configurações globais, usuários, permissões e gestão da plataforma",
+      icon: Shield,
+      useLogo: false,
+      color: "bg-green-600",
+      hoverColor: "hover:border-green-500",
+      textColor: "text-green-500",
+      path: "/painel-admin",
+      hasAccess: canAccessAdminPanel,
+      restrictedLabel: "Apenas administradores",
+      features: [
+        { icon: Users, label: "Usuários" },
+        { icon: Shield, label: "Permissões" },
+        { icon: Calculator, label: "Configurações" },
+      ]
     }
   ];
 
@@ -171,12 +181,18 @@ export default function SystemSelectPage() {
         </div>
 
         {/* System Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 px-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 px-1">
           {systems.map((system) => (
             <Card
               key={system.id}
               className={`bg-gray-900 border-2 border-gray-800 ${system.hasAccess ? system.hoverColor + ' cursor-pointer hover:shadow-xl hover:-translate-y-1' : 'opacity-50 cursor-not-allowed'} transition-all duration-300`}
-              onClick={() => system.hasAccess && navigate(system.path)}
+              onClick={() => {
+                if (system.hasAccess) {
+                  navigate(system.path);
+                } else if (system.restrictedLabel) {
+                  toast.error(`Acesso negado. ${system.restrictedLabel}.`);
+                }
+              }}
               data-testid={`system-${system.id}`}
             >
               <CardContent className="p-4">
@@ -229,29 +245,8 @@ export default function SystemSelectPage() {
           ))}
         </div>
 
-        {/* Admin Panel Button - Visible for all, accessible only for admin */}
-        <div className="mt-4 sm:mt-8 flex justify-center px-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className={`text-xs sm:text-sm ${canAccessAdminPanel 
-              ? 'bg-transparent border-green-700 text-green-500 hover:bg-green-900/30 hover:text-green-400 hover:border-green-600' 
-              : 'bg-transparent border-gray-700 text-gray-500 hover:bg-gray-800/30'}`}
-            onClick={handleAdminPanelClick}
-            data-testid="admin-panel-btn"
-          >
-            {canAccessAdminPanel ? (
-              <Shield size={16} className="mr-1 sm:mr-2" />
-            ) : (
-              <Lock size={16} className="mr-1 sm:mr-2" />
-            )}
-            Painel Admin
-            {!canAccessAdminPanel && <span className="ml-1 sm:ml-2 text-xs">(Restrito)</span>}
-          </Button>
-        </div>
-
         {/* Logout Button */}
-        <div className="mt-3 sm:mt-4 flex justify-center pb-4 sm:pb-8">
+        <div className="mt-6 sm:mt-8 flex justify-center pb-4 sm:pb-8">
           <Button
             variant="ghost"
             size="sm"
