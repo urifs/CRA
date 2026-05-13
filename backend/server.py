@@ -7234,6 +7234,49 @@ async def download_task_attachment(
         media_type=attachment.get("content_type", "application/octet-stream")
     )
 
+@api_router.delete("/tasks/{task_id}")
+async def delete_task_user(
+    task_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Exclui uma tarefa da Caixa de Tarefas (disponível para qualquer usuário
+    autenticado — limpeza da inbox)."""
+    await get_current_user(credentials)
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    # Remove anexos físicos
+    task_dir = TASK_UPLOAD_DIR / task_id
+    if task_dir.exists():
+        import shutil
+        shutil.rmtree(task_dir, ignore_errors=True)
+    await db.tasks.delete_one({"id": task_id})
+    return {"ok": True}
+
+
+@api_router.delete("/tasks/clear-all/{system}")
+async def clear_all_tasks(
+    system: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Limpa TODAS as tarefas de um sistema (rh|administrativo|gerenciamento).
+    Útil para o usuário esvaziar a caixa de tarefas de uma só vez."""
+    await get_current_user(credentials)
+    sistemas_validos = {"rh", "administrativo", "gerenciamento"}
+    if system not in sistemas_validos:
+        raise HTTPException(status_code=400, detail=f"system deve ser um de: {sistemas_validos}")
+    tasks_to_delete = await db.tasks.find(
+        {"target_system": system}, {"_id": 0, "id": 1}
+    ).to_list(5000)
+    import shutil
+    for t in tasks_to_delete:
+        td = TASK_UPLOAD_DIR / t["id"]
+        if td.exists():
+            shutil.rmtree(td, ignore_errors=True)
+    res = await db.tasks.delete_many({"target_system": system})
+    return {"ok": True, "removidas": res.deleted_count}
+
+
 @api_router.delete("/admin-panel/tasks/{task_id}")
 async def delete_task(
     task_id: str,

@@ -25,6 +25,8 @@ import {
   Clock,
   User,
   ExternalLink,
+  Trash2,
+  Trash,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -191,6 +193,48 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
     navigate(action.rota);
   };
 
+  const handleDeleteTask = async (e, task) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!window.confirm(`Excluir esta tarefa?\n\n"${task.title}"\n\nElla deixará de aparecer na sua Caixa de Tarefas.`)) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/tasks/${task.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Tarefa excluída");
+      // Atualização otimista
+      setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      if (!task.read) setUnreadCount((prev) => Math.max(0, prev - 1));
+      if (selectedTask?.id === task.id) {
+        setShowTaskDetail(false);
+        setSelectedTask(null);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.detail || "Erro ao excluir tarefa");
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (tasks.length === 0) return;
+    if (!window.confirm(`Limpar TODAS as ${tasks.length} tarefas desta caixa?\n\nEsta ação não pode ser desfeita.`)) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.delete(`${API}/tasks/clear-all/${system}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success(`${res.data.removidas} tarefa(s) removida(s)`);
+      setTasks([]);
+      setUnreadCount(0);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.detail || "Erro ao limpar tarefas");
+    }
+  };
+
   return (
     <>
       {/* Inbox Button */}
@@ -222,6 +266,18 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
                 <Badge variant="destructive" className="ml-2">
                   {unreadCount} {unreadCount === 1 ? "nova" : "novas"}
                 </Badge>
+              )}
+              {tasks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="ml-auto mr-6 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded-md transition-colors"
+                  title="Limpar todas as tarefas desta caixa"
+                  data-testid="btn-limpar-todas-tasks"
+                >
+                  <Trash size={13} />
+                  Limpar todas
+                </button>
               )}
             </DialogTitle>
           </DialogHeader>
@@ -278,6 +334,16 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
                             )}
                           </div>
                         </div>
+                        {/* Lixeira para excluir tarefa individualmente */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteTask(e, task)}
+                          className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                          title="Excluir tarefa"
+                          data-testid={`btn-excluir-task-${task.id}`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </CardContent>
                   </Card>
@@ -378,9 +444,18 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
                 )}
               </div>
 
-              {/* Botão de ação para abrir tela relacionada */}
-              {getOrigemAction(selectedTask) && (
-                <div className="border-t pt-3 mt-2 flex justify-end">
+              {/* Botão de ação para abrir tela relacionada + lixeira */}
+              <div className="border-t pt-3 mt-2 flex justify-between items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteTask(null, selectedTask)}
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  data-testid="btn-excluir-task-detail"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Excluir tarefa
+                </Button>
+                {getOrigemAction(selectedTask) && (
                   <Button
                     onClick={() => handleAbrirOrigem(selectedTask)}
                     className="text-white"
@@ -390,8 +465,8 @@ export default function TasksInbox({ system, accentColor = "#E31A1A" }) {
                     <ExternalLink size={16} className="mr-2" />
                     {getOrigemAction(selectedTask).label}
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
         </DialogContent>
