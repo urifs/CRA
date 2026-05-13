@@ -42,6 +42,7 @@ export default function ContasReceberPage() {
   const [filterVencimento, setFilterVencimento] = useState("");
   const [filterFormaPag, setFilterFormaPag] = useState("");
   const [filterPlanoConta, setFilterPlanoConta] = useState("");
+  const [filterCentroCusto, setFilterCentroCusto] = useState("");
   const [valorBusca, setValorBusca] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
@@ -483,6 +484,11 @@ export default function ContasReceberPage() {
       const okPC = c.plano_conta_id === filterPlanoConta || c.plano_contas_id === filterPlanoConta || c.subconta_id === filterPlanoConta;
       if (!okPC) return false;
     }
+    if (filterCentroCusto && filterCentroCusto !== "all") {
+      const ccNome = centrosCusto.find(cc => cc.id === filterCentroCusto)?.nome;
+      const okCC = c.centro_custo_id === filterCentroCusto || c.centro_custo === ccNome || c.centro_custo_nome === ccNome;
+      if (!okCC) return false;
+    }
     
     const hoje = new Date().toISOString().split("T")[0];
     if (filterVencimento === "vencidas" && !["em_aberto", "pendente", "parcial"].includes(c.status) || (filterVencimento === "vencidas" && c.data_vencimento >= hoje)) return false;
@@ -569,6 +575,17 @@ export default function ContasReceberPage() {
             {subcontas.map(s => (
               <SelectItem key={s.id} value={s.id}>
                 ↳ {s.codigo ? `${s.codigo} - ` : ""}{s.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterCentroCusto} onValueChange={setFilterCentroCusto}>
+          <SelectTrigger className="h-11" data-testid="filter-centro-custo-cr"><SelectValue placeholder="Centro de Custo" /></SelectTrigger>
+          <SelectContent className="z-[9999] max-h-64">
+            <SelectItem value="all">Todos Centros</SelectItem>
+            {centrosCusto.map(cc => (
+              <SelectItem key={cc.id} value={cc.id}>
+                {cc.codigo ? `${cc.codigo} - ` : ""}{cc.nome}
               </SelectItem>
             ))}
           </SelectContent>

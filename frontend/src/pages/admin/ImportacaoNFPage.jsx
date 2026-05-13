@@ -49,7 +49,8 @@ import {
   Timer,
   Ban,
   Pencil,
-  Plug
+  Plug,
+  Search
 } from "lucide-react";
 import { formatCPFouCNPJ } from "@/utils/masks";
 
@@ -131,6 +132,7 @@ export default function ImportacaoNFPage() {
   const [testandoConexaoId, setTestandoConexaoId] = useState(null);
   const [selectedCertificado, setSelectedCertificado] = useState("todos");
   const [selectedStatus, setSelectedStatus] = useState("todos");
+  const [buscaNotas, setBuscaNotas] = useState("");
   
   // Estados para importação manual
   const [centrosCusto, setCentrosCusto] = useState([]);
@@ -753,6 +755,25 @@ export default function ImportacaoNFPage() {
     );
   };
 
+  // Filtros de busca aplicados às listas (texto livre por nº NF, fornecedor, valor)
+  const termoBusca = (buscaNotas || "").trim().toLowerCase();
+  const matchNotaTexto = (nota, campos) => {
+    if (!termoBusca) return true;
+    const valorStr = String(nota.valor_total ?? nota.valor_servico ?? "").replace(".", ",");
+    const valorPt = Number(nota.valor_total ?? nota.valor_servico ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+    return campos.some((c) => {
+      const v = nota[c];
+      if (v == null) return false;
+      return String(v).toLowerCase().includes(termoBusca);
+    }) || valorStr.includes(termoBusca) || valorPt.toLowerCase().includes(termoBusca);
+  };
+  const nfesImportadasFiltradas = nfesImportadas.filter((n) =>
+    matchNotaTexto(n, ["numero_nf", "razao_social_emitente", "cnpj_emitente", "chave_acesso"])
+  );
+  const nfsesImportadasFiltradas = nfsesImportadas.filter((n) =>
+    matchNotaTexto(n, ["numero_nfse", "prestador_nome", "razao_social_prestador", "prestador_cnpj", "cnpj_prestador"])
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -874,13 +895,23 @@ export default function ImportacaoNFPage() {
           </div>
 
           {/* Filtros */}
-          <div className="flex gap-4 items-center">
-            <div className="flex-1 max-w-xs">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <Input
+                value={buscaNotas}
+                onChange={(e) => setBuscaNotas(e.target.value)}
+                placeholder="Buscar por nº NF, fornecedor, CNPJ ou valor..."
+                className="pl-9"
+                data-testid="busca-notas-importadas"
+              />
+            </div>
+            <div className="md:max-w-xs flex-1">
               <Select value={selectedCertificado} onValueChange={setSelectedCertificado}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="select-cnpj-certificado">
                   <SelectValue placeholder="Filtrar por CNPJ" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999]">
                   <SelectItem value="todos">Todos os CNPJs</SelectItem>
                   {certificados.map((cert) => (
                     <SelectItem key={cert.id} value={cert.id}>
@@ -890,12 +921,12 @@ export default function ImportacaoNFPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 max-w-xs">
+            <div className="md:max-w-xs flex-1">
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999]">
                   <SelectItem value="todos">Todos os status</SelectItem>
                   <SelectItem value="nova">Novas</SelectItem>
                   <SelectItem value="processada">Processadas</SelectItem>
@@ -912,7 +943,7 @@ export default function ImportacaoNFPage() {
           {/* Lista de NF-e ou NFS-e baseado no tipo selecionado */}
           {tipoNota === "nfe" ? (
             // Lista de NF-e (Compras)
-            nfesImportadas.length > 0 ? (
+            nfesImportadasFiltradas.length > 0 ? (
             <Card>
               <CardContent className="p-0">
                 <table className="w-full">
@@ -927,7 +958,7 @@ export default function ImportacaoNFPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {nfesImportadas.map((nfe) => {
+                    {nfesImportadasFiltradas.map((nfe) => {
                       const vinculada = !!nfe.conta_pagar_id;
                       return (
                       <tr
@@ -1051,7 +1082,7 @@ export default function ImportacaoNFPage() {
           )
           ) : (
             // Lista de NFS-e (Serviços)
-            nfsesImportadas.length > 0 ? (
+            nfsesImportadasFiltradas.length > 0 ? (
               <Card>
                 <CardContent className="p-0">
                   <table className="w-full">
@@ -1067,7 +1098,7 @@ export default function ImportacaoNFPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {nfsesImportadas.map((nfse) => {
+                      {nfsesImportadasFiltradas.map((nfse) => {
                         const vinculadaNfse = !!nfse.conta_pagar_id;
                         return (
                         <tr
