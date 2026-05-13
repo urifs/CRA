@@ -733,27 +733,60 @@ export default function ContasPagarPage() {
               <div><label className="form-label">{isParcelado ? "Data 1º Vencimento *" : "Data Vencimento *"}</label><MaskedDateInput value={formData.data_vencimento} onChange={(v) => setFormData({...formData, data_vencimento: v})} required /></div>
             </div>
             
-            {/* Seção de Parcelamento - apenas para novas contas */}
-            {!editingConta && (
+            {/* Seção de Parcelamento - disponível para novas e para edição (com aviso) */}
+            {(() => {
+              const podeParcelarEditando = editingConta
+                ? !((editingConta.valor_pago || 0) > 0) &&
+                  !["quitada", "cancelada", "perdida", "parcial"].includes(editingConta.status)
+                : true;
+              if (editingConta && !podeParcelarEditando) return null;
+              return (
               <div className="border-2 border-blue-300 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-blue-100">
-                <div className="flex items-center gap-3 mb-3">
-                  <input
-                    type="checkbox"
-                    id="isParcelado"
-                    checked={isParcelado}
-                    onChange={(e) => {
-                      setIsParcelado(e.target.checked);
-                      if (!e.target.checked) {
-                        setTotalParcelas("1");
-                        setIntervaloDias("30");
-                      }
-                    }}
-                    className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                  <label htmlFor="isParcelado" className="text-sm font-semibold text-blue-700 cursor-pointer">
-                    📋 Parcelar esta conta em múltiplas vezes
-                  </label>
-                </div>
+                {editingConta ? (
+                  <div className="mb-3">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setIsParcelado(!isParcelado);
+                        if (isParcelado) {
+                          setTotalParcelas("1");
+                          setIntervaloDias("30");
+                        } else if (totalParcelas === "1") {
+                          setTotalParcelas("2");
+                        }
+                      }}
+                      className={`${isParcelado ? "bg-amber-600 hover:bg-amber-700" : "bg-blue-600 hover:bg-blue-700"} text-white font-semibold`}
+                      data-testid="btn-parcelar-edicao"
+                    >
+                      📋 {isParcelado ? "Cancelar parcelamento" : "Parcelar esta conta"}
+                    </Button>
+                    {isParcelado && (
+                      <p className="text-xs text-amber-800 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
+                        ⚠️ Ao salvar, esta conta original será <strong>excluída</strong> e {parseInt(totalParcelas) || 0} parcelas serão criadas em seu lugar.
+                        Todos os detalhes (NF vinculada, anexos, fornecedor, plano de contas) serão preservados nas parcelas.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 mb-3">
+                    <input
+                      type="checkbox"
+                      id="isParcelado"
+                      checked={isParcelado}
+                      onChange={(e) => {
+                        setIsParcelado(e.target.checked);
+                        if (!e.target.checked) {
+                          setTotalParcelas("1");
+                          setIntervaloDias("30");
+                        }
+                      }}
+                      className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <label htmlFor="isParcelado" className="text-sm font-semibold text-blue-700 cursor-pointer">
+                      📋 Parcelar esta conta em múltiplas vezes
+                    </label>
+                  </div>
+                )}
                 
                 {isParcelado && (
                   <div className="grid grid-cols-2 gap-4">
@@ -805,7 +838,8 @@ export default function ContasPagarPage() {
                   </div>
                 )}
               </div>
-            )}
+              );
+            })()}
             
             <div className="grid grid-cols-2 gap-4">
               <div>

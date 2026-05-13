@@ -163,6 +163,16 @@ export default function ImportacaoNFPage() {
   const [xmlFileName, setXmlFileName] = useState("");
   const [pdfFileName, setPdfFileName] = useState("");
   const [extractingXml, setExtractingXml] = useState(false);
+
+  // Dialog para criar conta a pagar (cheia ou parcelada) a partir de NF
+  const [criarContaDialog, setCriarContaDialog] = useState(null);
+  // criarContaDialog: { tipo: "nfe"|"nfse", id, numero, fornecedor, valor, dataEmissao, etapa: "escolha"|"parcelas" }
+  const [parcelasForm, setParcelasForm] = useState({
+    total_parcelas: "2",
+    intervalo_dias: "30",
+    data_primeiro_vencimento: "",
+  });
+  const [criandoConta, setCriandoConta] = useState(false);
   const [xmlItens, setXmlItens] = useState([]);
 
   const [certForm, setCertForm] = useState({
@@ -561,25 +571,91 @@ export default function ImportacaoNFPage() {
     }
   };
 
-  const handleCriarContaPagar = async (nfeId) => {
+  // Abre o dialog de escolha (cheia x parcelada) ao invés de criar direto.
+  const handleCriarContaPagar = (nfeId) => {
+    const nfe = nfesImportadas.find((n) => n.id === nfeId) || {};
+    setParcelasForm({
+      total_parcelas: "2",
+      intervalo_dias: "30",
+      data_primeiro_vencimento: (nfe.data_emissao || "").slice(0, 10),
+    });
+    setCriarContaDialog({
+      tipo: "nfe",
+      id: nfeId,
+      numero: nfe.numero_nf,
+      fornecedor: nfe.razao_social_emitente,
+      valor: nfe.valor_total,
+      dataEmissao: nfe.data_emissao,
+      etapa: "escolha",
+    });
+  };
+
+  const handleCriarContaPagarNFSe = (nfseId) => {
+    const nfse = nfsesImportadas.find((n) => n.id === nfseId) || {};
+    setParcelasForm({
+      total_parcelas: "2",
+      intervalo_dias: "30",
+      data_primeiro_vencimento: (nfse.data_emissao || "").slice(0, 10),
+    });
+    setCriarContaDialog({
+      tipo: "nfse",
+      id: nfseId,
+      numero: nfse.numero_nfse,
+      fornecedor: nfse.prestador_nome || nfse.razao_social_prestador,
+      valor: nfse.valor_servico ?? nfse.valor_total,
+      dataEmissao: nfse.data_emissao,
+      etapa: "escolha",
+    });
+  };
+
+  const confirmarCriarContaCheia = async () => {
+    if (!criarContaDialog) return;
+    setCriandoConta(true);
     try {
-      const response = await axios.post(`${API}/nfe/importadas/${nfeId}/criar-conta-pagar`);
+      const url = criarContaDialog.tipo === "nfe"
+        ? `${API}/nfe/importadas/${criarContaDialog.id}/criar-conta-pagar`
+        : `${API}/nfse/importadas/${criarContaDialog.id}/criar-conta-pagar`;
+      await axios.post(url);
       toast.success("Conta a pagar criada com sucesso!");
-      fetchData();
+      setCriarContaDialog(null);
       setShowNFeDetail(null);
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao criar conta a pagar");
+    } finally {
+      setCriandoConta(false);
     }
   };
 
-  const handleCriarContaPagarNFSe = async (nfseId) => {
+  const confirmarCriarContaParcelada = async () => {
+    if (!criarContaDialog) return;
+    const n = parseInt(parcelasForm.total_parcelas);
+    if (!Number.isFinite(n) || n < 2 || n > 360) {
+      toast.error("Número de parcelas deve ser entre 2 e 360");
+      return;
+    }
+    if (!parcelasForm.data_primeiro_vencimento) {
+      toast.error("Informe a data do 1º vencimento");
+      return;
+    }
+    setCriandoConta(true);
     try {
-      const response = await axios.post(`${API}/nfse/importadas/${nfseId}/criar-conta-pagar`);
-      toast.success("Conta a pagar criada com sucesso!");
-      fetchData();
+      const url = criarContaDialog.tipo === "nfe"
+        ? `${API}/nfe/importadas/${criarContaDialog.id}/criar-conta-pagar-parcelado`
+        : `${API}/nfse/importadas/${criarContaDialog.id}/criar-conta-pagar-parcelado`;
+      const resp = await axios.post(url, {
+        total_parcelas: n,
+        intervalo_dias: parseInt(parcelasForm.intervalo_dias) || 30,
+        data_primeiro_vencimento: parcelasForm.data_primeiro_vencimento,
+      });
+      toast.success(`${resp.data.total_parcelas} parcelas criadas com sucesso!`);
+      setCriarContaDialog(null);
       setShowNFeDetail(null);
+      fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Erro ao criar conta a pagar");
+      toast.error(error.response?.data?.detail || "Erro ao criar conta parcelada");
+    } finally {
+      setCriandoConta(false);
     }
   };
 
@@ -2177,6 +2253,191 @@ export default function ImportacaoNFPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Criar Conta a Pagar (cheia ou parcelada) a partir de NF */}
+      <Dialog
+        open={!!criarContaDialog}
+        onOpenChange={(o) => !criandoConta && !o && setCriarContaDialog(null)}
+      >
+        <DialogContent className="max-w-lg" data-testid="dialog-criar-conta-nf">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard size={20} className="text-emerald-600" />
+              {criarContaDialog?.etapa === "parcelas"
+                ? "Configurar parcelas"
+                : "Criar conta a pagar"}
+            </DialogTitle>
+            <DialogDescription>
+              {criarContaDialog
+                ? `${criarContaDialog.tipo === "nfe" ? "NF-e" : "NFS-e"} ${criarContaDialog.numero || ""} — ${criarContaDialog.fornecedor || "—"}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {criarContaDialog && criarContaDialog.etapa === "escolha" && (
+            <div className="space-y-3">
+              <div className="bg-gray-50 border border-gray-200 rounded p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Valor da nota:</span>
+                  <span className="font-semibold text-gray-900">
+                    {Number(criarContaDialog.valor || 0).toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600">
+                Como você deseja gerar a conta a pagar a partir desta nota?
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={confirmarCriarContaCheia}
+                  disabled={criandoConta}
+                  className="border-2 border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50 rounded-lg p-5 text-left transition disabled:opacity-50"
+                  data-testid="btn-criar-conta-cheia"
+                >
+                  <div className="flex items-center gap-2 text-emerald-700 font-semibold mb-1">
+                    <FileText size={18} /> Criar conta cheia
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    Gera 1 única conta a pagar com o valor total da nota.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCriarContaDialog({ ...criarContaDialog, etapa: "parcelas" })
+                  }
+                  disabled={criandoConta}
+                  className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 rounded-lg p-5 text-left transition disabled:opacity-50"
+                  data-testid="btn-criar-conta-parcelada"
+                >
+                  <div className="flex items-center gap-2 text-blue-700 font-semibold mb-1">
+                    <CreditCard size={18} /> Criar parcelado
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    Gera N parcelas dividindo o valor da nota; cada parcela
+                    mantém o vínculo com esta nota.
+                  </p>
+                </button>
+              </div>
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCriarContaDialog(null)}
+                  disabled={criandoConta}
+                >
+                  Cancelar
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {criarContaDialog && criarContaDialog.etapa === "parcelas" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Número de parcelas *</Label>
+                  <Input
+                    type="number"
+                    min="2"
+                    max="360"
+                    value={parcelasForm.total_parcelas}
+                    onChange={(e) =>
+                      setParcelasForm({ ...parcelasForm, total_parcelas: e.target.value })
+                    }
+                    data-testid="input-nf-total-parcelas"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Intervalo entre parcelas</Label>
+                  <Select
+                    value={parcelasForm.intervalo_dias}
+                    onValueChange={(v) =>
+                      setParcelasForm({ ...parcelasForm, intervalo_dias: v })
+                    }
+                  >
+                    <SelectTrigger data-testid="select-nf-intervalo">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-[9999]">
+                      <SelectItem value="7">7 dias</SelectItem>
+                      <SelectItem value="14">14 dias</SelectItem>
+                      <SelectItem value="15">15 dias</SelectItem>
+                      <SelectItem value="21">21 dias</SelectItem>
+                      <SelectItem value="28">28 dias</SelectItem>
+                      <SelectItem value="30">30 dias (mensal)</SelectItem>
+                      <SelectItem value="45">45 dias</SelectItem>
+                      <SelectItem value="60">60 dias</SelectItem>
+                      <SelectItem value="90">90 dias</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Data do 1º vencimento *</Label>
+                <Input
+                  type="date"
+                  value={parcelasForm.data_primeiro_vencimento}
+                  onChange={(e) =>
+                    setParcelasForm({
+                      ...parcelasForm,
+                      data_primeiro_vencimento: e.target.value,
+                    })
+                  }
+                  data-testid="input-nf-data-vencimento"
+                />
+              </div>
+              {parseInt(parcelasForm.total_parcelas) >= 2 && criarContaDialog.valor && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                  <strong>Resumo:</strong> {parcelasForm.total_parcelas}x de{" "}
+                  <span className="font-semibold">
+                    {(
+                      Number(criarContaDialog.valor || 0) /
+                      Math.max(parseInt(parcelasForm.total_parcelas) || 1, 1)
+                    ).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </span>{" "}
+                  · Total:{" "}
+                  {Number(criarContaDialog.valor || 0).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </div>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setCriarContaDialog({ ...criarContaDialog, etapa: "escolha" })
+                  }
+                  disabled={criandoConta}
+                >
+                  Voltar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmarCriarContaParcelada}
+                  disabled={criandoConta}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="btn-salvar-parcelado-nf"
+                >
+                  {criandoConta ? (
+                    <>
+                      <Loader2 size={14} className="mr-2 animate-spin" /> Criando...
+                    </>
+                  ) : (
+                    "Salvar e gerar parcelas"
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

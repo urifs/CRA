@@ -8,10 +8,11 @@ import base64
 import io
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
+from pydantic import BaseModel
 
 from utils.audit import create_audit_log
 from utils.auth import get_current_user
@@ -642,6 +643,110 @@ async def criar_conta_pagar_from_nfse(nfse_id: str, current_user: dict = Depends
         "message": "Conta a pagar criada com sucesso",
         "conta_pagar_id": conta_pagar_id,
         "nfse_id": nfse_id,
+    }
+
+
+# ============================================================================
+# CRIAR CONTA A PAGAR PARCELADA A PARTIR DE NFS-E
+# ============================================================================
+
+class CriarContaParceladaFromNFSe(BaseModel):
+    total_parcelas: int
+    intervalo_dias: int = 30
+    data_primeiro_vencimento: Optional[str] = None
+
+
+@nfse_router.post("/importadas/{nfse_id}/criar-conta-pagar-parcelado")
+async def criar_conta_pagar_parcelado_from_nfse(
+    nfse_id: str,
+    payload: CriarContaParceladaFromNFSe,
+    current_user: dict = Depends(get_current_user),
+):
+    """Cria N contas a pagar (parcelas) a partir de uma NFS-e importada."""
+    if payload.total_parcelas < 2 or payload.total_parcelas > 360:
+        raise HTTPException(status_code=400, detail="Número de parcelas deve ser entre 2 e 360")
+
+    nfse = await db.nfse_importadas.find_one({"id": nfse_id}, {"_id": 0})
+    if not nfse:
+        raise HTTPException(status_code=404, detail="NFS-e não encontrada")
+    if nfse.get("conta_pagar_id"):
+        raise HTTPException(status_code=400, detail="Esta NFS-e já possui uma conta a pagar vinculada")
+
+    valor_total = float(nfse.get("valor_servico") or nfse.get("valor_total") or 0)
+    n = int(payload.total_parcelas)
+    valor_parcela = round(valor_total / n, 2)
+    valor_ultima = round(valor_total - (valor_parcela * (n - 1)), 2)
+    parcela_origem_id = str(uuid.uuid4())
+
+    data_emissao = nfse.get("data_emissao") or datetime.now(timezone.utc).isoformat()
+    data_emissao_str = data_emissao[:10] if isinstance(data_emissao, str) else datetime.now().strftime("%Y-%m-%d")
+    base_str = payload.data_primeiro_vencimento or data_emissao_str
+    try:
+        data_venc = datetime.strptime(base_str[:10], "%Y-%m-%d")
+    except Exception:
+        data_venc = datetime.now(timezone.utc)
+
+    favorecido = nfse.get("prestador_nome", nfse.get("razao_social_prestador", ""))
+    cnpj_fav = nfse.get("prestador_cnpj", nfse.get("cnpj_prestador", ""))
+    numero_nfse = nfse.get("numero_nfse", "")
+
+    parcelas_criadas: List[dict] = []
+    for i in range(n):
+        numero_parcela = i + 1
+        valor = valor_parcela if numero_parcela < n else valor_ultima
+        conta = {
+            "id": str(uuid.uuid4()),
+            "descricao": f"NFS-e {numero_nfse} - {favorecido} - Parcela {numero_parcela}/{n}",
+            "valor": valor,
+            "valor_final": valor,
+            "data_vencimento": data_venc.strftime("%Y-%m-%d"),
+            "data_emissao": data_emissao_str,
+            "status": "em_aberto",
+            "favorecido": favorecido,
+            "fornecedor_nome": favorecido,
+            "cnpj_favorecido": cnpj_fav,
+            "numero_doc": str(numero_nfse or ""),
+            "total_parcelas": n,
+            "numero_parcela": numero_parcela,
+            "parcela_origem_id": parcela_origem_id,
+            "nfse_id": nfse_id,
+            "numero_nfse": numero_nfse,
+            "origem": "nfse",
+            "created_by": current_user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.contas_pagar.insert_one(conta)
+        conta.pop("_id", None)
+        parcelas_criadas.append(conta)
+        data_venc = data_venc + timedelta(days=int(payload.intervalo_dias or 30))
+
+    primeira_id = parcelas_criadas[0]["id"]
+    await db.nfse_importadas.update_one(
+        {"id": nfse_id},
+        {"$set": {
+            "conta_pagar_id": primeira_id,
+            "parcela_origem_id": parcela_origem_id,
+            "status": "processada",
+        }},
+    )
+
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="conta_pagar_parcelada",
+        entity_id=parcela_origem_id,
+        entity_name=f"NFS-e {numero_nfse} - {n} parcelas",
+        details=f"{n} contas a pagar criadas a partir da NFS-e {numero_nfse}",
+        module="Financeiro",
+    )
+
+    return {
+        "message": f"{n} parcelas criadas com sucesso",
+        "parcela_origem_id": parcela_origem_id,
+        "nfse_id": nfse_id,
+        "total_parcelas": n,
+        "valor_parcela": valor_parcela,
+        "parcelas": parcelas_criadas,
     }
 
 

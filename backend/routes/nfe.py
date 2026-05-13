@@ -12,8 +12,8 @@ from __future__ import annotations
 import base64
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict
@@ -343,6 +343,139 @@ async def criar_conta_pagar_from_nfe(
         "message": "Conta a pagar criada com sucesso",
         "conta_pagar_id": conta_pagar_doc["id"],
         "nfe_id": nfe_id,
+    }
+
+
+# ============================================================================
+# CRIAR CONTA A PAGAR PARCELADA A PARTIR DE NF-E
+# ============================================================================
+
+class CriarContaParceladaFromNFe(BaseModel):
+    total_parcelas: int
+    intervalo_dias: int = 30
+    data_primeiro_vencimento: Optional[str] = None  # YYYY-MM-DD; default = data_emissao
+
+
+@nfe_router.post("/importadas/{nfe_id}/criar-conta-pagar-parcelado")
+async def criar_conta_pagar_parcelado_from_nfe(
+    nfe_id: str,
+    payload: CriarContaParceladaFromNFe,
+    current_user: dict = Depends(get_current_user),
+):
+    """Cria N contas a pagar (parcelas) a partir de uma NF-e importada.
+
+    Cada parcela mantém o vínculo com a NF-e original (nfe_id + chave) e a
+    mesma descrição/fornecedor; o valor é dividido proporcionalmente
+    (último ajuste de centavos vai para a última parcela)."""
+    if payload.total_parcelas < 2 or payload.total_parcelas > 360:
+        raise HTTPException(status_code=400, detail="Número de parcelas deve ser entre 2 e 360")
+
+    nfe = await db.nfe_importadas.find_one({"id": nfe_id})
+    if not nfe:
+        raise HTTPException(status_code=404, detail="NF-e não encontrada")
+    if nfe.get("conta_pagar_id"):
+        raise HTTPException(status_code=400, detail="Esta NF-e já possui uma conta a pagar vinculada")
+
+    cadastro = await db.cadastros.find_one({"cpf_cnpj": nfe["cnpj_emitente"]})
+    if not cadastro:
+        cadastro_doc = {
+            "id": str(uuid.uuid4()),
+            "tipo": "fornecedor",
+            "nome_razao": nfe["razao_social_emitente"],
+            "cpf_cnpj": nfe["cnpj_emitente"],
+            "telefone": "",
+            "email": "",
+            "endereco": "",
+            "cidade": "",
+            "estado": "",
+            "cep": "",
+            "observacoes": "Cadastrado automaticamente via importação de NF-e",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.cadastros.insert_one(cadastro_doc)
+        cadastro = cadastro_doc
+
+    valor_total = float(nfe.get("valor_total") or 0)
+    n = int(payload.total_parcelas)
+    valor_parcela = round(valor_total / n, 2)
+    valor_ultima = round(valor_total - (valor_parcela * (n - 1)), 2)
+    parcela_origem_id = str(uuid.uuid4())
+
+    base_str = payload.data_primeiro_vencimento or nfe.get("data_emissao") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    try:
+        data_venc = datetime.strptime(base_str[:10], "%Y-%m-%d")
+    except Exception:
+        data_venc = datetime.now(timezone.utc)
+
+    parcelas_criadas: List[dict] = []
+    for i in range(n):
+        numero_parcela = i + 1
+        valor = valor_parcela if numero_parcela < n else valor_ultima
+        conta = {
+            "id": str(uuid.uuid4()),
+            "descricao": f"NF-e {nfe['numero_nf']} - {nfe['razao_social_emitente']} - Parcela {numero_parcela}/{n}",
+            "cadastro_id": cadastro["id"],
+            "cadastro_nome": cadastro["nome_razao"],
+            "fornecedor_id": cadastro["id"],
+            "fornecedor_nome": cadastro["nome_razao"],
+            "numero_doc": str(nfe.get("numero_nf") or ""),
+            "valor": valor,
+            "valor_final": valor,
+            "desconto": 0,
+            "juros": 0,
+            "multa": 0,
+            "data_emissao": nfe.get("data_emissao"),
+            "data_vencimento": data_venc.strftime("%Y-%m-%d"),
+            "data_pagamento": None,
+            "status": "em_aberto",
+            "categoria": "fornecedores",
+            "total_parcelas": n,
+            "numero_parcela": numero_parcela,
+            "parcela_origem_id": parcela_origem_id,
+            "observacoes": f"Importada automaticamente da NF-e. Chave: {nfe['chave_acesso']}",
+            "centro_custo_id": None,
+            "plano_conta_id": None,
+            "forma_pagamento_id": None,
+            "conta_bancaria_id": None,
+            "nfe_id": nfe_id,
+            "nfe_chave": nfe["chave_acesso"],
+            "origem": "nfe",
+            "created_by": current_user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.contas_pagar.insert_one(conta)
+        conta.pop("_id", None)
+        parcelas_criadas.append(conta)
+        data_venc = data_venc + timedelta(days=int(payload.intervalo_dias or 30))
+
+    # Marca a NF-e como processada e vincula ao parcela_origem_id (1ª parcela)
+    primeira_id = parcelas_criadas[0]["id"]
+    await db.nfe_importadas.update_one(
+        {"id": nfe_id},
+        {"$set": {
+            "conta_pagar_id": primeira_id,
+            "parcela_origem_id": parcela_origem_id,
+            "status": "processada",
+        }},
+    )
+
+    await create_audit_log(
+        user=current_user,
+        action="criar",
+        entity_type="conta_pagar_parcelada",
+        entity_id=parcela_origem_id,
+        entity_name=f"NF-e {nfe['numero_nf']} - {n} parcelas",
+        details=f"{n} contas a pagar criadas a partir da NF-e {nfe['numero_nf']}",
+        module="Financeiro",
+    )
+
+    return {
+        "message": f"{n} parcelas criadas com sucesso",
+        "parcela_origem_id": parcela_origem_id,
+        "nfe_id": nfe_id,
+        "total_parcelas": n,
+        "valor_parcela": valor_parcela,
+        "parcelas": parcelas_criadas,
     }
 
 
