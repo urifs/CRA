@@ -268,8 +268,22 @@ export default function FolhaImportacaoPage() {
     }
   };
 
-  const excluirFolha = async (id) => {
-    if (!window.confirm("Excluir esta folha importada? PDFs anexados serão removidos.")) return;
+  const excluirFolha = async (id, status) => {
+    let mensagem = "Excluir esta folha importada? PDFs anexados serão removidos.";
+    if (status === "aceita") {
+      mensagem = (
+        "ATENÇÃO: Esta folha JÁ FOI ACEITA e lançada no Financeiro.\n\n" +
+        "Excluí-la NÃO desfaz as Contas a Pagar criadas automaticamente — " +
+        "você precisará removê-las manualmente em Contas a Pagar.\n\n" +
+        "Deseja realmente excluir esta folha?"
+      );
+    } else if (status === "enviada") {
+      mensagem = (
+        "Esta folha está EM ANÁLISE no Financeiro. Ao excluí-la, ela sai da " +
+        "fila de aprovação e os PDFs anexados serão removidos.\n\nDeseja continuar?"
+      );
+    }
+    if (!window.confirm(mensagem)) return;
     try {
       await axios.delete(`${API}/folha-pagamento/${id}`);
       toast.success("Folha excluída");
@@ -551,16 +565,22 @@ export default function FolhaImportacaoPage() {
                                 <Download size={14} />
                               </Button>
                             )}
-                            {f.status !== "aceita" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-600 hover:bg-red-50"
-                                onClick={() => excluirFolha(f.id)}
-                              >
-                                <Trash2 size={14} />
-                              </Button>
-                            )}
+                            {/* Lixeira para excluir folha — disponível em qualquer status.
+                                Para folhas "aceitas" ou "enviadas" o handler exibe alerta reforçado. */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => excluirFolha(f.id, f.status)}
+                              title={
+                                f.status === "aceita"
+                                  ? "Excluir folha (já lançada no Financeiro — atenção)"
+                                  : "Excluir folha importada"
+                              }
+                              data-testid={`btn-excluir-folha-${f.id}`}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
                           </div>
                         </td>
                       </tr>

@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { 
   Bell, AlertTriangle, Clock, CheckCircle2, DollarSign, 
   TrendingDown, TrendingUp, ClipboardList, Truck, Calendar,
-  Filter, ChevronRight, Search, X
+  Filter, ChevronRight, Search, X, Trash2, RotateCcw
 } from "lucide-react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 const tipoIcons = {
@@ -45,6 +46,49 @@ export default function NotificacoesPage() {
       console.error("Erro ao carregar notificações:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const dispensarNotificacao = async (e, notif) => {
+    e.stopPropagation();
+    if (!window.confirm(`Excluir esta notificação?\n\n"${notif.titulo}"\n\nEla deixará de aparecer na sua central. Você pode restaurá-la depois clicando em "Restaurar dispensadas".`)) return;
+    try {
+      await axios.post(`${API}/admin/notificacoes/dispensar`, {
+        tipo: notif.tipo,
+        ref_id: notif.id,
+      });
+      toast.success("Notificação excluída");
+      // Otimização: remove localmente sem refetch para resposta imediata
+      setData((prev) => ({
+        ...prev,
+        notificacoes: prev.notificacoes.filter(
+          (n) => !(n.tipo === notif.tipo && n.id === notif.id)
+        ),
+        resumo: {
+          ...prev.resumo,
+          total: Math.max(0, (prev.resumo?.total || 1) - 1),
+          vencidas: notif.vencida
+            ? Math.max(0, (prev.resumo?.vencidas || 1) - 1)
+            : prev.resumo?.vencidas,
+          por_tipo: {
+            ...(prev.resumo?.por_tipo || {}),
+            [notif.tipo]: Math.max(0, (prev.resumo?.por_tipo?.[notif.tipo] || 1) - 1),
+          },
+        },
+      }));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Erro ao excluir notificação");
+    }
+  };
+
+  const restaurarDispensadas = async () => {
+    if (!window.confirm("Restaurar todas as notificações dispensadas? Elas voltarão a aparecer na central.")) return;
+    try {
+      const r = await axios.delete(`${API}/admin/notificacoes/dispensar-todos`);
+      toast.success(`${r.data.restauradas} notificação(ões) restaurada(s)`);
+      fetchNotificacoes();
+    } catch (err) {
+      toast.error("Erro ao restaurar");
     }
   };
 
@@ -99,6 +143,16 @@ export default function NotificacoesPage() {
           </h1>
           <p className="text-gray-500 mt-1">Acompanhe vencimentos e prazos importantes</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={restaurarDispensadas}
+          data-testid="btn-restaurar-notificacoes"
+          title="Restaurar notificações dispensadas anteriormente"
+        >
+          <RotateCcw size={14} className="mr-1" />
+          Restaurar dispensadas
+        </Button>
       </div>
 
       {/* Search Bar */}
@@ -316,8 +370,19 @@ export default function NotificacoesPage() {
                       </p>
                     </div>
 
-                    {/* Seta */}
-                    <ChevronRight className="text-gray-300 flex-shrink-0" size={20} />
+                    {/* Ações: lixeira + seta */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => dispensarNotificacao(e, notif)}
+                        className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Excluir esta notificação"
+                        data-testid={`btn-excluir-notif-${notif.tipo}-${notif.id}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <ChevronRight className="text-gray-300" size={20} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

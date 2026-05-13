@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   Bell, Gift, Calendar, HardHat, Clock, AlertTriangle, 
-  CheckCircle, Users, FileText, ChevronRight
+  CheckCircle, Users, FileText, ChevronRight, Trash2, RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +38,38 @@ export default function RHNotificacoesPage() {
     }
   };
 
+  const dispensar = async (tipo, refId, descricao) => {
+    if (!window.confirm(`Excluir esta notificação?\n\n"${descricao}"\n\nEla deixará de aparecer. Use "Restaurar dispensadas" no topo da página para reverter.`)) return;
+    try {
+      await axios.post(`${API}/rh/notificacoes/dispensar`, { tipo, ref_id: refId });
+      toast.success("Notificação excluída");
+      // Remove localmente para UX rápida
+      setNotificacoes((prev) => {
+        const next = { ...prev };
+        const matchRef = (item) => item.ref_id === refId;
+        if (tipo === "aniversariante") next.aniversariantes = prev.aniversariantes.filter((i) => !matchRef(i));
+        if (tipo === "alerta_ferias") next.alertas_ferias = prev.alertas_ferias.filter((i) => !matchRef(i));
+        if (tipo === "funcionario_sem_ferias") next.funcionarios_sem_ferias = prev.funcionarios_sem_ferias.filter((i) => !matchRef(i));
+        if (tipo === "alerta_epi") next.alertas_epi = prev.alertas_epi.filter((i) => !matchRef(i));
+        if (tipo === "inconsistencia_ponto") next.inconsistencias_ponto = prev.inconsistencias_ponto.filter((i) => !matchRef(i));
+        return next;
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Erro ao excluir");
+    }
+  };
+
+  const restaurarTodas = async () => {
+    if (!window.confirm("Restaurar todas as notificações RH dispensadas?")) return;
+    try {
+      const r = await axios.delete(`${API}/rh/notificacoes/dispensar-todos`);
+      toast.success(`${r.data.restauradas} notificação(ões) restaurada(s)`);
+      fetchNotificacoes();
+    } catch {
+      toast.error("Erro ao restaurar");
+    }
+  };
+
   const totalAlertas = 
     notificacoes.alertas_ferias.length +
     notificacoes.alertas_epi.length +
@@ -56,9 +88,15 @@ export default function RHNotificacoesPage() {
           <h1 className="page-title">Notificações RH</h1>
           <p className="text-gray-500 mt-1">Alertas e lembretes importantes</p>
         </div>
-        <Button onClick={fetchNotificacoes} variant="outline">
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={restaurarTodas} variant="outline" size="sm" data-testid="btn-restaurar-rh">
+            <RotateCcw size={14} className="mr-1" />
+            Restaurar dispensadas
+          </Button>
+          <Button onClick={fetchNotificacoes} variant="outline">
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Resumo */}
@@ -125,7 +163,7 @@ export default function RHNotificacoesPage() {
           ) : (
             <div className="grid gap-2">
               {notificacoes.aniversariantes.map((func, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-pink-50 rounded-lg">
+                <div key={func.ref_id || idx} className="flex items-center justify-between p-3 bg-pink-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
                       🎂
@@ -135,9 +173,20 @@ export default function RHNotificacoesPage() {
                       <p className="text-sm text-gray-500">{func.cargo}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-pink-600">{func.data_formatada}</p>
-                    {func.idade && <p className="text-sm text-gray-500">{func.idade} anos</p>}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-bold text-pink-600">{func.data_formatada}</p>
+                      {func.idade && <p className="text-sm text-gray-500">{func.idade} anos</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => dispensar("aniversariante", func.ref_id, `Aniversário de ${func.nome}`)}
+                      className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Excluir notificação"
+                      data-testid={`btn-excluir-aniv-${func.ref_id}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -167,14 +216,25 @@ export default function RHNotificacoesPage() {
                   <h4 className="text-sm font-medium text-orange-600 mb-2">Período Aquisitivo Vencendo</h4>
                   <div className="grid gap-2">
                     {notificacoes.alertas_ferias.map((alerta, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                      <div key={alerta.ref_id || idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                         <div>
                           <p className="font-medium">{alerta.nome}</p>
                           <p className="text-sm text-gray-500">{alerta.mensagem}</p>
                         </div>
-                        <Button size="sm" variant="outline" onClick={() => navigate('/rh/ferias')}>
-                          Agendar
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => navigate('/rh/ferias')}>
+                            Agendar
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => dispensar("alerta_ferias", alerta.ref_id, `Alerta de férias - ${alerta.nome}`)}
+                            className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Excluir notificação"
+                            data-testid={`btn-excluir-ferias-${alerta.ref_id}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -190,14 +250,25 @@ export default function RHNotificacoesPage() {
                   </h4>
                   <div className="grid gap-2">
                     {notificacoes.funcionarios_sem_ferias.map((func, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div key={func.ref_id || idx} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                         <div>
                           <p className="font-medium">{func.nome}</p>
                           <p className="text-sm text-red-600">Última férias: {func.ultima_ferias || 'Nunca tirou férias'}</p>
                         </div>
-                        <Button size="sm" className="bg-red-500 hover:bg-red-600" onClick={() => navigate('/rh/ferias')}>
-                          Agendar Urgente
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" className="bg-red-500 hover:bg-red-600" onClick={() => navigate('/rh/ferias')}>
+                            Agendar Urgente
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => dispensar("funcionario_sem_ferias", func.ref_id, `Sem férias - ${func.nome}`)}
+                            className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-100 transition-colors"
+                            title="Excluir notificação"
+                            data-testid={`btn-excluir-sem-ferias-${func.ref_id}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -224,14 +295,25 @@ export default function RHNotificacoesPage() {
           ) : (
             <div className="grid gap-2">
               {notificacoes.alertas_epi.map((alerta, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                <div key={alerta.ref_id || idx} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div>
                     <p className="font-medium">{alerta.funcionario}</p>
                     <p className="text-sm text-red-600">{alerta.epi} - Vence em {alerta.dias_restantes} dias</p>
                   </div>
-                  <Button size="sm" variant="outline" className="border-red-500 text-red-500" onClick={() => navigate('/rh/epi')}>
-                    Substituir
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="border-red-500 text-red-500" onClick={() => navigate('/rh/epi')}>
+                      Substituir
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => dispensar("alerta_epi", alerta.ref_id, `EPI ${alerta.epi} - ${alerta.funcionario}`)}
+                      className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-100 transition-colors"
+                      title="Excluir notificação"
+                      data-testid={`btn-excluir-epi-${alerta.ref_id}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -281,14 +363,25 @@ export default function RHNotificacoesPage() {
           ) : (
             <div className="grid gap-2">
               {notificacoes.inconsistencias_ponto.map((inc, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div key={inc.ref_id || idx} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                   <div>
                     <p className="font-medium">{inc.funcionario}</p>
                     <p className="text-sm text-yellow-600">{inc.tipo}: {inc.detalhe}</p>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => navigate('/rh/ponto')}>
-                    Corrigir
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => navigate('/rh/ponto')}>
+                      Corrigir
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => dispensar("inconsistencia_ponto", inc.ref_id, `${inc.tipo} - ${inc.funcionario}`)}
+                      className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Excluir notificação"
+                      data-testid={`btn-excluir-ponto-${inc.ref_id}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

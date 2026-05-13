@@ -659,21 +659,15 @@ async def enviar_financeiro(folha_id: str, payload: EnviarFinanceiroPayload):
 
 @folha_router.delete("/{folha_id}")
 async def excluir_folha(folha_id: str):
+    """Exclui uma folha importada. Permite excluir folhas em qualquer status —
+    inclusive 'aceita'. As contas a pagar geradas a partir dela continuam no
+    Financeiro (o usuário deve removê-las manualmente, conforme avisado na UI)."""
     folha = await folhas_importadas_collection.find_one({"id": folha_id}, {"_id": 0})
     if not folha:
         raise HTTPException(status_code=404, detail="Folha não encontrada")
-    if folha["status"] == "enviada":
-        # Verifica se a solicitação foi aceita
-        sol = await solicitacoes_folha_collection.find_one(
-            {"folha_id": folha_id, "status": "aceita"}, {"_id": 0}
-        )
-        if sol:
-            raise HTTPException(
-                status_code=400,
-                detail="Folha já foi aceita pelo Financeiro; não pode ser excluída",
-            )
     await folhas_importadas_collection.delete_one({"id": folha_id})
-    await solicitacoes_folha_collection.delete_many({"folha_id": folha_id, "status": "pendente"})
+    # Remove TODAS as solicitações ligadas (pendentes, aceitas, rejeitadas)
+    await solicitacoes_folha_collection.delete_many({"folha_id": folha_id})
     return {"ok": True}
 
 

@@ -5757,6 +5757,16 @@ async def get_notificacoes(
     
     notificacoes = []
     
+    # Carrega o set de notificações dispensadas (uma única consulta) — coleção
+    # `notificacoes_dispensadas` armazena documentos {tipo, ref_id, ...}
+    dispensados_docs = await db.notificacoes_dispensadas.find(
+        {"escopo": "admin"}, {"_id": 0, "tipo": 1, "ref_id": 1}
+    ).to_list(2000)
+    dispensados = {(d.get("tipo"), d.get("ref_id")) for d in dispensados_docs}
+    
+    def _esta_dispensada(tipo: str, ref_id: str) -> bool:
+        return (tipo, ref_id) in dispensados
+    
     # Contas a Pagar próximas do vencimento
     contas_pagar = await db.contas_pagar.find({
         "status": "em_aberto",
@@ -5765,6 +5775,8 @@ async def get_notificacoes(
     
     for c in contas_pagar:
         vencida = c.get("data_vencimento", "") < hoje_str
+        if _esta_dispensada("conta_pagar", c.get("id")):
+            continue
         notificacoes.append({
             "tipo": "conta_pagar",
             "id": c.get("id"),
@@ -5785,6 +5797,8 @@ async def get_notificacoes(
     
     for c in contas_receber:
         vencida = c.get("data_vencimento", "") < hoje_str
+        if _esta_dispensada("conta_receber", c.get("id")):
+            continue
         notificacoes.append({
             "tipo": "conta_receber",
             "id": c.get("id"),
@@ -5805,6 +5819,8 @@ async def get_notificacoes(
     
     for o in ordens:
         vencida = o.get("data_previsao_entrega", "") < hoje_str
+        if _esta_dispensada("ordem_servico", o.get("id")):
+            continue
         notificacoes.append({
             "tipo": "ordem_servico",
             "id": o.get("id"),
@@ -5825,6 +5841,8 @@ async def get_notificacoes(
     
     for a in alugueis:
         vencida = a.get("data_vencimento", "") < hoje_str
+        if _esta_dispensada("aluguel", a.get("id")):
+            continue
         notificacoes.append({
             "tipo": "aluguel",
             "id": a.get("id"),
@@ -5869,51 +5887,73 @@ async def get_notificacoes_contagem(
     prazo_dias: int = 7,
     current_user: dict = Depends(get_current_user)
 ):
-    """Retorna apenas a contagem de notificações (para o badge)"""
-    from datetime import timedelta
-    hoje = datetime.now(timezone.utc)
-    hoje_str = hoje.strftime("%Y-%m-%d")
-    limite = (hoje + timedelta(days=prazo_dias)).strftime("%Y-%m-%d")
-    
-    count_pagar = await db.contas_pagar.count_documents({
-        "status": "em_aberto",
-        "data_vencimento": {"$lte": limite}
-    })
-    
-    count_receber = await db.contas_receber.count_documents({
-        "status": "em_aberto",
-        "data_vencimento": {"$lte": limite}
-    })
-    
-    count_os = await db.ordens_servico.count_documents({
-        "status": {"$in": ["em_aberto", "em_andamento"]},
-        "data_previsao_entrega": {"$lte": limite, "$ne": None, "$ne": ""}
-    })
-    
-    count_alugueis = await db.alugueis.count_documents({
-        "status": "ativo",
-        "data_vencimento": {"$lte": limite}
-    })
-    
-    # Contar vencidas
-    count_vencidas = await db.contas_pagar.count_documents({
-        "status": "em_aberto",
-        "data_vencimento": {"$lt": hoje_str}
-    }) + await db.contas_receber.count_documents({
-        "status": "em_aberto",
-        "data_vencimento": {"$lt": hoje_str}
-    }) + await db.alugueis.count_documents({
-        "status": "ativo",
-        "data_vencimento": {"$lt": hoje_str}
-    })
-    
-    total = count_pagar + count_receber + count_os + count_alugueis
-    
+    """Retorna apenas a contagem de notificações (para o badge).
+
+    Reutiliza `get_notificacoes` para que as notificações dispensadas pelo usuário
+    sejam descontadas tanto do total quanto do badge.
+    """
+    data = await get_notificacoes(prazo_dias=prazo_dias, current_user=current_user)
+    resumo = data.get("resumo", {})
     return {
-        "total": total,
-        "vencidas": count_vencidas,
-        "prazo_dias": prazo_dias
+        "total": resumo.get("total", 0),
+        "vencidas": resumo.get("vencidas", 0),
+        "prazo_dias": prazo_dias,
     }
+
+
+# ===== Dispensar / Restaurar notificações individuais (Admin) =====
+
+class DispensarNotificacaoBody(BaseModel):
+    tipo: str  # conta_pagar | conta_receber | ordem_servico | aluguel
+    ref_id: str
+
+
+@api_router.post("/admin/notificacoes/dispensar")
+async def dispensar_notificacao_admin(
+    payload: DispensarNotificacaoBody,
+    current_user: dict = Depends(get_current_user),
+):
+    """Dispensa (oculta permanentemente) uma notificação específica do admin."""
+    tipos_validos = {"conta_pagar", "conta_receber", "ordem_servico", "aluguel"}
+    if payload.tipo not in tipos_validos:
+        raise HTTPException(status_code=400, detail=f"Tipo inválido. Use um de: {tipos_validos}")
+    if not payload.ref_id:
+        raise HTTPException(status_code=400, detail="ref_id é obrigatório")
+    # upsert para idempotência (várias chamadas não duplicam)
+    await db.notificacoes_dispensadas.update_one(
+        {"escopo": "admin", "tipo": payload.tipo, "ref_id": payload.ref_id},
+        {"$set": {
+            "escopo": "admin",
+            "tipo": payload.tipo,
+            "ref_id": payload.ref_id,
+            "user_id": current_user.get("id"),
+            "dispensada_em": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"dispensada": True, "tipo": payload.tipo, "ref_id": payload.ref_id}
+
+
+@api_router.delete("/admin/notificacoes/dispensar")
+async def restaurar_notificacao_admin(
+    tipo: str,
+    ref_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Restaura (re-exibe) uma notificação previamente dispensada."""
+    res = await db.notificacoes_dispensadas.delete_one(
+        {"escopo": "admin", "tipo": tipo, "ref_id": ref_id}
+    )
+    return {"restaurada": True, "removidos": res.deleted_count}
+
+
+@api_router.delete("/admin/notificacoes/dispensar-todos")
+async def restaurar_todas_admin(current_user: dict = Depends(get_current_user)):
+    """Restaura TODAS as notificações admin dispensadas (limpa o filtro)."""
+    res = await db.notificacoes_dispensadas.delete_many({"escopo": "admin"})
+    return {"restauradas": res.deleted_count}
+
+
 
 
 # ============ PAINEL ADMINISTRATIVO (GESTÃO DE USUÁRIOS) ============

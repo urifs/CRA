@@ -3930,15 +3930,31 @@ async def get_rh_notificacoes():
     """Obter todas as notificações do RH"""
     hoje = datetime.now()
     mes_atual = hoje.month
-    
+
+    # Carrega o set de notificações RH dispensadas (uma única consulta)
+    # Estrutura: {escopo:"rh", tipo, ref_id}
+    dispensados_docs = await db.notificacoes_dispensadas.find(
+        {"escopo": "rh"}, {"_id": 0, "tipo": 1, "ref_id": 1}
+    ).to_list(2000)
+    dispensados = {(d.get("tipo"), d.get("ref_id")) for d in dispensados_docs}
+
+    def _disp(tipo: str, ref_id: str) -> bool:
+        return (tipo, ref_id) in dispensados
+
     aniversariantes = []
     async for func in funcionarios_collection.find({"status": "ativo"}):
         if func.get("data_nascimento"):
             try:
                 data_nasc = datetime.strptime(func["data_nascimento"], "%Y-%m-%d")
                 if data_nasc.month == mes_atual:
+                    # ref_id inclui o mês para que ao virar o mês a dispensa reseta
+                    ref = f"{func['id']}::{hoje.year}-{mes_atual:02d}"
+                    if _disp("aniversariante", ref):
+                        continue
                     idade = hoje.year - data_nasc.year
                     aniversariantes.append({
+                        "ref_id": ref,
+                        "funcionario_id": func["id"],
                         "nome": func["nome"],
                         "cargo": func.get("cargo", "-"),
                         "data_formatada": data_nasc.strftime("%d/%m"),
@@ -3961,24 +3977,33 @@ async def get_rh_notificacoes():
                 )
                 
                 if meses_trabalhados >= 11 and meses_trabalhados <= 14:
-                    alertas_ferias.append({
-                        "nome": func["nome"],
-                        "mensagem": f"Período aquisitivo completando"
-                    })
+                    if not _disp("alerta_ferias", func["id"]):
+                        alertas_ferias.append({
+                            "ref_id": func["id"],
+                            "funcionario_id": func["id"],
+                            "nome": func["nome"],
+                            "mensagem": f"Período aquisitivo completando"
+                        })
                 
                 if meses_trabalhados >= 12:
                     if not ultima_ferias:
-                        funcionarios_sem_ferias.append({
-                            "nome": func["nome"],
-                            "ultima_ferias": "Nunca tirou férias"
-                        })
+                        if not _disp("funcionario_sem_ferias", func["id"]):
+                            funcionarios_sem_ferias.append({
+                                "ref_id": func["id"],
+                                "funcionario_id": func["id"],
+                                "nome": func["nome"],
+                                "ultima_ferias": "Nunca tirou férias"
+                            })
                     else:
                         ultima = datetime.strptime(ultima_ferias["data_inicio"], "%Y-%m-%d")
                         if (hoje - ultima).days > 365:
-                            funcionarios_sem_ferias.append({
-                                "nome": func["nome"],
-                                "ultima_ferias": ultima.strftime("%d/%m/%Y")
-                            })
+                            if not _disp("funcionario_sem_ferias", func["id"]):
+                                funcionarios_sem_ferias.append({
+                                    "ref_id": func["id"],
+                                    "funcionario_id": func["id"],
+                                    "nome": func["nome"],
+                                    "ultima_ferias": ultima.strftime("%d/%m/%Y")
+                                })
             except:
                 pass
     
@@ -3992,7 +4017,12 @@ async def get_rh_notificacoes():
                         validade = datetime.strptime(epi["validade"], "%Y-%m-%d")
                         dias_restantes = (validade - hoje).days
                         if 0 < dias_restantes <= 30:
+                            ref = f"{func['id']}::{epi.get('nome','')}::{epi['validade']}"
+                            if _disp("alerta_epi", ref):
+                                continue
                             alertas_epi.append({
+                                "ref_id": ref,
+                                "funcionario_id": func["id"],
                                 "funcionario": func["nome"],
                                 "epi": epi["nome"],
                                 "dias_restantes": dias_restantes
@@ -4014,8 +4044,13 @@ async def get_rh_notificacoes():
                     minuto_limite = 15
                     
                     if h > hora_limite or (h == hora_limite and m > minuto_limite):
+                        ref = f"{func['id']}::{hoje_str}"
+                        if _disp("inconsistencia_ponto", ref):
+                            continue
                         atraso = (h - 8) * 60 + m
                         inconsistencias_ponto.append({
+                            "ref_id": ref,
+                            "funcionario_id": func["id"],
                             "funcionario": func["nome"],
                             "tipo": "Atraso",
                             "detalhe": f"Entrada às {reg['entrada']} ({atraso} min de atraso)"
@@ -4031,6 +4066,53 @@ async def get_rh_notificacoes():
         "alertas_atestados": [],
         "inconsistencias_ponto": inconsistencias_ponto
     }
+
+
+# ===== Dispensar / restaurar notificações RH individualmente =====
+
+class DispensarNotificacaoRH(BaseModel):
+    tipo: str  # aniversariante | alerta_ferias | funcionario_sem_ferias | alerta_epi | inconsistencia_ponto
+    ref_id: str
+
+
+@rh_router.post("/notificacoes/dispensar")
+async def dispensar_notificacao_rh(payload: DispensarNotificacaoRH):
+    """Dispensa (oculta) uma notificação RH específica."""
+    tipos_validos = {
+        "aniversariante", "alerta_ferias", "funcionario_sem_ferias",
+        "alerta_epi", "inconsistencia_ponto",
+    }
+    if payload.tipo not in tipos_validos:
+        raise HTTPException(status_code=400, detail=f"Tipo inválido. Use um de: {tipos_validos}")
+    if not payload.ref_id:
+        raise HTTPException(status_code=400, detail="ref_id é obrigatório")
+    await db.notificacoes_dispensadas.update_one(
+        {"escopo": "rh", "tipo": payload.tipo, "ref_id": payload.ref_id},
+        {"$set": {
+            "escopo": "rh",
+            "tipo": payload.tipo,
+            "ref_id": payload.ref_id,
+            "dispensada_em": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"dispensada": True, "tipo": payload.tipo, "ref_id": payload.ref_id}
+
+
+@rh_router.delete("/notificacoes/dispensar")
+async def restaurar_notificacao_rh(tipo: str, ref_id: str):
+    """Restaura uma notificação RH previamente dispensada."""
+    res = await db.notificacoes_dispensadas.delete_one(
+        {"escopo": "rh", "tipo": tipo, "ref_id": ref_id}
+    )
+    return {"restaurada": True, "removidos": res.deleted_count}
+
+
+@rh_router.delete("/notificacoes/dispensar-todos")
+async def restaurar_todas_rh():
+    """Restaura TODAS as notificações RH dispensadas."""
+    res = await db.notificacoes_dispensadas.delete_many({"escopo": "rh"})
+    return {"restauradas": res.deleted_count}
 
 
 @rh_router.get("/notificacoes/contagem")
