@@ -111,28 +111,34 @@ export default function AdminDashboardPage() {
   const ccSelecionadoNome = (filterCentroCusto && filterCentroCusto !== "all")
     ? (centrosCusto.find(cc => cc.id === filterCentroCusto)?.nome || null)
     : null;
-  const passaCentroCusto = (c) => {
-    if (!ccSelecionadoNome) return true;
-    return (
-      c.centro_custo === ccSelecionadoNome ||
-      c.centro_custo_id === filterCentroCusto ||
-      c.centro_custo_nome === ccSelecionadoNome
-    );
-  };
+  const pcSelecionado = (filterPlanoContas && filterPlanoContas !== "all") ? filterPlanoContas : null;
 
-  if (ccSelecionadoNome && vencidas?.pagar?.lista) {
+  const passaFiltros = (c) => {
+    if (ccSelecionadoNome) {
+      const okCC = (
+        c.centro_custo === ccSelecionadoNome ||
+        c.centro_custo_id === filterCentroCusto ||
+        c.centro_custo_nome === ccSelecionadoNome
+      );
+      if (!okCC) return false;
+    }
+    if (pcSelecionado) {
+      const okPC = c.plano_conta_id === pcSelecionado || c.plano_contas_id === pcSelecionado;
+      if (!okPC) return false;
+    }
+    return true;
+  };
+  const passaCentroCusto = passaFiltros; // backward compat para usos abaixo
+
+  if ((ccSelecionadoNome || pcSelecionado) && vencidas?.pagar?.lista) {
     vencidas = {
       ...vencidas,
-      pagar: { ...vencidas.pagar, lista: vencidas.pagar.lista.filter(passaCentroCusto) },
-      receber: vencidas.receber ? { ...vencidas.receber, lista: (vencidas.receber.lista || []).filter(passaCentroCusto) } : vencidas.receber,
+      pagar: { ...vencidas.pagar, lista: vencidas.pagar.lista.filter(passaFiltros) },
+      receber: vencidas.receber ? { ...vencidas.receber, lista: (vencidas.receber.lista || []).filter(passaFiltros) } : vencidas.receber,
     };
   }
-  if (ccSelecionadoNome && contasProximas) {
-    contasProximas = {
-      ...contasProximas,
-      pagar: (contasProximas.pagar || []).filter(passaCentroCusto),
-      receber: (contasProximas.receber || []).filter(passaCentroCusto),
-    };
+  if ((ccSelecionadoNome || pcSelecionado) && Array.isArray(contasProximas)) {
+    contasProximas = contasProximas.filter(passaFiltros);
   }
 
   // Componente de filtros reutilizável
@@ -636,7 +642,7 @@ export default function AdminDashboardPage() {
               {contasPagar.filter(c => {
                 if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
                 if (!passaCentroCusto(c)) return false;
-                if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_contas_id !== filterPlanoContas) return false;
+                if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_conta_id !== filterPlanoContas && c.plano_contas_id !== filterPlanoContas) return false;
                 if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
                 if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;
                 if (filterStatus === "pago" && c.status !== "pago") return false;
@@ -648,7 +654,7 @@ export default function AdminDashboardPage() {
                   {contasPagar.filter(c => {
                     if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
                     if (!passaCentroCusto(c)) return false;
-                    if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_contas_id !== filterPlanoContas) return false;
+                    if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_conta_id !== filterPlanoContas && c.plano_contas_id !== filterPlanoContas) return false;
                     if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
                     if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;
                     if (filterStatus === "pago" && c.status !== "pago") return false;

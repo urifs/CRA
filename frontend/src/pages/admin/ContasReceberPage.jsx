@@ -41,6 +41,7 @@ export default function ContasReceberPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterVencimento, setFilterVencimento] = useState("");
   const [filterFormaPag, setFilterFormaPag] = useState("");
+  const [filterPlanoConta, setFilterPlanoConta] = useState("");
   const [valorBusca, setValorBusca] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
@@ -478,6 +479,10 @@ export default function ContasReceberPage() {
     if (!matchSearch) return false;
     if (filterStatus && filterStatus !== "all" && c.status !== filterStatus) return false;
     if (filterFormaPag && filterFormaPag !== "all" && c.forma_pagamento !== filterFormaPag) return false;
+    if (filterPlanoConta && filterPlanoConta !== "all") {
+      const okPC = c.plano_conta_id === filterPlanoConta || c.plano_contas_id === filterPlanoConta || c.subconta_id === filterPlanoConta;
+      if (!okPC) return false;
+    }
     
     const hoje = new Date().toISOString().split("T")[0];
     if (filterVencimento === "vencidas" && !["em_aberto", "pendente", "parcial"].includes(c.status) || (filterVencimento === "vencidas" && c.data_vencimento >= hoje)) return false;
@@ -550,6 +555,22 @@ export default function ContasReceberPage() {
           <SelectContent className="z-[9999]">
             <SelectItem value="all">Todas Formas</SelectItem>
             {formasPagamento.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterPlanoConta} onValueChange={setFilterPlanoConta}>
+          <SelectTrigger className="h-11" data-testid="filter-plano-conta-cr"><SelectValue placeholder="Plano de Contas" /></SelectTrigger>
+          <SelectContent className="z-[9999] max-h-64">
+            <SelectItem value="all">Todos Planos</SelectItem>
+            {planoContas.map(p => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.codigo ? `${p.codigo} - ` : ""}{p.nome}
+              </SelectItem>
+            ))}
+            {subcontas.map(s => (
+              <SelectItem key={s.id} value={s.id}>
+                ↳ {s.codigo ? `${s.codigo} - ` : ""}{s.nome}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Input
