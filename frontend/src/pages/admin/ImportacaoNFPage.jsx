@@ -425,7 +425,7 @@ export default function ImportacaoNFPage() {
     return Math.max(0, LIMITE_DIARIO - consultasHoje);
   };
 
-  const handleImportarNotas = async (certificadoId, desdeInicio = false) => {
+  const handleImportarNotas = async (certificadoId, desdeInicio = false, tipo = "ambos") => {
     const cert = certificados.find(c => c.id === certificadoId);
     
     if (cert && isCertificadoBloqueado(cert)) {
@@ -440,54 +440,105 @@ export default function ImportacaoNFPage() {
     setImportando(true);
     setImportandoCertId(certificadoId);
     try {
-      // Importar NF-e (SEFAZ) e NFS-e (prefeitura) em paralelo.
-      // Se desdeInicio=true, NF-e ignora o cursor NSU e re-varre o histórico todo.
-      const nfeUrl = desdeInicio
-        ? `${API}/nfe/importar/${certificadoId}?desde_inicio=true`
-        : `${API}/nfe/importar/${certificadoId}`;
-      const [nfeResult, nfseResult] = await Promise.allSettled([
-        axios.post(nfeUrl),
-        axios.post(`${API}/nfse/importar/${certificadoId}`)
-      ]);
-
       const empresaNome = cert?.razao_social || "Empresa";
       const sufixo = desdeInicio ? " [varredura completa]" : "";
 
-      // Tratar resultado NF-e
-      if (nfeResult.status === 'fulfilled') {
-        const d = nfeResult.value.data;
-        if (d.aviso) {
-          toast.warning(`NF-e ${empresaNome}${sufixo}: ${d.aviso}`, { duration: 8000 });
-        } else if (d.novas_nfes > 0) {
-          toast.success(`${empresaNome}${sufixo}: ${d.novas_nfes} nova(s) NF-e importada(s)!`);
-        } else {
-          toast.info(`NF-e ${empresaNome}${sufixo}: nenhuma nova nota encontrada na SEFAZ`);
-        }
-      } else {
-        toast.error(`NF-e ${empresaNome}: ${nfeResult.reason?.response?.data?.detail || "Erro"}`);
+      // Importa apenas o tipo solicitado (nfe, nfse, ou ambos)
+      const fazNfe = tipo === "nfe" || tipo === "ambos";
+      const fazNfse = tipo === "nfse" || tipo === "ambos";
+
+      const promises = [];
+      if (fazNfe) {
+        const nfeUrl = desdeInicio
+          ? `${API}/nfe/importar/${certificadoId}?desde_inicio=true`
+          : `${API}/nfe/importar/${certificadoId}`;
+        promises.push(axios.post(nfeUrl).then(r => ({ tipo: "nfe", ok: true, data: r.data }), err => ({ tipo: "nfe", ok: false, err })));
+      }
+      if (fazNfse) {
+        promises.push(axios.post(`${API}/nfse/importar/${certificadoId}`).then(r => ({ tipo: "nfse", ok: true, data: r.data }), err => ({ tipo: "nfse", ok: false, err })));
       }
 
-      // Tratar resultado NFS-e (mais visível: warning/error em vez de info)
-      if (nfseResult.status === 'fulfilled') {
-        const d = nfseResult.value.data;
-        if (d.aviso) {
-          toast.warning(`NFS-e ${empresaNome}: ${d.aviso}`, { duration: 12000 });
-        } else if (d.novas_nfses > 0) {
-          toast.success(`${empresaNome}: ${d.novas_nfses} nova(s) NFS-e importada(s)!`);
-        } else if ((d.erros || []).length > 0) {
-          toast.warning(`NFS-e ${empresaNome}: ${d.erros.join(' | ')}`, { duration: 12000 });
-        } else {
-          toast.info(`NFS-e ${empresaNome}: nenhuma nova nota encontrada no histórico (5 anos)`);
+      const results = await Promise.all(promises);
+
+      for (const r of results) {
+        if (r.tipo === "nfe") {
+          if (r.ok) {
+            const d = r.data;
+            if (d.aviso) toast.warning(`NF-e ${empresaNome}${sufixo}: ${d.aviso}`, { duration: 8000 });
+            else if (d.novas_nfes > 0) toast.success(`${empresaNome}${sufixo}: ${d.novas_nfes} nova(s) NF-e importada(s)!`);
+            else toast.info(`NF-e ${empresaNome}${sufixo}: nenhuma nova nota encontrada na SEFAZ`);
+          } else {
+            toast.error(`NF-e ${empresaNome}: ${r.err?.response?.data?.detail || "Erro"}`);
+          }
+        } else if (r.tipo === "nfse") {
+          if (r.ok) {
+            const d = r.data;
+            if (d.aviso) toast.warning(`NFS-e ${empresaNome}: ${d.aviso}`, { duration: 12000 });
+            else if (d.novas_nfses > 0) toast.success(`${empresaNome}: ${d.novas_nfses} nova(s) NFS-e importada(s)!`);
+            else if ((d.erros || []).length > 0) toast.warning(`NFS-e ${empresaNome}: ${d.erros.join(' | ')}`, { duration: 12000 });
+            else toast.info(`NFS-e ${empresaNome}: nenhuma nova nota encontrada no histórico (5 anos)`);
+          } else {
+            toast.error(`NFS-e ${empresaNome}: ${r.err?.response?.data?.detail || "falha na consulta ao webservice"}`);
+          }
         }
-      } else {
-        const errMsg = nfseResult.reason?.response?.data?.detail;
-        toast.error(`NFS-e ${empresaNome}: ${errMsg || "falha na consulta ao webservice"}`);
       }
 
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Erro ao importar notas");
       fetchData();
+    } finally {
+      setImportando(false);
+      setImportandoCertId(null);
+    }
+  };
+
+  // Importa NF-e de TODOS os certificados ativos (varre todos os CNPJs)
+  const handleImportarNFeTodos = async (desdeInicio = false) => {
+    const certsAtivos = certificados.filter(c => c.ativo);
+    if (certsAtivos.length === 0) {
+      toast.error("Nenhum certificado ativo encontrado");
+      return;
+    }
+    setImportando(true);
+    let totalNovas = 0;
+    let temErro = false;
+    try {
+      for (const cert of certsAtivos) {
+        if (isCertificadoBloqueado(cert)) {
+          toast.warning(`${cert.razao_social}: certificado bloqueado, ignorando.`);
+          continue;
+        }
+        if (getConsultasRestantes(cert) <= 0) {
+          toast.warning(`${cert.razao_social}: limite diário atingido, ignorando.`);
+          continue;
+        }
+        setImportandoCertId(cert.id);
+        try {
+          const url = desdeInicio
+            ? `${API}/nfe/importar/${cert.id}?desde_inicio=true`
+            : `${API}/nfe/importar/${cert.id}`;
+          const { data } = await axios.post(url);
+          if (data.aviso) {
+            temErro = true;
+            toast.warning(`${cert.razao_social}: ${data.aviso}`, { duration: 10000 });
+          } else if (data.novas_nfes > 0) {
+            totalNovas += data.novas_nfes;
+            toast.success(`${cert.razao_social}: ${data.novas_nfes} NF-e importada(s)!`);
+          } else {
+            toast.info(`${cert.razao_social}: nenhuma nova NF-e encontrada na SEFAZ`);
+          }
+        } catch (e) {
+          temErro = true;
+          toast.error(`${cert.razao_social}: ${e.response?.data?.detail || "falha na consulta"}`);
+        }
+      }
+      if (totalNovas === 0 && !temErro) {
+        toast.info("Importação concluída — nenhuma NF-e nova encontrada para os CNPJs ativos.");
+      } else if (totalNovas > 0) {
+        toast.success(`Total: ${totalNovas} NF-e importada(s) entre ${certsAtivos.length} CNPJ(s).`);
+      }
+      await fetchData();
     } finally {
       setImportando(false);
       setImportandoCertId(null);
@@ -805,7 +856,7 @@ export default function ImportacaoNFPage() {
                 if (tipoNota === "nfse") {
                   handleImportarNFSeTodos();
                 } else {
-                  handleImportarNotas(certificados[0]?.id);
+                  handleImportarNFeTodos();
                 }
               }}
               disabled={importando}
@@ -1741,10 +1792,10 @@ export default function ImportacaoNFPage() {
                         variant="outline" 
                         size="sm" 
                         className="flex-1 min-w-[120px]"
-                        onClick={() => handleImportarNotas(cert.id)}
+                        onClick={() => handleImportarNotas(cert.id, false, tipoNota)}
                         disabled={importando || bloqueado || semConsultas}
                         data-testid={`btn-importar-incremental-${cert.id}`}
-                        title="Importa apenas as NF-e novas desde a última sincronização"
+                        title={tipoNota === "nfse" ? "Importa NFS-e novas deste CNPJ" : "Importa NF-e novas deste CNPJ"}
                       >
                         {importandoCertId === cert.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -1774,7 +1825,7 @@ export default function ImportacaoNFPage() {
                             `Importação COMPLETA: re-varre todo o histórico de NF-e (NSU=0) e busca todas as NFS-e dos últimos 5 anos. ` +
                             `Pode demorar mais que o normal (até ~30s). Duplicatas serão ignoradas. Deseja continuar?`
                           )) {
-                            handleImportarNotas(cert.id, true);
+                            handleImportarNotas(cert.id, true, tipoNota);
                           }
                         }}
                         disabled={importando || bloqueado || semConsultas}

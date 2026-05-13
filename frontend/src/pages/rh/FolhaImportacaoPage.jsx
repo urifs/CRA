@@ -357,6 +357,67 @@ export default function FolhaImportacaoPage() {
         />
       </div>
 
+      {/* Banner de Processamento — exibido quando há folhas sendo processadas */}
+      {(() => {
+        const processando = (folhas || []).filter((f) => f.status === "processando");
+        if (processando.length === 0) return null;
+        const mediaProgresso = Math.round(
+          processando.reduce((acc, f) => acc + (f.progresso || 0), 0) / processando.length
+        );
+        return (
+          <div
+            className="border-2 border-sky-300 bg-gradient-to-r from-sky-50 to-indigo-50 rounded-lg p-4"
+            data-testid="banner-folhas-processando"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Loader2 size={20} className="animate-spin text-sky-700" />
+                <div>
+                  <p className="font-semibold text-sky-900">
+                    {processando.length === 1
+                      ? "1 folha em processamento"
+                      : `${processando.length} folhas em processamento`}
+                  </p>
+                  <p className="text-xs text-sky-700">
+                    A leitura via IA leva ~30‑60s por PDF. Não recarregue a página.
+                  </p>
+                </div>
+              </div>
+              <span className="text-2xl font-bold text-sky-800 tabular-nums">
+                {mediaProgresso}%
+              </span>
+            </div>
+            <div className="w-full h-2.5 bg-sky-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500"
+                style={{ width: `${mediaProgresso}%` }}
+              />
+            </div>
+            <div className="mt-3 space-y-1.5 max-h-32 overflow-y-auto">
+              {processando.map((f) => (
+                <div key={f.id} className="flex items-center gap-2 text-xs">
+                  <div className="w-32 truncate font-medium text-gray-700">
+                    {f.arquivo_nome || "Folha sem nome"}
+                  </div>
+                  <div className="flex-1 h-1.5 bg-sky-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-sky-500 transition-all duration-500"
+                      style={{ width: `${f.progresso || 0}%` }}
+                    />
+                  </div>
+                  <div className="w-12 text-right tabular-nums text-sky-700 font-medium">
+                    {f.progresso || 0}%
+                  </div>
+                  <div className="w-44 text-right text-sky-700 truncate">
+                    {ETAPA_LABEL[f.etapa] || f.etapa || "..."}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Lista de folhas */}
       <Card>
         <CardContent className="p-0">
