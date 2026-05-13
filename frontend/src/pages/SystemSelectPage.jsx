@@ -118,7 +118,7 @@ export default function SystemSelectPage() {
     {
       id: "painel-admin",
       title: "Painel Admin",
-      description: "Configurações globais, usuários, permissões e gestão da plataforma",
+      description: "Configurações, usuários e permissões",
       icon: Shield,
       useLogo: false,
       color: "bg-green-600",
@@ -207,21 +207,23 @@ export default function SystemSelectPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-lg sm:text-xl font-bold text-white">{system.title}</h2>
+                      <h2 className="text-base sm:text-lg lg:text-xl xl:text-sm 2xl:text-base font-bold text-white break-words leading-tight">
+                        {system.title}
+                      </h2>
                       {!system.hasAccess && (
                         <Lock size={14} className="text-gray-500 flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-400 line-clamp-2">{system.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-400 line-clamp-2 break-words">{system.description}</p>
                   </div>
                 </div>
 
                 {/* Features */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-4 pt-3 sm:pt-4 border-t border-gray-700">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-3 mb-3 sm:mb-4 pt-3 sm:pt-4 border-t border-gray-700">
                   {system.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-1 sm:gap-2 text-gray-300">
-                      <feature.icon size={14} className="text-gray-400" />
-                      <span className="text-xs sm:text-sm">{feature.label}</span>
+                    <div key={index} className="flex items-center gap-1 text-gray-300 min-w-0">
+                      <feature.icon size={14} className="text-gray-400 flex-shrink-0" />
+                      <span className="text-xs truncate">{feature.label}</span>
                     </div>
                   ))}
                 </div>
