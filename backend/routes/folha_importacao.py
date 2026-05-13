@@ -1090,3 +1090,30 @@ async def rejeitar_solicitacao(sol_id: str, body: dict = Body(default={})):
         origem={"tipo": "folha_rejeitada", "folha_id": sol["folha_id"]},
     )
     return {"ok": True}
+
+
+
+@fin_folha_router.delete("/{sol_id}")
+async def excluir_solicitacao(sol_id: str):
+    """Exclui uma solicitação de folha do Financeiro (em qualquer status).
+
+    - PENDENTE: remove a solicitação e devolve a folha original para 'em_revisao'
+      (assim ela pode ser reenviada pelo RH).
+    - ACEITA: remove a solicitação. As Contas a Pagar geradas NÃO são apagadas
+      automaticamente — o usuário deve removê-las manualmente caso queira.
+    - REJEITADA: remove a solicitação (limpeza de histórico).
+    """
+    sol = await solicitacoes_folha_collection.find_one({"id": sol_id}, {"_id": 0})
+    if not sol:
+        raise HTTPException(status_code=404, detail="Solicitação não encontrada")
+
+    await solicitacoes_folha_collection.delete_one({"id": sol_id})
+
+    # Se estava pendente, devolve a folha ao RH em revisão
+    if sol.get("status") == "pendente" and sol.get("folha_id"):
+        await folhas_importadas_collection.update_one(
+            {"id": sol["folha_id"]},
+            {"$set": {"status": "em_revisao"}},
+        )
+
+    return {"ok": True, "status_anterior": sol.get("status")}

@@ -31,6 +31,7 @@ import {
   Users,
   AlertCircle,
   Inbox,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -240,6 +241,34 @@ export default function SolicitacoesFolhaPage() {
     }
   };
 
+  const excluirSolicitacao = async (sol) => {
+    let msg = "Excluir esta solicitação de folha?";
+    if (sol.status === "aceita") {
+      msg = (
+        "ATENÇÃO: Esta solicitação JÁ FOI ACEITA e gerou " +
+        `${sol.contas_pagar_ids?.length || 0} conta(s) a pagar.\n\n` +
+        "Excluí-la apenas remove o registro da solicitação. As Contas a Pagar " +
+        "criadas NÃO serão apagadas automaticamente — remova-as manualmente em " +
+        "Contas a Pagar, se necessário.\n\nDeseja continuar?"
+      );
+    } else if (sol.status === "pendente") {
+      msg = (
+        "Excluir esta solicitação pendente?\n\nA folha original voltará ao status " +
+        "'em revisão' no RH, podendo ser reenviada depois."
+      );
+    } else {
+      msg = "Excluir esta solicitação rejeitada do histórico?";
+    }
+    if (!window.confirm(msg)) return;
+    try {
+      await axios.delete(`${API}/financeiro/solicitacoes-folha/${sol.id}`);
+      toast.success("Solicitação excluída");
+      fetchSolicitacoes();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erro ao excluir");
+    }
+  };
+
   const totalPendente = solicitacoes.filter((s) => s.status === "pendente").length;
 
   return (
@@ -338,35 +367,51 @@ export default function SolicitacoesFolhaPage() {
                           </span>
                         </td>
                         <td className="p-3 text-center">
-                          {s.status === "pendente" ? (
-                            <div className="flex gap-1 justify-center">
-                              <Button
-                                size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700"
-                                onClick={() => abrirAceitar(s)}
-                                data-testid={`btn-aceitar-${s.id}`}
-                              >
-                                <CheckCircle2 size={14} className="mr-1" /> Aceitar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-600 border-red-300 hover:bg-red-50"
-                                onClick={() => setRejeitarSol(s)}
-                                data-testid={`btn-rejeitar-${s.id}`}
-                              >
-                                <XCircle size={14} />
-                              </Button>
-                            </div>
-                          ) : s.status === "aceita" ? (
-                            <span className="text-xs text-emerald-700 font-medium">
-                              {s.contas_pagar_ids?.length || 0} conta(s) criadas
-                            </span>
-                          ) : (
-                            <span className="text-xs text-red-700">
-                              {s.motivo_rejeicao || "Rejeitada"}
-                            </span>
-                          )}
+                          <div className="flex gap-1 justify-center items-center">
+                            {s.status === "pendente" ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={() => abrirAceitar(s)}
+                                  data-testid={`btn-aceitar-${s.id}`}
+                                >
+                                  <CheckCircle2 size={14} className="mr-1" /> Aceitar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-300 hover:bg-red-50"
+                                  onClick={() => setRejeitarSol(s)}
+                                  data-testid={`btn-rejeitar-${s.id}`}
+                                >
+                                  <XCircle size={14} />
+                                </Button>
+                              </>
+                            ) : s.status === "aceita" ? (
+                              <span className="text-xs text-emerald-700 font-medium">
+                                {s.contas_pagar_ids?.length || 0} conta(s) criadas
+                              </span>
+                            ) : (
+                              <span className="text-xs text-red-700">
+                                {s.motivo_rejeicao || "Rejeitada"}
+                              </span>
+                            )}
+                            {/* Lixeira: disponível em qualquer status */}
+                            <button
+                              type="button"
+                              onClick={() => excluirSolicitacao(s)}
+                              className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title={
+                                s.status === "aceita"
+                                  ? "Excluir solicitação (contas a pagar geradas não serão removidas)"
+                                  : "Excluir solicitação"
+                              }
+                              data-testid={`btn-excluir-solicitacao-${s.id}`}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
