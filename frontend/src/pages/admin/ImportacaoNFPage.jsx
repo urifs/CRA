@@ -50,7 +50,8 @@ import {
   Ban,
   Pencil,
   Plug,
-  Search
+  Search,
+  Filter
 } from "lucide-react";
 import { formatCPFouCNPJ } from "@/utils/masks";
 
@@ -133,6 +134,11 @@ export default function ImportacaoNFPage() {
   const [selectedCertificado, setSelectedCertificado] = useState("todos");
   const [selectedStatus, setSelectedStatus] = useState("todos");
   const [buscaNotas, setBuscaNotas] = useState("");
+  const [filtroDataInicio, setFiltroDataInicio] = useState("");
+  const [filtroDataFim, setFiltroDataFim] = useState("");
+  const [filtroValorMin, setFiltroValorMin] = useState("");
+  const [filtroValorMax, setFiltroValorMax] = useState("");
+  const [filtrosAvancadosAberto, setFiltrosAvancadosAberto] = useState(false);
   
   // Estados para importação manual
   const [centrosCusto, setCentrosCusto] = useState([]);
@@ -818,12 +824,27 @@ export default function ImportacaoNFPage() {
       return String(v).toLowerCase().includes(termoBusca);
     }) || valorStr.includes(termoBusca) || valorPt.toLowerCase().includes(termoBusca);
   };
-  const nfesImportadasFiltradas = nfesImportadas.filter((n) =>
-    matchNotaTexto(n, ["numero_nf", "razao_social_emitente", "cnpj_emitente", "chave_acesso"])
-  );
-  const nfsesImportadasFiltradas = nfsesImportadas.filter((n) =>
-    matchNotaTexto(n, ["numero_nfse", "prestador_nome", "razao_social_prestador", "prestador_cnpj", "cnpj_prestador"])
-  );
+
+  // Filtros avançados: data emissão + faixa de valor
+  const valorMinNum = filtroValorMin === "" ? null : Number(String(filtroValorMin).replace(",", "."));
+  const valorMaxNum = filtroValorMax === "" ? null : Number(String(filtroValorMax).replace(",", "."));
+  const matchFiltrosAvancados = (nota) => {
+    const dataNota = (nota.data_emissao || "").slice(0, 10);
+    if (filtroDataInicio && dataNota && dataNota < filtroDataInicio) return false;
+    if (filtroDataFim && dataNota && dataNota > filtroDataFim) return false;
+    const valor = Number(nota.valor_total ?? nota.valor_servico ?? 0);
+    if (valorMinNum != null && !isNaN(valorMinNum) && valor < valorMinNum) return false;
+    if (valorMaxNum != null && !isNaN(valorMaxNum) && valor > valorMaxNum) return false;
+    return true;
+  };
+  const filtrosAvancadosAtivos = !!(filtroDataInicio || filtroDataFim || filtroValorMin || filtroValorMax);
+
+  const nfesImportadasFiltradas = nfesImportadas
+    .filter((n) => matchNotaTexto(n, ["numero_nf", "razao_social_emitente", "cnpj_emitente", "chave_acesso"]))
+    .filter(matchFiltrosAvancados);
+  const nfsesImportadasFiltradas = nfsesImportadas
+    .filter((n) => matchNotaTexto(n, ["numero_nfse", "prestador_nome", "razao_social_prestador", "prestador_cnpj", "cnpj_prestador"]))
+    .filter(matchFiltrosAvancados);
 
   if (loading) {
     return (
@@ -946,49 +967,123 @@ export default function ImportacaoNFPage() {
           </div>
 
           {/* Filtros */}
-          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
-            <div className="flex-1 relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <Input
-                value={buscaNotas}
-                onChange={(e) => setBuscaNotas(e.target.value)}
-                placeholder="Buscar por nº NF, fornecedor, CNPJ ou valor..."
-                className="pl-9"
-                data-testid="busca-notas-importadas"
-              />
+          <div className="space-y-2">
+            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+              <div className="flex-1 relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <Input
+                  value={buscaNotas}
+                  onChange={(e) => setBuscaNotas(e.target.value)}
+                  placeholder="Buscar por nº NF, fornecedor, CNPJ ou valor..."
+                  className="pl-9"
+                  data-testid="busca-notas-importadas"
+                />
+              </div>
+              <div className="md:max-w-xs flex-1">
+                <Select value={selectedCertificado} onValueChange={setSelectedCertificado}>
+                  <SelectTrigger data-testid="select-cnpj-certificado">
+                    <SelectValue placeholder="Filtrar por CNPJ" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="todos">Todos os CNPJs</SelectItem>
+                    {certificados.map((cert) => (
+                      <SelectItem key={cert.id} value={cert.id}>
+                        {cert.razao_social} ({formatCPFouCNPJ(cert.cnpj)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:max-w-xs flex-1">
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por status" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]">
+                    <SelectItem value="todos">Todos os status</SelectItem>
+                    <SelectItem value="nova">Novas</SelectItem>
+                    <SelectItem value="processada">Processadas</SelectItem>
+                    <SelectItem value="ignorada">Ignoradas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setFiltrosAvancadosAberto((v) => !v)}
+                className={filtrosAvancadosAtivos ? "border-blue-500 text-blue-700 bg-blue-50" : ""}
+                data-testid="btn-filtros-avancados"
+                title="Filtrar por data e faixa de valor"
+              >
+                <Filter size={16} className="mr-2" />
+                {filtrosAvancadosAtivos ? "Filtros ativos" : "Filtros"}
+              </Button>
+              <Button variant="outline" onClick={fetchData}>
+                <RefreshCw size={16} className="mr-2" />
+                Atualizar
+              </Button>
             </div>
-            <div className="md:max-w-xs flex-1">
-              <Select value={selectedCertificado} onValueChange={setSelectedCertificado}>
-                <SelectTrigger data-testid="select-cnpj-certificado">
-                  <SelectValue placeholder="Filtrar por CNPJ" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]">
-                  <SelectItem value="todos">Todos os CNPJs</SelectItem>
-                  {certificados.map((cert) => (
-                    <SelectItem key={cert.id} value={cert.id}>
-                      {cert.razao_social} ({formatCPFouCNPJ(cert.cnpj)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:max-w-xs flex-1">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]">
-                  <SelectItem value="todos">Todos os status</SelectItem>
-                  <SelectItem value="nova">Novas</SelectItem>
-                  <SelectItem value="processada">Processadas</SelectItem>
-                  <SelectItem value="ignorada">Ignoradas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button variant="outline" onClick={fetchData}>
-              <RefreshCw size={16} className="mr-2" />
-              Atualizar
-            </Button>
+
+            {filtrosAvancadosAberto && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-wrap items-end gap-3" data-testid="filtros-avancados-panel">
+                <div className="flex-1 min-w-[140px]">
+                  <Label className="text-xs text-gray-600">Data emissão de</Label>
+                  <Input
+                    type="date"
+                    value={filtroDataInicio}
+                    onChange={(e) => setFiltroDataInicio(e.target.value)}
+                    data-testid="filtro-data-inicio"
+                  />
+                </div>
+                <div className="flex-1 min-w-[140px]">
+                  <Label className="text-xs text-gray-600">até</Label>
+                  <Input
+                    type="date"
+                    value={filtroDataFim}
+                    onChange={(e) => setFiltroDataFim(e.target.value)}
+                    data-testid="filtro-data-fim"
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px]">
+                  <Label className="text-xs text-gray-600">Valor mínimo (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={filtroValorMin}
+                    onChange={(e) => setFiltroValorMin(e.target.value)}
+                    data-testid="filtro-valor-min"
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px]">
+                  <Label className="text-xs text-gray-600">Valor máximo (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="99999,00"
+                    value={filtroValorMax}
+                    onChange={(e) => setFiltroValorMax(e.target.value)}
+                    data-testid="filtro-valor-max"
+                  />
+                </div>
+                {filtrosAvancadosAtivos && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setFiltroDataInicio("");
+                      setFiltroDataFim("");
+                      setFiltroValorMin("");
+                      setFiltroValorMax("");
+                    }}
+                    data-testid="btn-limpar-filtros-avancados"
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Lista de NF-e ou NFS-e baseado no tipo selecionado */}
