@@ -2510,9 +2510,38 @@ async def export_recibo(
     # quando o conta_pagar/receber só tiver fornecedor_id/cliente_id mas faltarem
     # CPF/CNPJ, telefone e endereço.
     cadastro_doc = None
-    cadastro_id = item.get("fornecedor_id") or item.get("cliente_id")
+    cadastro_id = item.get("fornecedor_id") or item.get("cliente_id") or item.get("cadastro_id")
     if cadastro_id:
         cadastro_doc = await db.cadastros.find_one({"id": cadastro_id}, {"_id": 0})
+
+    # Fallback: muitas contas legadas só guardam o NOME (sem id). Tenta
+    # localizar o cadastro por nome_razao igual a cliente_nome/fornecedor_nome,
+    # e se necessário também por CPF/CNPJ presente na conta.
+    nome_pessoa_busca = item.get("fornecedor_nome") or item.get("cliente_nome")
+    doc_pessoa_busca = (
+        item.get("fornecedor_cnpj")
+        or item.get("fornecedor_documento")
+        or item.get("cliente_cnpj")
+        or item.get("cliente_documento")
+        or item.get("fornecedor_cpf")
+    )
+    if not cadastro_doc and doc_pessoa_busca:
+        doc_limpo = "".join(c for c in str(doc_pessoa_busca) if c.isdigit())
+        if doc_limpo:
+            cadastro_doc = await db.cadastros.find_one(
+                {"cpf_cnpj": {"$regex": f"^{doc_limpo}", "$options": "i"}}, {"_id": 0}
+            )
+    if not cadastro_doc and nome_pessoa_busca:
+        # Case-insensitive exact match
+        cadastro_doc = await db.cadastros.find_one(
+            {"nome_razao": {"$regex": f"^{nome_pessoa_busca}$", "$options": "i"}}, {"_id": 0}
+        )
+        # Se ainda não achou, busca por substring (mais permissivo)
+        if not cadastro_doc:
+            import re as _re_esc
+            cadastro_doc = await db.cadastros.find_one(
+                {"nome_razao": {"$regex": _re_esc.escape(nome_pessoa_busca)[:80], "$options": "i"}}, {"_id": 0}
+            )
 
     def _pick(*vals):
         for v in vals:
@@ -2543,20 +2572,28 @@ async def export_recibo(
     end_cad = ""
     if cadastro_doc:
         partes_end = [
-            cadastro_doc.get("endereco"),
+            cadastro_doc.get("endereco") or cadastro_doc.get("logradouro"),
             cadastro_doc.get("numero"),
             cadastro_doc.get("complemento"),
             cadastro_doc.get("bairro"),
-            cadastro_doc.get("cidade"),
-            cadastro_doc.get("uf"),
+            cadastro_doc.get("cidade") or cadastro_doc.get("municipio"),
+            cadastro_doc.get("uf") or cadastro_doc.get("estado"),
         ]
-        end_cad = ", ".join([p for p in partes_end if p]) or ""
-        if cadastro_doc.get("cep") and end_cad:
-            end_cad = f"{end_cad} - CEP {cadastro_doc.get('cep')}"
+        end_cad = ", ".join([str(p).strip() for p in partes_end if p and str(p).strip()]) or ""
+        cep = cadastro_doc.get("cep")
+        if cep:
+            end_cad = f"{end_cad} - CEP {cep}" if end_cad else f"CEP {cep}"
     pessoa_endereco = _pick(
         item.get("fornecedor_endereco"),
         item.get("cliente_endereco"),
         end_cad,
+    )
+
+    # Email adicional (se o cadastro tiver)
+    pessoa_email = _pick(
+        item.get("fornecedor_email"),
+        item.get("cliente_email"),
+        (cadastro_doc or {}).get("email"),
     )
 
     # Determina PAGADOR (quem pagou) para o "Recebi(emos) de":
@@ -2574,6 +2611,7 @@ async def export_recibo(
         [Paragraph("Nome:", label_style), Paragraph(pessoa_nome, value_style)],
         [Paragraph("CPF/CNPJ:", label_style), Paragraph(pessoa_doc, value_style)],
         [Paragraph("Telefone:", label_style), Paragraph(pessoa_telefone, value_style)],
+        [Paragraph("E-mail:", label_style), Paragraph(pessoa_email, value_style)],
         [Paragraph("Endereço:", label_style), Paragraph(pessoa_endereco, value_style)],
     ]
     client_table = Table(client_data, colWidths=[2.5*cm, 15*cm])
