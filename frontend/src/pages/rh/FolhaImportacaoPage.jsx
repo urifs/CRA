@@ -144,15 +144,15 @@ export default function FolhaImportacaoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folhas, processandoIds]);
 
-  const fetchFolhas = async () => {
-    setLoading(true);
+  const fetchFolhas = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const r = await axios.get(`${API}/folha-pagamento`);
       setFolhas(r.data || []);
     } catch (e) {
       toast.error("Erro ao carregar folhas importadas");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -193,8 +193,14 @@ export default function FolhaImportacaoPage() {
       // Registra para polling
       if (r.data?.id) {
         setProcessandoIds((prev) => new Set(prev).add(r.data.id));
+        // Inserção otimista: já adiciona a nova folha na lista para o usuário
+        // ver o card de "Processando..." imediatamente, sem esperar o GET.
+        setFolhas((prev) => {
+          if (prev.some((f) => f.id === r.data.id)) return prev;
+          return [r.data, ...prev];
+        });
       }
-      fetchFolhas();
+      fetchFolhas(true);
     } catch (err) {
       toast.error(err.response?.data?.detail || "Erro ao iniciar importação");
     } finally {
@@ -233,7 +239,7 @@ export default function FolhaImportacaoPage() {
       toast.success("Vínculos salvos");
       const r = await axios.get(`${API}/folha-pagamento/${folhaAtual.id}`);
       setFolhaAtual(r.data);
-      fetchFolhas();
+      fetchFolhas(true);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao salvar");
     } finally {
@@ -254,7 +260,7 @@ export default function FolhaImportacaoPage() {
       setEnvioObs("");
       const r = await axios.get(`${API}/folha-pagamento/${folhaAtual.id}`);
       setFolhaAtual(r.data);
-      fetchFolhas();
+      fetchFolhas(true);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao enviar");
     } finally {
@@ -267,7 +273,7 @@ export default function FolhaImportacaoPage() {
     try {
       await axios.delete(`${API}/folha-pagamento/${id}`);
       toast.success("Folha excluída");
-      fetchFolhas();
+      fetchFolhas(true);
       if (folhaAtual?.id === id) setFolhaAtual(null);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erro ao excluir");
