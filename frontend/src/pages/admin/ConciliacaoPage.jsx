@@ -80,10 +80,12 @@ export default function ConciliacaoPage() {
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
   const [filtroTipoExtrato, setFiltroTipoExtrato] = useState("todos");
+  const [filtroConciliadoExtrato, setFiltroConciliadoExtrato] = useState("todos"); // todos | conciliados | nao_conciliados
   const [buscaExtrato, setBuscaExtrato] = useState("");
   
   // Filtros das contas
   const [filtroContas, setFiltroContas] = useState("todas");
+  const [filtroConciliadoContas, setFiltroConciliadoContas] = useState("todos"); // todos | conciliados | nao_conciliados
   const [buscaConta, setBuscaConta] = useState("");
   const [filtroContaDataInicio, setFiltroContaDataInicio] = useState("");
   const [filtroContaDataFim, setFiltroContaDataFim] = useState("");
@@ -480,6 +482,8 @@ export default function ConciliacaoPage() {
   const extratosFiltrados = extratoItems
     .filter(item => {
       if (filtroTipoExtrato !== "todos" && item.tipo !== filtroTipoExtrato) return false;
+      if (filtroConciliadoExtrato === "conciliados" && !item.conciliado) return false;
+      if (filtroConciliadoExtrato === "nao_conciliados" && item.conciliado) return false;
       if (filtroDataInicio && item.data < filtroDataInicio) return false;
       if (filtroDataFim && item.data > filtroDataFim) return false;
       if (buscaExtrato) {
@@ -505,6 +509,10 @@ export default function ConciliacaoPage() {
         if (conta.centro_custo !== centroCustoSelecionado.nome) return false;
       }
     }
+
+    // Filtro: conciliados / não conciliados
+    if (filtroConciliadoContas === "conciliados" && !conta.conciliado) return false;
+    if (filtroConciliadoContas === "nao_conciliados" && conta.conciliado) return false;
     
     switch (filtroContas) {
       case "quitadas":
@@ -738,6 +746,17 @@ export default function ConciliacaoPage() {
                   <SelectItem value="saida">Saídas</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select value={filtroConciliadoExtrato} onValueChange={setFiltroConciliadoExtrato}>
+                <SelectTrigger className="w-44 h-8" data-testid="filtro-conciliado-extrato">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos (conciliados + não)</SelectItem>
+                  <SelectItem value="nao_conciliados">Apenas não conciliados</SelectItem>
+                  <SelectItem value="conciliados">Apenas conciliados</SelectItem>
+                </SelectContent>
+              </Select>
               
               <MaskedDateInput 
                 value={filtroDataInicio}
@@ -880,6 +899,17 @@ export default function ConciliacaoPage() {
                   <SelectItem value="quitadas">Quitadas</SelectItem>
                   <SelectItem value="a_pagar">A Pagar</SelectItem>
                   <SelectItem value="a_receber">A Receber</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filtroConciliadoContas} onValueChange={setFiltroConciliadoContas}>
+                <SelectTrigger className="w-44 h-8" data-testid="filtro-conciliado-contas">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas (conciliadas + não)</SelectItem>
+                  <SelectItem value="nao_conciliados">Apenas não conciliadas</SelectItem>
+                  <SelectItem value="conciliados">Apenas conciliadas</SelectItem>
                 </SelectContent>
               </Select>
               

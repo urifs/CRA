@@ -104,7 +104,36 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const { stats, aPagar, aReceber, quitados, contasProximas, vencidas } = data;
+  let { stats, aPagar, aReceber, quitados, contasProximas, vencidas } = data;
+
+  // Nome do centro de custo selecionado (necessário porque as contas guardam o
+  // nome em string, não o ID). Quando "all"/vazio, não filtra.
+  const ccSelecionadoNome = (filterCentroCusto && filterCentroCusto !== "all")
+    ? (centrosCusto.find(cc => cc.id === filterCentroCusto)?.nome || null)
+    : null;
+  const passaCentroCusto = (c) => {
+    if (!ccSelecionadoNome) return true;
+    return (
+      c.centro_custo === ccSelecionadoNome ||
+      c.centro_custo_id === filterCentroCusto ||
+      c.centro_custo_nome === ccSelecionadoNome
+    );
+  };
+
+  if (ccSelecionadoNome && vencidas?.pagar?.lista) {
+    vencidas = {
+      ...vencidas,
+      pagar: { ...vencidas.pagar, lista: vencidas.pagar.lista.filter(passaCentroCusto) },
+      receber: vencidas.receber ? { ...vencidas.receber, lista: (vencidas.receber.lista || []).filter(passaCentroCusto) } : vencidas.receber,
+    };
+  }
+  if (ccSelecionadoNome && contasProximas) {
+    contasProximas = {
+      ...contasProximas,
+      pagar: (contasProximas.pagar || []).filter(passaCentroCusto),
+      receber: (contasProximas.receber || []).filter(passaCentroCusto),
+    };
+  }
 
   // Componente de filtros reutilizável
   const FilterBar = () => (
@@ -606,7 +635,7 @@ export default function AdminDashboardPage() {
             <CardContent>
               {contasPagar.filter(c => {
                 if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-                if (filterCentroCusto && filterCentroCusto !== "all" && c.centro_custo_id !== filterCentroCusto) return false;
+                if (!passaCentroCusto(c)) return false;
                 if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_contas_id !== filterPlanoContas) return false;
                 if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
                 if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;
@@ -618,7 +647,7 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {contasPagar.filter(c => {
                     if (searchTerm && !c.descricao?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-                    if (filterCentroCusto && filterCentroCusto !== "all" && c.centro_custo_id !== filterCentroCusto) return false;
+                    if (!passaCentroCusto(c)) return false;
                     if (filterPlanoContas && filterPlanoContas !== "all" && c.plano_contas_id !== filterPlanoContas) return false;
                     if (filterStatus === "vencido" && c.data_vencimento >= new Date().toISOString().split("T")[0]) return false;
                     if (filterStatus === "pendente" && (c.status === "pago" || c.data_vencimento < new Date().toISOString().split("T")[0])) return false;

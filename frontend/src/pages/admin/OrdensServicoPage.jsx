@@ -32,8 +32,11 @@ import {
   Minus,
   FileDown,
   UserPlus,
-  Loader2
+  Loader2,
+  CheckSquare,
+  CreditCard,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
@@ -41,6 +44,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 export default function OrdensServicoPage() {
@@ -98,6 +103,69 @@ export default function OrdensServicoPage() {
   const [showNovoCadastro, setShowNovoCadastro] = useState(false);
   const [showNovoFornecedor, setShowNovoFornecedor] = useState(false);
   const [consultandoCep, setConsultandoCep] = useState(false);
+
+  // Dialog encerrar OS + gerar conta a receber
+  const [encerrarOS, setEncerrarOS] = useState(null);
+  const [encerrarForm, setEncerrarForm] = useState({
+    valor: "",
+    data_vencimento: "",
+    parcelado: false,
+    total_parcelas: "2",
+    intervalo_dias: "30",
+    descricao: "",
+  });
+  const [encerrando, setEncerrando] = useState(false);
+
+  const abrirEncerrarOS = (ordem) => {
+    const hoje = new Date();
+    const venc = new Date(hoje.getFullYear(), hoje.getMonth() + 1, hoje.getDate());
+    const restante = (ordem.valor_total || 0) - (ordem.valor_antecipado || 0);
+    setEncerrarForm({
+      valor: restante > 0 ? restante.toFixed(2) : (ordem.valor_total || 0).toFixed(2),
+      data_vencimento: venc.toISOString().slice(0, 10),
+      parcelado: false,
+      total_parcelas: "2",
+      intervalo_dias: "30",
+      descricao: "",
+    });
+    setEncerrarOS(ordem);
+  };
+
+  const confirmarEncerrarOS = async () => {
+    if (!encerrarOS) return;
+    const valor = parseFloat(String(encerrarForm.valor).replace(",", "."));
+    if (!Number.isFinite(valor) || valor <= 0) {
+      toast.error("Informe um valor maior que zero");
+      return;
+    }
+    if (!encerrarForm.data_vencimento) {
+      toast.error("Informe a data de vencimento");
+      return;
+    }
+    const n = parseInt(encerrarForm.total_parcelas) || 1;
+    if (encerrarForm.parcelado && (n < 2 || n > 360)) {
+      toast.error("Número de parcelas entre 2 e 360");
+      return;
+    }
+    setEncerrando(true);
+    try {
+      const resp = await axios.post(`${API}/admin/ordens-servico/${encerrarOS.id}/encerrar`, {
+        valor,
+        data_vencimento: encerrarForm.data_vencimento,
+        parcelado: encerrarForm.parcelado,
+        total_parcelas: encerrarForm.parcelado ? n : 1,
+        intervalo_dias: parseInt(encerrarForm.intervalo_dias) || 30,
+        descricao: encerrarForm.descricao || null,
+      });
+      toast.success(resp.data.message || "OS encerrada e conta(s) gerada(s)!");
+      setEncerrarOS(null);
+      fetchOrdens();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Erro ao encerrar OS");
+    } finally {
+      setEncerrando(false);
+    }
+  };
 
   const handleExportPdf = async (ordem) => {
     try {
@@ -665,10 +733,23 @@ export default function OrdensServicoPage() {
                             size="sm"
                             variant="outline"
                             className="text-green-600"
-                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(ordem.id, "concluida"); }}
-                            title="Concluir"
+                            onClick={(e) => { e.stopPropagation(); abrirEncerrarOS(ordem); }}
+                            title="Encerrar O.S. e gerar Conta a Receber"
+                            data-testid={`btn-encerrar-os-${ordem.id}`}
                           >
-                            <CheckCircle2 size={16} />
+                            <CheckSquare size={16} />
+                          </Button>
+                        )}
+                        {ordem.status === "em_aberto" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-emerald-700"
+                            onClick={(e) => { e.stopPropagation(); abrirEncerrarOS(ordem); }}
+                            title="Encerrar O.S. e gerar Conta a Receber"
+                            data-testid={`btn-encerrar-direto-os-${ordem.id}`}
+                          >
+                            <CheckSquare size={16} />
                           </Button>
                         )}
                         <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleExportPdf(ordem); }} title="Exportar PDF" data-testid={`btn-export-os-${ordem.id}`}>
@@ -1284,6 +1365,164 @@ export default function OrdensServicoPage() {
         defaultTipo="fornecedor"
         onSuccess={handleNovoFornecedorSuccess}
       />
+
+      {/* Dialog: Encerrar OS + Gerar Conta a Receber */}
+      <Dialog open={!!encerrarOS} onOpenChange={(o) => !encerrando && !o && setEncerrarOS(null)}>
+        <DialogContent className="max-w-lg" data-testid="dialog-encerrar-os">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckSquare size={20} className="text-emerald-600" />
+              Encerrar Ordem de Serviço
+            </DialogTitle>
+            <DialogDescription>
+              {encerrarOS && (
+                <>
+                  <strong>OS {encerrarOS.numero}</strong> — {encerrarOS.cliente_nome || "Cliente"}
+                  <br />
+                  Ao encerrar, a OS é marcada como <em>concluída</em> e {encerrarForm.parcelado ? `${encerrarForm.total_parcelas} parcelas` : "1 conta a receber"} será gerada automaticamente.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {encerrarOS && (
+            <div className="space-y-4">
+              {/* Tipo: cheia ou parcelada */}
+              <div>
+                <Label className="text-xs">Tipo de geração</Label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEncerrarForm({ ...encerrarForm, parcelado: false })}
+                    className={`p-3 rounded border-2 text-sm transition ${
+                      !encerrarForm.parcelado ? "border-emerald-500 bg-emerald-50 font-medium" : "border-gray-200"
+                    }`}
+                    data-testid="encerrar-tipo-cheia"
+                  >
+                    <CheckCircle2 size={14} className="inline mr-1" /> Conta cheia
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEncerrarForm({ ...encerrarForm, parcelado: true })}
+                    className={`p-3 rounded border-2 text-sm transition ${
+                      encerrarForm.parcelado ? "border-blue-500 bg-blue-50 font-medium" : "border-gray-200"
+                    }`}
+                    data-testid="encerrar-tipo-parcelado"
+                  >
+                    <CreditCard size={14} className="inline mr-1" /> Parcelado
+                  </button>
+                </div>
+              </div>
+
+              {/* Valor e Data */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Valor total *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={encerrarForm.valor}
+                    onChange={(e) => setEncerrarForm({ ...encerrarForm, valor: e.target.value })}
+                    data-testid="input-encerrar-valor"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">
+                    {encerrarForm.parcelado ? "Data 1º vencimento *" : "Data de vencimento *"}
+                  </Label>
+                  <Input
+                    type="date"
+                    value={encerrarForm.data_vencimento}
+                    onChange={(e) => setEncerrarForm({ ...encerrarForm, data_vencimento: e.target.value })}
+                    data-testid="input-encerrar-data"
+                  />
+                </div>
+              </div>
+
+              {encerrarForm.parcelado && (
+                <div className="grid grid-cols-2 gap-3 p-3 border-2 border-blue-200 rounded bg-blue-50/40">
+                  <div>
+                    <Label className="text-xs">Nº de parcelas *</Label>
+                    <Input
+                      type="number"
+                      min="2"
+                      max="360"
+                      value={encerrarForm.total_parcelas}
+                      onChange={(e) => setEncerrarForm({ ...encerrarForm, total_parcelas: e.target.value })}
+                      data-testid="input-encerrar-parcelas"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Intervalo entre parcelas</Label>
+                    <Select
+                      value={encerrarForm.intervalo_dias}
+                      onValueChange={(v) => setEncerrarForm({ ...encerrarForm, intervalo_dias: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999]">
+                        <SelectItem value="7">7 dias</SelectItem>
+                        <SelectItem value="14">14 dias</SelectItem>
+                        <SelectItem value="15">15 dias</SelectItem>
+                        <SelectItem value="21">21 dias</SelectItem>
+                        <SelectItem value="28">28 dias</SelectItem>
+                        <SelectItem value="30">30 dias (mensal)</SelectItem>
+                        <SelectItem value="45">45 dias</SelectItem>
+                        <SelectItem value="60">60 dias</SelectItem>
+                        <SelectItem value="90">90 dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-xs">Descrição (opcional)</Label>
+                <Input
+                  value={encerrarForm.descricao}
+                  onChange={(e) => setEncerrarForm({ ...encerrarForm, descricao: e.target.value })}
+                  placeholder={`OS ${encerrarOS.numero} - ${encerrarOS.cliente_nome || ""}`}
+                  data-testid="input-encerrar-descricao"
+                />
+              </div>
+
+              {encerrarForm.parcelado && parseInt(encerrarForm.total_parcelas) >= 2 && encerrarForm.valor && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-900">
+                  <strong>Resumo:</strong> {encerrarForm.total_parcelas}x de{" "}
+                  <span className="font-semibold">
+                    {(parseFloat(encerrarForm.valor) / Math.max(parseInt(encerrarForm.total_parcelas) || 1, 1)).toLocaleString(
+                      "pt-BR",
+                      { style: "currency", currency: "BRL" },
+                    )}
+                  </span>{" "}· Total:{" "}
+                  {parseFloat(encerrarForm.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEncerrarOS(null)} disabled={encerrando}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmarEncerrarOS}
+                  disabled={encerrando}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  data-testid="btn-confirmar-encerrar-os"
+                >
+                  {encerrando ? (
+                    <><Loader2 size={14} className="mr-2 animate-spin" /> Encerrando...</>
+                  ) : (
+                    "Encerrar OS e gerar conta"
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

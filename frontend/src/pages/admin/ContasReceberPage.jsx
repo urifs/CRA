@@ -581,6 +581,7 @@ export default function ContasReceberPage() {
                 <th className="text-left p-3 font-medium text-gray-600">Documento</th>
                 <th className="text-left p-3 font-medium text-gray-600">Emissão</th>
                 <th className="text-left p-3 font-medium text-gray-600">Vencimento</th>
+                <th className="text-left p-3 font-medium text-gray-600">Recebido em</th>
                 <th className="text-right p-3 font-medium text-gray-600">Valor R$</th>
                 <th className="text-left p-3 font-medium text-gray-600">Forma Pag.</th>
                 <th className="text-left p-3 font-medium text-gray-600">Status</th>
@@ -610,6 +611,9 @@ export default function ContasReceberPage() {
                     <td className="p-3">{c.documento || "-"}</td>
                     <td className="p-3">{c.data_emissao ? new Date(c.data_emissao).toLocaleDateString('pt-BR') : "-"}</td>
                     <td className="p-3">{new Date(c.data_vencimento).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3 text-emerald-700" data-testid={`cell-recebido-em-${c.id}`}>
+                      {c.data_recebimento ? new Date(c.data_recebimento).toLocaleDateString('pt-BR') : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="p-3 text-right font-medium text-green-600">{formatCurrency(c.valor_final || c.valor)}</td>
                     <td className="p-3 text-xs">{formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
                     <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${status.color}`}><StatusIcon className="inline mr-1" size={12} />{status.label}</span></td>
@@ -733,6 +737,21 @@ export default function ContasReceberPage() {
               <div><label className="form-label">Data Emissão</label><MaskedDateInput value={formData.data_emissao} onChange={(v) => setFormData({...formData, data_emissao: v})} /></div>
               <div><label className="form-label">{isParcelado ? "Data 1º Vencimento *" : "Data Vencimento *"}</label><MaskedDateInput value={formData.data_vencimento} onChange={(v) => setFormData({...formData, data_vencimento: v})} required /></div>
             </div>
+
+            {/* Data de Recebimento — visível somente quando a conta já foi recebida */}
+            {editingConta && editingConta.data_recebimento && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between" data-testid="info-data-recebimento">
+                <div className="flex items-center gap-2 text-sm text-emerald-800">
+                  <CheckCircle2 size={16} />
+                  <span><strong>Recebido em:</strong> {new Date(editingConta.data_recebimento).toLocaleDateString('pt-BR')}</span>
+                </div>
+                {editingConta.valor_recebido != null && (
+                  <span className="text-sm font-semibold text-emerald-900">
+                    Valor recebido: {formatCurrency(editingConta.valor_recebido)}
+                  </span>
+                )}
+              </div>
+            )}
             
             {/* Seção de Parcelamento - disponível para novas e para edição (com aviso) */}
             {(() => {

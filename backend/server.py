@@ -4561,6 +4561,113 @@ async def confirmar_ordem_servico(id: str, current_user: dict = Depends(get_curr
     await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']} - CONFIRMADA")
     return {"message": "Ordem confirmada"}
 
+
+class EncerrarOSRequest(BaseModel):
+    valor: float
+    data_vencimento: str  # YYYY-MM-DD (1ª parcela se parcelado, ou venc único)
+    parcelado: bool = False
+    total_parcelas: int = 1
+    intervalo_dias: int = 30
+    descricao: Optional[str] = None
+    plano_conta_id: Optional[str] = None
+    plano_conta_nome: Optional[str] = None
+
+
+@api_router.post("/admin/ordens-servico/{id}/encerrar")
+async def encerrar_ordem_servico(id: str, payload: EncerrarOSRequest, current_user: dict = Depends(get_current_user)):
+    """Encerra uma OS e gera conta(s) a receber vinculada(s). Cheia ou parcelada."""
+    ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})
+    if not ordem:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    if ordem.get("status") in ("concluida", "cancelada"):
+        raise HTTPException(status_code=400, detail=f"OS já está {ordem['status']}")
+    if ordem.get("conta_receber_ids"):
+        raise HTTPException(status_code=400, detail="Esta OS já possui contas a receber vinculadas")
+
+    valor_total = float(payload.valor or 0)
+    if valor_total <= 0:
+        raise HTTPException(status_code=400, detail="Valor deve ser maior que zero")
+
+    n = int(payload.total_parcelas) if payload.parcelado else 1
+    if payload.parcelado and (n < 2 or n > 360):
+        raise HTTPException(status_code=400, detail="Número de parcelas deve ser entre 2 e 360")
+
+    try:
+        data_base = datetime.strptime(payload.data_vencimento[:10], "%Y-%m-%d")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Data de vencimento inválida")
+
+    descricao_base = (payload.descricao or "").strip() or f"OS {ordem.get('numero', '')} - {ordem.get('cliente_nome', 'Cliente')}"
+    parcela_origem_id = str(uuid.uuid4()) if n > 1 else None
+    valor_parcela = round(valor_total / n, 2)
+    valor_ultima = round(valor_total - (valor_parcela * (n - 1)), 2)
+
+    contas_criadas = []
+    contas_ids = []
+    for i in range(n):
+        numero_parcela = i + 1
+        valor = valor_parcela if numero_parcela < n else valor_ultima
+        numero_seq = await get_next_sequence("contas_receber")
+        venc = data_base + timedelta(days=int(payload.intervalo_dias or 30) * i)
+        descricao = descricao_base if n == 1 else f"{descricao_base} - Parcela {numero_parcela}/{n}"
+        conta = {
+            "id": str(uuid.uuid4()),
+            "numero": numero_seq,
+            "cliente_id": ordem.get("cliente_id"),
+            "cliente_nome": ordem.get("cliente_nome"),
+            "documento": ordem.get("numero_documento_fiscal") or "",
+            "numero_doc": ordem.get("numero_documento_fiscal") or "",
+            "descricao": descricao,
+            "valor": valor,
+            "valor_desconto": 0,
+            "valor_juros": 0,
+            "valor_multa": 0,
+            "valor_retencao": 0,
+            "valor_final": valor,
+            "total_parcelas": n if n > 1 else 1,
+            "numero_parcela": numero_parcela if n > 1 else 1,
+            "parcela_origem_id": parcela_origem_id,
+            "data_emissao": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "data_vencimento": venc.strftime("%Y-%m-%d"),
+            "data_recebimento": None,
+            "plano_conta_id": payload.plano_conta_id,
+            "plano_conta_nome": payload.plano_conta_nome,
+            "forma_pagamento": ordem.get("forma_pagamento") or "boleto",
+            "status": "em_aberto",
+            "origem": "ordem_servico",
+            "ordem_servico_id": id,
+            "ordem_servico_numero": ordem.get("numero"),
+            "observacoes": f"Conta gerada automaticamente pelo encerramento da OS {ordem.get('numero','')}.",
+            "created_by": current_user["id"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.contas_receber.insert_one(conta)
+        conta.pop("_id", None)
+        contas_criadas.append(conta)
+        contas_ids.append(conta["id"])
+
+    await db.ordens_servico.update_one(
+        {"id": id},
+        {"$set": {
+            "status": "concluida",
+            "data_conclusao": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "conta_receber_ids": contas_ids,
+            "parcela_origem_id": parcela_origem_id,
+        }},
+    )
+    await create_audit_log(
+        current_user, "update", "ordem_servico", id,
+        f"OS-{ordem['numero']} ENCERRADA — {n} conta(s) a receber gerada(s)"
+    )
+    return {
+        "message": f"OS encerrada. {n} conta(s) a receber criada(s).",
+        "ordem_servico_id": id,
+        "total_parcelas": n,
+        "parcela_origem_id": parcela_origem_id,
+        "contas_receber_ids": contas_ids,
+        "contas": contas_criadas,
+    }
+
 @api_router.delete("/admin/ordens-servico/{id}")
 async def delete_ordem_servico(id: str, current_user: dict = Depends(get_current_user)):
     ordem = await db.ordens_servico.find_one({"id": id}, {"_id": 0})

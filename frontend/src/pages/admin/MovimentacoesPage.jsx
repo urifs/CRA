@@ -482,8 +482,8 @@ export default function MovimentacoesPage() {
                 <Label>Valor *</Label>
                 <Input
                   data-testid="input-valor-mov"
-                  value={formData.valor ? formatCurrency(parseCurrency(formData.valor)) : ""}
-                  onChange={(e) => setFormData({...formData, valor: e.target.value})}
+                  value={formData.valor}
+                  onChange={(e) => setFormData({...formData, valor: formatCurrency(e.target.value)})}
                   placeholder="R$ 0,00"
                 />
               </div>
