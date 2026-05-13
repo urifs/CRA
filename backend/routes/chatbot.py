@@ -1223,7 +1223,70 @@ async def _execute_chat_tool(action: str, params: dict, current_user: dict):
             f"• Abrange: {len(funcionarios)} funcionário(s)"
         )
 
+    if action == "gerar_pdf_documento":
+        # Geração genérica de PDF a partir do texto produzido pela IA.
+        # Útil quando o usuário pede "gera um PDF com essas informações",
+        # "exporta a resposta em PDF", "manda em PDF para mim", etc.
+        titulo = (params.get("titulo") or "Documento").strip()[:120]
+        conteudo = (params.get("conteudo") or "").strip()
+        subtitulo = (params.get("subtitulo") or "").strip()
+        if not conteudo:
+            raise ValueError("O campo 'conteudo' é obrigatório para gerar o PDF.")
+        pdf_bytes = _gerar_pdf_documento_livre(titulo, conteudo, subtitulo)
+        artifact_id = str(uuid.uuid4())
+        slug = "".join(c if c.isalnum() else "_" for c in titulo).strip("_")[:40] or "documento"
+        await db.chat_artifacts.insert_one({
+            "id": artifact_id,
+            "user_id": current_user.get("id"),
+            "filename": f"{slug}.pdf",
+            "content_type": "application/pdf",
+            "content_b64": base64.b64encode(pdf_bytes).decode("ascii"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        artifact = {
+            "type": "pdf",
+            "label": f"Baixar {titulo}",
+            "download_url": f"/api/chatbot/artifacts/{artifact_id}",
+        }
+        return artifact, f"📄 PDF \"{titulo}\" gerado com sucesso."
+
     raise ValueError(f"Ação desconhecida: {action}")
+
+
+def _gerar_pdf_documento_livre(titulo: str, conteudo: str, subtitulo: str = "") -> bytes:
+    """Gera um PDF corporativo com título, subtítulo opcional e conteúdo livre.
+
+    O conteúdo é texto plano (pode conter quebras de linha e bullets simples).
+    Cabeçalho corporativo da CRA é aplicado automaticamente.
+    """
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles,
+    )
+    from reportlab.platypus import Paragraph, Spacer
+    from reportlab.lib.units import cm
+
+    buf = io.BytesIO()
+    doc = create_corporate_doc(buf, title=titulo)
+    styles = get_corporate_styles()
+
+    story = []
+    add_corporate_header(story, doc_title=titulo, subtitle=subtitulo or None)
+
+    # Quebra o conteúdo em parágrafos preservando linhas vazias como separadores
+    paragrafos = conteudo.replace("\r\n", "\n").split("\n\n")
+    from xml.sax.saxutils import escape as _xml_escape
+    for bloco in paragrafos:
+        if not bloco.strip():
+            continue
+        texto = _xml_escape(bloco).replace("\n", "<br/>")
+        story.append(Paragraph(texto, styles["body"]))
+        story.append(Spacer(1, 0.2 * cm))
+
+    add_footer(story)
+
+    doc.build(story)
+    return buf.getvalue()
 
 
 def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorrencia: str, texto_complementar: str) -> bytes:
@@ -1513,6 +1576,24 @@ INSTRUÇÕES DE FORMATAÇÃO:
    documentos normativos da seção "DOCUMENTOS NORMATIVOS DE RH" acima e cite o documento
    de origem (PCMSO, PGR, LTCAT ou CCT) na resposta.
 
+⚠️ REGRA CRÍTICA — PRIORIDADE DOS DOCUMENTOS NORMATIVOS:
+Quando o usuário citar EXPLICITAMENTE um documento ("de acordo com o PCMSO", "conforme o
+PGR", "baseado no LTCAT", "segundo a CCT", "veja na convenção", "pelo programa de riscos",
+"pelo programa de saúde ocupacional", etc.), você é OBRIGADO a:
+1. PRIMEIRO procurar a resposta dentro do texto desse documento na seção "DOCUMENTOS
+   NORMATIVOS DE RH" acima (todos os textos estão integralmente disponíveis nesta conversa).
+2. Citar TEXTUALMENTE trechos relevantes do documento (entre aspas), informando o nome
+   do documento (ex.: "Conforme consta no PCMSO da CRA: '...trecho literal...'").
+3. NUNCA, sob NENHUMA hipótese, responder com conhecimento genérico/da internet ANTES
+   de consultar o documento citado.
+4. Se o documento citado realmente NÃO contiver informação sobre o tema perguntado,
+   você deve dizer EXATAMENTE: "Não localizei essa informação no [NOME DO DOCUMENTO]
+   que está disponível. Posso responder com base em norma geral, se desejar."
+
+Para "Ordem de Serviço (OS) de SST", os documentos PCMSO (riscos à saúde, exames,
+EPIs por função) e PGR (gerenciamento de riscos, riscos por setor, medidas de controle)
+contêm exatamente as informações necessárias — consulte ambos antes de responder.
+
 FERRAMENTAS DISPONÍVEIS (você PODE executar ações reais na plataforma):
 
 Quando o usuário pedir para criar uma notificação, gerar um PDF, ou executar uma ação,
@@ -1540,6 +1621,18 @@ Ações suportadas:
   funcionario_id é OPCIONAL: se omitido, gera o espelho consolidado de TODOS os funcionários
   do período. Use quando o usuário pedir "espelho de ponto", "relatório de ponto",
   "frequência" ou "registro de ponto" em PDF.
+• action="gerar_pdf_documento" — params: {{"titulo":"...","subtitulo":"...","conteudo":"..."}}
+  ⚠️ FERRAMENTA GENÉRICA DE PDF — use SEMPRE que o usuário pedir "gera um PDF",
+  "exporta em PDF", "manda em PDF", "baixar em PDF", "imprimir", "gerar documento"
+  e a solicitação NÃO se encaixar nas ações específicas acima (holerite, espelho,
+  notificação, ficha). Exemplos típicos:
+    – "Gera um PDF com a Ordem de Serviço (OS) do cargo X conforme o PCMSO/PGR"
+    – "Quero esse resumo em PDF"
+    – "Exporta a tabela de pisos salariais em PDF"
+    – "Manda em PDF a lista de exames admissionais"
+  Coloque em `conteudo` o TEXTO COMPLETO que deve aparecer no documento (use \\n para
+  novas linhas e \\n\\n para separar parágrafos). VOCÊ TEM ESTA FERRAMENTA — JAMAIS
+  responda "não posso gerar PDF" quando o usuário pedir um PDF; sempre use esta ação.
 
 Após o bloco <<TOOL>>...<<END>>, escreva uma mensagem natural em português confirmando
 o que está sendo feito. NÃO emita uma ação se não tiver os parâmetros necessários —
@@ -1557,6 +1650,14 @@ Exemplos para HOLERITE/ESPELHO:
 - "Espelho de ponto da Maria em março/2026" → use `gerar_espelho_ponto` com funcionario_id, mes=3, ano=2026.
 Se o usuário não informou o ano, assuma o ano atual.
 Se a folha de pagamento ainda não existir para o período, INFORME ao usuário sem chamar a tool.
+
+Exemplos para PDF GENÉRICO (gerar_pdf_documento):
+- "Gera uma OS conforme o PCMSO para Auxiliar Administrativo" → primeiro extraia do PCMSO
+  os riscos/exames/EPIs do cargo, monte um texto formal com tópicos (Identificação do
+  cargo, Riscos ocupacionais, EPIs obrigatórios, Exames, Treinamentos, Medidas de
+  controle), e chame `gerar_pdf_documento` com titulo="Ordem de Serviço - Auxiliar
+  Administrativo" e conteudo=<o texto completo construído>.
+- "Resume isso em PDF" → use `gerar_pdf_documento` com o resumo no conteudo.
 """
 
     llm_key = os.environ.get("EMERGENT_LLM_KEY")
