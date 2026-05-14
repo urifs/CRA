@@ -1,0 +1,5684 @@
+{
+  "_meta": {
+    "exported_at": "2026-05-14T18:38:24.645414+00:00",
+    "database": "test_database",
+    "source": "MongoDB",
+    "format_version": "1.0",
+    "collection_count": 65,
+    "total_documents": 1340
+  },
+  "collections": {
+    "alugueis": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "maquina_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "maquina_nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "maquina_placa": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_telefone": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_documento": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "numero_contrato": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_periodo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "periodo_especificado": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_entrega": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_vencimento": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_devolucao": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor_caucao": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "local_entrega": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta_receber_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "attachments": {
+      "document_count": 3,
+      "sample_size": 3,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "filename": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "stored_filename": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "file_type": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "file_size": {
+          "types": {
+            "int": 3
+          },
+          "presence_pct": 100.0
+        },
+        "entity_type": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "entity_id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "uploaded_by": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "uploaded_by_name": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 3
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "audit_logs": {
+      "document_count": 763,
+      "sample_size": 763,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 763
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 763
+          },
+          "presence_pct": 100.0
+        },
+        "user_name": {
+          "types": {
+            "string": 763
+          },
+          "presence_pct": 100.0
+        },
+        "user_email": {
+          "types": {
+            "string": 614
+          },
+          "presence_pct": 80.5
+        },
+        "action": {
+          "types": {
+            "string": 763
+          },
+          "presence_pct": 100.0
+        },
+        "entity_type": {
+          "types": {
+            "string": 762
+          },
+          "presence_pct": 99.9
+        },
+        "entity_id": {
+          "types": {
+            "string": 754,
+            "null": 8
+          },
+          "presence_pct": 99.9
+        },
+        "entity_name": {
+          "types": {
+            "string": 762
+          },
+          "presence_pct": 99.9
+        },
+        "details": {
+          "types": {
+            "string": 763
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 615
+          },
+          "presence_pct": 80.6
+        },
+        "module": {
+          "types": {
+            "string": 616
+          },
+          "presence_pct": 80.7
+        },
+        "user_role": {
+          "types": {
+            "string": 148
+          },
+          "presence_pct": 19.4
+        },
+        "timestamp": {
+          "types": {
+            "datetime-string": 148
+          },
+          "presence_pct": 19.4
+        }
+      }
+    },
+    "banco_horas_ajustes": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "cadastros": {
+      "document_count": 8,
+      "sample_size": 8,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "codigo": {
+          "types": {
+            "int": 6
+          },
+          "presence_pct": 75.0
+        },
+        "tipo_cadastro": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 75.0
+        },
+        "tipo_pessoa": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 75.0
+        },
+        "status": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 75.0
+        },
+        "nome_razao": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "apelido_fantasia": {
+          "types": {
+            "null": 5,
+            "string": 1
+          },
+          "presence_pct": 75.0
+        },
+        "cpf_cnpj": {
+          "types": {
+            "null": 1,
+            "string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "rg_ie": {
+          "types": {
+            "null": 6
+          },
+          "presence_pct": 75.0
+        },
+        "telefone": {
+          "types": {
+            "string": 6,
+            "null": 2
+          },
+          "presence_pct": 100.0
+        },
+        "celular": {
+          "types": {
+            "null": 3,
+            "string": 3
+          },
+          "presence_pct": 75.0
+        },
+        "email": {
+          "types": {
+            "string": 6,
+            "null": 2
+          },
+          "presence_pct": 100.0
+        },
+        "cep": {
+          "types": {
+            "null": 3,
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "endereco": {
+          "types": {
+            "null": 3,
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "null": 3,
+            "string": 3
+          },
+          "presence_pct": 75.0
+        },
+        "complemento": {
+          "types": {
+            "null": 4,
+            "string": 2
+          },
+          "presence_pct": 75.0
+        },
+        "bairro": {
+          "types": {
+            "null": 3,
+            "string": 3
+          },
+          "presence_pct": 75.0
+        },
+        "cidade": {
+          "types": {
+            "null": 3,
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "uf": {
+          "types": {
+            "null": 3,
+            "string": 3
+          },
+          "presence_pct": 75.0
+        },
+        "grupo": {
+          "types": {
+            "null": 6
+          },
+          "presence_pct": 75.0
+        },
+        "rota": {
+          "types": {
+            "null": 6
+          },
+          "presence_pct": 75.0
+        },
+        "vendedor": {
+          "types": {
+            "null": 6
+          },
+          "presence_pct": 75.0
+        },
+        "limite_credito": {
+          "types": {
+            "null": 6
+          },
+          "presence_pct": 75.0
+        },
+        "observacoes": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 75.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 25.0
+        },
+        "estado": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 25.0
+        }
+      }
+    },
+    "categories": {
+      "document_count": 6,
+      "sample_size": 6,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "description": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 16.7
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "color": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 16.7
+        },
+        "created_by": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 83.3
+        }
+      }
+    },
+    "centros_custo": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "codigo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "chat_artifacts": {
+      "document_count": 13,
+      "sample_size": 13,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 13
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 12
+          },
+          "presence_pct": 92.3
+        },
+        "filename": {
+          "types": {
+            "string": 13
+          },
+          "presence_pct": 100.0
+        },
+        "content_type": {
+          "types": {
+            "string": 12
+          },
+          "presence_pct": 92.3
+        },
+        "content_b64": {
+          "types": {
+            "string": 12
+          },
+          "presence_pct": 92.3
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 13
+          },
+          "presence_pct": 100.0
+        },
+        "conversation_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 7.7
+        },
+        "path": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 7.7
+        },
+        "mime": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 7.7
+        }
+      }
+    },
+    "chat_conversations": {
+      "document_count": 18,
+      "sample_size": 18,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 18
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 18
+          },
+          "presence_pct": 100.0
+        },
+        "title": {
+          "types": {
+            "string": 18
+          },
+          "presence_pct": 100.0
+        },
+        "module": {
+          "types": {
+            "string": 18
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 18
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 18
+          },
+          "presence_pct": 100.0
+        },
+        "last_message_preview": {
+          "types": {
+            "string": 18
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "chat_knowledge_base": {
+      "document_count": 4,
+      "sample_size": 4,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "category": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "title": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "extracted_text": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "pdf_path": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "pdf_size": {
+          "types": {
+            "int": 4
+          },
+          "presence_pct": 100.0
+        },
+        "pages": {
+          "types": {
+            "int": 4
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "uploaded_by": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "chat_messages": {
+      "document_count": 54,
+      "sample_size": 54,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 54
+          },
+          "presence_pct": 100.0
+        },
+        "conversation_id": {
+          "types": {
+            "string": 54
+          },
+          "presence_pct": 100.0
+        },
+        "role": {
+          "types": {
+            "string": 54
+          },
+          "presence_pct": 100.0
+        },
+        "content": {
+          "types": {
+            "string": 54
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 54
+          },
+          "presence_pct": 100.0
+        },
+        "artifact": {
+          "types": {
+            "object": 7,
+            "null": 18
+          },
+          "presence_pct": 46.3
+        },
+        "attachments": {
+          "types": {
+            "array<object>": 2
+          },
+          "presence_pct": 3.7
+        }
+      }
+    },
+    "combustivel": {
+      "document_count": 7,
+      "sample_size": 7,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "machine_id": {
+          "types": {
+            "string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "data": {
+          "types": {
+            "string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_medicao": {
+          "types": {
+            "string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "hora_km_inicial": {
+          "types": {
+            "float": 1,
+            "int": 6
+          },
+          "presence_pct": 100.0
+        },
+        "litros_inicial": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 14.3
+        },
+        "litros_final": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 14.3
+        },
+        "litros_consumidos": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 14.3
+        },
+        "operador": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 14.3
+        },
+        "observacoes": {
+          "types": {
+            "string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 7
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_registro": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 85.7
+        },
+        "litros_diesel": {
+          "types": {
+            "float": 6
+          },
+          "presence_pct": 85.7
+        },
+        "litros_oleo": {
+          "types": {
+            "float": 6
+          },
+          "presence_pct": 85.7
+        },
+        "litros_graxa": {
+          "types": {
+            "float": 6
+          },
+          "presence_pct": 85.7
+        },
+        "fonte_abastecimento": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 85.7
+        },
+        "veiculo_abastecedor_id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 85.7
+        },
+        "operador_id": {
+          "types": {
+            "string": 5,
+            "null": 1
+          },
+          "presence_pct": 85.7
+        }
+      }
+    },
+    "conciliacoes": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "extrato_ids": {
+          "types": {
+            "array<string>": 2
+          },
+          "presence_pct": 100.0
+        },
+        "contas_ids": {
+          "types": {
+            "array<string>": 2
+          },
+          "presence_pct": 100.0
+        },
+        "contas_tipos": {
+          "types": {
+            "array<string>": 2
+          },
+          "presence_pct": 100.0
+        },
+        "extratos_descricao": {
+          "types": {
+            "array<string>": 2
+          },
+          "presence_pct": 100.0
+        },
+        "contas_descricao": {
+          "types": {
+            "array<string>": 2
+          },
+          "presence_pct": 100.0
+        },
+        "valor_extratos": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "valor_contas": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "diferenca": {
+          "types": {
+            "int": 2
+          },
+          "presence_pct": 100.0
+        },
+        "data_conciliacao": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "contas_bancarias": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "nome": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "banco": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "codigo_banco": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "agencia": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "agencia_digito": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "conta_digito": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_conta": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "titular": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cpf_cnpj_titular": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "chave_pix": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_chave_pix": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "saldo_inicial": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "saldo_atual": {
+          "types": {
+            "float": 1,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ativo": {
+          "types": {
+            "bool": 2
+          },
+          "presence_pct": 100.0
+        },
+        "cor": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 50.0
+        }
+      }
+    },
+    "contas_pagar": {
+      "document_count": 39,
+      "sample_size": 39,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 39
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "int": 33
+          },
+          "presence_pct": 84.6
+        },
+        "fornecedor_id": {
+          "types": {
+            "null": 31,
+            "string": 2
+          },
+          "presence_pct": 84.6
+        },
+        "fornecedor_nome": {
+          "types": {
+            "string": 18,
+            "null": 15
+          },
+          "presence_pct": 84.6
+        },
+        "documento": {
+          "types": {
+            "string": 4,
+            "null": 29
+          },
+          "presence_pct": 84.6
+        },
+        "numero_doc": {
+          "types": {
+            "string": 13,
+            "null": 20
+          },
+          "presence_pct": 84.6
+        },
+        "descricao": {
+          "types": {
+            "string": 39
+          },
+          "presence_pct": 100.0
+        },
+        "valor": {
+          "types": {
+            "float": 39
+          },
+          "presence_pct": 100.0
+        },
+        "valor_desconto": {
+          "types": {
+            "float": 2,
+            "int": 31
+          },
+          "presence_pct": 84.6
+        },
+        "valor_juros": {
+          "types": {
+            "float": 3,
+            "int": 30
+          },
+          "presence_pct": 84.6
+        },
+        "valor_multa": {
+          "types": {
+            "float": 2,
+            "int": 31
+          },
+          "presence_pct": 84.6
+        },
+        "data_emissao": {
+          "types": {
+            "string": 12,
+            "null": 21
+          },
+          "presence_pct": 84.6
+        },
+        "data_vencimento": {
+          "types": {
+            "string": 39
+          },
+          "presence_pct": 100.0
+        },
+        "data_pagamento": {
+          "types": {
+            "string": 11,
+            "null": 23
+          },
+          "presence_pct": 87.2
+        },
+        "data_cancelamento": {
+          "types": {
+            "null": 33
+          },
+          "presence_pct": 84.6
+        },
+        "plano_conta_id": {
+          "types": {
+            "string": 1,
+            "null": 32
+          },
+          "presence_pct": 84.6
+        },
+        "plano_conta_nome": {
+          "types": {
+            "string": 2,
+            "null": 31
+          },
+          "presence_pct": 84.6
+        },
+        "centro_custo": {
+          "types": {
+            "string": 2,
+            "null": 31
+          },
+          "presence_pct": 84.6
+        },
+        "forma_pagamento": {
+          "types": {
+            "string": 33
+          },
+          "presence_pct": 84.6
+        },
+        "conta_movimento": {
+          "types": {
+            "string": 1,
+            "null": 32
+          },
+          "presence_pct": 84.6
+        },
+        "status": {
+          "types": {
+            "string": 39
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 4,
+            "null": 29
+          },
+          "presence_pct": 84.6
+        },
+        "valor_final": {
+          "types": {
+            "float": 30
+          },
+          "presence_pct": 76.9
+        },
+        "created_by": {
+          "types": {
+            "string": 30
+          },
+          "presence_pct": 76.9
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 39
+          },
+          "presence_pct": 100.0
+        },
+        "conciliado": {
+          "types": {
+            "bool": 2
+          },
+          "presence_pct": 5.1
+        },
+        "anexos": {
+          "types": {
+            "array<string>": 1
+          },
+          "presence_pct": 2.6
+        },
+        "frota_id": {
+          "types": {
+            "null": 30,
+            "string": 2
+          },
+          "presence_pct": 82.1
+        },
+        "frota_nome": {
+          "types": {
+            "null": 30,
+            "string": 2
+          },
+          "presence_pct": 82.1
+        },
+        "categoria": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 15.4
+        },
+        "tipo": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 15.4
+        },
+        "origem": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 15.4
+        },
+        "conta_bancaria_id": {
+          "types": {
+            "string": 10,
+            "null": 19
+          },
+          "presence_pct": 74.4
+        },
+        "data_ultimo_pagamento": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 5.1
+        },
+        "pagamentos": {
+          "types": {
+            "array<object>": 2
+          },
+          "presence_pct": 5.1
+        },
+        "saldo_restante": {
+          "types": {
+            "float": 1,
+            "int": 1
+          },
+          "presence_pct": 5.1
+        },
+        "valor_pago": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 5.1
+        },
+        "total_parcelas": {
+          "types": {
+            "int": 21
+          },
+          "presence_pct": 53.8
+        },
+        "numero_parcela": {
+          "types": {
+            "int": 21
+          },
+          "presence_pct": 53.8
+        },
+        "parcela_origem_id": {
+          "types": {
+            "string": 5,
+            "null": 16
+          },
+          "presence_pct": 53.8
+        },
+        "subconta_id": {
+          "types": {
+            "null": 21
+          },
+          "presence_pct": 53.8
+        },
+        "subconta_nome": {
+          "types": {
+            "null": 21
+          },
+          "presence_pct": 53.8
+        },
+        "conta_bancaria_nome": {
+          "types": {
+            "null": 21
+          },
+          "presence_pct": 53.8
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 5
+          },
+          "presence_pct": 12.8
+        },
+        "maquina_id": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 5.1
+        },
+        "maquina_nome": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 5.1
+        },
+        "valor_retencao": {
+          "types": {
+            "float": 4
+          },
+          "presence_pct": 10.3
+        }
+      }
+    },
+    "contas_receber": {
+      "document_count": 16,
+      "sample_size": 16,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 16
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 16
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_nome": {
+          "types": {
+            "string": 9,
+            "null": 7
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_documento": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 6.2
+        },
+        "valor": {
+          "types": {
+            "float": 16
+          },
+          "presence_pct": 100.0
+        },
+        "valor_final": {
+          "types": {
+            "float": 16
+          },
+          "presence_pct": 100.0
+        },
+        "data_vencimento": {
+          "types": {
+            "string": 16
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 16
+          },
+          "presence_pct": 100.0
+        },
+        "origem": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 6.2
+        },
+        "imovel_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 6.2
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 16
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "null": 1,
+            "string": 15
+          },
+          "presence_pct": 100.0
+        },
+        "data_recebimento": {
+          "types": {
+            "string": 6,
+            "null": 9
+          },
+          "presence_pct": 93.8
+        },
+        "data_ultimo_recebimento": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 12.5
+        },
+        "recebimentos": {
+          "types": {
+            "array<object>": 2
+          },
+          "presence_pct": 12.5
+        },
+        "saldo_restante": {
+          "types": {
+            "int": 1,
+            "float": 1
+          },
+          "presence_pct": 12.5
+        },
+        "valor_recebido": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 12.5
+        },
+        "numero": {
+          "types": {
+            "int": 15
+          },
+          "presence_pct": 93.8
+        },
+        "cliente_id": {
+          "types": {
+            "null": 14
+          },
+          "presence_pct": 87.5
+        },
+        "documento": {
+          "types": {
+            "null": 14,
+            "string": 1
+          },
+          "presence_pct": 93.8
+        },
+        "numero_doc": {
+          "types": {
+            "null": 11,
+            "string": 3
+          },
+          "presence_pct": 87.5
+        },
+        "valor_desconto": {
+          "types": {
+            "int": 14
+          },
+          "presence_pct": 87.5
+        },
+        "valor_juros": {
+          "types": {
+            "int": 14
+          },
+          "presence_pct": 87.5
+        },
+        "valor_multa": {
+          "types": {
+            "int": 14
+          },
+          "presence_pct": 87.5
+        },
+        "data_emissao": {
+          "types": {
+            "string": 6,
+            "null": 9
+          },
+          "presence_pct": 93.8
+        },
+        "data_cancelamento": {
+          "types": {
+            "null": 14
+          },
+          "presence_pct": 87.5
+        },
+        "plano_conta_id": {
+          "types": {
+            "null": 14
+          },
+          "presence_pct": 87.5
+        },
+        "plano_conta_nome": {
+          "types": {
+            "null": 14
+          },
+          "presence_pct": 87.5
+        },
+        "centro_custo": {
+          "types": {
+            "null": 14
+          },
+          "presence_pct": 87.5
+        },
+        "frota_id": {
+          "types": {
+            "null": 12,
+            "string": 2
+          },
+          "presence_pct": 87.5
+        },
+        "frota_nome": {
+          "types": {
+            "null": 12,
+            "string": 2
+          },
+          "presence_pct": 87.5
+        },
+        "forma_pagamento": {
+          "types": {
+            "string": 15
+          },
+          "presence_pct": 93.8
+        },
+        "conta_movimento": {
+          "types": {
+            "null": 14
+          },
+          "presence_pct": 87.5
+        },
+        "faturamento": {
+          "types": {
+            "null": 14
+          },
+          "presence_pct": 87.5
+        },
+        "observacoes": {
+          "types": {
+            "null": 14,
+            "string": 1
+          },
+          "presence_pct": 93.8
+        },
+        "conta_bancaria_id": {
+          "types": {
+            "string": 8,
+            "null": 6
+          },
+          "presence_pct": 87.5
+        },
+        "aluguel_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 6.2
+        },
+        "total_parcelas": {
+          "types": {
+            "int": 8
+          },
+          "presence_pct": 50.0
+        },
+        "numero_parcela": {
+          "types": {
+            "int": 8
+          },
+          "presence_pct": 50.0
+        },
+        "parcela_origem_id": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 50.0
+        },
+        "subconta_id": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 50.0
+        },
+        "subconta_nome": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 50.0
+        },
+        "conta_bancaria_nome": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 50.0
+        },
+        "anexos": {
+          "types": {
+            "array<string>": 1
+          },
+          "presence_pct": 6.2
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 12.5
+        },
+        "maquina_id": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 12.5
+        },
+        "maquina_nome": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 12.5
+        },
+        "valor_retencao": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 6.2
+        }
+      }
+    },
+    "counters": {
+      "document_count": 6,
+      "sample_size": 6,
+      "fields": {
+        "seq": {
+          "types": {
+            "int": 6
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "custos_rh_config": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "fgts_aliquota": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "inss_patronal_aliquota": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "vale_transporte": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "vale_alimentacao": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "plano_saude": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "outros_beneficios": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "epis_custo_mensal": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "horas_mes": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "custos_extras": {
+          "types": {
+            "array<object>": 1
+          },
+          "presence_pct": 100.0
+        },
+        "vale_transporte_funcionario_ids": {
+          "types": {
+            "array<string>": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "epi_cargos": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "epi_fichas": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "funcionario_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cargo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "codigo_cbo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ocupacao_cbo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_entrega": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "epis": {
+          "types": {
+            "array<object>": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "extratos_bancarios": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "data": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "valor": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "conta_bancaria_id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "conciliado": {
+          "types": {
+            "bool": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "ferias": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "ferias_alertas_dispensados": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "fleets": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "description": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "folder_passwords": {
+      "document_count": 3,
+      "sample_size": 3,
+      "fields": {
+        "path": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "password_hash": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "updated_by": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "folha_pagamento": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "funcionario_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "mes": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ano": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "salario_base": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "horas_extras": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor_hora_extra": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "adicional_noturno": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "comissoes": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "vale_transporte": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "vale_alimentacao": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "plano_saude": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "outros_descontos": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "salario_bruto": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "inss": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "irpf": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "fgts": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "total_descontos": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "salario_liquido": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "folhas_importadas": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "formas_pagamento": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "codigo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "taxa": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "prazo_recebimento": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta_bancaria": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ativo": {
+          "types": {
+            "bool": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "fornecedores": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "funcionarios": {
+      "document_count": 9,
+      "sample_size": 9,
+      "fields": {
+        "nome": {
+          "types": {
+            "string": 9
+          },
+          "presence_pct": 100.0
+        },
+        "cpf": {
+          "types": {
+            "string": 2,
+            "null": 7
+          },
+          "presence_pct": 100.0
+        },
+        "rg": {
+          "types": {
+            "string": 2,
+            "null": 7
+          },
+          "presence_pct": 100.0
+        },
+        "data_nascimento": {
+          "types": {
+            "string": 2,
+            "null": 7
+          },
+          "presence_pct": 100.0
+        },
+        "telefone": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "celular": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "email": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "cep": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "endereco": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "complemento": {
+          "types": {
+            "null": 9
+          },
+          "presence_pct": 100.0
+        },
+        "bairro": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "cidade": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "uf": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "cargo": {
+          "types": {
+            "string": 9
+          },
+          "presence_pct": 100.0
+        },
+        "funcao": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "departamento": {
+          "types": {
+            "string": 1,
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "salario": {
+          "types": {
+            "float": 2,
+            "int": 7
+          },
+          "presence_pct": 100.0
+        },
+        "data_admissao": {
+          "types": {
+            "string": 9
+          },
+          "presence_pct": 100.0
+        },
+        "regime_contratacao": {
+          "types": {
+            "string": 9
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 9
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "null": 9
+          },
+          "presence_pct": 100.0
+        },
+        "id": {
+          "types": {
+            "string": 9
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 9
+          },
+          "presence_pct": 100.0
+        },
+        "anexos": {
+          "types": {
+            "array<empty>": 9
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "horimetro": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "machine_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "hora_inicial": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "hora_final": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "horas_trabalhadas": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "operador": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "imoveis": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "tipo_imovel": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "endereco": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "complemento": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "bairro": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cidade": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "estado": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cep": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "area_m2": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "quartos": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "banheiros": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "vagas_garagem": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_telefone": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_documento": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "numero_contrato": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_periodo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "periodo_especificado": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_inicio": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_vencimento": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor_aluguel": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor_condominio": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor_iptu": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor_caucao": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "dia_vencimento": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "gerar_conta_receber": {
+          "types": {
+            "bool": 1
+          },
+          "presence_pct": 100.0
+        },
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta_receber_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "jornadas_trabalho": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "nome": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "is_padrao": {
+          "types": {
+            "bool": 2
+          },
+          "presence_pct": 100.0
+        },
+        "dias": {
+          "types": {
+            "object": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "logs_importacao": {
+      "document_count": 3,
+      "sample_size": 3,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "data_hora": {
+          "types": {
+            "datetime-string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "total_certificados": {
+          "types": {
+            "int": 3
+          },
+          "presence_pct": 100.0
+        },
+        "nfe_importadas": {
+          "types": {
+            "int": 3
+          },
+          "presence_pct": 100.0
+        },
+        "nfse_importadas": {
+          "types": {
+            "int": 3
+          },
+          "presence_pct": 100.0
+        },
+        "erros": {
+          "types": {
+            "array<empty>": 3
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "machines": {
+      "document_count": 6,
+      "sample_size": 6,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "plate": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "category_id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "brand": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "model": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "year": {
+          "types": {
+            "null": 5,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "notes": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 66.7
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "obra_id": {
+          "types": {
+            "null": 4,
+            "string": 1
+          },
+          "presence_pct": 83.3
+        },
+        "hours_since_oil_change": {
+          "types": {
+            "int": 1,
+            "float": 1
+          },
+          "presence_pct": 33.3
+        },
+        "last_oil_change_date": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 16.7
+        },
+        "horimetro_atual": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 16.7
+        },
+        "fleet_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 16.7
+        },
+        "identificador_numero": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 16.7
+        },
+        "identificador_tipo": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 16.7
+        },
+        "operator_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 16.7
+        },
+        "subcategory_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 16.7
+        },
+        "subfleet_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 16.7
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 33.3
+        }
+      }
+    },
+    "maintenances": {
+      "document_count": 6,
+      "sample_size": 6,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "machine_id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "part_name": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "replacement_date": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "part_value": {
+          "types": {
+            "float": 6
+          },
+          "presence_pct": 100.0
+        },
+        "maintenance_type": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "description": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "photos": {
+          "types": {
+            "array<empty>": 5,
+            "array<string>": 1
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 66.7
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "is_oil_change": {
+          "types": {
+            "bool": 3
+          },
+          "presence_pct": 50.0
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 33.3
+        }
+      }
+    },
+    "movimentacoes_contas": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_movimentacao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta_bancaria_origem_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta_bancaria_origem_nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "centro_custo_origem_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "centro_custo_origem_nome": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta_bancaria_destino_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "conta_bancaria_destino_nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "centro_custo_destino_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "centro_custo_destino_nome": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "categoria": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "documento_referencia": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "nfe_certificados": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cnpj": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "razao_social": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "uf": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ambiente": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "certificado_base64": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "senha_certificado": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ativo": {
+          "types": {
+            "bool": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ultimo_nsu": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "consultas_hoje": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_consultas": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ultima_consulta_auto": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "inscricao_municipal": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "url_nfse": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "soapaction_nfse": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "bloqueado_ate": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "nfe_importadas": {
+      "document_count": 155,
+      "sample_size": 155,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 155
+          },
+          "presence_pct": 100.0
+        },
+        "certificado_id": {
+          "types": {
+            "string": 154
+          },
+          "presence_pct": 99.4
+        },
+        "chave_acesso": {
+          "types": {
+            "string": 154,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "numero_nf": {
+          "types": {
+            "string": 154
+          },
+          "presence_pct": 99.4
+        },
+        "serie": {
+          "types": {
+            "string": 155
+          },
+          "presence_pct": 100.0
+        },
+        "data_emissao": {
+          "types": {
+            "datetime-string": 1,
+            "string": 154
+          },
+          "presence_pct": 100.0
+        },
+        "valor_total": {
+          "types": {
+            "float": 155
+          },
+          "presence_pct": 100.0
+        },
+        "cnpj_emitente": {
+          "types": {
+            "string": 155
+          },
+          "presence_pct": 100.0
+        },
+        "razao_social_emitente": {
+          "types": {
+            "string": 155
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 155
+          },
+          "presence_pct": 100.0
+        },
+        "xml_base64": {
+          "types": {
+            "string": 154,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "itens": {
+          "types": {
+            "array<object>": 154,
+            "array<empty>": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 155
+          },
+          "presence_pct": 100.0
+        },
+        "cnpj_destinatario": {
+          "types": {
+            "string": 153,
+            "null": 1
+          },
+          "presence_pct": 99.4
+        },
+        "nsu": {
+          "types": {
+            "string": 153
+          },
+          "presence_pct": 98.7
+        },
+        "conta_pagar_id": {
+          "types": {
+            "null": 153
+          },
+          "presence_pct": 98.7
+        },
+        "numero_nota": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 0.6
+        },
+        "uf_emitente": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 0.6
+        },
+        "razao_social_destinatario": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 0.6
+        },
+        "valor_produtos": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 0.6
+        },
+        "valor_servicos": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 0.6
+        },
+        "valor_frete": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 0.6
+        },
+        "valor_desconto": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 0.6
+        },
+        "centro_custo_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 0.6
+        },
+        "centro_custo_nome": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 0.6
+        },
+        "plano_conta_id": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 0.6
+        },
+        "plano_conta_nome": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 0.6
+        },
+        "pdf_base64": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 0.6
+        },
+        "observacoes": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 0.6
+        },
+        "importacao_manual": {
+          "types": {
+            "bool": 1
+          },
+          "presence_pct": 0.6
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 0.6
+        }
+      }
+    },
+    "nfse_importadas": {
+      "document_count": 3,
+      "sample_size": 3,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "numero_nfse": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "serie": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "data_emissao": {
+          "types": {
+            "datetime-string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "valor_servico": {
+          "types": {
+            "float": 3
+          },
+          "presence_pct": 100.0
+        },
+        "valor_total": {
+          "types": {
+            "float": 3
+          },
+          "presence_pct": 100.0
+        },
+        "prestador_nome": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "prestador_cnpj": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "razao_social_prestador": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "cnpj_prestador": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "tomador_nome": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "tomador_cnpj": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "descricao_servico": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "discriminacao": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "xml_base64": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 3
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "notas_emitidas": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "certificado_id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "cnpj_emitente": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "razao_social_emitente": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "uf_emitente": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "ambiente": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "serie": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "chave_acesso": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 50.0
+        },
+        "protocolo": {
+          "types": {
+            "null": 2
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "mensagem": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "dest_cpf_cnpj": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "dest_razao_social": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "dest_ie": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "dest_email": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "dest_telefone": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "dest_endereco": {
+          "types": {
+            "object": 1
+          },
+          "presence_pct": 50.0
+        },
+        "natureza_operacao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tipo_operacao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "finalidade": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "consumidor_final": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "presenca_comprador": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "forma_pagamento": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_pagamento": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "modalidade_frete": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "transportador_cnpj": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 50.0
+        },
+        "transportador_razao": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 50.0
+        },
+        "itens": {
+          "types": {
+            "array<object>": 1,
+            "array<empty>": 1
+          },
+          "presence_pct": 100.0
+        },
+        "valor_produtos": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_frete": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_seguro": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_desconto": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_outros": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_total": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "info_complementar": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "xml_base64": {
+          "types": {
+            "null": 1,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "null": 2
+          },
+          "presence_pct": 100.0
+        },
+        "numero_nfse": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 50.0
+        },
+        "codigo_verificacao": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tomador_cpf_cnpj": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tomador_razao_social": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tomador_ie": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tomador_im": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tomador_email": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tomador_telefone": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "tomador_endereco": {
+          "types": {
+            "object": 1
+          },
+          "presence_pct": 50.0
+        },
+        "codigo_cnae": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "codigo_tributario_municipio": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "item_lista_servico": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "discriminacao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_servicos": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_deducoes": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_pis": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_cofins": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_inss": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_ir": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_csll": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "outras_retencoes": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_iss": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "aliquota_iss": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "valor_liquido": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 50.0
+        },
+        "iss_retido": {
+          "types": {
+            "bool": 1
+          },
+          "presence_pct": 50.0
+        }
+      }
+    },
+    "notificacoes_dispensadas": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "notifications": {
+      "document_count": 3,
+      "sample_size": 3,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "title": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "message": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "type": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "read": {
+          "types": {
+            "bool": 3
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 3
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "obras": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "description": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "location": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "start_date": {
+          "types": {
+            "null": 1,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "end_date": {
+          "types": {
+            "null": 2
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "ordens_servico": {
+      "document_count": 8,
+      "sample_size": 8,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "numero": {
+          "types": {
+            "int": 8
+          },
+          "presence_pct": 100.0
+        },
+        "numero_contrato": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "numero_documento_fiscal": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_id": {
+          "types": {
+            "null": 4,
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_nome": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_fantasia": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_documento": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_email": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_telefone": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_celular": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_ie": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_endereco": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_bairro": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_cidade": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_uf": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cliente_cep": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "obra": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "obra_id": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "endereco_entrega": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "prisma": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "periodo": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "periodicidade": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "km": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "data_abertura": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "data_fechamento": {
+          "types": {
+            "null": 7,
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data_previsao_entrega": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "data_conclusao": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_atendimento": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "atendente": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "atendente_nome": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "empresa": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "empresa_emissora": {
+          "types": {
+            "string": 4,
+            "null": 4
+          },
+          "presence_pct": 100.0
+        },
+        "responsavel_id": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "responsavel_nome": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "maquina_id": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "maquina_nome": {
+          "types": {
+            "null": 8
+          },
+          "presence_pct": 100.0
+        },
+        "itens": {
+          "types": {
+            "array<empty>": 8
+          },
+          "presence_pct": 100.0
+        },
+        "frotas_ids": {
+          "types": {
+            "array<empty>": 4,
+            "null": 4
+          },
+          "presence_pct": 100.0
+        },
+        "maquinas_ids": {
+          "types": {
+            "array<empty>": 4,
+            "null": 4
+          },
+          "presence_pct": 100.0
+        },
+        "fornecedores_ids": {
+          "types": {
+            "array<empty>": 4,
+            "null": 4
+          },
+          "presence_pct": 100.0
+        },
+        "valor_total": {
+          "types": {
+            "float": 8
+          },
+          "presence_pct": 100.0
+        },
+        "valor_principal": {
+          "types": {
+            "float": 5,
+            "int": 3
+          },
+          "presence_pct": 100.0
+        },
+        "valores_extras": {
+          "types": {
+            "array<object>": 8
+          },
+          "presence_pct": 100.0
+        },
+        "valor_desconto": {
+          "types": {
+            "float": 8
+          },
+          "presence_pct": 100.0
+        },
+        "valor_subtotal": {
+          "types": {
+            "int": 8
+          },
+          "presence_pct": 100.0
+        },
+        "valor_antecipado": {
+          "types": {
+            "float": 4,
+            "int": 4
+          },
+          "presence_pct": 100.0
+        },
+        "forma_pagamento": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "condicao_pagamento": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "confirmada": {
+          "types": {
+            "bool": 8
+          },
+          "presence_pct": 100.0
+        },
+        "prioridade": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_financeiro": {
+          "types": {
+            "string": 4,
+            "null": 4
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "observacao_servicos": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "notas_gerais": {
+          "types": {
+            "null": 6,
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "valor_restante": {
+          "types": {
+            "float": 8
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 8
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 8
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "plano_contas": {
+      "document_count": 6,
+      "sample_size": 6,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "codigo": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "nome": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "nivel": {
+          "types": {
+            "int": 6
+          },
+          "presence_pct": 100.0
+        },
+        "pai_id": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 6
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 6
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "ponto_abonos": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "funcionario_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "data": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "motivo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "anexo": {
+          "types": {
+            "object": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "ponto_observacoes": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "ano": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "funcionario_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "mes": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "texto": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "ponto_registros": {
+      "document_count": 135,
+      "sample_size": 135,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "funcionario_id": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "funcionario_nome_planilha": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "funcionario_nao_cadastrado": {
+          "types": {
+            "bool": 135
+          },
+          "presence_pct": 100.0
+        },
+        "id_usuario_planilha": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "departamento_planilha": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "data": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "batidas": {
+          "types": {
+            "array<string>": 85,
+            "array<empty>": 50
+          },
+          "presence_pct": 100.0
+        },
+        "entrada": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "saida_almoco": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "retorno_almoco": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "saida": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "minutos_trabalhados": {
+          "types": {
+            "int": 135
+          },
+          "presence_pct": 100.0
+        },
+        "minutos_previstos": {
+          "types": {
+            "int": 135
+          },
+          "presence_pct": 100.0
+        },
+        "saldo_minutos": {
+          "types": {
+            "int": 135
+          },
+          "presence_pct": 100.0
+        },
+        "status_dia": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "dia_semana": {
+          "types": {
+            "int": 135
+          },
+          "presence_pct": 100.0
+        },
+        "origem": {
+          "types": {
+            "string": 135
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 135
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "produtos": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "produtos_admin": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "codigo_interno": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "codigo_fabricante": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "codigo_barras": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "descricao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "fabricante": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "aplicacao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "grupo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "subgrupo": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "unidade_comercial": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "unidade_tributada": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "multiplo": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "preco_custo": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "preco_custo_final": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "preco_venda": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "estoque_atual": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "estoque_minimo": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "estoque_maximo": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "localizacao": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ncm": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cst": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cest": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "origem": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "ipi": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "icms": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "pis": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "cofins": {
+          "types": {
+            "float": 1
+          },
+          "presence_pct": 100.0
+        },
+        "tipo_item": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "status": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "em_promocao": {
+          "types": {
+            "bool": 1
+          },
+          "presence_pct": 100.0
+        },
+        "preco_promocao": {
+          "types": {
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "observacoes": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "margem_lucro": {
+          "types": {
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "rh_notificacoes": {
+      "document_count": 4,
+      "sample_size": 4,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "tipo": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "titulo": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "mensagem": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "categoria": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "funcionario_id": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "funcionario_nome": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "lida": {
+          "types": {
+            "bool": 4
+          },
+          "presence_pct": 100.0
+        },
+        "criada_por_ia": {
+          "types": {
+            "bool": 4
+          },
+          "presence_pct": 100.0
+        },
+        "criada_por_user_id": {
+          "types": {
+            "string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 4
+          },
+          "presence_pct": 100.0
+        },
+        "tem_pdf": {
+          "types": {
+            "bool": 3
+          },
+          "presence_pct": 75.0
+        },
+        "pdf_artifact_id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 75.0
+        }
+      }
+    },
+    "solicitacoes_folha": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "solicitacoes_folha_financeiro": {
+      "document_count": 0,
+      "sample_size": 0,
+      "fields": {}
+    },
+    "stock_categories": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "stock_items": {
+      "document_count": 5,
+      "sample_size": 5,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "code": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "category": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "unit": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "quantity": {
+          "types": {
+            "float": 5
+          },
+          "presence_pct": 100.0
+        },
+        "min_quantity": {
+          "types": {
+            "float": 5
+          },
+          "presence_pct": 100.0
+        },
+        "unit_price": {
+          "types": {
+            "float": 4,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "location": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "notes": {
+          "types": {
+            "string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 60.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 5
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 40.0
+        },
+        "machine_ids": {
+          "types": {
+            "array<string>": 1
+          },
+          "presence_pct": 20.0
+        }
+      }
+    },
+    "stock_movements": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "item_id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "movement_type": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "quantity": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "previous_quantity": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "new_quantity": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "reason": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "notes": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "stock_subcategories": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "category_id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "storage_trash": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "original_name": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "original_path": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "type": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "deleted_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "deleted_by_name": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "deleted_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "subcategories": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "category_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "description": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "subfleets": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "fleet_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "description": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "tasks": {
+      "document_count": 1,
+      "sample_size": 1,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "target_system": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "priority": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "title": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "message": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "attachments": {
+          "types": {
+            "array<empty>": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by_id": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by_name": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "read": {
+          "types": {
+            "bool": 1
+          },
+          "presence_pct": 100.0
+        },
+        "read_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 100.0
+        },
+        "read_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "usage_logs": {
+      "document_count": 3,
+      "sample_size": 3,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "machine_id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "hours": {
+          "types": {
+            "float": 3
+          },
+          "presence_pct": 100.0
+        },
+        "notes": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "user_id": {
+          "types": {
+            "string": 3
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 3
+          },
+          "presence_pct": 100.0
+        }
+      }
+    },
+    "users": {
+      "document_count": 15,
+      "sample_size": 15,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 15
+          },
+          "presence_pct": 100.0
+        },
+        "name": {
+          "types": {
+            "string": 15
+          },
+          "presence_pct": 100.0
+        },
+        "email": {
+          "types": {
+            "string": 15
+          },
+          "presence_pct": 100.0
+        },
+        "password": {
+          "types": {
+            "string": 15
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 15
+          },
+          "presence_pct": 100.0
+        },
+        "role": {
+          "types": {
+            "string": 15
+          },
+          "presence_pct": 100.0
+        },
+        "last_login": {
+          "types": {
+            "datetime-string": 4
+          },
+          "presence_pct": 26.7
+        },
+        "password_reset_at": {
+          "types": {
+            "datetime-string": 1
+          },
+          "presence_pct": 6.7
+        },
+        "password_reset_by": {
+          "types": {
+            "string": 1
+          },
+          "presence_pct": 6.7
+        }
+      }
+    },
+    "veiculos_abastecedores": {
+      "document_count": 2,
+      "sample_size": 2,
+      "fields": {
+        "id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "machine_id": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "capacidade_diesel": {
+          "types": {
+            "float": 2
+          },
+          "presence_pct": 100.0
+        },
+        "capacidade_oleo": {
+          "types": {
+            "float": 1,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "capacidade_graxa": {
+          "types": {
+            "float": 1,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "litros_diesel": {
+          "types": {
+            "float": 1,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "litros_oleo": {
+          "types": {
+            "float": 1,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "litros_graxa": {
+          "types": {
+            "float": 1,
+            "int": 1
+          },
+          "presence_pct": 100.0
+        },
+        "operador_id": {
+          "types": {
+            "string": 1,
+            "null": 1
+          },
+          "presence_pct": 100.0
+        },
+        "created_by": {
+          "types": {
+            "string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "created_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        },
+        "updated_at": {
+          "types": {
+            "datetime-string": 2
+          },
+          "presence_pct": 100.0
+        }
+      }
+    }
+  }
+}
