@@ -22,6 +22,36 @@ async def create_audit_log(
         reversible: Quando True, marca o log como reversível (apto a Desfazer).
     """
     log_id = str(uuid.uuid4())
+
+    # Regra de reversibilidade (mesma do server.py):
+    # - Exportações nunca são reversíveis.
+    # - Em módulo Administrativo: create/update/delete são reversíveis
+    #   (create: rollback exclui; update/delete: restaura snapshot).
+    action_lower = (action or "").lower()
+    is_create = action_lower in ("criar", "create")
+    is_update = action_lower in ("editar", "update")
+    is_delete = action_lower in ("excluir", "delete")
+    is_export = "export" in action_lower or "exportar" in action_lower
+    if is_export:
+        reversible_final = False
+    elif reversible:
+        if is_create:
+            reversible_final = True
+        elif (is_update or is_delete) and snapshot is not None:
+            reversible_final = True
+        else:
+            reversible_final = False
+    else:
+        if module == "Administrativo":
+            if is_create:
+                reversible_final = True
+            elif (is_update or is_delete) and snapshot is not None:
+                reversible_final = True
+            else:
+                reversible_final = False
+        else:
+            reversible_final = False
+
     log_doc = {
         "id": log_id,
         "user_id": user.get("id"),
@@ -36,7 +66,7 @@ async def create_audit_log(
         "module": module,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "reversible": bool(reversible and snapshot is not None and action.lower() in ("delete", "update", "excluir", "editar")),
+        "reversible": reversible_final,
         "rolled_back": False,
     }
     if snapshot is not None:

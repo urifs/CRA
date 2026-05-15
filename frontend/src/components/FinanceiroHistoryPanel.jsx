@@ -208,8 +208,9 @@ export default function FinanceiroHistoryPanel({ open, onClose }) {
 
                 {!selectedLog.reversible && !selectedLog.rolled_back && (
                   <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-xs text-amber-700">
-                    Esta ação não é reversível pelo histórico.
-                    {(selectedLog.action || "").toLowerCase().includes("export") && " (Exportações apenas geram arquivos, não modificam dados.)"}
+                    {(selectedLog.action || "").toLowerCase().includes("export")
+                      ? "Exportações apenas geram arquivos e não modificam dados — não há nada para desfazer."
+                      : "Esta ação foi registrada apenas para consulta. Não há estado anterior salvo para reverter."}
                   </div>
                 )}
               </div>

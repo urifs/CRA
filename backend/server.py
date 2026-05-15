@@ -849,16 +849,20 @@ async def create_audit_log(
     
     # Determinar o módulo automaticamente se não especificado
     if not module:
-        admin_entities = ["cadastro", "conta_pagar", "conta_receber", "produto", 
-                         "ordem_servico", "plano_contas", "centro_custo", 
-                         "forma_pagamento", "aluguel"]
+        admin_entities = [
+            "cadastro", "conta_pagar", "conta_receber", "produto",
+            "ordem_servico", "plano_conta", "plano_contas", "centro_custo",
+            "forma_pagamento", "aluguel", "conta_bancaria", "conta_bancaria_saldo",
+            "movimentacao", "movimentacao_conta", "movimentacao_bancaria",
+            "imovel", "nfe_manual", "nfse_manual", "fornecedor", "cliente",
+        ]
         gerenciamento_entities = ["categoria", "máquina", "maquina", "manutenção", 
                                   "manutencao", "registro de uso", "categoria de estoque",
                                   "item de estoque", "obra"]
         admin_panel_entities = ["usuario", "user"]
         
         entity_lower = entity_type.lower()
-        if any(e in entity_lower for e in admin_entities):
+        if entity_lower in admin_entities or any(e in entity_lower for e in admin_entities):
             module = "Administrativo"
         elif any(e in entity_lower for e in gerenciamento_entities) or "estoque" in entity_lower:
             module = "Gerenciamento"
@@ -880,6 +884,40 @@ async def create_audit_log(
         detailed_info += f" | {details}"
     
     audit_id = str(uuid.uuid4())
+    # Determina se a ação é reversível pelo Histórico.
+    # Regras:
+    # - Exportações nunca são reversíveis.
+    # - Em módulos Admin/Sistema Financeiro: create/update/delete sempre podem
+    #   ser desfeitos (create: rollback exclui; update/delete: restaura snapshot).
+    # - Outras ações (login, upload anexo, etc.) NÃO são reversíveis.
+    action_lower = action.lower()
+    is_create = action_lower in ("criar", "create")
+    is_update = action_lower in ("editar", "update")
+    is_delete = action_lower in ("excluir", "delete")
+    is_export = "export" in action_lower or "exportar" in action_lower or "exportacao" in action_lower
+    if is_export:
+        reversible_final = False
+    elif reversible:
+        # Caller explicitamente marcou. Para update/delete precisa de snapshot.
+        if is_create:
+            reversible_final = True
+        elif (is_update or is_delete) and snapshot is not None:
+            reversible_final = True
+        else:
+            reversible_final = False
+    else:
+        # Default: tenta marcar reversível automaticamente para mutações no módulo
+        # Administrativo, desde que tenhamos as informações necessárias.
+        if module == "Administrativo":
+            if is_create:
+                reversible_final = True
+            elif (is_update or is_delete) and snapshot is not None:
+                reversible_final = True
+            else:
+                reversible_final = False
+        else:
+            reversible_final = False
+
     audit_doc = {
         "id": audit_id,
         "user_id": user["id"],
@@ -892,7 +930,7 @@ async def create_audit_log(
         "module": module,
         "details": detailed_info,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "reversible": bool(reversible and snapshot is not None and action.lower() in ("excluir", "delete", "editar", "update")),
+        "reversible": reversible_final,
         "rolled_back": False,
     }
     if snapshot is not None:
@@ -3105,7 +3143,9 @@ async def rollback_audit_action(
     if log.get("rolled_back"):
         raise HTTPException(status_code=400, detail="Esta ação já foi desfeita anteriormente")
     snapshot = log.get("snapshot")
-    if not snapshot:
+    action_for_check = log.get("action", "").lower()
+    is_create_check = "criou" in action_for_check or action_for_check.startswith("create")
+    if not snapshot and not is_create_check:
         raise HTTPException(status_code=400, detail="Não há snapshot para esta ação — rollback indisponível")
 
     entity_type = log.get("entity_type", "")
@@ -3115,6 +3155,7 @@ async def rollback_audit_action(
     # "Excluiu Conta a Pagar"/"Editou Conta a Pagar" (server.py).
     is_delete = "excluiu" in action or action.startswith("delete")
     is_update = "editou" in action or action.startswith("update")
+    is_create = "criou" in action or action.startswith("create")
 
     # Mapa entity_type → collection (suporta variantes singular/plural)
     collection_map = {
@@ -3130,14 +3171,19 @@ async def rollback_audit_action(
         "os": "ordens_servico",
         "aluguel": "alugueis",
         "movimentacao": "movimentacoes_contas",
+        "movimentacao_conta": "movimentacoes_contas",
         "movimentacao_bancaria": "movimentacoes_contas",
         "plano_conta": "plano_contas",
+        "plano_contas": "plano_contas",
         "centro_custo": "centros_custo",
         "categoria": "categories",
         "subcategoria": "subcategorias",
         "forma_pagamento": "formas_pagamento",
         "conta_bancaria": "contas_bancarias",
         "produto": "produtos_admin",
+        "imovel": "imoveis",
+        "nfe_manual": "nfe_importadas",
+        "nfse_manual": "nfse_importadas",
     }
     coll_name = collection_map.get(entity_type)
     if not coll_name:
@@ -3145,17 +3191,28 @@ async def rollback_audit_action(
 
     coll = db[coll_name]
 
+    entity_id = log.get("entity_id") or (snapshot.get("id") if snapshot else None)
+
     if is_delete:
         # Re-insere o documento (se ainda não existir)
         existing = await coll.find_one({"id": snapshot.get("id")}, {"_id": 1})
         if existing:
             raise HTTPException(status_code=400, detail="O item já existe — possivelmente foi recriado depois")
         await coll.insert_one(snapshot)
-        msg = "Conta restaurada"
+        msg = "Item restaurado"
     elif is_update:
         # Restaura o snapshot por completo
         await coll.update_one({"id": snapshot.get("id")}, {"$set": snapshot})
         msg = "Edição revertida"
+    elif is_create:
+        # Desfaz a criação removendo o documento
+        if not entity_id:
+            raise HTTPException(status_code=400, detail="entity_id ausente para desfazer criação")
+        existing = await coll.find_one({"id": entity_id}, {"_id": 1})
+        if not existing:
+            raise HTTPException(status_code=400, detail="Item já foi removido")
+        await coll.delete_one({"id": entity_id})
+        msg = "Criação revertida (item removido)"
     else:
         raise HTTPException(status_code=400, detail=f"Rollback não implementado para a ação '{action}'")
 
@@ -3168,7 +3225,7 @@ async def rollback_audit_action(
         user=current_user,
         action="editar",
         entity_type=entity_type,
-        entity_id=snapshot.get("id", ""),
+        entity_id=entity_id or "",
         entity_name=log.get("entity_name", ""),
         details=f"ROLLBACK da ação '{log.get('action')}' de {log.get('created_at','')[:19]}",
         module=log.get("module") or "Administrativo",
@@ -4240,7 +4297,8 @@ async def update_cadastro(id: str, data: CadastroCreate, current_user: dict = De
     update_data = data.model_dump()
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.cadastros.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "cadastro", id, data.nome_razao)
+    await create_audit_log(current_user, "update", "cadastro", id, data.nome_razao,
+                           snapshot=cadastro, reversible=True)
     
     updated = await db.cadastros.find_one({"id": id}, {"_id": 0})
     return updated
@@ -4252,7 +4310,8 @@ async def delete_cadastro(id: str, current_user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Cadastro não encontrado")
     
     await db.cadastros.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "cadastro", id, cadastro["nome_razao"])
+    await create_audit_log(current_user, "delete", "cadastro", id, cadastro["nome_razao"],
+                           snapshot=cadastro, reversible=True)
     return {"message": "Cadastro excluído"}
 
 # --- Anexos de Cadastros ---
@@ -4432,7 +4491,8 @@ async def update_produto(id: str, data: ProdutoCreate, current_user: dict = Depe
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.produtos_admin.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "produto", id, data.descricao)
+    await create_audit_log(current_user, "update", "produto", id, data.descricao,
+                           snapshot=produto, reversible=True)
     
     updated = await db.produtos_admin.find_one({"id": id}, {"_id": 0})
     return updated
@@ -4444,7 +4504,8 @@ async def delete_produto(id: str, current_user: dict = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     
     await db.produtos_admin.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "produto", id, produto["descricao"])
+    await create_audit_log(current_user, "delete", "produto", id, produto["descricao"],
+                           snapshot=produto, reversible=True)
     return {"message": "Produto excluído"}
 
 # --- Anexos de Produtos ---
@@ -4683,7 +4744,8 @@ async def update_ordem_status(id: str, data: StatusOSUpdate, current_user: dict 
         update_fields["data_conclusao"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
     await db.ordens_servico.update_one({"id": id}, {"$set": update_fields})
-    await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']} - Status: {data.status}")
+    await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']} - Status: {data.status}",
+                           snapshot=ordem, reversible=True)
     return {"message": "Status atualizado"}
 
 @api_router.patch("/admin/ordens-servico/{id}/confirmar")
@@ -4693,7 +4755,8 @@ async def confirmar_ordem_servico(id: str, current_user: dict = Depends(get_curr
         raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
     
     await db.ordens_servico.update_one({"id": id}, {"$set": {"confirmada": True}})
-    await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']} - CONFIRMADA")
+    await create_audit_log(current_user, "update", "ordem_servico", id, f"OS-{ordem['numero']} - CONFIRMADA",
+                           snapshot=ordem, reversible=True)
     return {"message": "Ordem confirmada"}
 
 
@@ -4810,7 +4873,8 @@ async def delete_ordem_servico(id: str, current_user: dict = Depends(get_current
         raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
     
     await db.ordens_servico.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "ordem_servico", id, f"OS-{ordem['numero']}")
+    await create_audit_log(current_user, "delete", "ordem_servico", id, f"OS-{ordem['numero']}",
+                           snapshot=ordem, reversible=True)
     return {"message": "Ordem de serviço excluída"}
 
 # --- Plano de Contas (2 níveis) ---
@@ -4860,7 +4924,8 @@ async def update_plano_conta(id: str, data: PlanoContaCreate, current_user: dict
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.plano_contas.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "plano_conta", id, data.nome)
+    await create_audit_log(current_user, "update", "plano_conta", id, data.nome,
+                           snapshot=conta, reversible=True)
     
     updated = await db.plano_contas.find_one({"id": id}, {"_id": 0})
     return updated
@@ -4875,11 +4940,13 @@ async def delete_plano_conta(id: str, current_user: dict = Depends(get_current_u
     subcontas = await db.plano_contas.find({"pai_id": id}, {"_id": 0}).to_list(100)
     for sub in subcontas:
         await db.plano_contas.delete_one({"id": sub["id"]})
-        await create_audit_log(current_user, "delete", "plano_conta", sub["id"], f"Subconta: {sub['nome']}")
+        await create_audit_log(current_user, "delete", "plano_conta", sub["id"], f"Subconta: {sub['nome']}",
+                               snapshot=sub, reversible=True)
     
     # Excluir a conta principal
     await db.plano_contas.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "plano_conta", id, conta["nome"])
+    await create_audit_log(current_user, "delete", "plano_conta", id, conta["nome"],
+                           snapshot=conta, reversible=True)
     
     msg = f"Conta excluída" + (f" junto com {len(subcontas)} subconta(s)" if subcontas else "")
     return {"message": msg}
@@ -4911,7 +4978,8 @@ async def update_centro_custo(id: str, data: CentroCustoCreate, current_user: di
     
     update_data = data.model_dump()
     await db.centros_custo.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "centro_custo", id, data.nome)
+    await create_audit_log(current_user, "update", "centro_custo", id, data.nome,
+                           snapshot=centro, reversible=True)
     
     updated = await db.centros_custo.find_one({"id": id}, {"_id": 0})
     return updated
@@ -4923,7 +4991,8 @@ async def delete_centro_custo(id: str, current_user: dict = Depends(get_current_
         raise HTTPException(status_code=404, detail="Centro de custo não encontrado")
     
     await db.centros_custo.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "centro_custo", id, centro["nome"])
+    await create_audit_log(current_user, "delete", "centro_custo", id, centro["nome"],
+                           snapshot=centro, reversible=True)
     return {"message": "Centro de custo excluído"}
 
 # --- Formas de Pagamento ---
@@ -4961,7 +5030,8 @@ async def update_forma_pagamento(id: str, data: FormaPagamentoCreate, current_us
     update_data = data.model_dump()
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.formas_pagamento.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "forma_pagamento", id, data.nome)
+    await create_audit_log(current_user, "update", "forma_pagamento", id, data.nome,
+                           snapshot=forma, reversible=True)
     
     updated = await db.formas_pagamento.find_one({"id": id}, {"_id": 0})
     return updated
@@ -4973,7 +5043,8 @@ async def delete_forma_pagamento(id: str, current_user: dict = Depends(get_curre
         raise HTTPException(status_code=404, detail="Forma de pagamento não encontrada")
     
     await db.formas_pagamento.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "forma_pagamento", id, forma["nome"])
+    await create_audit_log(current_user, "delete", "forma_pagamento", id, forma["nome"],
+                           snapshot=forma, reversible=True)
     return {"message": "Forma de pagamento excluída"}
 
 # --- Contas Bancárias ---
@@ -5018,7 +5089,8 @@ async def update_conta_bancaria(id: str, data: ContaBancariaCreate, current_user
     update_data = data.model_dump()
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.contas_bancarias.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "conta_bancaria", id, data.nome)
+    await create_audit_log(current_user, "update", "conta_bancaria", id, data.nome,
+                           snapshot=conta, reversible=True)
     
     updated = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
     return updated
@@ -5030,7 +5102,8 @@ async def delete_conta_bancaria(id: str, current_user: dict = Depends(get_curren
         raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
     
     await db.contas_bancarias.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "conta_bancaria", id, conta["nome"])
+    await create_audit_log(current_user, "delete", "conta_bancaria", id, conta["nome"],
+                           snapshot=conta, reversible=True)
     return {"message": "Conta bancária excluída"}
 
 @api_router.patch("/admin/contas-bancarias/{id}/saldo")
@@ -5040,7 +5113,9 @@ async def update_saldo_conta_bancaria(id: str, saldo: float, current_user: dict 
         raise HTTPException(status_code=404, detail="Conta bancária não encontrada")
     
     await db.contas_bancarias.update_one({"id": id}, {"$set": {"saldo_atual": saldo, "updated_at": datetime.now(timezone.utc).isoformat()}})
-    await create_audit_log(current_user, "update", "conta_bancaria_saldo", id, f"Saldo: {saldo}")
+    await create_audit_log(current_user, "update", "conta_bancaria", id, f"Saldo: {saldo}",
+                           snapshot=conta, reversible=True,
+                           details=f"Saldo alterado para R$ {saldo:.2f}")
     
     updated = await db.contas_bancarias.find_one({"id": id}, {"_id": 0})
     return updated
@@ -5186,7 +5261,8 @@ async def delete_movimentacao(id: str, current_user: dict = Depends(get_current_
     
     await create_audit_log(
         current_user, "delete", "movimentacao_conta", id,
-        f"Movimentação excluída: {mov['descricao']}"
+        f"Movimentação excluída: {mov['descricao']}",
+        snapshot=mov, reversible=True,
     )
     
     return {"message": "Movimentação excluída e saldos revertidos"}
@@ -5587,7 +5663,8 @@ async def update_aluguel(id: str, data: AluguelCreate, current_user: dict = Depe
             }}
         )
     
-    await create_audit_log(current_user, "update", "aluguel", id, f"Aluguel #{aluguel['numero']}")
+    await create_audit_log(current_user, "update", "aluguel", id, f"Aluguel #{aluguel['numero']}",
+                           snapshot=aluguel, reversible=True)
     
     updated = await db.alugueis.find_one({"id": id}, {"_id": 0})
     return updated
@@ -5620,7 +5697,8 @@ async def update_aluguel_status(id: str, status_data: dict, current_user: dict =
             {"$set": {"status": "quitada", "data_recebimento": datetime.now(timezone.utc).strftime("%Y-%m-%d")}}
         )
     
-    await create_audit_log(current_user, "update", "aluguel", id, f"Status: {new_status}")
+    await create_audit_log(current_user, "update", "aluguel", id, f"Status: {new_status}",
+                           snapshot=aluguel, reversible=True)
     
     updated = await db.alugueis.find_one({"id": id}, {"_id": 0})
     return updated
@@ -5636,7 +5714,8 @@ async def delete_aluguel(id: str, current_user: dict = Depends(get_current_user)
         await db.contas_receber.delete_one({"id": aluguel["conta_receber_id"]})
     
     await db.alugueis.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "aluguel", id, f"Aluguel #{aluguel['numero']}")
+    await create_audit_log(current_user, "delete", "aluguel", id, f"Aluguel #{aluguel['numero']}",
+                           snapshot=aluguel, reversible=True)
     return {"message": "Aluguel excluído"}
 
 # --- Upload contrato de aluguel ---
@@ -5809,7 +5888,8 @@ async def update_imovel(id: str, imovel: ImovelCreate, current_user: dict = Depe
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.imoveis.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "imovel", id, f"Imóvel: {update_data['descricao']}")
+    await create_audit_log(current_user, "update", "imovel", id, f"Imóvel: {update_data['descricao']}",
+                           snapshot=existing, reversible=True)
     
     updated = await db.imoveis.find_one({"id": id}, {"_id": 0})
     return updated
@@ -5822,7 +5902,8 @@ async def update_imovel_status(id: str, status_data: dict, current_user: dict = 
     
     new_status = status_data.get("status")
     await db.imoveis.update_one({"id": id}, {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}})
-    await create_audit_log(current_user, "update", "imovel", id, f"Status: {new_status}")
+    await create_audit_log(current_user, "update", "imovel", id, f"Status: {new_status}",
+                           snapshot=imovel, reversible=True)
     
     updated = await db.imoveis.find_one({"id": id}, {"_id": 0})
     return updated
@@ -5837,7 +5918,8 @@ async def delete_imovel(id: str, current_user: dict = Depends(get_current_user))
         await db.contas_receber.delete_one({"id": imovel["conta_receber_id"]})
     
     await db.imoveis.delete_one({"id": id})
-    await create_audit_log(current_user, "delete", "imovel", id, f"Imóvel: {imovel['descricao']}")
+    await create_audit_log(current_user, "delete", "imovel", id, f"Imóvel: {imovel['descricao']}",
+                           snapshot=imovel, reversible=True)
     return {"message": "Imóvel excluído"}
 
 CONTRATOS_IMOVEIS_DIR = ROOT_DIR / "uploads" / "contratos_imoveis"

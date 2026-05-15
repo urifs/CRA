@@ -363,7 +363,8 @@ async def create_conta_pagar(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.contas_pagar.insert_one(conta)
-    await create_audit_log(current_user, "create", "conta_pagar", conta["id"], data.descricao)
+    await create_audit_log(current_user, "create", "conta_pagar", conta["id"], data.descricao,
+                           module="Administrativo", reversible=True)
     conta.pop("_id", None)
     return conta
 
@@ -446,6 +447,7 @@ async def create_conta_pagar_parcelada(
     await create_audit_log(
         current_user, "create", "conta_pagar_parcelada", parcela_origem_id,
         f"{data.descricao} - {data.total_parcelas} parcelas",
+        module="Administrativo",
     )
 
     return {
@@ -564,6 +566,7 @@ async def quitar_conta_pagar(
     await create_audit_log(
         current_user, "update", "conta_pagar", id,
         f"{conta['descricao']} - {tipo_quitacao} em {data_pagamento}",
+        module="Administrativo", snapshot=conta, reversible=True,
     )
     return {
         "message": "Pagamento registrado com sucesso",
@@ -585,7 +588,8 @@ async def cancelar_conta_pagar(id: str, current_user: dict = Depends(get_current
         {"id": id},
         {"$set": {"status": "cancelada", "data_cancelamento": datetime.now(timezone.utc).strftime("%Y-%m-%d")}},
     )
-    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - CANCELADA")
+    await create_audit_log(current_user, "update", "conta_pagar", id, f"{conta['descricao']} - CANCELADA",
+                           module="Administrativo", snapshot=conta, reversible=True)
     return {"message": "Conta cancelada"}
 
 
@@ -777,7 +781,8 @@ async def create_conta_receber(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.contas_receber.insert_one(conta)
-    await create_audit_log(current_user, "create", "conta_receber", conta["id"], data.descricao)
+    await create_audit_log(current_user, "create", "conta_receber", conta["id"], data.descricao,
+                           module="Administrativo", reversible=True)
     conta.pop("_id", None)
     return conta
 
@@ -860,6 +865,7 @@ async def create_conta_receber_parcelada(
     await create_audit_log(
         current_user, "create", "conta_receber_parcelada", parcela_origem_id,
         f"{data.descricao} - {data.total_parcelas} parcelas",
+        module="Administrativo",
     )
     return {
         "message": f"{data.total_parcelas} parcelas criadas com sucesso",
@@ -985,6 +991,7 @@ async def quitar_conta_receber(
     await create_audit_log(
         current_user, "update", "conta_receber", id,
         f"{conta['descricao']} - {tipo_quitacao} em {data_recebimento}",
+        module="Administrativo", snapshot=conta, reversible=True,
     )
     return {
         "message": "Recebimento registrado com sucesso",
@@ -1006,7 +1013,8 @@ async def cancelar_conta_receber(id: str, current_user: dict = Depends(get_curre
         {"id": id},
         {"$set": {"status": "cancelada", "data_cancelamento": datetime.now(timezone.utc).strftime("%Y-%m-%d")}},
     )
-    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - CANCELADA")
+    await create_audit_log(current_user, "update", "conta_receber", id, f"{conta['descricao']} - CANCELADA",
+                           module="Administrativo", snapshot=conta, reversible=True)
     return {"message": "Conta cancelada"}
 
 

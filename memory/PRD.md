@@ -2996,3 +2996,61 @@ Novo sistema de Recursos Humanos adicionado à plataforma com:
 - P3: Dashboard de Custo por Máquina.
 - P3: Links públicos de compartilhamento de PDFs.
 
+
+
+---
+
+## Atualização (2026-05-15) — Audit Logs / Rollback abrangente
+
+### Mudança principal
+- **Toda ação realizada no módulo Administrativo (Sistema Financeiro) agora
+  é reversível pelo Histórico**, exceto exportações (que apenas geram
+  arquivos e não modificam dados).
+- Antes, a maioria das ações aparecia como "Esta ação não é reversível pelo
+  histórico" porque as rotas não passavam `snapshot=` nem `reversible=True`.
+
+### Backend
+- `/app/backend/server.py` `create_audit_log`:
+  - Lista `admin_entities` expandida (`conta_bancaria`, `movimentacao*`,
+    `imovel`, `nfe_manual`, `nfse_manual`, `plano_conta`, etc.).
+  - Nova lógica de `reversible`:
+    - **Exportações**: nunca reversíveis.
+    - **Create**: reversível (rollback exclui o item criado).
+    - **Update/Delete em módulo Administrativo**: reversível quando há
+      snapshot do estado anterior. Snapshot é capturado por padrão em todas
+      as rotas Admin (cadastro, produto, OS, plano de contas, centro de
+      custo, forma de pagamento, conta bancária, aluguel, imóvel,
+      movimentação bancária).
+- `/app/backend/utils/audit.py`: mesma lógica replicada para rotas que
+  usam o helper alternativo (`routes/financeiro.py`).
+- `/app/backend/server.py` `/audit-logs/{audit_id}/rollback`:
+  - Suporta `action == "create"` → remove o item criado.
+  - `collection_map` ampliado para incluir `imovel`, `movimentacao_conta`,
+    `nfe_manual`, `nfse_manual`, `plano_contas` (plural).
+- Atualizado >20 chamadas a `create_audit_log` em rotas de Cadastros,
+  Produtos, OS (update/delete/status/confirmar), Plano de Contas, Centro
+  de Custo, Forma de Pagamento, Conta Bancária (incluindo update de
+  saldo), Aluguel (update/status/delete), Imóvel, Movimentação Bancária,
+  Contas a Pagar/Receber (create/update/quitar/cancelar) para passar
+  `snapshot=pre_state, reversible=True`.
+
+### Frontend
+- `FinanceiroHistoryPanel.jsx`: mensagem amigável quando ação não é
+  reversível ("Exportações apenas geram arquivos" ou "registrada apenas
+  para consulta").
+
+### Validação (curl)
+- ✅ Criar Cadastro → log `reversible=True` → POST rollback → cadastro
+  removido (mensagem: "Criação revertida (item removido)").
+- ✅ Editar Centro de Custo → log `reversible=True` → POST rollback →
+  estado anterior (v1) restaurado.
+- ✅ Criar Forma de Pagamento → rollback → item removido.
+- ✅ Listagem do histórico mostra badges corretos (REVERSÍVEL / DESFEITA).
+
+### Próximas tarefas (mantidas)
+- P1: Ordenação de colunas + paginação server-side na Importação NF.
+- P2: Fase 2 da refatoração do `server.py`.
+- P2: Parcelas automáticas em Contas a Receber p/ OS recorrentes.
+- P3: Dashboard de Custo por Máquina.
+- P3: Links públicos de compartilhamento de PDFs.
+
