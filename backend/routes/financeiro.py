@@ -398,7 +398,10 @@ async def update_conta_pagar(
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "conta_pagar", id, data.descricao)
+    await create_audit_log(
+        current_user, "update", "conta_pagar", id, data.descricao,
+        module="Administrativo", snapshot=conta, reversible=True,
+    )
     return await db.contas_pagar.find_one({"id": id}, {"_id": 0})
 
 
@@ -526,7 +529,10 @@ async def delete_conta_pagar(id: str, current_user: dict = Depends(get_current_u
         {"$set": {"conta_pagar_id": None}},
     )
 
-    await create_audit_log(current_user, "delete", "conta_pagar", id, conta["descricao"])
+    await create_audit_log(
+        current_user, "delete", "conta_pagar", id, conta["descricao"],
+        module="Administrativo", snapshot=conta, reversible=True,
+    )
     return {"message": "Conta excluída"}
 
 
@@ -728,7 +734,10 @@ async def update_conta_receber(
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     await db.contas_receber.update_one({"id": id}, {"$set": update_data})
-    await create_audit_log(current_user, "update", "conta_receber", id, data.descricao)
+    await create_audit_log(
+        current_user, "update", "conta_receber", id, data.descricao,
+        module="Administrativo", snapshot=conta, reversible=True,
+    )
     return await db.contas_receber.find_one({"id": id}, {"_id": 0})
 
 
@@ -863,5 +872,8 @@ async def delete_conta_receber(id: str, current_user: dict = Depends(get_current
         {"$set": {"conta_receber_id": None}},
     )
 
-    await create_audit_log(current_user, "delete", "conta_receber", id, conta["descricao"])
+    await create_audit_log(
+        current_user, "delete", "conta_receber", id, conta["descricao"],
+        module="Administrativo", snapshot=conta, reversible=True,
+    )
     return {"message": "Conta excluída"}

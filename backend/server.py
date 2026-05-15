@@ -794,9 +794,18 @@ async def create_audit_log(
     entity_id: str,
     entity_name: str,
     details: str = "",
-    module: str = ""
+    module: str = "",
+    snapshot: Optional[dict] = None,
+    reversible: bool = False,
 ):
-    """Create an audit log entry for tracking user actions."""
+    """Create an audit log entry for tracking user actions.
+
+    Args:
+        snapshot: Estado ANTERIOR do documento (antes da ação). Necessário para
+            permitir rollback de updates/deletes. Para creates, pode ser None.
+        reversible: Quando True, indica que esta ação pode ser desfeita pelo
+            usuário via Histórico Financeiro.
+    """
     # Mapear ações para descrições em português
     action_labels = {
         "criar": "Criou",
@@ -882,9 +891,23 @@ async def create_audit_log(
         "entity_name": entity_name,
         "module": module,
         "details": detailed_info,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "reversible": bool(reversible and snapshot is not None and action.lower() in ("excluir", "delete", "editar", "update")),
+        "rolled_back": False,
     }
+    if snapshot is not None:
+        # Garante que valores não-JSON-friendly (datetime) sejam strings ISO
+        def _norm(v):
+            if isinstance(v, datetime):
+                return v.isoformat()
+            if isinstance(v, dict):
+                return {k: _norm(vv) for k, vv in v.items()}
+            if isinstance(v, list):
+                return [_norm(vv) for vv in v]
+            return v
+        audit_doc["snapshot"] = _norm({k: v for k, v in snapshot.items() if k != "_id"})
     await db.audit_logs.insert_one(audit_doc)
+    return audit_id
 
 # ============ AUTH ROUTES ============
 
@@ -3041,6 +3064,102 @@ async def get_audit_logs(
         details=l.get("details", ""),
         created_at=l.get("created_at", "")
     ) for l in logs]
+
+
+# ============ HISTÓRICO E ROLLBACK (Financeiro) ============
+
+@api_router.get("/audit-logs/my-history")
+async def get_my_history(
+    module: Optional[str] = None,
+    limit: int = 80,
+    current_user: dict = Depends(get_current_user),
+):
+    """Retorna o histórico de ações do USUÁRIO LOGADO, ordenado do mais recente
+    para o mais antigo. Inclui o flag `reversible` e `rolled_back` para a UI
+    decidir se mostra o botão de Desfazer."""
+    q = {"user_id": current_user["id"]}
+    if module:
+        q["module"] = module
+    logs = await db.audit_logs.find(q, {"_id": 0, "snapshot": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return logs
+
+
+@api_router.post("/audit-logs/{audit_id}/rollback")
+async def rollback_audit_action(
+    audit_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Desfaz uma ação reversível executada pelo usuário.
+
+    Suporta:
+    - Exclusão de contas_pagar/contas_receber → recria o documento.
+    - Edição de contas_pagar/contas_receber → restaura o estado anterior.
+    """
+    log = await db.audit_logs.find_one({"id": audit_id}, {"_id": 0})
+    if not log:
+        raise HTTPException(status_code=404, detail="Registro de auditoria não encontrado")
+    if log.get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Você só pode desfazer ações próprias")
+    if not log.get("reversible"):
+        raise HTTPException(status_code=400, detail="Esta ação não é reversível")
+    if log.get("rolled_back"):
+        raise HTTPException(status_code=400, detail="Esta ação já foi desfeita anteriormente")
+    snapshot = log.get("snapshot")
+    if not snapshot:
+        raise HTTPException(status_code=400, detail="Não há snapshot para esta ação — rollback indisponível")
+
+    entity_type = log.get("entity_type", "")
+    action = log.get("action", "").lower()
+
+    # Normaliza action: pode vir como "delete"/"update" (utils/audit.py) ou
+    # "Excluiu Conta a Pagar"/"Editou Conta a Pagar" (server.py).
+    is_delete = "excluiu" in action or action.startswith("delete")
+    is_update = "editou" in action or action.startswith("update")
+
+    # Mapa entity_type → collection
+    collection_map = {
+        "conta_pagar": "contas_pagar",
+        "contas_pagar": "contas_pagar",
+        "conta_receber": "contas_receber",
+        "contas_receber": "contas_receber",
+    }
+    coll_name = collection_map.get(entity_type)
+    if not coll_name:
+        raise HTTPException(status_code=400, detail=f"Rollback não suportado para o tipo '{entity_type}'")
+
+    coll = db[coll_name]
+
+    if is_delete:
+        # Re-insere o documento (se ainda não existir)
+        existing = await coll.find_one({"id": snapshot.get("id")}, {"_id": 1})
+        if existing:
+            raise HTTPException(status_code=400, detail="O item já existe — possivelmente foi recriado depois")
+        await coll.insert_one(snapshot)
+        msg = "Conta restaurada"
+    elif is_update:
+        # Restaura o snapshot por completo
+        await coll.update_one({"id": snapshot.get("id")}, {"$set": snapshot})
+        msg = "Edição revertida"
+    else:
+        raise HTTPException(status_code=400, detail=f"Rollback não implementado para a ação '{action}'")
+
+    # Marca o log como revertido e cria um novo log de "Desfeita por <usuário>"
+    await db.audit_logs.update_one(
+        {"id": audit_id},
+        {"$set": {"rolled_back": True, "rolled_back_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    await create_audit_log(
+        user=current_user,
+        action="editar",
+        entity_type=entity_type,
+        entity_id=snapshot.get("id", ""),
+        entity_name=log.get("entity_name", ""),
+        details=f"ROLLBACK da ação '{log.get('action')}' de {log.get('created_at','')[:19]}",
+        module=log.get("module") or "Administrativo",
+    )
+    return {"ok": True, "message": msg}
+
+
 
 # ============ ROOT ============
 

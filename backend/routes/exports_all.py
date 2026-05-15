@@ -51,6 +51,13 @@ logger = logging.getLogger(__name__)
 
 exports_all_router = APIRouter(tags=["Exportação"])
 
+# Filtros expandidos: "quitada" abrange tanto contas totalmente quitadas
+# (status=quitada) quanto contas com pagamentos parciais registrados
+# (pagamentos[]/recebimentos[] não-vazios). Garante que parcelas pagas
+# apareçam na visão de Quitados/Recebidos do Financeiro.
+FILTER_QUITADA_CP = {"$or": [{"status": "quitada"}, {"pagamentos.0": {"$exists": True}}]}
+FILTER_QUITADA_CR = {"$or": [{"status": "quitada"}, {"recebimentos.0": {"$exists": True}}]}
+
 
 # ============ HELPER: Filtro de período por coleção ============
 
@@ -562,28 +569,44 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
                     cell(status_map.get(item.get("status", ""), item.get("status", "-"))),
                 ])
         elif category == "contas_pagar":
-            headers = [cell("Fornecedor", True), cell("Vencimento", True), cell("Quitação", True), cell("Valor", True), cell("Descrição", True), cell("Status", True)]
+            headers = [cell("Fornecedor", True), cell("Vencimento", True), cell("Quitação", True), cell("Valor", True), cell("Pago", True), cell("Descrição", True), cell("Status", True)]
             table_data = [headers]
             for item in data:
+                pagamentos = item.get("pagamentos") or []
+                # Quando há pagamentos parciais, mostramos a soma deles em "Pago"
+                # e a data do ÚLTIMO pagamento em "Quitação"
+                total_pago = sum(float(p.get("valor", 0) or 0) for p in pagamentos)
+                data_quit = item.get("data_pagamento") or (pagamentos[-1].get("data") if pagamentos else None)
+                status_label = item.get("status", "-").upper()
+                if pagamentos and item.get("status") != "quitada":
+                    status_label = f"PARCIAL ({len(pagamentos)})"
                 table_data.append([
                     cell(item.get("fornecedor_nome", "-")),
                     cell(fmt_date(item.get("data_vencimento"))),
-                    cell(fmt_date(item.get("data_pagamento"))),
+                    cell(fmt_date(data_quit)),
                     cell(fmt_money(item.get('valor', 0))),
+                    cell(fmt_money(total_pago) if pagamentos else "-"),
                     cell(item.get("descricao", "-")),
-                    cell(item.get("status", "-").upper()),
+                    cell(status_label),
                 ])
         elif category == "contas_receber":
-            headers = [cell("Cliente", True), cell("Vencimento", True), cell("Recebimento", True), cell("Valor", True), cell("Descrição", True), cell("Status", True)]
+            headers = [cell("Cliente", True), cell("Vencimento", True), cell("Recebimento", True), cell("Valor", True), cell("Recebido", True), cell("Descrição", True), cell("Status", True)]
             table_data = [headers]
             for item in data:
+                recebimentos = item.get("recebimentos") or []
+                total_recebido = sum(float(r.get("valor", 0) or 0) for r in recebimentos)
+                data_quit = item.get("data_recebimento") or (recebimentos[-1].get("data") if recebimentos else None)
+                status_label = item.get("status", "-").upper()
+                if recebimentos and item.get("status") != "quitada":
+                    status_label = f"PARCIAL ({len(recebimentos)})"
                 table_data.append([
                     cell(item.get("cliente_nome", "-")),
                     cell(fmt_date(item.get("data_vencimento"))),
-                    cell(fmt_date(item.get("data_recebimento"))),
+                    cell(fmt_date(data_quit)),
                     cell(fmt_money(item.get('valor', 0))),
+                    cell(fmt_money(total_recebido) if recebimentos else "-"),
                     cell(item.get("descricao", "-")),
-                    cell(item.get("status", "-").upper()),
+                    cell(status_label),
                 ])
         elif category == "cadastros":
             headers = [cell("Nome/Razão", True), cell("Tipo", True), cell("CPF/CNPJ", True), cell("Telefone", True), cell("Cidade", True)]
@@ -801,6 +824,85 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         elements.append(table)
+
+        # Seção: Detalhes dos Pagamentos Parciais (somente para contas_pagar/receber)
+        if category in ("contas_pagar", "contas_receber"):
+            campo_pagamentos = "pagamentos" if category == "contas_pagar" else "recebimentos"
+            label_titulo = "PAGAMENTOS" if category == "contas_pagar" else "RECEBIMENTOS"
+            campo_pessoa = "fornecedor_nome" if category == "contas_pagar" else "cliente_nome"
+            contas_com_pag = [it for it in data if (it.get(campo_pagamentos) or [])]
+            if contas_com_pag:
+                elements.append(Spacer(1, 14))
+                section_title = ParagraphStyle(
+                    'PagamentosSection', parent=styles['Heading2'],
+                    fontSize=12, textColor=colors.Color(0.89, 0.10, 0.10),
+                    spaceBefore=8, spaceAfter=6,
+                )
+                elements.append(Paragraph(
+                    f"DETALHES DOS {label_titulo} PARCIAIS",
+                    section_title,
+                ))
+                conta_subtitle_style = ParagraphStyle(
+                    'ContaSubTitle', parent=styles['Normal'],
+                    fontSize=10, fontName='Helvetica-Bold',
+                    textColor=colors.black, spaceBefore=10, spaceAfter=4,
+                )
+                for conta in contas_com_pag:
+                    pagamentos = conta.get(campo_pagamentos) or []
+                    pessoa = conta.get(campo_pessoa, "-") or "-"
+                    desc = (conta.get("descricao") or "-")[:60]
+                    vencimento = fmt_date(conta.get("data_vencimento"))
+                    valor_total_conta = float(conta.get("valor_final") or conta.get("valor", 0) or 0)
+                    cabecalho = (
+                        f"{pessoa} • {desc} • Vencimento {vencimento} • Total {fmt_money(valor_total_conta)}"
+                    )
+                    elements.append(Paragraph(cabecalho, conta_subtitle_style))
+                    pag_headers = [
+                        cell("Data", True),
+                        cell("Valor pago", True),
+                        cell("Forma", True),
+                        cell("Observação", True),
+                        cell("Por", True),
+                    ]
+                    pag_data = [pag_headers]
+                    total_pago = 0.0
+                    for p in pagamentos:
+                        v = float(p.get("valor", 0) or 0)
+                        total_pago += v
+                        pag_data.append([
+                            cell(fmt_date(p.get("data"))),
+                            cell(fmt_money(v)),
+                            cell(p.get("forma_pagamento") or p.get("forma") or "-"),
+                            cell((p.get("observacao") or "-")[:80]),
+                            cell((p.get("created_by") or "-")[:25]),
+                        ])
+                    saldo = valor_total_conta - total_pago
+                    pag_data.append([
+                        cell("TOTAL PAGO"),
+                        cell(fmt_money(total_pago)),
+                        cell("—"),
+                        cell(f"Saldo: {fmt_money(saldo)}" if saldo > 0.01 else "QUITADA"),
+                        cell(""),
+                    ])
+                    pag_table = Table(
+                        pag_data,
+                        colWidths=[doc.width * 0.12, doc.width * 0.15, doc.width * 0.13,
+                                   doc.width * 0.40, doc.width * 0.20],
+                        repeatRows=1,
+                    )
+                    pag_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#28a745")),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('FONTSIZE', (0, 0), (-1, -1), 8),
+                        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
+                        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#eafaf1")),
+                        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('TOPPADDING', (0, 0), (-1, -1), 3),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                    ]))
+                    elements.append(pag_table)
+                    elements.append(Spacer(1, 6))
         
         # Calcular e adicionar total quando houver valores monetários
         total_valor = 0
@@ -914,17 +1016,17 @@ async def export_pdf(
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar", "filter": {}},
         "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "em_aberto"}},
         "contas_pagar_pendentes": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "em_aberto"}},
-        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
-        "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": FILTER_QUITADA_CP},
+        "contas_pagar_quitadas": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": FILTER_QUITADA_CP},
         "contas_pagar_vencidas": {"collection": "contas_pagar", "title": "Contas a Pagar Vencidas", "filter": {"status": "em_aberto", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
         
         # Contas a Receber
         "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber", "filter": {}},
         "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "em_aberto"}},
         "contas_receber_pendentes": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "em_aberto"}},
-        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
-        "contas_receber_quitadas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
-        "contas_receber_recebidas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": FILTER_QUITADA_CR},
+        "contas_receber_quitadas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": FILTER_QUITADA_CR},
+        "contas_receber_recebidas": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": FILTER_QUITADA_CR},
         "contas_receber_vencidas": {"collection": "contas_receber", "title": "Contas a Receber Vencidas", "filter": {"status": "em_aberto", "data_vencimento": {"$lt": datetime.now().strftime("%Y-%m-%d")}}},
         
         # Cadastros
@@ -1080,10 +1182,10 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
         "obras": {"collection": "obras", "title": "Obras e Projetos", "filter": {}},
         "contas_pagar": {"collection": "contas_pagar", "title": "Contas a Pagar", "filter": {}},
         "contas_pagar_pendente": {"collection": "contas_pagar", "title": "Contas a Pagar Pendentes", "filter": {"status": "em_aberto"}},
-        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": {"status": "quitada"}},
+        "contas_pagar_quitada": {"collection": "contas_pagar", "title": "Contas a Pagar Quitadas", "filter": FILTER_QUITADA_CP},
         "contas_receber": {"collection": "contas_receber", "title": "Contas a Receber", "filter": {}},
         "contas_receber_pendente": {"collection": "contas_receber", "title": "Contas a Receber Pendentes", "filter": {"status": "em_aberto"}},
-        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": {"status": "quitada"}},
+        "contas_receber_quitada": {"collection": "contas_receber", "title": "Contas a Receber Recebidas", "filter": FILTER_QUITADA_CR},
         "cadastros": {"collection": "cadastros", "title": "Cadastros", "filter": {}},
         "produtos_admin": {"collection": "produtos_admin", "title": "Produtos", "filter": {}},
         "ordens_servico": {"collection": "ordens_servico", "title": "Ordens de Serviço", "filter": {}},
@@ -1207,14 +1309,14 @@ async def get_export_items(
         # Contas a Pagar
         "contas_pagar": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "extra_fields": ["valor", "data_vencimento", "fornecedor_nome", "numero_doc"]},
         "contas_pagar_pendente": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "fornecedor_nome", "numero_doc"]},
-        "contas_pagar_quitada": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": {"status": "quitada"}, "extra_fields": ["valor", "data_vencimento", "fornecedor_nome", "numero_doc"]},
-        "contas_pagar_quitadas": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": {"status": "quitada"}, "extra_fields": ["valor", "data_vencimento", "fornecedor_nome", "numero_doc"]},
+        "contas_pagar_quitada": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": FILTER_QUITADA_CP, "extra_fields": ["valor", "data_vencimento", "data_pagamento", "fornecedor_nome", "numero_doc", "status", "pagamentos"]},
+        "contas_pagar_quitadas": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": FILTER_QUITADA_CP, "extra_fields": ["valor", "data_vencimento", "data_pagamento", "fornecedor_nome", "numero_doc", "status", "pagamentos"]},
         "contas_pagar_vencidas": {"name_field": "descricao", "id_field": "id", "collection": "contas_pagar", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "fornecedor_nome", "numero_doc"], "vencidas": True},
         # Contas a Receber
         "contas_receber": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "extra_fields": ["valor", "data_vencimento", "cliente_nome", "numero_doc"]},
         "contas_receber_pendente": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "cliente_nome", "numero_doc"]},
-        "contas_receber_quitada": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": {"status": "quitada"}, "extra_fields": ["valor", "data_vencimento", "cliente_nome", "numero_doc"]},
-        "contas_receber_recebidas": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": {"status": "quitada"}, "extra_fields": ["valor", "data_vencimento", "cliente_nome", "numero_doc"]},
+        "contas_receber_quitada": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": FILTER_QUITADA_CR, "extra_fields": ["valor", "data_vencimento", "data_recebimento", "cliente_nome", "numero_doc", "status", "recebimentos"]},
+        "contas_receber_recebidas": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": FILTER_QUITADA_CR, "extra_fields": ["valor", "data_vencimento", "data_recebimento", "cliente_nome", "numero_doc", "status", "recebimentos"]},
         "contas_receber_vencidas": {"name_field": "descricao", "id_field": "id", "collection": "contas_receber", "filter": {"status": "em_aberto"}, "extra_fields": ["valor", "data_vencimento", "cliente_nome", "numero_doc"], "vencidas": True},
         # Outras
         "machines": {"name_field": "name", "id_field": "id", "collection": "machines", "extra_fields": ["model", "plate"]},
@@ -1273,13 +1375,13 @@ _EXPORT_ITEMS_CONFIG = {
     "contas_bancarias": {"collection": "contas_bancarias"},
     "contas_pagar": {"collection": "contas_pagar"},
     "contas_pagar_pendente": {"collection": "contas_pagar", "filter": {"status": "em_aberto"}},
-    "contas_pagar_quitada": {"collection": "contas_pagar", "filter": {"status": "quitada"}},
-    "contas_pagar_quitadas": {"collection": "contas_pagar", "filter": {"status": "quitada"}},
+    "contas_pagar_quitada": {"collection": "contas_pagar", "filter": FILTER_QUITADA_CP},
+    "contas_pagar_quitadas": {"collection": "contas_pagar", "filter": FILTER_QUITADA_CP},
     "contas_pagar_vencidas": {"collection": "contas_pagar", "filter": {"status": "em_aberto"}, "vencidas": True},
     "contas_receber": {"collection": "contas_receber"},
     "contas_receber_pendente": {"collection": "contas_receber", "filter": {"status": "em_aberto"}},
-    "contas_receber_quitada": {"collection": "contas_receber", "filter": {"status": "quitada"}},
-    "contas_receber_recebidas": {"collection": "contas_receber", "filter": {"status": "quitada"}},
+    "contas_receber_quitada": {"collection": "contas_receber", "filter": FILTER_QUITADA_CR},
+    "contas_receber_recebidas": {"collection": "contas_receber", "filter": FILTER_QUITADA_CR},
     "contas_receber_vencidas": {"collection": "contas_receber", "filter": {"status": "em_aberto"}, "vencidas": True},
     "machines": {"collection": "machines"},
     "maintenances": {"collection": "maintenances"},

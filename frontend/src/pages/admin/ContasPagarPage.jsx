@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import AttachmentsSection from "@/components/AttachmentsSection";
 import CadastroFormModal from "@/components/CadastroFormModal";
 import { formatCurrency as formatCurrencyInput, parseCurrency } from "@/utils/masks";
+import { formatDateBR, formatDateTimeBR } from "@/utils/dateFormat";
 
 const formasPagamento = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -647,10 +648,10 @@ export default function ContasPagarPage() {
                       )}
                     </td>
                     <td className="p-3">{c.documento || "-"}</td>
-                    <td className="p-3">{c.data_emissao ? new Date(c.data_emissao).toLocaleDateString('pt-BR') : "-"}</td>
-                    <td className="p-3">{new Date(c.data_vencimento).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3">{formatDateBR(c.data_emissao)}</td>
+                    <td className="p-3">{formatDateBR(c.data_vencimento)}</td>
                     <td className="p-3 text-emerald-700" data-testid={`cell-pago-em-${c.id}`}>
-                      {c.data_pagamento ? new Date(c.data_pagamento).toLocaleDateString('pt-BR') : <span className="text-gray-300">—</span>}
+                      {c.data_pagamento ? formatDateBR(c.data_pagamento) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-3 text-right font-medium text-red-600">{formatCurrency(c.valor_final || c.valor)}</td>
                     <td className="p-3 text-xs">{formasPagamentoDB.find(f => f.nome?.toLowerCase() === c.forma_pagamento?.toLowerCase())?.nome || formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
@@ -674,7 +675,21 @@ export default function ContasPagarPage() {
 
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => {
+            // Evita que o modal feche acidentalmente quando o usuário interage
+            // com o file picker do sistema (input type=file abre janela nativa).
+            // O usuário deve fechar explicitamente pelo botão Cancelar/X.
+            e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            // Permite ESC apenas se NÃO estiver no fluxo de anexo (mantém UX)
+            if (document.querySelector('input[type="file"]:focus')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader><DialogTitle>{editingConta ? "Editar Conta a Pagar" : "Nova Conta a Pagar"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -780,7 +795,7 @@ export default function ContasPagarPage() {
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between" data-testid="info-data-pagamento">
                 <div className="flex items-center gap-2 text-sm text-emerald-800">
                   <CheckCircle2 size={16} />
-                  <span><strong>Pago em:</strong> {new Date(editingConta.data_pagamento).toLocaleDateString('pt-BR')}</span>
+                  <span><strong>Pago em:</strong> {formatDateBR(editingConta.data_pagamento)}</span>
                 </div>
                 {editingConta.valor_pago != null && (
                   <span className="text-sm font-semibold text-emerald-900">
@@ -1254,7 +1269,7 @@ export default function ContasPagarPage() {
                 )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Vencimento:</span>
-                  <span className="font-medium">{new Date(quitarContaInfo.data_vencimento).toLocaleDateString('pt-BR')}</span>
+                  <span className="font-medium">{formatDateBR(quitarContaInfo.data_vencimento)}</span>
                 </div>
               </div>
               
@@ -1505,7 +1520,7 @@ export default function ContasPagarPage() {
                       <div key={p.id || idx} className="bg-white border rounded-lg p-3 space-y-1">
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-sm text-gray-500">
-                            {new Date(p.data).toLocaleDateString('pt-BR')}
+                            {formatDateBR(p.data)}
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-green-600">{formatCurrency(p.valor)}</span>
@@ -1545,7 +1560,7 @@ export default function ContasPagarPage() {
                           <p className="text-xs text-gray-500">{p.observacao}</p>
                         )}
                         <p className="text-xs text-gray-400">
-                          Por: {p.created_by} em {new Date(p.created_at).toLocaleString('pt-BR')}
+                          Por: {p.created_by} em {formatDateTimeBR(p.created_at)}
                         </p>
                       </div>
                     ))}

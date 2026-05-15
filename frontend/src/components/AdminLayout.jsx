@@ -24,15 +24,18 @@ import {
   FileInput,
   Inbox,
   ArrowLeftRight,
-  FilePlus
+  FilePlus,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatbotWidget from "@/components/ChatbotWidget";
 import TasksInbox from "@/components/TasksInbox";
+import FinanceiroHistoryPanel from "@/components/FinanceiroHistoryPanel";
 
 export const AdminLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [historyOpen, setHistoryOpen] = useState(false);
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -115,6 +118,15 @@ export const AdminLayout = () => {
           <div className="flex items-center gap-1">
             {/* Tasks inbox */}
             <TasksInbox system="administrativo" accentColor="#D4A000" />
+            {/* Histórico Financeiro */}
+            <button
+              data-testid="admin-mobile-history-btn"
+              className="p-2 hover:bg-gray-900 rounded-lg"
+              onClick={() => setHistoryOpen(true)}
+              title="Histórico de ações"
+            >
+              <History size={22} />
+            </button>
             {/* Notification bell for mobile header */}
             <button
               data-testid="admin-mobile-notif-btn"
@@ -163,8 +175,16 @@ export const AdminLayout = () => {
               <Building2 className="text-[#D4A000]" size={28} />
               <span>Administrativo</span>
             </h1>
-            <div className="hidden md:block">
+            <div className="hidden md:flex items-center gap-1">
               <TasksInbox system="administrativo" accentColor="#D4A000" />
+              <button
+                onClick={() => setHistoryOpen(true)}
+                className="p-2 text-gray-300 hover:text-white hover:bg-gray-900 rounded-lg"
+                title="Histórico de ações"
+                data-testid="admin-history-btn"
+              >
+                <History size={22} />
+              </button>
             </div>
           </div>
           <p className="text-xs text-gray-400 mt-1">Sistema Financeiro</p>
@@ -277,6 +297,9 @@ export const AdminLayout = () => {
 
       {/* Chatbot Widget */}
       <ChatbotWidget module="administrativo" accentColor="#D4A000" />
+
+      {/* Painel de Histórico Financeiro */}
+      <FinanceiroHistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </div>
   );
 };

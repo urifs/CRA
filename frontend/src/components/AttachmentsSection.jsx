@@ -365,6 +365,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
               </DialogTitle>
               <div className="flex items-center gap-2">
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   className="h-8"
@@ -381,6 +382,7 @@ export default function AttachmentsSection({ entityType, entityId, accentColor =
                   Baixar
                 </Button>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"

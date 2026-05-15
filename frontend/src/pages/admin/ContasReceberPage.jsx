@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import AttachmentsSection from "@/components/AttachmentsSection";
 import CadastroFormModal from "@/components/CadastroFormModal";
 import { formatCurrency as formatCurrencyInput, parseCurrency } from "@/utils/masks";
+import { formatDateBR, formatDateTimeBR } from "@/utils/dateFormat";
 
 const formasPagamento = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -647,10 +648,10 @@ export default function ContasReceberPage() {
                       )}
                     </td>
                     <td className="p-3">{c.documento || "-"}</td>
-                    <td className="p-3">{c.data_emissao ? new Date(c.data_emissao).toLocaleDateString('pt-BR') : "-"}</td>
-                    <td className="p-3">{new Date(c.data_vencimento).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3">{formatDateBR(c.data_emissao)}</td>
+                    <td className="p-3">{formatDateBR(c.data_vencimento)}</td>
                     <td className="p-3 text-emerald-700" data-testid={`cell-recebido-em-${c.id}`}>
-                      {c.data_recebimento ? new Date(c.data_recebimento).toLocaleDateString('pt-BR') : <span className="text-gray-300">—</span>}
+                      {c.data_recebimento ? formatDateBR(c.data_recebimento) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-3 text-right font-medium text-green-600">{formatCurrency(c.valor_final || c.valor)}</td>
                     <td className="p-3 text-xs">{formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
@@ -674,7 +675,15 @@ export default function ContasReceberPage() {
 
       {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => {
+            if (document.querySelector('input[type="file"]:focus')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader><DialogTitle>{editingConta ? "Editar Conta a Receber" : "Nova Conta a Receber"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -781,7 +790,7 @@ export default function ContasReceberPage() {
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between" data-testid="info-data-recebimento">
                 <div className="flex items-center gap-2 text-sm text-emerald-800">
                   <CheckCircle2 size={16} />
-                  <span><strong>Recebido em:</strong> {new Date(editingConta.data_recebimento).toLocaleDateString('pt-BR')}</span>
+                  <span><strong>Recebido em:</strong> {formatDateBR(editingConta.data_recebimento)}</span>
                 </div>
                 {editingConta.valor_recebido != null && (
                   <span className="text-sm font-semibold text-emerald-900">
@@ -1107,7 +1116,7 @@ export default function ContasReceberPage() {
                 )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Vencimento:</span>
-                  <span className="font-medium">{new Date(quitarContaInfo.data_vencimento).toLocaleDateString('pt-BR')}</span>
+                  <span className="font-medium">{formatDateBR(quitarContaInfo.data_vencimento)}</span>
                 </div>
               </div>
               
@@ -1358,7 +1367,7 @@ export default function ContasReceberPage() {
                       <div key={r.id || idx} className="bg-white border rounded-lg p-3 space-y-1">
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-sm text-gray-500">
-                            {new Date(r.data).toLocaleDateString('pt-BR')}
+                            {formatDateBR(r.data)}
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-green-600">{formatCurrency(r.valor)}</span>
@@ -1398,7 +1407,7 @@ export default function ContasReceberPage() {
                           <p className="text-xs text-gray-500">{r.observacao}</p>
                         )}
                         <p className="text-xs text-gray-400">
-                          Por: {r.created_by} em {new Date(r.created_at).toLocaleString('pt-BR')}
+                          Por: {r.created_by} em {formatDateTimeBR(r.created_at)}
                         </p>
                       </div>
                     ))}

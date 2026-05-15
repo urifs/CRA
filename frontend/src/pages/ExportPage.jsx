@@ -1438,7 +1438,50 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                           {item.banco && (
                                             <span>{item.banco}</span>
                                           )}
+                                          {/* Indicador de pagamentos parciais (parcelas pagas) */}
+                                          {(item.pagamentos?.length || item.recebimentos?.length) > 0 && (
+                                            <span
+                                              className="font-medium text-emerald-700 cursor-pointer hover:underline"
+                                              title="Ver parcelas pagas"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const el = document.getElementById(`parcelas-${item.id}`);
+                                                if (el) el.classList.toggle('hidden');
+                                              }}
+                                            >
+                                              ▾ {(item.pagamentos?.length || item.recebimentos?.length)} pagamento(s)
+                                            </span>
+                                          )}
                                         </div>
+                                        {/* Dropdown FIXO com as parcelas pagas (oculto por padrão) */}
+                                        {(item.pagamentos?.length || item.recebimentos?.length) > 0 && (
+                                          <div
+                                            id={`parcelas-${item.id}`}
+                                            className="hidden mt-2 ml-4 pl-3 border-l-2 border-emerald-300 space-y-1"
+                                          >
+                                            {(item.pagamentos || item.recebimentos || []).map((p, idx) => {
+                                              const [y, m, d] = String(p.data || '').split('-');
+                                              const dataFmt = (y && m && d) ? `${d}/${m}/${y}` : (p.data || '-');
+                                              return (
+                                                <div key={p.id || idx} className="flex items-center gap-2 text-xs text-gray-700 bg-emerald-50 rounded px-2 py-1">
+                                                  <span className="font-medium text-emerald-800">{dataFmt}</span>
+                                                  <span className="font-semibold text-emerald-700">
+                                                    R$ {Number(p.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                  </span>
+                                                  {p.forma_pagamento && (
+                                                    <span className="text-gray-500">• {p.forma_pagamento}</span>
+                                                  )}
+                                                  {p.observacao && (
+                                                    <span className="text-gray-400 truncate" title={p.observacao}>
+                                                      • {p.observacao}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-1 shrink-0">
                                         {/* Botão Recibo - apenas para categorias que suportam */}
