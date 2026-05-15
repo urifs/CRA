@@ -169,21 +169,21 @@ export const AdminLayout = () => {
         </button>
 
         {/* Logo */}
-        <div className="p-5 border-b border-gray-800" style={{ flexShrink: 0 }}>
-          <div className="flex items-center justify-between">
-            <h1 className="font-heading text-xl font-black tracking-tight text-white flex items-center gap-2">
-              <Building2 className="text-[#D4A000]" size={28} />
-              <span>Administrativo</span>
+        <div className="p-4 border-b border-gray-800" style={{ flexShrink: 0 }}>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="font-heading text-base font-black tracking-tight text-white flex items-center gap-1.5 min-w-0">
+              <Building2 className="text-[#D4A000] flex-shrink-0" size={22} />
+              <span className="truncate">Administrativo</span>
             </h1>
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-0.5 flex-shrink-0">
               <TasksInbox system="administrativo" accentColor="#D4A000" />
               <button
                 onClick={() => setHistoryOpen(true)}
-                className="p-2 text-gray-300 hover:text-white hover:bg-gray-900 rounded-lg"
+                className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-900 rounded-lg flex-shrink-0"
                 title="Histórico de ações"
                 data-testid="admin-history-btn"
               >
-                <History size={22} />
+                <History size={18} />
               </button>
             </div>
           </div>

@@ -3116,12 +3116,28 @@ async def rollback_audit_action(
     is_delete = "excluiu" in action or action.startswith("delete")
     is_update = "editou" in action or action.startswith("update")
 
-    # Mapa entity_type → collection
+    # Mapa entity_type → collection (suporta variantes singular/plural)
     collection_map = {
         "conta_pagar": "contas_pagar",
         "contas_pagar": "contas_pagar",
         "conta_receber": "contas_receber",
         "contas_receber": "contas_receber",
+        "cadastro": "cadastros",
+        "cadastros": "cadastros",
+        "fornecedor": "cadastros",
+        "cliente": "cadastros",
+        "ordem_servico": "ordens_servico",
+        "os": "ordens_servico",
+        "aluguel": "alugueis",
+        "movimentacao": "movimentacoes_contas",
+        "movimentacao_bancaria": "movimentacoes_contas",
+        "plano_conta": "plano_contas",
+        "centro_custo": "centros_custo",
+        "categoria": "categories",
+        "subcategoria": "subcategorias",
+        "forma_pagamento": "formas_pagamento",
+        "conta_bancaria": "contas_bancarias",
+        "produto": "produtos_admin",
     }
     coll_name = collection_map.get(entity_type)
     if not coll_name:
