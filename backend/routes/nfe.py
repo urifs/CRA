@@ -330,13 +330,13 @@ async def criar_conta_pagar_from_nfe(
     if nfe.get("conta_pagar_id"):
         raise HTTPException(status_code=400, detail="Esta NF-e já possui uma conta a pagar vinculada")
 
-    cadastro = await db.cadastros.find_one({"cpf_cnpj": nfe["cnpj_emitente"]})
+    cadastro = await db.cadastros.find_one({"cpf_cnpj": nfe.get("cnpj_emitente")})
     if not cadastro:
         cadastro_doc = {
             "id": str(uuid.uuid4()),
             "tipo": "fornecedor",
-            "nome_razao": nfe["razao_social_emitente"],
-            "cpf_cnpj": nfe["cnpj_emitente"],
+            "nome_razao": nfe.get("razao_social_emitente") or nfe.get("nome_emitente") or "Fornecedor não identificado",
+            "cpf_cnpj": nfe.get("cnpj_emitente") or "",
             "telefone": "",
             "email": "",
             "endereco": "",
@@ -349,26 +349,34 @@ async def criar_conta_pagar_from_nfe(
         await db.cadastros.insert_one(cadastro_doc)
         cadastro = cadastro_doc
 
+    nome_emitente = (
+        nfe.get("razao_social_emitente")
+        or nfe.get("nome_emitente")
+        or "Fornecedor"
+    )
+    numero_nf = str(nfe.get("numero_nf") or nfe.get("numero") or "")
+    chave = nfe.get("chave_acesso") or ""
+
     conta_pagar_doc = {
         "id": str(uuid.uuid4()),
-        "descricao": f"NF-e {nfe['numero_nf']} - {nfe['razao_social_emitente']}",
+        "descricao": f"NF-e {numero_nf} - {nome_emitente}",
         "cadastro_id": cadastro["id"],
         "cadastro_nome": cadastro["nome_razao"],
-        "valor": nfe["valor_total"],
+        "valor": float(nfe.get("valor_total") or 0),
         "desconto": 0,
         "juros": 0,
         "multa": 0,
-        "data_vencimento": nfe["data_emissao"],
+        "data_vencimento": nfe.get("data_emissao"),
         "data_pagamento": None,
         "status": "pendente",
         "categoria": "fornecedores",
-        "observacoes": f"Importada automaticamente da NF-e. Chave: {nfe['chave_acesso']}",
+        "observacoes": f"Importada automaticamente da NF-e. Chave: {chave}",
         "centro_custo_id": None,
         "plano_conta_id": None,
         "forma_pagamento_id": None,
         "conta_bancaria_id": None,
         "nfe_id": nfe_id,
-        "nfe_chave": nfe["chave_acesso"],
+        "nfe_chave": chave,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -384,7 +392,7 @@ async def criar_conta_pagar_from_nfe(
         entity_type="conta_pagar",
         entity_id=conta_pagar_doc["id"],
         entity_name=conta_pagar_doc["descricao"],
-        details=f"Conta a pagar criada a partir da NF-e {nfe['numero_nf']}",
+        details=f"Conta a pagar criada a partir da NF-e {nfe.get('numero_nf') or nfe.get('numero') or '-'}",
         module="Financeiro",
     )
 
@@ -425,13 +433,13 @@ async def criar_conta_pagar_parcelado_from_nfe(
     if nfe.get("conta_pagar_id"):
         raise HTTPException(status_code=400, detail="Esta NF-e já possui uma conta a pagar vinculada")
 
-    cadastro = await db.cadastros.find_one({"cpf_cnpj": nfe["cnpj_emitente"]})
+    cadastro = await db.cadastros.find_one({"cpf_cnpj": nfe.get("cnpj_emitente")})
     if not cadastro:
         cadastro_doc = {
             "id": str(uuid.uuid4()),
             "tipo": "fornecedor",
-            "nome_razao": nfe["razao_social_emitente"],
-            "cpf_cnpj": nfe["cnpj_emitente"],
+            "nome_razao": nfe.get("razao_social_emitente") or nfe.get("nome_emitente") or "Fornecedor não identificado",
+            "cpf_cnpj": nfe.get("cnpj_emitente") or "",
             "telefone": "",
             "email": "",
             "endereco": "",
@@ -445,6 +453,8 @@ async def criar_conta_pagar_parcelado_from_nfe(
         cadastro = cadastro_doc
 
     valor_total = float(nfe.get("valor_total") or 0)
+    if valor_total <= 0:
+        raise HTTPException(status_code=400, detail="NF-e sem valor total válido — não é possível parcelar")
     n = int(payload.total_parcelas)
     valor_parcela = round(valor_total / n, 2)
     valor_ultima = round(valor_total - (valor_parcela * (n - 1)), 2)
@@ -456,18 +466,26 @@ async def criar_conta_pagar_parcelado_from_nfe(
     except Exception:
         data_venc = datetime.now(timezone.utc)
 
+    nome_emitente = (
+        nfe.get("razao_social_emitente")
+        or nfe.get("nome_emitente")
+        or "Fornecedor"
+    )
+    numero_nf = str(nfe.get("numero_nf") or nfe.get("numero") or "")
+    chave = nfe.get("chave_acesso") or ""
+
     parcelas_criadas: List[dict] = []
     for i in range(n):
         numero_parcela = i + 1
         valor = valor_parcela if numero_parcela < n else valor_ultima
         conta = {
             "id": str(uuid.uuid4()),
-            "descricao": f"NF-e {nfe['numero_nf']} - {nfe['razao_social_emitente']} - Parcela {numero_parcela}/{n}",
+            "descricao": f"NF-e {numero_nf} - {nome_emitente} - Parcela {numero_parcela}/{n}",
             "cadastro_id": cadastro["id"],
             "cadastro_nome": cadastro["nome_razao"],
             "fornecedor_id": cadastro["id"],
             "fornecedor_nome": cadastro["nome_razao"],
-            "numero_doc": str(nfe.get("numero_nf") or ""),
+            "numero_doc": numero_nf,
             "valor": valor,
             "valor_final": valor,
             "desconto": 0,
@@ -481,13 +499,13 @@ async def criar_conta_pagar_parcelado_from_nfe(
             "total_parcelas": n,
             "numero_parcela": numero_parcela,
             "parcela_origem_id": parcela_origem_id,
-            "observacoes": f"Importada automaticamente da NF-e. Chave: {nfe['chave_acesso']}",
+            "observacoes": f"Importada automaticamente da NF-e. Chave: {chave}",
             "centro_custo_id": None,
             "plano_conta_id": None,
             "forma_pagamento_id": None,
             "conta_bancaria_id": None,
             "nfe_id": nfe_id,
-            "nfe_chave": nfe["chave_acesso"],
+            "nfe_chave": chave,
             "origem": "nfe",
             "created_by": current_user["id"],
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -513,8 +531,8 @@ async def criar_conta_pagar_parcelado_from_nfe(
         action="criar",
         entity_type="conta_pagar_parcelada",
         entity_id=parcela_origem_id,
-        entity_name=f"NF-e {nfe['numero_nf']} - {n} parcelas",
-        details=f"{n} contas a pagar criadas a partir da NF-e {nfe['numero_nf']}",
+        entity_name=f"NF-e {numero_nf} - {n} parcelas",
+        details=f"{n} contas a pagar criadas a partir da NF-e {numero_nf}",
         module="Financeiro",
     )
 
