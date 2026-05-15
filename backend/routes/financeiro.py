@@ -216,8 +216,15 @@ async def get_contas_pagar(
     current_user: dict = Depends(get_current_user),
 ):
     query: dict = {}
+    # Status "a_pagar" é um filtro virtual que engloba TODAS as contas ainda
+    # não quitadas (em_aberto, parcial e pendente). Isso garante que uma
+    # conta com pagamento parcial continue aparecendo na visão "A Pagar"
+    # até ser totalmente quitada.
     if status:
-        query["status"] = status
+        if status == "a_pagar":
+            query["status"] = {"$in": ["em_aberto", "parcial", "pendente"]}
+        else:
+            query["status"] = status
     if forma_pagamento:
         query["forma_pagamento"] = forma_pagamento
     if plano_conta_id:
@@ -237,14 +244,17 @@ async def get_contas_pagar(
         ]
 
     hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Para filtros de vencimento, consideramos pendentes (em_aberto), parciais
+    # e pendentes legados como "ainda devidas".
+    status_pendente = {"$in": ["em_aberto", "parcial", "pendente"]}
     if vencimento == "vencidas":
         query["data_vencimento"] = {"$lt": hoje}
-        query["status"] = "em_aberto"
+        query["status"] = status_pendente
     elif vencimento == "hoje":
         query["data_vencimento"] = hoje
     elif vencimento == "a_vencer":
         query["data_vencimento"] = {"$gt": hoje}
-        query["status"] = "em_aberto"
+        query["status"] = status_pendente
 
     if data_inicio and data_fim:
         campo_data = "data_pagamento" if tipo_data == "pagamento" else "data_vencimento"
@@ -637,8 +647,13 @@ async def get_contas_receber(
     current_user: dict = Depends(get_current_user),
 ):
     query: dict = {}
+    # Status "a_receber" é virtual: engloba todas as contas ainda não totalmente
+    # recebidas (em_aberto + parcial + pendente).
     if status:
-        query["status"] = status
+        if status == "a_receber" or status == "a_pagar":
+            query["status"] = {"$in": ["em_aberto", "parcial", "pendente"]}
+        else:
+            query["status"] = status
     if forma_pagamento:
         query["forma_pagamento"] = forma_pagamento
     if plano_conta_id:
@@ -657,14 +672,15 @@ async def get_contas_receber(
         ]
 
     hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    status_pendente = {"$in": ["em_aberto", "parcial", "pendente"]}
     if vencimento == "vencidas":
         query["data_vencimento"] = {"$lt": hoje}
-        query["status"] = "em_aberto"
+        query["status"] = status_pendente
     elif vencimento == "hoje":
         query["data_vencimento"] = hoje
     elif vencimento == "a_vencer":
         query["data_vencimento"] = {"$gt": hoje}
-        query["status"] = "em_aberto"
+        query["status"] = status_pendente
 
     if data_inicio and data_fim:
         campo_data = "data_recebimento" if tipo_data == "pagamento" else "data_vencimento"

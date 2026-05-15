@@ -484,7 +484,14 @@ export default function ContasPagarPage() {
       String(c.numero || "").includes(s);
     
     if (!matchSearch) return false;
-    if (filterStatus && filterStatus !== "all" && c.status !== filterStatus) return false;
+    if (filterStatus && filterStatus !== "all") {
+      if (filterStatus === "a_pagar") {
+        // Virtual: todas as contas não-quitadas
+        if (!["em_aberto", "pendente", "parcial"].includes(c.status)) return false;
+      } else if (c.status !== filterStatus) {
+        return false;
+      }
+    }
     if (filterFormaPag && filterFormaPag !== "all" && c.forma_pagamento !== filterFormaPag) return false;
     if (filterPlanoConta && filterPlanoConta !== "all") {
       const okPC = c.plano_conta_id === filterPlanoConta || c.plano_contas_id === filterPlanoConta || c.subconta_id === filterPlanoConta;
@@ -547,7 +554,8 @@ export default function ContasPagarPage() {
           <SelectTrigger className="h-11"><SelectValue placeholder="Todos Status" /></SelectTrigger>
           <SelectContent className="z-[9999]">
             <SelectItem value="all">Todos Status</SelectItem>
-            <SelectItem value="em_aberto">Em Aberto</SelectItem>
+            <SelectItem value="a_pagar">A Pagar (Em Aberto + Parcial)</SelectItem>
+            <SelectItem value="em_aberto">Em Aberto (sem pagamento)</SelectItem>
             <SelectItem value="parcial">Parcialmente Pagas</SelectItem>
             <SelectItem value="quitada">Quitadas</SelectItem>
             <SelectItem value="cancelada">Canceladas</SelectItem>

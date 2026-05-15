@@ -3139,3 +3139,43 @@ Em `/app/backend/routes/rh.py`:
 Bug existe em produção (`construtoracra.com.br`). Para o fix ir ao ar, o
 usuário precisa publicar o deploy a partir do preview.
 
+
+
+---
+
+## Atualização (2026-05-15) — Bug Fix: Contas parciais sumiam de "A Pagar"
+
+### Problema reportado (produção)
+Conta com pagamento PARCIAL (status `parcial`) sumia das visões "Vencidas",
+"A Vencer" e "Em Aberto" em Contas a Pagar/Receber. O esperado é que ela
+continue listada até que todas as parcelas / o saldo total seja quitado.
+
+### Causa raiz
+Em `/app/backend/routes/financeiro.py` os filtros de `vencimento=vencidas`
+e `vencimento=a_vencer` forçavam `query["status"] = "em_aberto"` —
+excluindo explicitamente contas parciais e pendentes legados.
+No frontend, o filtro "Em Aberto" tinha apenas a opção `em_aberto`, sem
+combinar com `parcial`.
+
+### Correções
+**Backend** (`financeiro.py`):
+- Status virtual `a_pagar` (e `a_receber`) → expande para
+  `{"$in": ["em_aberto", "parcial", "pendente"]}`.
+- Filtros `vencimento=vencidas` e `vencimento=a_vencer` agora incluem
+  `em_aberto + parcial + pendente`.
+
+**Frontend** (`ContasPagarPage.jsx`, `ContasReceberPage.jsx`):
+- Nova opção no dropdown de status:
+  - "A Pagar (Em Aberto + Parcial)" / "A Receber (Em Aberto + Parcial)"
+  - "Em Aberto (sem pagamento)" passa a ser apenas o granular.
+- Filtro client-side reconhece `a_pagar`/`a_receber` e mantém parciais visíveis.
+
+### Validação (curl)
+- ✅ Sem filtro: 42 contas (10 quitada, 18 em_aberto, 1 parcial, 11 pendente).
+- ✅ `status=a_pagar`: 30 contas (excluindo apenas quitada/cancelada).
+- ✅ `vencimento=vencidas`: agora inclui parcial e pendente (antes só em_aberto).
+- ✅ Lint Python + JS: 0 erros.
+
+### Deploy
+Bug está em produção. Para o fix ir ao ar, publicar deploy a partir do preview.
+
