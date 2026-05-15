@@ -259,7 +259,86 @@ async def get_contas_pagar(
         multa = conta.get("valor_multa", 0)
         conta["valor_final"] = v - desconto + juros + multa
 
+    # Anexa resumo de saldo do grupo de parcelas (calculado a partir de TODAS as
+    # parcelas do grupo, ignorando os filtros aplicados na listagem)
+    origem_ids = {c.get("parcela_origem_id") for c in contas if c.get("parcela_origem_id")}
+    if origem_ids:
+        all_parcelas = await db.contas_pagar.find(
+            {"parcela_origem_id": {"$in": list(origem_ids)}},
+            {"_id": 0, "parcela_origem_id": 1, "valor": 1, "valor_desconto": 1,
+             "valor_juros": 1, "valor_multa": 1, "valor_pago": 1, "valor_final": 1,
+             "status": 1, "total_parcelas": 1},
+        ).to_list(5000)
+        resumo: dict = {}
+        for p in all_parcelas:
+            oid = p.get("parcela_origem_id")
+            v = p.get("valor", 0) or 0
+            vf = (v - (p.get("valor_desconto", 0) or 0)
+                  + (p.get("valor_juros", 0) or 0)
+                  + (p.get("valor_multa", 0) or 0))
+            pago = p.get("valor_pago", 0) or 0
+            if p.get("status") == "quitada" and pago < vf:
+                pago = vf
+            r = resumo.setdefault(oid, {
+                "total_geral": 0, "total_pago": 0, "saldo_restante": 0,
+                "qtd_parcelas": 0, "qtd_quitadas": 0,
+            })
+            r["total_geral"] += vf
+            r["total_pago"] += pago
+            r["qtd_parcelas"] += 1
+            if p.get("status") == "quitada":
+                r["qtd_quitadas"] += 1
+        for oid, r in resumo.items():
+            r["total_geral"] = round(r["total_geral"], 2)
+            r["total_pago"] = round(r["total_pago"], 2)
+            r["saldo_restante"] = round(r["total_geral"] - r["total_pago"], 2)
+        for conta in contas:
+            oid = conta.get("parcela_origem_id")
+            if oid and oid in resumo:
+                conta["grupo_parcelas"] = resumo[oid]
+
     return contas
+
+
+@financeiro_router.get("/contas-pagar/grupo/{parcela_origem_id}")
+async def get_grupo_parcelas_pagar(
+    parcela_origem_id: str, current_user: dict = Depends(get_current_user)
+):
+    """Retorna todas as parcelas do mesmo grupo (mesmo parcela_origem_id),
+    ignorando filtros, com resumo de saldo."""
+    parcelas = await db.contas_pagar.find(
+        {"parcela_origem_id": parcela_origem_id}, {"_id": 0}
+    ).sort("numero_parcela", 1).to_list(5000)
+    if not parcelas:
+        raise HTTPException(status_code=404, detail="Grupo de parcelas não encontrado")
+
+    total_geral = 0.0
+    total_pago = 0.0
+    qtd_quitadas = 0
+    for p in parcelas:
+        v = p.get("valor", 0) or 0
+        vf = (v - (p.get("valor_desconto", 0) or 0)
+              + (p.get("valor_juros", 0) or 0)
+              + (p.get("valor_multa", 0) or 0))
+        p["valor_final"] = vf
+        pago = p.get("valor_pago", 0) or 0
+        if p.get("status") == "quitada" and pago < vf:
+            pago = vf
+        total_geral += vf
+        total_pago += pago
+        if p.get("status") == "quitada":
+            qtd_quitadas += 1
+    return {
+        "parcela_origem_id": parcela_origem_id,
+        "parcelas": parcelas,
+        "resumo": {
+            "total_geral": round(total_geral, 2),
+            "total_pago": round(total_pago, 2),
+            "saldo_restante": round(total_geral - total_pago, 2),
+            "qtd_parcelas": len(parcelas),
+            "qtd_quitadas": qtd_quitadas,
+        },
+    }
 
 
 @financeiro_router.post("/contas-pagar")
@@ -596,7 +675,84 @@ async def get_contas_receber(
         multa = conta.get("valor_multa", 0)
         conta["valor_final"] = v - desconto + juros + multa
 
+    # Anexa resumo de saldo do grupo de parcelas (todas as parcelas, ignorando filtros)
+    origem_ids = {c.get("parcela_origem_id") for c in contas if c.get("parcela_origem_id")}
+    if origem_ids:
+        all_parcelas = await db.contas_receber.find(
+            {"parcela_origem_id": {"$in": list(origem_ids)}},
+            {"_id": 0, "parcela_origem_id": 1, "valor": 1, "valor_desconto": 1,
+             "valor_juros": 1, "valor_multa": 1, "valor_pago": 1, "valor_final": 1,
+             "status": 1, "total_parcelas": 1},
+        ).to_list(5000)
+        resumo: dict = {}
+        for p in all_parcelas:
+            oid = p.get("parcela_origem_id")
+            v = p.get("valor", 0) or 0
+            vf = (v - (p.get("valor_desconto", 0) or 0)
+                  + (p.get("valor_juros", 0) or 0)
+                  + (p.get("valor_multa", 0) or 0))
+            pago = p.get("valor_pago", 0) or 0
+            if p.get("status") == "quitada" and pago < vf:
+                pago = vf
+            r = resumo.setdefault(oid, {
+                "total_geral": 0, "total_pago": 0, "saldo_restante": 0,
+                "qtd_parcelas": 0, "qtd_quitadas": 0,
+            })
+            r["total_geral"] += vf
+            r["total_pago"] += pago
+            r["qtd_parcelas"] += 1
+            if p.get("status") == "quitada":
+                r["qtd_quitadas"] += 1
+        for oid, r in resumo.items():
+            r["total_geral"] = round(r["total_geral"], 2)
+            r["total_pago"] = round(r["total_pago"], 2)
+            r["saldo_restante"] = round(r["total_geral"] - r["total_pago"], 2)
+        for conta in contas:
+            oid = conta.get("parcela_origem_id")
+            if oid and oid in resumo:
+                conta["grupo_parcelas"] = resumo[oid]
+
     return contas
+
+
+@financeiro_router.get("/contas-receber/grupo/{parcela_origem_id}")
+async def get_grupo_parcelas_receber(
+    parcela_origem_id: str, current_user: dict = Depends(get_current_user)
+):
+    """Retorna todas as parcelas do mesmo grupo de contas a receber."""
+    parcelas = await db.contas_receber.find(
+        {"parcela_origem_id": parcela_origem_id}, {"_id": 0}
+    ).sort("numero_parcela", 1).to_list(5000)
+    if not parcelas:
+        raise HTTPException(status_code=404, detail="Grupo de parcelas não encontrado")
+
+    total_geral = 0.0
+    total_pago = 0.0
+    qtd_quitadas = 0
+    for p in parcelas:
+        v = p.get("valor", 0) or 0
+        vf = (v - (p.get("valor_desconto", 0) or 0)
+              + (p.get("valor_juros", 0) or 0)
+              + (p.get("valor_multa", 0) or 0))
+        p["valor_final"] = vf
+        pago = p.get("valor_pago", 0) or 0
+        if p.get("status") == "quitada" and pago < vf:
+            pago = vf
+        total_geral += vf
+        total_pago += pago
+        if p.get("status") == "quitada":
+            qtd_quitadas += 1
+    return {
+        "parcela_origem_id": parcela_origem_id,
+        "parcelas": parcelas,
+        "resumo": {
+            "total_geral": round(total_geral, 2),
+            "total_pago": round(total_pago, 2),
+            "saldo_restante": round(total_geral - total_pago, 2),
+            "qtd_parcelas": len(parcelas),
+            "qtd_quitadas": qtd_quitadas,
+        },
+    }
 
 
 @financeiro_router.post("/contas-receber")

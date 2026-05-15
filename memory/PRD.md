@@ -2953,3 +2953,46 @@ Novo sistema de Recursos Humanos adicionado à plataforma com:
 - P3: Dashboard de Custo por Máquina.
 - P3: Links públicos de compartilhamento de PDFs.
 
+
+
+---
+
+## Atualização (2026-05-15) — Saldo Restante em Contas Parceladas
+
+### Backend (`/app/backend/routes/financeiro.py`)
+- `GET /api/admin/contas-pagar` e `GET /api/admin/contas-receber` agora
+  enriquecem cada parcela do retorno com o objeto `grupo_parcelas`:
+  `{ total_geral, total_pago, saldo_restante, qtd_parcelas, qtd_quitadas }`.
+  A agregação considera TODAS as parcelas do grupo (`parcela_origem_id`),
+  ignorando filtros aplicados na listagem.
+- Novos endpoints:
+  - `GET /api/admin/contas-pagar/grupo/{parcela_origem_id}`
+  - `GET /api/admin/contas-receber/grupo/{parcela_origem_id}`
+  Retornam todas as parcelas do grupo + `resumo` consolidado.
+
+### Frontend
+- Novo componente: `/app/frontend/src/components/ParcelasDetalhesModal.jsx`
+  (modal reutilizável para "pagar" e "receber"), exibindo cards de Total Geral
+  / Total Pago (ou Recebido) / Saldo Restante / Parcelas e tabela com cada
+  parcela (status, valor, pago, saldo, data de pagamento).
+- `ContasPagarPage.jsx` e `ContasReceberPage.jsx`:
+  - Nova coluna "Saldo Restante" entre Valor e Forma Pag.
+  - Para contas parceladas, valor exibido como botão clicável (cor âmbar) que
+    abre `ParcelasDetalhesModal`. Para contas únicas, exibe "—".
+  - Clique em uma parcela dentro do modal fecha o modal e abre o modal de
+    edição daquela parcela.
+
+### Validação
+- `curl GET /api/admin/contas-pagar` confirmou `grupo_parcelas` em todas as
+  parcelas (8 parceladas em 42 contas) com saldo correto.
+- `curl GET /api/admin/contas-pagar/grupo/{id}` retornou 2 parcelas + resumo.
+- Lint Python + JS: 0 erros.
+
+### Próximas tarefas (mantidas)
+- P1: Expandir Audit Logs/Rollback para Cadastros, OS, Aluguéis, Movimentações.
+- P1: Ordenação de colunas + paginação server-side na Importação NF.
+- P2: Fase 2 da refatoração do `server.py`.
+- P2: Parcelas automáticas em Contas a Receber p/ OS recorrentes.
+- P3: Dashboard de Custo por Máquina.
+- P3: Links públicos de compartilhamento de PDFs.
+

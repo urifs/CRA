@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AttachmentsSection from "@/components/AttachmentsSection";
 import CadastroFormModal from "@/components/CadastroFormModal";
+import ParcelasDetalhesModal from "@/components/ParcelasDetalhesModal";
 import { formatCurrency as formatCurrencyInput, parseCurrency } from "@/utils/masks";
 import { formatDateBR, formatDateTimeBR } from "@/utils/dateFormat";
 
@@ -75,6 +76,10 @@ export default function ContasPagarPage() {
   const [isParcelado, setIsParcelado] = useState(false);
   const [totalParcelas, setTotalParcelas] = useState("1");
   const [intervaloDias, setIntervaloDias] = useState("30");
+
+  // Modal de detalhes do grupo de parcelas
+  const [showParcelasModal, setShowParcelasModal] = useState(false);
+  const [parcelaOrigemSelecionada, setParcelaOrigemSelecionada] = useState(null);
   
   const [formData, setFormData] = useState({
     fornecedor_nome: "", documento: "", numero_doc: "", descricao: "",
@@ -622,6 +627,7 @@ export default function ContasPagarPage() {
                 <th className="text-left p-3 font-medium text-gray-600">Vencimento</th>
                 <th className="text-left p-3 font-medium text-gray-600">Pago em</th>
                 <th className="text-right p-3 font-medium text-gray-600">Valor R$</th>
+                <th className="text-right p-3 font-medium text-gray-600">Saldo Restante</th>
                 <th className="text-left p-3 font-medium text-gray-600">Forma Pag.</th>
                 <th className="text-left p-3 font-medium text-gray-600">Status</th>
                 <th className="text-center p-3 font-medium text-gray-600">Ações</th>
@@ -654,6 +660,24 @@ export default function ContasPagarPage() {
                       {c.data_pagamento ? formatDateBR(c.data_pagamento) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-3 text-right font-medium text-red-600">{formatCurrency(c.valor_final || c.valor)}</td>
+                    <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      {c.parcela_origem_id && c.grupo_parcelas ? (
+                        <button
+                          type="button"
+                          className="text-amber-700 font-semibold hover:underline hover:text-amber-900 cursor-pointer"
+                          onClick={() => {
+                            setParcelaOrigemSelecionada(c.parcela_origem_id);
+                            setShowParcelasModal(true);
+                          }}
+                          title="Clique para ver detalhes das parcelas"
+                          data-testid={`saldo-restante-btn-${c.id}`}
+                        >
+                          {formatCurrency(c.grupo_parcelas.saldo_restante)}
+                        </button>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
                     <td className="p-3 text-xs">{formasPagamentoDB.find(f => f.nome?.toLowerCase() === c.forma_pagamento?.toLowerCase())?.nome || formasPagamento.find(f => f.value === c.forma_pagamento)?.label || c.forma_pagamento}</td>
                     <td className="p-3"><span className={`px-2 py-1 rounded text-xs ${status.color}`}><StatusIcon className="inline mr-1" size={12} />{status.label}</span></td>
                     <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
@@ -1228,6 +1252,19 @@ export default function ContasPagarPage() {
         onOpenChange={setShowNovoCadastro}
         defaultTipo="fornecedor"
         onSuccess={handleNovoCadastroSuccess}
+      />
+
+      {/* Modal de Detalhes do Parcelamento */}
+      <ParcelasDetalhesModal
+        open={showParcelasModal}
+        onOpenChange={setShowParcelasModal}
+        parcelaOrigemId={parcelaOrigemSelecionada}
+        tipo="pagar"
+        onSelectParcela={(p) => {
+          setShowParcelasModal(false);
+          const local = contas.find((c) => c.id === p.id);
+          openModal(local || p);
+        }}
       />
 
       {/* Modal de Quitação com Opção Parcial */}
