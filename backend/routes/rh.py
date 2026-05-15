@@ -628,7 +628,22 @@ async def list_ponto(
     abonos_set = set()
     async for ab in ponto_abonos_collection.find(abonos_query, {"_id": 0, "funcionario_id": 1, "data": 1}):
         abonos_set.add((ab["funcionario_id"], ab["data"]))
-    
+
+    # Pré-carrega jornadas + mapa funcionario→jornada para RECALCULAR
+    # `minutos_previstos` e `saldo_minutos` na hora. Isso garante que mudanças
+    # de carga horária do funcionário sejam refletidas mesmo em registros
+    # antigos importados antes da atribuição da jornada.
+    jornada_padrao_doc = await _get_or_create_jornada_padrao()
+    jornadas_map_listponto: dict = {jornada_padrao_doc["id"]: jornada_padrao_doc}
+    async for _j in jornadas_collection.find({}, {"_id": 0}):
+        jornadas_map_listponto[_j["id"]] = _j
+    func_jornada_map_listponto: dict = {}
+    async for _f in funcionarios_collection.find({}, {"_id": 0, "id": 1, "jornada_id": 1}):
+        _fjid = _f.get("jornada_id")
+        func_jornada_map_listponto[_f["id"]] = (
+            jornadas_map_listponto.get(_fjid) if _fjid else jornada_padrao_doc
+        ) or jornada_padrao_doc
+
     # Carrega registros (excluindo _id)
     registros = []
     cache_funcionarios = {}
@@ -649,6 +664,18 @@ async def list_ponto(
             reg["funcionario_cadastrado"] = bool(f)
         # Marca abonos
         reg["abonado"] = (fid, reg.get("data")) in abonos_set
+
+        # Recalcula minutos_previstos com a jornada ATUAL do funcionário
+        if fid.startswith("NAO_CADASTRADO::"):
+            jornada_func_reg = jornada_padrao_doc
+        else:
+            jornada_func_reg = func_jornada_map_listponto.get(fid, jornada_padrao_doc)
+        prev_calc = _jornada_minutos_previstos(jornada_func_reg, reg.get("dia_semana", 6))
+        reg["minutos_previstos"] = prev_calc
+        reg["saldo_minutos"] = int(reg.get("minutos_trabalhados", 0) or 0) - prev_calc
+        reg["jornada_id"] = jornada_func_reg.get("id") if jornada_func_reg else None
+        reg["jornada_nome"] = jornada_func_reg.get("nome") if jornada_func_reg else None
+
         registros.append(reg)
     
     # Calcular resumo
@@ -970,7 +997,15 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
         "origem": "planilha_xls",
         "data": {"$gte": inicio_periodo_iso, "$lte": fim_periodo_iso},
     })
-    
+
+    # Pré-carrega jornadas (Padrão + customizadas) para resolver a carga horária
+    # correta de cada funcionário no momento da importação. Sem isso, todos os
+    # registros são salvos com a jornada padrão hardcoded (Seg-Sex 8h, Sáb 4h).
+    jornada_padrao_doc = await _get_or_create_jornada_padrao()
+    jornadas_map: dict = {jornada_padrao_doc["id"]: jornada_padrao_doc}
+    async for _j in jornadas_collection.find({}, {"_id": 0}):
+        jornadas_map[_j["id"]] = _j
+
     # Iterar linhas em busca de blocos de funcionários
     funcionarios_processados = []
     funcionarios_nao_cadastrados = []
@@ -1020,7 +1055,15 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
                 func = _match_funcionario_por_nome(nome, funcs_db)
                 func_id = func["id"] if func else None
                 cargo = func.get("cargo", "") if func else ""
-                
+
+                # Resolve a jornada deste funcionário (ou usa Padrão p/ não-cadastrado
+                # / sem jornada_id definido). Isso garante que `minutos_previstos`
+                # respeite a carga horária atribuída a ele.
+                fjid = func.get("jornada_id") if func else None
+                jornada_func = jornadas_map.get(fjid) if fjid else None
+                if not jornada_func:
+                    jornada_func = jornada_padrao_doc
+
                 if not func:
                     funcionarios_nao_cadastrados.append({
                         "nome": nome,
@@ -1056,7 +1099,7 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
                     
                     dia_semana = data_dt.weekday()
                     minutos_trab, status_dia = _calcular_minutos_trabalhados(batidas, dia_semana)
-                    minutos_prev = _jornada_prevista_minutos(dia_semana)
+                    minutos_prev = _jornada_minutos_previstos(jornada_func, dia_semana)
                     saldo = minutos_trab - minutos_prev
                     
                     # Montar registro: usa primeira batida como entrada, última como saída, etc.
@@ -1083,6 +1126,8 @@ async def importar_planilha_ponto(file: UploadFile = File(...)):
                         "saldo_minutos": saldo,
                         "status_dia": status_dia,
                         "dia_semana": dia_semana,
+                        "jornada_id": jornada_func.get("id"),
+                        "jornada_nome": jornada_func.get("nome"),
                         "origem": "planilha_xls",
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     }

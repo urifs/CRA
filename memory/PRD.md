@@ -3092,3 +3092,50 @@ Novo sistema de Recursos Humanos adicionado à plataforma com:
 - ✅ `sort_by=razao_social_prestador&sort_dir=asc` ordena NFS-e por prestador.
 - Lint Python + JS: 0 erros.
 
+
+
+---
+
+## Atualização (2026-05-15) — Bug Fix: Jornada de Trabalho ignorada no Ponto
+
+### Problema reportado
+Usuário criou jornada customizada (ex: "Diarista 6h") e atribuiu a um
+funcionário, mas o Ponto Eletrônico, Quadro Mensal e Banco de Horas
+continuavam contando como se a jornada fosse a padrão (Seg-Sex 8h).
+
+### Causa raiz
+1. **Importação da planilha (`/api/rh/ponto/importar-planilha`)** chamava
+   `_jornada_prevista_minutos(dia_semana)` — função HARDCODED (8h Seg-Sex,
+   4h Sáb, 0h Dom) que ignora completamente a `jornada_id` do funcionário.
+   O `minutos_previstos` e `saldo_minutos` eram persistidos errados no
+   documento de ponto.
+2. **Listagem de Ponto (`GET /api/rh/ponto`)** retornava os valores
+   `minutos_previstos`/`saldo_minutos` STORED no registro (que vieram da
+   importação errada). Mudar a jornada do funcionário depois não tinha
+   efeito.
+3. Quadro Mensal e Banco de Horas já recalculavam corretamente — mas o
+   usuário olhava primeiro o Ponto e via os valores antigos.
+
+### Correções aplicadas
+Em `/app/backend/routes/rh.py`:
+- **Importação da planilha**: pré-carrega `jornadas_map` (todas as jornadas
+  + Padrão) e resolve a jornada de cada funcionário no momento da
+  importação. `minutos_previstos` agora usa
+  `_jornada_minutos_previstos(jornada_func, dia_semana)`. O documento de
+  ponto passa a guardar `jornada_id` e `jornada_nome` para auditoria.
+- **`GET /api/rh/ponto`**: agora pré-carrega jornadas + mapa
+  funcionário→jornada e **recalcula `minutos_previstos` e `saldo_minutos`
+  na hora**, com a jornada CORRENTE do funcionário. Isso garante que
+  mudanças de jornada feitas depois da importação se reflitam
+  imediatamente, sem precisar reimportar a planilha.
+
+### Validação (curl)
+- ✅ Funcionário LUIZ CARLOS, dia útil, antes: `prev=480min (8h) | saldo=4min`.
+- ✅ Após atribuir jornada "Diarista 6h": `prev=360min (6h) | saldo=124min`.
+- ✅ Banco de horas recalcula automaticamente o saldo acumulado (1.070 min).
+- ✅ Domingo continua `prev=0min`.
+
+### Observação para produção
+Bug existe em produção (`construtoracra.com.br`). Para o fix ir ao ar, o
+usuário precisa publicar o deploy a partir do preview.
+
