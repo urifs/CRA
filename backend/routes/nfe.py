@@ -253,6 +253,8 @@ async def list_nfe_importadas(
     data_fim: Optional[str] = None,
     valor_min: Optional[float] = None,
     valor_max: Optional[float] = None,
+    sort_by: Optional[str] = None,
+    sort_dir: Optional[str] = "desc",
     limit: int = 50,
     offset: int = 0,
     current_user: dict = Depends(get_current_user),
@@ -261,6 +263,9 @@ async def list_nfe_importadas(
 
     Quando `limit=0` ou negativo, retorna a coleção COMPLETA (modo legado).
     Caso contrário, devolve um dict `{"items": [...], "total": N, "limit": L, "offset": O}`.
+
+    Ordenação: `sort_by` aceita "data_emissao", "valor_total", "numero_nf",
+    "razao_social_emitente". `sort_dir` é "asc" ou "desc" (padrão "desc").
     """
     filtro: dict = {}
     if certificado_id:
@@ -285,16 +290,29 @@ async def list_nfe_importadas(
             {"chave_acesso": rx},
         ]
 
+    # Determina ordenação (whitelist para evitar injeção de campo)
+    sort_field_map = {
+        "data_emissao": "data_emissao",
+        "valor_total": "valor_total",
+        "valor": "valor_total",
+        "numero_nf": "numero_nf",
+        "numero": "numero_nf",
+        "razao_social_emitente": "razao_social_emitente",
+        "emitente": "razao_social_emitente",
+    }
+    sort_field = sort_field_map.get((sort_by or "").lower(), "data_emissao")
+    sort_dir_val = -1 if (sort_dir or "desc").lower() != "asc" else 1
+
     # Modo legado (sem paginação)
     if limit is None or limit <= 0:
-        return await db.nfe_importadas.find(filtro, {"_id": 0}).sort("data_emissao", -1).to_list(5000)
+        return await db.nfe_importadas.find(filtro, {"_id": 0}).sort(sort_field, sort_dir_val).to_list(5000)
 
     total = await db.nfe_importadas.count_documents(filtro)
     # total_geral = contagem absoluta sem filtros (badge/cards na UI)
     total_geral = await db.nfe_importadas.count_documents({})
     items = await (
         db.nfe_importadas.find(filtro, {"_id": 0})
-        .sort("data_emissao", -1)
+        .sort(sort_field, sort_dir_val)
         .skip(int(offset))
         .limit(int(limit))
         .to_list(int(limit))
@@ -305,6 +323,8 @@ async def list_nfe_importadas(
         "total_geral": total_geral,
         "limit": int(limit),
         "offset": int(offset),
+        "sort_by": sort_field,
+        "sort_dir": "asc" if sort_dir_val == 1 else "desc",
     }
 
 

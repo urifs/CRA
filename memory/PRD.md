@@ -3054,3 +3054,41 @@ Novo sistema de Recursos Humanos adicionado à plataforma com:
 - P3: Dashboard de Custo por Máquina.
 - P3: Links públicos de compartilhamento de PDFs.
 
+
+
+---
+
+## Atualização (2026-05-15) — Ordenação de colunas na Importação NF
+
+### Backend
+- `/app/backend/routes/nfe.py` `GET /api/nfe/importadas`:
+  - Novos parâmetros `sort_by` e `sort_dir` (padrão: `data_emissao` desc).
+  - Whitelist de campos: `data_emissao`, `valor_total`, `numero_nf`,
+    `razao_social_emitente` (aliases: `valor`, `numero`, `emitente`).
+  - Resposta inclui `sort_by` e `sort_dir` aplicados (para a UI refletir).
+- `/app/backend/routes/nfse.py` `GET /api/nfse/importadas`: mesmas mudanças
+  com whitelist `data_emissao`, `valor_total`, `numero_nfse`,
+  `razao_social_prestador`/`prestador_nome`.
+
+### Frontend
+- `/app/frontend/src/pages/admin/ImportacaoNFPage.jsx`:
+  - Estado `sortNfe` e `sortNfse` (independentes por aba).
+  - Helper `toggleSort(colKey)` (asc → desc → asc).
+  - Componente `SortableTh` reutilizável que renderiza ícone (ArrowUp/Down/UpDown)
+    e destaca a coluna ativa em azul.
+  - Tabelas NF-e e NFS-e: colunas Núm., Emitente/Prestador, Data e Valor
+    agora são clicáveis para ordenar (com indicador visual).
+  - Parâmetros `sort_by`/`sort_dir` enviados para o backend em cada fetch.
+
+### Paginação server-side (já existente)
+- `limit=50` por página + `offset` + `total`/`total_geral` no payload.
+- UI mostra "Mostrando X–Y de N" + botões Anterior/Próxima + número de páginas.
+- Tudo já estava implementado, validado nesta sessão.
+
+### Validação (curl)
+- ✅ `sort_by=valor_total&sort_dir=desc` retorna NF-e ordenada por maior valor
+  (R$ 8.767 → R$ 6.836 → R$ 6.392).
+- ✅ `sort_by=numero_nf&sort_dir=asc` retorna ordem crescente por número.
+- ✅ `sort_by=razao_social_prestador&sort_dir=asc` ordena NFS-e por prestador.
+- Lint Python + JS: 0 erros.
+

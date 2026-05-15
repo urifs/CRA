@@ -51,7 +51,10 @@ import {
   Pencil,
   Plug,
   Search,
-  Filter
+  Filter,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from "lucide-react";
 import { formatCPFouCNPJ } from "@/utils/masks";
 
@@ -143,6 +146,10 @@ export default function ImportacaoNFPage() {
   const PAGE_SIZE = 50;
   const [pagina, setPagina] = useState(1);
   const [totalServer, setTotalServer] = useState(0); // total da aba ativa (com filtros aplicados)
+
+  // Ordenação server-side (independente por aba)
+  const [sortNfe, setSortNfe] = useState({ by: "data_emissao", dir: "desc" });
+  const [sortNfse, setSortNfse] = useState({ by: "data_emissao", dir: "desc" });
   const [totalGeralNfe, setTotalGeralNfe] = useState(0); // total absoluto de NF-e no banco
   const [totalGeralNfse, setTotalGeralNfse] = useState(0); // total absoluto de NFS-e no banco
   const [carregandoLista, setCarregandoLista] = useState(false);
@@ -228,6 +235,7 @@ export default function ImportacaoNFPage() {
   const fetchListaPaginada = async () => {
     setCarregandoLista(true);
     try {
+      const activeSort = tipoNota === "nfe" ? sortNfe : sortNfse;
       const baseParams = {
         certificado_id: selectedCertificado !== "todos" ? selectedCertificado : undefined,
         status: selectedStatus !== "todos" ? selectedStatus : undefined,
@@ -236,6 +244,8 @@ export default function ImportacaoNFPage() {
         data_fim: filtroDataFim || undefined,
         valor_min: filtroValorMin !== "" ? Number(String(filtroValorMin).replace(",", ".")) : undefined,
         valor_max: filtroValorMax !== "" ? Number(String(filtroValorMax).replace(",", ".")) : undefined,
+        sort_by: activeSort.by,
+        sort_dir: activeSort.dir,
         limit: PAGE_SIZE,
         offset: (pagina - 1) * PAGE_SIZE,
       };
@@ -296,13 +306,50 @@ export default function ImportacaoNFPage() {
   }, [
     tipoNota, pagina, selectedCertificado, selectedStatus,
     buscaNotas, filtroDataInicio, filtroDataFim, filtroValorMin, filtroValorMax,
+    sortNfe, sortNfse,
   ]);
 
   // Quando muda qualquer filtro/aba, volta para a página 1
   useEffect(() => {
     setPagina(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipoNota, selectedCertificado, selectedStatus, buscaNotas, filtroDataInicio, filtroDataFim, filtroValorMin, filtroValorMax]);
+  }, [tipoNota, selectedCertificado, selectedStatus, buscaNotas, filtroDataInicio, filtroDataFim, filtroValorMin, filtroValorMax, sortNfe, sortNfse]);
+
+  // Helper de ordenação por coluna (server-side)
+  const toggleSort = (colKey) => {
+    const isNfe = tipoNota === "nfe";
+    const current = isNfe ? sortNfe : sortNfse;
+    let nextDir = "asc";
+    if (current.by === colKey) {
+      nextDir = current.dir === "asc" ? "desc" : "asc";
+    }
+    const next = { by: colKey, dir: nextDir };
+    if (isNfe) setSortNfe(next);
+    else setSortNfse(next);
+  };
+
+  // Componente de header de coluna clicável com indicador
+  const SortableTh = ({ colKey, label, align = "left", className = "" }) => {
+    const isNfe = tipoNota === "nfe";
+    const current = isNfe ? sortNfe : sortNfse;
+    const active = current.by === colKey;
+    const Icon = active ? (current.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+    const alignCls = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
+    const justifyCls = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
+    return (
+      <th
+        className={`px-4 py-3 ${alignCls} text-sm font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-100 transition-colors ${className}`}
+        onClick={() => toggleSort(colKey)}
+        data-testid={`th-sort-${colKey}`}
+        title="Clique para ordenar"
+      >
+        <span className={`inline-flex items-center gap-1 ${justifyCls} w-full`}>
+          {label}
+          <Icon size={12} className={active ? "text-blue-600" : "text-gray-400"} />
+        </span>
+      </th>
+    );
+  };
 
   // Função para extrair dados do XML automaticamente
   const handleXmlExtract = async (file) => {
@@ -1198,10 +1245,10 @@ export default function ImportacaoNFPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">NF-e</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Emitente</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Data</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Valor</th>
+                      <SortableTh colKey="numero_nf" label="NF-e" />
+                      <SortableTh colKey="razao_social_emitente" label="Emitente" />
+                      <SortableTh colKey="data_emissao" label="Data" />
+                      <SortableTh colKey="valor_total" label="Valor" align="right" />
                       <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ações</th>
                     </tr>
@@ -1337,11 +1384,11 @@ export default function ImportacaoNFPage() {
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">NFS-e</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prestador</th>
+                        <SortableTh colKey="numero_nfse" label="NFS-e" />
+                        <SortableTh colKey="razao_social_prestador" label="Prestador" />
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Serviço</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Data</th>
-                        <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Valor</th>
+                        <SortableTh colKey="data_emissao" label="Data" />
+                        <SortableTh colKey="valor_total" label="Valor" align="right" />
                         <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
                         <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ações</th>
                       </tr>
