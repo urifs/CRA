@@ -3179,3 +3179,52 @@ combinar com `parcial`.
 ### Deploy
 Bug está em produção. Para o fix ir ao ar, publicar deploy a partir do preview.
 
+
+
+---
+
+## Atualização (2026-05-19) — Export sob demanda do Banco em Produção
+
+### Necessidade
+Usuário precisa do dump completo do MongoDB de PRODUÇÃO
+(`construtoracra.com.br`) para migrar para Supabase via Claude Code.
+Como o agente não tem acesso direto ao container de produção, criamos
+um endpoint admin que gera o backup sob demanda.
+
+### Backend
+- Novo helper: `/app/backend/utils/db_export.py`
+  - `build_export_zip(db, db_name)` retorna `(zip_bytes, meta)` com:
+    - `dump.json` (todas as collections, todos os docs, com tipos BSON
+      envelopados — `$date`, `$oid`, `$binary`)
+    - `schema.json` (schema inferido por collection)
+    - `migrate_to_supabase.sql` (DDL Postgres equivalente)
+    - `MANIFEST.md` (instruções legíveis pro Claude Code)
+  - Reaproveita 100% da lógica existente em
+    `/app/database_export/export_mongodb.py` via `importlib`.
+- Novo endpoint: `GET /api/admin-panel/database-export` (require_admin)
+  - Retorna `StreamingResponse` com `application/zip`.
+  - Headers extras: `X-Export-Total-Docs`, `X-Export-Collections`,
+    `X-Export-Size-Bytes`.
+  - Registra audit log da ação (`module=Painel Admin`, action=export).
+
+### Frontend
+- `/app/frontend/src/pages/PainelAdminPage.jsx` aba "Banco de Dados":
+  - Novo botão azul "Exportar Banco" (com loading + ícone Download).
+  - Faz GET `responseType="blob"`, lê o nome do arquivo do header
+    `Content-Disposition`, cria URL temporária e dispara o download.
+  - Toast com total de documentos + collections retornado.
+
+### Validação (curl)
+- ✅ HTTP 200 + `application/zip`
+- ✅ 1.367 documentos em 65 collections
+- ✅ ZIP de 1,9 MB com `dump.json` (4,4 MB), `schema.json`, `MANIFEST.md`,
+  `migrate_to_supabase.sql`
+- ✅ Audit log registrado
+
+### Como usar em PRODUÇÃO
+1. Publique o deploy a partir do preview.
+2. Acesse `https://construtoracra.com.br` como admin/programador.
+3. Painel Admin → aba "Banco de Dados" → botão "Exportar Banco".
+4. Salve o ZIP. Suba no Claude Code junto com o prompt sugerido no
+   `MANIFEST.md` para conversão automática Postgres/Supabase.
+

@@ -54,6 +54,7 @@ import {
   Crown,
   Info,
   Database,
+  Download,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
@@ -63,7 +64,6 @@ import {
   AlertCircle,
   Paperclip,
   X as XIcon,
-  Download,
   KeyRound,
   Copy
 } from "lucide-react";
@@ -152,6 +152,7 @@ export default function PainelAdminPage() {
   const [docJson, setDocJson] = useState("");
   const [showAddDocModal, setShowAddDocModal] = useState(false);
   const [newDocJson, setNewDocJson] = useState("{\n  \n}");
+  const [dbExportLoading, setDbExportLoading] = useState(false);
 
   // Task states
   const [tasks, setTasks] = useState([]);
@@ -314,6 +315,39 @@ export default function PainelAdminPage() {
       toast.error("Erro ao carregar documentos");
     } finally {
       setDbLoading(false);
+    }
+  };
+
+  // Faz o download do backup completo do banco (todas as collections + schema + DDL)
+  const handleExportDatabase = async () => {
+    if (dbExportLoading) return;
+    setDbExportLoading(true);
+    const tId = toast.loading("Gerando backup completo do banco... isso pode levar alguns segundos.");
+    try {
+      const resp = await axios.get(`${API}/admin-panel/database-export`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+      const totalDocs = resp.headers["x-export-total-docs"];
+      const totalCols = resp.headers["x-export-collections"];
+      // Extrai filename do Content-Disposition
+      const cd = resp.headers["content-disposition"] || "";
+      const m = /filename="?([^";]+)"?/i.exec(cd);
+      const filename = (m && m[1]) || `backup_db_${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
+      const url = window.URL.createObjectURL(new Blob([resp.data], { type: "application/zip" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success(`Backup gerado: ${totalDocs} documentos em ${totalCols} collections`, { id: tId });
+    } catch (e) {
+      console.error("Erro ao exportar banco:", e);
+      toast.error("Falha ao gerar o backup do banco. Verifique se você é admin.", { id: tId });
+    } finally {
+      setDbExportLoading(false);
     }
   };
 
@@ -730,6 +764,19 @@ export default function PainelAdminPage() {
               </div>
               <Button variant="outline" className="bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800" onClick={fetchDbDocuments}>
                 <RefreshCw size={18} className={dbLoading ? "animate-spin" : ""} />
+              </Button>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={handleExportDatabase}
+                disabled={dbExportLoading}
+                data-testid="db-export-full-btn"
+                title="Baixa um ZIP com todo o banco de dados (dump.json + schema.json + MANIFEST.md + DDL Postgres). Útil para migrar/auditar."
+              >
+                {dbExportLoading
+                  ? <Loader2 size={18} className="mr-2 animate-spin" />
+                  : <Download size={18} className="mr-2" />}
+                <span className="hidden md:inline">Exportar Banco</span>
+                <span className="md:hidden">Backup</span>
               </Button>
               <Button className="bg-[#E31A1A] hover:bg-red-700" onClick={() => setShowAddDocModal(true)}>
                 <Plus size={18} className="mr-2" />Adicionar

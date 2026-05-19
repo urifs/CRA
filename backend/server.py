@@ -1,6 +1,7 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Response, Body, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+import io
 """
 ================================================================================
 CRA CONSTRUTORA - SISTEMA DE GESTÃO EMPRESARIAL
@@ -6404,6 +6405,43 @@ async def get_audit_logs(current_user: dict = Depends(get_current_user)):
             "created_at": log.get("created_at")
         })
     return logs
+
+
+@api_router.get("/admin-panel/database-export")
+async def database_export(current_user: dict = Depends(get_current_user)):
+    """Gera um backup COMPLETO do MongoDB sob demanda e devolve um ZIP com:
+       - dump.json (todos os documentos de todas as collections)
+       - schema.json (schema inferido para auxiliar a migração)
+       - migrate_to_supabase.sql (DDL Postgres equivalente)
+       - MANIFEST.md (instruções legíveis)
+    Endpoint protegido — somente admin/programador."""
+    require_admin(current_user)
+    from utils.db_export import build_export_zip
+    zip_bytes, meta = await build_export_zip(db, os.environ["DB_NAME"])
+
+    # Registra a ação no audit log para rastreabilidade
+    await create_audit_log(
+        current_user,
+        action="export",
+        entity_type="database",
+        entity_id="full",
+        entity_name=f"Backup completo ({meta['total_documents']} docs / {meta['collection_count']} collections)",
+        details=f"Tamanho: {meta['zip_size_bytes'] / 1024:.1f} KB",
+        module="Painel Admin",
+    )
+
+    filename = f"backup_db_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.zip"
+    return StreamingResponse(
+        io.BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Export-Total-Docs": str(meta["total_documents"]),
+            "X-Export-Collections": str(meta["collection_count"]),
+            "X-Export-Size-Bytes": str(meta["zip_size_bytes"]),
+        },
+    )
+
 
 @api_router.get("/admin-panel/users/{user_id}/activities")
 async def get_user_activities(user_id: str, current_user: dict = Depends(get_current_user)):
