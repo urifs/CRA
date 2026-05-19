@@ -3228,3 +3228,47 @@ um endpoint admin que gera o backup sob demanda.
 4. Salve o ZIP. Suba no Claude Code junto com o prompt sugerido no
    `MANIFEST.md` para conversão automática Postgres/Supabase.
 
+
+
+---
+
+## Atualização (2026-05-19) — Export Completo: Auditoria & Reforço
+
+### Problemas encontrados na 1ª versão
+1. Projection `{"_id": 0}` cortava o `_id`. Collections `counters` (6 docs) e
+   `folder_passwords` (3 docs) usam `_id` como única PK — sem ele, perderiam
+   a identidade.
+2. Tipos BSON especiais (Decimal128, Binary, Timestamp, Regex, Code,
+   MinKey/MaxKey, UUID) não tinham handlers explícitos. Cairiam no
+   fallback `default=str` perdendo o tipo.
+3. Índices do MongoDB não eram exportados.
+4. Sem arquivo de verificação para validar contagens pós-migração.
+
+### Refatoração `/app/backend/utils/db_export.py` (v2.0)
+- **`_serialize_full`**: novo serializador cobrindo TODOS os tipos BSON:
+  ObjectId → `$oid`, datetime → `$date`, Decimal128 → `$numberDecimal`,
+  Binary → `$binary`+`$type`, Timestamp → `$timestamp`, Regex → `$regex`,
+  Code → `$code`+`$scope`, MinKey/MaxKey → `$minKey`/`$maxKey`,
+  UUID → `$uuid`. Fallback marca como `$unsupported` para detectar futuras
+  lacunas.
+- **Projection removida**: agora exporta `_id` + TODOS os campos, sem
+  exceção (= "TUDO sem falta" exigido pelo usuário).
+- **`indexes.json`**: índices de cada collection (saída de
+  `index_information()` serializada).
+- **`verification.json`**: contagem por collection + sample de IDs +
+  `field_count_avg` + flag `has_id_field` (sinaliza quais collections
+  precisam usar `_id` como PK na migração).
+- **`system.*`** explicitamente skipped + registrado em
+  `skipped_system_collections`.
+
+### Validação (curl + python análise do ZIP gerado)
+- ✅ Total: 1.368 docs em 65 collections (vs 1.367 antes — `counters` voltou).
+- ✅ `counters` preservados com `_id` ("ordens_servico", "alugueis", …).
+- ✅ `folder_passwords` com `_id` envelopado em `$oid`.
+- ✅ `users` mantém `_id` E `id` (UUID) ambos.
+- ✅ Zero tipos `$unsupported` no dump inteiro.
+- ✅ 65 índices em `indexes.json`.
+- ✅ ZIP: 1,9 MB com 6 arquivos (dump + schema + indexes + verification
+  + manifest + sql).
+- ✅ Lint Python: 0 erros.
+
