@@ -2196,11 +2196,12 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
     styles = getSampleStyleSheet()
     
-    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=5, alignment=1, fontName='Helvetica-Bold')
-    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=10, textColor=colors.gray, spaceAfter=8, alignment=1)
-    section_style = ParagraphStyle('Section', fontSize=12, fontName='Helvetica-Bold', spaceBefore=12, spaceAfter=8, textColor=colors.HexColor("#D4A000"))
-    label_style = ParagraphStyle('Label', fontSize=9, fontName='Helvetica-Bold')
-    value_style = ParagraphStyle('Value', fontSize=9, leading=12, wordWrap='CJK')
+    # Estilos padronizados (idênticos ao /export/individual single-item da CRA)
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, spaceAfter=15, textColor=colors.HexColor("#1a1a1a"))
+    subtitle_style = ParagraphStyle('CustomSubtitle', parent=styles['Normal'], fontSize=9, textColor=colors.gray, spaceAfter=15)
+    section_style = ParagraphStyle('Section', parent=styles['Heading2'], fontSize=11, spaceBefore=10, spaceAfter=5, textColor=colors.HexColor("#D4A000"))
+    label_style = ParagraphStyle('Label', parent=styles['Normal'], fontSize=8, textColor=colors.gray, wordWrap='LTR')
+    value_style = ParagraphStyle('Value', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor("#1a1a1a"), wordWrap='LTR', leading=12)
     
     elements = []
     
@@ -2217,90 +2218,250 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
         if idx > 0:
             elements.append(PageBreak())
         
-        # Cabeçalho
-        elements.append(Paragraph(f"{config['title']}", title_style))
+        # Logo CRA (idêntico ao single-item)
+        try:
+            logo_path = "/app/frontend/public/logo.png"
+            if os.path.exists(logo_path):
+                logo = RLImage(logo_path, width=2.5*cm, height=2.5*cm, kind='proportional')
+                elements.append(logo)
+                elements.append(Spacer(1, 0.3*cm))
+        except Exception:
+            pass
+        
+        # Título (singular para cada item, mais elegante)
+        single_title = config["title"].replace("Contas a Pagar", "Conta a Pagar").replace("Contas a Receber", "Conta a Receber").replace("Pendentes", "(Pendente)").replace("Quitadas", "(Quitada)").replace("Recebidas", "(Recebida)").replace("Vencidas", "(Vencida)")
+        elements.append(Paragraph(single_title, title_style))
         elements.append(Paragraph(f"Item {idx + 1} de {len(items)} | Exportado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
-        elements.append(Spacer(1, 0.5*cm))
         
         # Conteúdo baseado no tipo de categoria
         category = data.category
         
         if "contas_pagar" in category or "contas_receber" in category:
-            elements.append(Paragraph("INFORMAÇÕES DA CONTA", section_style))
-            
-            # Buscar dados relacionados
-            fornecedor_nome = item.get("fornecedor_nome") or item.get("cliente_nome") or "-"
-            plano_nome = item.get("plano_conta_nome") or item.get("plano_contas_nome") or "-"
-            centro_nome = item.get("centro_custo_nome") or item.get("centro_custo") or "-"
-            forma_pag = item.get("forma_pagamento_nome") or item.get("forma_pagamento") or "-"
-            conta_banco = item.get("conta_bancaria_nome") or "-"
-            
-            info_data = [
-                [Paragraph("Nº:", label_style), Paragraph(str(item.get("numero", "-")), value_style),
-                 Paragraph("Status:", label_style), Paragraph("Quitada" if item.get("status") == "quitada" else "Em Aberto", value_style)],
-                [Paragraph("Fornecedor/Cliente:", label_style), Paragraph(fornecedor_nome, value_style),
-                 Paragraph("CNPJ/CPF:", label_style), Paragraph(item.get("fornecedor_cnpj") or item.get("cliente_cnpj") or "-", value_style)],
-                [Paragraph("Documento:", label_style), Paragraph(item.get("documento") or "-", value_style),
-                 Paragraph("Nº Doc:", label_style), Paragraph(item.get("numero_doc") or "-", value_style)],
-                [Paragraph("Data Emissão:", label_style), Paragraph(item.get("data_emissao") or "-", value_style),
-                 Paragraph("Data Vencimento:", label_style), Paragraph(item.get("data_vencimento") or "-", value_style)],
-                [Paragraph("Valor Original:", label_style), Paragraph(fmt_valor(item.get("valor", 0)), value_style),
-                 Paragraph("Valor Final:", label_style), Paragraph(fmt_valor(item.get("valor_final") or item.get("valor", 0)), value_style)],
-                [Paragraph("Juros:", label_style), Paragraph(fmt_valor(item.get("juros", 0)), value_style),
-                 Paragraph("Desconto:", label_style), Paragraph(fmt_valor(item.get("desconto", 0)), value_style)],
-                [Paragraph("Plano de Contas:", label_style), Paragraph(plano_nome, value_style),
-                 Paragraph("Centro de Custo:", label_style), Paragraph(centro_nome, value_style)],
-                [Paragraph("Forma Pagamento:", label_style), Paragraph(forma_pag, value_style),
-                 Paragraph("Conta Bancária:", label_style), Paragraph(conta_banco, value_style)],
+            is_pagar = "contas_pagar" in category
+            pessoa_label = "Fornecedor" if is_pagar else "Cliente"
+            pessoa_nome = item.get("fornecedor_nome" if is_pagar else "cliente_nome") or "-"
+            pessoa_doc = item.get("fornecedor_cnpj" if is_pagar else "cliente_documento") or "-"
+
+            # Seção: Identificação
+            elements.append(Paragraph("IDENTIFICAÇÃO", section_style))
+            id_data = [
+                [Paragraph("Nº Documento:", label_style), Paragraph(item.get("numero_documento") or (item.get("id", "-") or "-")[:12], value_style),
+                 Paragraph("Conta Movimento:", label_style), Paragraph(item.get("conta_bancaria_nome") or "-", value_style)],
+                [Paragraph(f"{pessoa_label}:", label_style), Paragraph(pessoa_nome, value_style),
+                 Paragraph("CPF/CNPJ:", label_style), Paragraph(pessoa_doc, value_style)],
             ]
-            
-            if item.get("data_pagamento") or item.get("data_recebimento"):
-                info_data.append([
-                    Paragraph("Data Pagamento:", label_style), 
-                    Paragraph(item.get("data_pagamento") or item.get("data_recebimento") or "-", value_style),
-                    Paragraph("", label_style), Paragraph("", value_style)
-                ])
-            
-            info_table = Table(info_data, colWidths=[3.5*cm, 5.5*cm, 3.5*cm, 5.5*cm])
-            info_table.setStyle(TableStyle([
+            id_table = Table(id_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+            id_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
                 ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            elements.append(id_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+            # Seção: Descrição
+            elements.append(Paragraph("DESCRIÇÃO", section_style))
+            desc_text = item.get("descricao", "-") or "-"
+            desc_table = Table([[Paragraph(desc_text, value_style)]], colWidths=[18*cm])
+            desc_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
                 ('TOPPADDING', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
                 ('LEFTPADDING', (0, 0), (-1, -1), 6),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ]))
-            elements.append(info_table)
-            
-            # Descrição
-            if item.get("descricao"):
-                elements.append(Spacer(1, 0.4*cm))
-                elements.append(Paragraph("DESCRIÇÃO", section_style))
-                desc_table = Table([[Paragraph(item.get("descricao", "-"), value_style)]], colWidths=[18*cm])
-                desc_table.setStyle(TableStyle([
-                    ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
-                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#fffef5")),
-                    ('TOPPADDING', (0, 0), (-1, -1), 8),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 8),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            elements.append(desc_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+            # Seção: Datas
+            elements.append(Paragraph("DATAS", section_style))
+            data_emissao = item.get("data_emissao") or (str(item.get("created_at", ""))[:10] if item.get("created_at") else "-")
+            data_venc = item.get("data_vencimento") or "-"
+            data_pag = item.get("data_pagamento" if is_pagar else "data_recebimento") or "-"
+            dates_data = [
+                [Paragraph("Data Emissão:", label_style), Paragraph(data_emissao, value_style),
+                 Paragraph("Data Vencimento:", label_style), Paragraph(data_venc, value_style),
+                 Paragraph("Data Pagamento:" if is_pagar else "Data Recebimento:", label_style), Paragraph(data_pag if data_pag else "-", value_style)],
+            ]
+            dates_table = Table(dates_data, colWidths=[3*cm, 3*cm, 3*cm, 3*cm, 3*cm, 3*cm])
+            dates_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+                ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+                ('BACKGROUND', (4, 0), (4, -1), colors.HexColor("#f8f8f8")),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ]))
+            elements.append(dates_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+            # Seção: Classificação
+            elements.append(Paragraph("CLASSIFICAÇÃO", section_style))
+            class_data = [
+                [Paragraph("Plano de Contas:", label_style), Paragraph(item.get("plano_contas_nome", "-") or "-", value_style),
+                 Paragraph("Subconta:", label_style), Paragraph(item.get("subconta_nome", "-") or "-", value_style)],
+                [Paragraph("Centro de Custo:", label_style), Paragraph(item.get("centro_custo_nome", "-") or "-", value_style),
+                 Paragraph("Frota:", label_style), Paragraph(item.get("fleet_nome", "-") or "-", value_style)],
+                [Paragraph("Forma Pagamento:", label_style), Paragraph(item.get("forma_pagamento_nome", "-") or "-", value_style),
+                 Paragraph("Conta Bancária:", label_style), Paragraph(item.get("conta_bancaria_nome", "-") or "-", value_style)],
+            ]
+            class_table = Table(class_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+            class_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+                ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            elements.append(class_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+            # Seção: Valores
+            elements.append(Paragraph("VALORES", section_style))
+            valor = float(item.get("valor", 0) or 0)
+            desconto = float(item.get("desconto", 0) or 0)
+            multa = float(item.get("multa", 0) or 0)
+            juros = float(item.get("juros", 0) or 0)
+            valor_final = float(item.get("valor_final", valor) or valor)
+
+            historico_pag = item.get("pagamentos" if is_pagar else "recebimentos", []) or []
+            if is_pagar:
+                valor_pago_acumulado = float(item.get("valor_pago", 0) or 0)
+            else:
+                valor_pago_acumulado = float(item.get("valor_recebido", 0) or 0)
+            if not valor_pago_acumulado and historico_pag:
+                valor_pago_acumulado = sum(float(p.get("valor", 0) or 0) for p in historico_pag)
+            saldo_restante = float(item.get("saldo_restante", max(valor_final - valor_pago_acumulado, 0)) or 0)
+            if saldo_restante <= 0.01 and valor_pago_acumulado >= valor_final - 0.01:
+                saldo_restante = 0.0
+
+            valores_data = [
+                [Paragraph("Valor Original:", label_style), Paragraph(fmt_valor(valor), value_style),
+                 Paragraph("Desconto:", label_style), Paragraph(fmt_valor(desconto), value_style)],
+                [Paragraph("Multa:", label_style), Paragraph(fmt_valor(multa), value_style),
+                 Paragraph("Juros:", label_style), Paragraph(fmt_valor(juros), value_style)],
+                [Paragraph("Já Pago:" if is_pagar else "Já Recebido:", label_style), Paragraph(fmt_valor(valor_pago_acumulado), value_style),
+                 Paragraph("Saldo Restante:", label_style), Paragraph(fmt_valor(saldo_restante), value_style)],
+            ]
+            valores_table = Table(valores_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
+            valores_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8f8f8")),
+                ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8f8f8")),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ]))
+            elements.append(valores_table)
+
+            # Total destacado
+            total_data = [[Paragraph("VALOR TOTAL:", ParagraphStyle('TotalLabel', fontSize=10, textColor=colors.white)),
+                           Paragraph(fmt_valor(valor_final), ParagraphStyle('TotalValue', fontSize=12, textColor=colors.white))]]
+            total_table = Table(total_data, colWidths=[9*cm, 9*cm])
+            total_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#D4A000")),
+                ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            elements.append(total_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+            # Histórico de pagamentos parciais
+            if historico_pag:
+                titulo_hist = "HISTÓRICO DE PAGAMENTOS PARCIAIS" if is_pagar else "HISTÓRICO DE RECEBIMENTOS PARCIAIS"
+                elements.append(Paragraph(titulo_hist, section_style))
+                hist_headers = [
+                    Paragraph("<b>#</b>", label_style),
+                    Paragraph("<b>Data</b>", label_style),
+                    Paragraph("<b>Valor</b>", label_style),
+                    Paragraph("<b>Juros</b>", label_style),
+                    Paragraph("<b>Multa</b>", label_style),
+                    Paragraph("<b>Desconto</b>", label_style),
+                    Paragraph("<b>Conta Bancária</b>", label_style),
+                    Paragraph("<b>Registrado por</b>", label_style),
+                ]
+                hist_rows = [hist_headers]
+                total_pag = 0.0
+                for hidx, p in enumerate(historico_pag, start=1):
+                    v_pag = float(p.get("valor", 0) or 0)
+                    total_pag += v_pag
+                    cb_id = p.get("conta_bancaria_id") or "-"
+                    cb_nome = "-"
+                    if cb_id and cb_id != "-":
+                        cb_doc = await db.contas_bancarias.find_one({"id": cb_id}, {"_id": 0, "nome": 1, "banco": 1})
+                        if cb_doc:
+                            cb_nome = cb_doc.get("nome") or cb_doc.get("banco") or "-"
+                    hist_rows.append([
+                        Paragraph(str(hidx), value_style),
+                        Paragraph(str(p.get("data", "-")), value_style),
+                        Paragraph(fmt_valor(v_pag), value_style),
+                        Paragraph(fmt_valor(p.get("valor_juros", 0)), value_style),
+                        Paragraph(fmt_valor(p.get("valor_multa", 0)), value_style),
+                        Paragraph(fmt_valor(p.get("valor_desconto", 0)), value_style),
+                        Paragraph(cb_nome, value_style),
+                        Paragraph(str(p.get("created_by", "-")), value_style),
+                    ])
+                hist_rows.append([
+                    Paragraph("", value_style),
+                    Paragraph("<b>TOTAL</b>", value_style),
+                    Paragraph(f"<b>{fmt_valor(total_pag)}</b>", value_style),
+                    Paragraph("", value_style),
+                    Paragraph("", value_style),
+                    Paragraph("", value_style),
+                    Paragraph("", value_style),
+                    Paragraph("", value_style),
+                ])
+                hist_table = Table(hist_rows, colWidths=[0.8*cm, 2.2*cm, 2.5*cm, 1.8*cm, 1.8*cm, 2.2*cm, 3.7*cm, 3.0*cm])
+                hist_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4A000")),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTSIZE', (0, 0), (-1, -1), 7),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                    ('TOPPADDING', (0, 0), (-1, -1), 3),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f8f8")),
                 ]))
-                elements.append(desc_table)
-            
-            # Observações
-            if item.get("observacoes"):
+                elements.append(hist_table)
                 elements.append(Spacer(1, 0.3*cm))
+
+            # Observações
+            obs = item.get("observacoes", "")
+            if obs:
                 elements.append(Paragraph("OBSERVAÇÕES", section_style))
-                obs_table = Table([[Paragraph(item.get("observacoes", "-"), value_style)]], colWidths=[18*cm])
+                obs_table = Table([[Paragraph(obs, value_style)]], colWidths=[18*cm])
                 obs_table.setStyle(TableStyle([
                     ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
-                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f5f5f5")),
-                    ('TOPPADDING', (0, 0), (-1, -1), 8),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ]))
                 elements.append(obs_table)
+
+            # Status colorido (lido sempre do documento)
+            status = item.get("status", "em_aberto")
+            status_map = {
+                "quitada": ("QUITADA", colors.HexColor("#28a745")),
+                "parcial": (f"PAGAMENTO PARCIAL — Falta {fmt_valor(saldo_restante)}" if is_pagar
+                            else f"RECEBIMENTO PARCIAL — Falta {fmt_valor(saldo_restante)}", colors.HexColor("#D4A000")),
+                "em_aberto": ("EM ABERTO", colors.HexColor("#dc3545")),
+                "pendente": ("PENDENTE", colors.HexColor("#dc3545")),
+                "cancelada": ("CANCELADA", colors.HexColor("#6c757d")),
+            }
+            status_text, status_color = status_map.get(status, (str(status).upper(), colors.HexColor("#6c757d")))
+            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Paragraph(f"<b>Status: {status_text}</b>", ParagraphStyle('Status', fontSize=12, alignment=1, textColor=status_color)))
         
         elif category == "plano_contas":
             elements.append(Paragraph("DADOS DO PLANO DE CONTAS", section_style))

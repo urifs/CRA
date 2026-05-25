@@ -12,6 +12,17 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 25/05/2026 (sessão 3)
+- **Fix Export Selecionados (PDF Multi-Item)**: rewriting do bloco contas_pagar/contas_receber em `/api/export/individual-multiple` para espelhar EXATAMENTE o layout do PDF single-item:
+  - Logo CRA no topo de cada item
+  - Seções IDENTIFICAÇÃO, DESCRIÇÃO, DATAS, CLASSIFICAÇÃO, VALORES
+  - VALOR TOTAL destacado em amarelo/dourado (#D4A000)
+  - HISTÓRICO DE PAGAMENTOS PARCIAIS quando aplicável
+  - Status colorido no rodapé (QUITADA=verde, EM ABERTO=vermelho, PARCIAL=amarelo)
+  - Título singularizado por item ("Conta a Pagar (Quitada)" em vez de "Contas a Pagar Quitadas")
+  - Proteção contra valores None em `.get()` que crashavam o Paragraph
+- Arquivo de validação: `/app/test_reports/multi_export_test_NEW.pdf` (37KB)
+
 ### 25/05/2026 (sessão 2)
 - **AnexosManager aplicado a TODOS os formulários restantes**:
   - `NewMaintenancePage.jsx` — anexos pendentes em criação + flushPending após POST
