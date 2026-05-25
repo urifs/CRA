@@ -12,6 +12,11 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 25/05/2026 (sessão 5 - Fix definitivo Exportação PDF Múltipla)
+- **Fix Exportação Selecionados (correção definitiva)**: O endpoint `POST /api/export/individual-multiple` em `exports_all.py` (linhas 2186-2206) agora chama o helper `generate_pdf_report(base_category, items, title)` produzindo uma **TABELA CONSOLIDADA única** (mesmo padrão da "Exportação Total"), em vez de gerar recibos individuais concatenados.
+- Validado via curl + `analyze_file_tool`: PDF gerado é uma única página com tabela contendo colunas Fornecedor / Vencimento / Quitação / Valor / Pago / Descrição / Status e TOTAL GERAL — exatamente o formato solicitado pelo usuário.
+- O parâmetro `base_category` (ex: `contas_pagar`) é derivado da `config["collection"]`, garantindo que `generate_pdf_report` selecione o layout correto.
+
 ### 25/05/2026 (sessão 4 - Object Storage Persistente)
 - **NOVO: Módulo de Armazenamento migrado para Object Storage persistente** (resolução definitiva do problema "arquivos perdidos no deploy"):
   - Nova camada de metadados em MongoDB (`storage_files`) — pasta + arquivo com `path`, `parent_path`, `name`, `type`, `size`, `object_key`, `modified_at`
