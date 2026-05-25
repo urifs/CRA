@@ -12,6 +12,17 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 25/05/2026 (sessão 2)
+- **AnexosManager aplicado a TODOS os formulários restantes**:
+  - `NewMaintenancePage.jsx` — anexos pendentes em criação + flushPending após POST
+  - `MaintenanceDetailPage.jsx` — anexos vinculados à manutenção existente
+  - `FolhaPagamentoPage.jsx` — modal "Detalhes da Folha" (read-mode)
+  - `EPIPage.jsx` — modal "Nova Ficha EPI" com flushPending
+  - `CustosPage.jsx` — modal "Configurar Custos" para tabelas oficiais (INSS/FGTS/CCT)
+  - Fix import em `MedicoesPage.jsx` (AnexosManager + useRef estavam usados sem import)
+- Backend `VALID_ENTITY_TYPES` já contempla todos os tipos (manutencao, epi_ficha, folha_pagamento, custo_rh, medicao, horimetro, combustivel)
+- Testing agent: 12/12 backend (100%) + 6/7 frontend validados em runtime
+
 ### 25/05/2026
 - **Preview Inline de Anexos** (NOVO): modal abre direto no AnexosManager mostrando:
   - **Imagens** (.jpg/.png/.gif/.webp/.svg) inline
@@ -39,7 +50,8 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 - Bug fix Financeiro: PUT em conta quitada preserva status
 
 ## Backlog (Pendente)
-- **P2**: Aplicar AnexosManager nos formulários restantes (Manutenções, Folha Pagamento, EPI, Custos RH, Banco Horas, Solicitações Folha)
+- **P1**: Rotação/zoom/anterior-próximo no modal de Preview Inline de anexos
+- **P1**: Adicionar `<DialogDescription>` aos modais "Nova Ficha EPI" e "Configurar Custos" (a11y warning Radix)
 - **P2**: Refatoração Fase 2 do `server.py`
 - **P2**: Parcelas automáticas em Contas a Receber via OS recorrente
 - **P2**: Mini-histórico do cliente no dropdown da OS
