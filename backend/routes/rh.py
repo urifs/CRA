@@ -567,6 +567,99 @@ async def delete_funcionario(funcionario_id: str):
     return {"message": "Funcionário excluído com sucesso"}
 
 
+# ===== ANEXOS DE FUNCIONÁRIOS =====
+FUNCIONARIOS_ANEXOS_DIR = ROOT_DIR / "uploads" / "funcionarios"
+FUNCIONARIOS_ANEXOS_DIR.mkdir(parents=True, exist_ok=True)
+FUNCIONARIOS_MAX_BYTES = 50 * 1024 * 1024  # 50MB
+
+
+@rh_router.post("/funcionarios/{funcionario_id}/anexos")
+async def upload_funcionario_anexo(
+    funcionario_id: str,
+    file: UploadFile = File(...),
+):
+    """Upload de anexo (documento) para um funcionário."""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Arquivo vazio")
+    if len(content) > FUNCIONARIOS_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 50MB")
+
+    ext = Path(file.filename).suffix.lower() if file.filename else ""
+    unique_filename = f"{funcionario_id}_{uuid.uuid4()}{ext}"
+    file_path = FUNCIONARIOS_ANEXOS_DIR / unique_filename
+
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    anexo = {
+        "id": str(uuid.uuid4()),
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "size": len(content),
+        "content_type": file.content_type or "application/octet-stream",
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await funcionarios_collection.update_one(
+        {"id": funcionario_id},
+        {"$push": {"anexos": anexo}},
+    )
+
+    return {"message": "Anexo adicionado", "anexo": anexo}
+
+
+@rh_router.delete("/funcionarios/{funcionario_id}/anexos/{anexo_id}")
+async def delete_funcionario_anexo(funcionario_id: str, anexo_id: str):
+    """Excluir um anexo de funcionário."""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+
+    anexo = next((a for a in func.get("anexos", []) if a.get("id") == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+
+    file_path = FUNCIONARIOS_ANEXOS_DIR / anexo["filename"]
+    try:
+        if file_path.exists():
+            file_path.unlink()
+    except Exception:
+        pass
+
+    await funcionarios_collection.update_one(
+        {"id": funcionario_id},
+        {"$pull": {"anexos": {"id": anexo_id}}},
+    )
+    return {"message": "Anexo excluído"}
+
+
+@rh_router.get("/funcionarios/{funcionario_id}/anexos/{anexo_id}/download")
+async def download_funcionario_anexo(funcionario_id: str, anexo_id: str):
+    """Download de anexo de funcionário."""
+    func = await funcionarios_collection.find_one({"id": funcionario_id})
+    if not func:
+        raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+
+    anexo = next((a for a in func.get("anexos", []) if a.get("id") == anexo_id), None)
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+
+    file_path = FUNCIONARIOS_ANEXOS_DIR / anexo["filename"]
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=anexo.get("original_name", anexo["filename"]),
+        media_type=anexo.get("content_type", "application/octet-stream"),
+    )
+
+
 # ===== PONTO =====
 @rh_router.get("/ponto")
 async def list_ponto(
