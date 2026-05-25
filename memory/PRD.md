@@ -13,7 +13,12 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 ## Histórico de Implementações
 
 ### 25/05/2026
-- **Histórico de Ações ampliado** (FinanceiroHistoryPanel): removido filtro restritivo de `module: Administrativo` e aumentado limite de 80 → 200 registros, agora exibindo ações de todos os módulos.
+- **Histórico de Ações** restaurado ao filtro Administrativo (módulo financeiro) com limite ampliado para 200 registros (FinanceiroHistoryPanel).
+- **Exportação PDF de Contas (Pagar/Receber)** ampliada (`/app/backend/routes/exports_all.py` → `export_individual_item`):
+  - Adicionada exibição de "Já Pago" / "Já Recebido" e "Saldo Restante" na seção VALORES.
+  - Nova seção **HISTÓRICO DE PAGAMENTOS/RECEBIMENTOS PARCIAIS** com tabela detalhada (#, data, valor, juros, multa, desconto, conta bancária, registrado por, total).
+  - Status agora suporta todos os estados: "QUITADA", "PAGAMENTO/RECEBIMENTO PARCIAL — Falta R$ X,XX", "EM ABERTO", "PENDENTE", "CANCELADA".
+  - Bug fix paralelo: tratamento de `data_emissao`/`data_vencimento`/`data_pagamento` null para evitar 500 em contas a receber sem datas.
 
 ### Sessões anteriores
 - Coluna "Saldo Restante" e modal de parcelas em Contas a Pagar/Receber

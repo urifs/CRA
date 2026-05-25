@@ -1559,9 +1559,9 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
         
         # Seção: Datas
         elements.append(Paragraph("DATAS", section_style))
-        data_emissao = item.get("data_emissao", item.get("created_at", "-")[:10] if item.get("created_at") else "-")
-        data_venc = item.get("data_vencimento", "-")
-        data_pag = item.get("data_pagamento" if is_pagar else "data_recebimento", "-")
+        data_emissao = item.get("data_emissao") or (str(item.get("created_at", ""))[:10] if item.get("created_at") else "-")
+        data_venc = item.get("data_vencimento") or "-"
+        data_pag = item.get("data_pagamento" if is_pagar else "data_recebimento") or "-"
         dates_data = [
             [Paragraph("Data Emissão:", label_style), Paragraph(data_emissao, value_style),
              Paragraph("Data Vencimento:", label_style), Paragraph(data_venc, value_style),
@@ -1610,12 +1610,27 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
         multa = float(item.get("multa", 0) or 0)
         juros = float(item.get("juros", 0) or 0)
         valor_final = float(item.get("valor_final", valor) or valor)
-        
+
+        # Histórico de pagamentos/recebimentos parciais
+        historico_pag = item.get("pagamentos" if is_pagar else "recebimentos", []) or []
+        # Quanto já foi pago / recebido (acumulado)
+        if is_pagar:
+            valor_pago_acumulado = float(item.get("valor_pago", 0) or 0)
+        else:
+            valor_pago_acumulado = float(item.get("valor_recebido", 0) or 0)
+        if not valor_pago_acumulado and historico_pag:
+            valor_pago_acumulado = sum(float(p.get("valor", 0) or 0) for p in historico_pag)
+        saldo_restante = float(item.get("saldo_restante", max(valor_final - valor_pago_acumulado, 0)) or 0)
+        if saldo_restante <= 0.01 and valor_pago_acumulado >= valor_final - 0.01:
+            saldo_restante = 0.0
+
         valores_data = [
             [Paragraph("Valor Original:", label_style), Paragraph(fmt_valor(valor), value_style),
              Paragraph("Desconto:", label_style), Paragraph(fmt_valor(desconto), value_style)],
             [Paragraph("Multa:", label_style), Paragraph(fmt_valor(multa), value_style),
              Paragraph("Juros:", label_style), Paragraph(fmt_valor(juros), value_style)],
+            [Paragraph("Já Pago:" if is_pagar else "Já Recebido:", label_style), Paragraph(fmt_valor(valor_pago_acumulado), value_style),
+             Paragraph("Saldo Restante:", label_style), Paragraph(fmt_valor(saldo_restante), value_style)],
         ]
         valores_table = Table(valores_data, colWidths=[3*cm, 6*cm, 3*cm, 6*cm])
         valores_table.setStyle(TableStyle([
@@ -1642,6 +1657,66 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
         ]))
         elements.append(total_table)
         elements.append(Spacer(1, 0.3*cm))
+
+        # Seção: Histórico de Pagamentos / Recebimentos Parciais
+        if historico_pag:
+            titulo_hist = "HISTÓRICO DE PAGAMENTOS PARCIAIS" if is_pagar else "HISTÓRICO DE RECEBIMENTOS PARCIAIS"
+            elements.append(Paragraph(titulo_hist, section_style))
+            hist_headers = [
+                Paragraph("<b>#</b>", label_style),
+                Paragraph("<b>Data</b>", label_style),
+                Paragraph("<b>Valor</b>", label_style),
+                Paragraph("<b>Juros</b>", label_style),
+                Paragraph("<b>Multa</b>", label_style),
+                Paragraph("<b>Desconto</b>", label_style),
+                Paragraph("<b>Conta Bancária</b>", label_style),
+                Paragraph("<b>Registrado por</b>", label_style),
+            ]
+            hist_rows = [hist_headers]
+            total_pag = 0.0
+            for idx, p in enumerate(historico_pag, start=1):
+                v_pag = float(p.get("valor", 0) or 0)
+                total_pag += v_pag
+                cb_id = p.get("conta_bancaria_id") or "-"
+                cb_nome = "-"
+                if cb_id and cb_id != "-":
+                    cb_doc = await db.contas_bancarias.find_one({"id": cb_id}, {"_id": 0, "nome": 1, "banco": 1})
+                    if cb_doc:
+                        cb_nome = cb_doc.get("nome") or cb_doc.get("banco") or "-"
+                hist_rows.append([
+                    Paragraph(str(idx), value_style),
+                    Paragraph(str(p.get("data", "-")), value_style),
+                    Paragraph(fmt_valor(v_pag), value_style),
+                    Paragraph(fmt_valor(p.get("valor_juros", 0)), value_style),
+                    Paragraph(fmt_valor(p.get("valor_multa", 0)), value_style),
+                    Paragraph(fmt_valor(p.get("valor_desconto", 0)), value_style),
+                    Paragraph(cb_nome, value_style),
+                    Paragraph(str(p.get("created_by", "-")), value_style),
+                ])
+            # Linha de Total
+            hist_rows.append([
+                Paragraph("", value_style),
+                Paragraph("<b>TOTAL</b>", value_style),
+                Paragraph(f"<b>{fmt_valor(total_pag)}</b>", value_style),
+                Paragraph("", value_style),
+                Paragraph("", value_style),
+                Paragraph("", value_style),
+                Paragraph("", value_style),
+                Paragraph("", value_style),
+            ])
+            hist_table = Table(hist_rows, colWidths=[0.8*cm, 2.2*cm, 2.5*cm, 1.8*cm, 1.8*cm, 2.2*cm, 3.7*cm, 3.0*cm])
+            hist_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#D4A000")),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTSIZE', (0, 0), (-1, -1), 7),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+                ('TOPPADDING', (0, 0), (-1, -1), 3),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f8f8f8")),
+            ]))
+            elements.append(hist_table)
+            elements.append(Spacer(1, 0.3*cm))
         
         # Seção: Observações
         obs = item.get("observacoes", "")
@@ -1657,10 +1732,17 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
             ]))
             elements.append(obs_table)
         
-        # Status
+        # Status (lido sempre do documento — ignora qualquer rótulo da rota)
         status = item.get("status", "em_aberto")
-        status_text = "QUITADA" if status == "quitada" else "EM ABERTO"
-        status_color = colors.HexColor("#28a745") if status == "quitada" else colors.HexColor("#dc3545")
+        status_map = {
+            "quitada": ("QUITADA", colors.HexColor("#28a745")),
+            "parcial": (f"PAGAMENTO PARCIAL — Falta {fmt_valor(saldo_restante)}" if is_pagar
+                        else f"RECEBIMENTO PARCIAL — Falta {fmt_valor(saldo_restante)}", colors.HexColor("#D4A000")),
+            "em_aberto": ("EM ABERTO", colors.HexColor("#dc3545")),
+            "pendente": ("PENDENTE", colors.HexColor("#dc3545")),
+            "cancelada": ("CANCELADA", colors.HexColor("#6c757d")),
+        }
+        status_text, status_color = status_map.get(status, (status.upper(), colors.HexColor("#6c757d")))
         elements.append(Spacer(1, 0.3*cm))
         elements.append(Paragraph(f"<b>Status: {status_text}</b>", ParagraphStyle('Status', fontSize=12, alignment=1, textColor=status_color)))
         

@@ -10,7 +10,7 @@ import { formatDateTimeBR } from "@/utils/dateFormat";
 
 /**
  * Painel lateral de Histórico do Sistema Financeiro.
- * - Lista as últimas ações do usuário em TODOS os módulos do ERP.
+ * - Lista as últimas ações do usuário no módulo Administrativo (Financeiro).
  * - Cada item é clicável → abre modal de detalhes.
  * - Botão "Desfazer" disponível para ações reversíveis (exclusão/edição
  *   de contas a pagar/receber, etc.).
@@ -25,7 +25,7 @@ export default function FinanceiroHistoryPanel({ open, onClose }) {
     setLoading(true);
     try {
       const r = await axios.get(`${API}/audit-logs/my-history`, {
-        params: { limit: 200 },
+        params: { module: "Administrativo", limit: 200 },
       });
       setLogs(r.data || []);
     } catch (err) {
