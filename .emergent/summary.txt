@@ -1,123 +1,119 @@
-<analysis><handoff summary>
-**original_problem_statement**: O usuário solicitou uma série de melhorias de fluxo, UI/UX e correção de bugs nos módulos Administrativo (Financeiro), Exportação e RH:
-- **Notificações e Folha de Pagamento**: Adicionar botão na notificação do financeiro que abre diretamente o modal detalhado da folha de pagamento, exibindo a tabela de funcionários com divergências antes de confirmar.
-- **Dropdowns em Modais**: Corrigir bugs onde o dropdown (Plano de Contas) não abria dentro de modais específicos (conflito de ).
-- **Contas a Pagar/Receber (Parcelamento)**: Ao editar uma conta de valor cheio e alterar para Parcelado, o sistema deve excluir a conta original e gerar as N parcelas correspondentes, copiando integralmente as observações, anexos e Nº da Nota Fiscal da conta original para as novas parcelas.
-- **RH (Férias)**: Corrigir o botão Dispensar Todos os alertas de férias, que apagava no banco mas continuava exibindo na tela.
-- **Exportação (Filtros e PDFs)**: Garantir que todas as categorias (incluindo Quitadas e Recebidas) possuam a barra de pesquisa por Nº da NF, Fornecedor e Valor. Corrigir falhas de UI (falta do botão de expandir listas) e erros 400/500 ao gerar PDFs/Excel originados por divergência de IDs (singular vs plural) no backend.
+<analysis>**original_problem_statement**: O usuário solicitou diversas implementações e correções abrangendo múltiplos módulos: criação de coluna Saldo Restante e modal para contas parceladas; expansão do sistema de Audit Logs e Rollback para abranger todas as ações do painel administrativo (Cadastros, OS, etc.); implementação de ordenação de colunas na Importação de NFs; correção do cálculo do Ponto Eletrônico (RH) que ignorava jornadas personalizadas; correção de filtros no Financeiro que ocultavam contas Parciais; criação de um endpoint para exportação total do banco de dados (MongoDB para Supabase) incluindo chaves primárias originais (); e correção de um bug onde a inserção de anexos em contas quitadas revertia o status da conta para em aberto. PRODUCT REQUIREMENTS: Full-stack ERP (React + FastAPI + MongoDB) cobrindo módulos de Finanças, RH e Operações.
 
 **User's preferred language**: Portuguese (Brazil)
 INSTRUCT NEXT AGENT: The next agent MUST respond strictly in Portuguese (Brazil) only.
 
 **what currently exists?** 
-Um ERP full-stack React + FastAPI + MongoDB com módulos de Financeiro, RH, Gestão de Frota e Relatórios. O sistema possui um pipeline avançado de extração de dados (OCR) para folhas de pagamento. Conta também com um sistema dinâmico de notificações in-app e geração nativa de PDFs/Exportações (WeasyPrint/Excel/OFX) com filtros granulares. O fluxo de parcelamento agora preserva rastreabilidade completa (Nº doc, anexos) da conta original.
+Um ERP Full-stack React + FastAPI + MongoDB estável e em produção. Possui módulos robustos de Financeiro, RH (com controle de Ponto Eletrônico e Jornadas), Gestão de Frota, Importação de Notas Fiscais via OCR e um painel de administração com sistema de auditoria (Rollback) e capacidade de gerar exportações completas do banco de dados em formato ZIP via UI.
 
 **Last working item**: 
-    - Last item agent was working: Correção de múltiplos erros 400 (Bad Request) e 500 (Internal Server Error) ao tentar exportar arquivos (PDF, Excel, OFX) e exportação em lote nas subcategorias Contas Quitadas e Contas Recebidas. O problema raiz era uma confusão de chaves em dicionários no  originada pelo ajuste de IDs singulares/plurais na UI.
+    - Last item agent was working: Correção de bug no Financeiro onde editar/anexar um documento em uma conta já quitada revertia o status para em aberto. O problema ocorria porque o Pydantic model () injetava o valor default ao realizar o update sem a chave de status.
     - Status: COMPLETED
     - Agent Testing Done: Y
-    - Which testing method agent to use? backend testing via bash (curl validando respostas HTTP 200 e tamanho de bytes dos arquivos exportados).
-    - User Testing Done: Y (Usuário respondeu continuar, validando o fim do fluxo).
+    - Which testing method agent to use? manual testing by curl
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:  
-  Nenhum issue bloqueante ou em progresso no momento. O ambiente está limpo e os bugs de exportação/parcelamento foram resolvidos.
+  Nenhum issue bloqueante ou reportado pendente no momento. Todas as requisições da última sessão foram solucionadas.
 
 **In progress Task List**: 
-  Nenhuma.
+  Nenhuma tarefa em progresso.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - P1: Retomar a refatoração do  (Fase 2). O monolito continua grande e precisa de suas rotas restantes e Pydantic models extraídos para a pasta .
+    - P2: Retomar refatoração do  (Fase 2 - extrair rotas restantes para modularização).
     
     Future Tasks:
-    - P2: Gerar parcelas automáticas em Contas a Receber quando uma OS recorrente é criada.
-    - P2: Exibir um mini-histórico do cliente ao selecioná-lo no dropdown da OS (últimas OSs, valores, frequência).
+    - P2: Gerar parcelas automáticas em Contas a Receber quando uma Ordem de Serviço (OS) recorrente é criada.
+    - P2: Exibir um mini-histórico do cliente ao selecioná-lo no dropdown da OS.
     - P3: Dashboard de Custo por Máquina (combustível, manutenção, peças vs. aluguel recebido).
-    - P3: Links de Compartilhamento público para envios externos de relatórios PDF.
+    - P3: Links públicos de compartilhamento para relatórios em PDF gerados pelo sistema.
 
 **Completed work in this session**
-- **TasksInbox / Folha**: Redirecionamento da notificação direto para o detalhe da Folha () (DONE)
-- **UI Folha**: Modal abre automaticamente exibindo tabela de funcionários, valores e botão renomeado para Confirmar Folha de Pagamento (DONE)
-- **Bug Fix UI**: Removido wrapper com  que impedia o Radix Select (Dropdown de Plano de Contas) de abrir sobre o modal (DONE)
-- **Financeiro (Parcelamento)**: Corrigido fluxo de Edição. Ao editar conta e marcar Parcelado, o backend gera as N parcelas, deleta a original e injeta dados cruciais (NF, origem, anexos) nas observações das novas parcelas (DONE)
-- **RH**: Corrigido  para respeitar a coleção de alertas dispensados (botão Dispensar Todos agora funciona) (DONE)
-- **Exportação**: Adicionado campo  (NF) nas respostas de todas as subcategorias para permitir pesquisa na UI (DONE)
-- **Bug Fix Exportação UI**: Alinhamento de nomenclaturas ( vs ) devolvendo o botão de Expandir para as abas Quitadas/Recebidas (DONE)
-- **Bug Fix Exportação Backend**: Mapeamento completo de aliases em  e correção de erro  ao gerar PDF de itens quitados (DONE)
+- Coluna Saldo Restante e modal de listagem de parcelas implementados em Contas a Pagar/Receber (DONE)
+- Audit Logs e Rollback expandidos () para Cadastros, Aluguéis, Imóveis, Centro de Custo, etc (DONE)
+- Ordenação de colunas (, ) implementada no backend e UI da Importação de NF-e/NFS-e (DONE)
+- Bug Fix (RH): Ponto Eletrônico agora lê a  do funcionário em vez de usar 8h diárias fixas, recalculando o saldo retroativamente (DONE)
+- Bug Fix (Financeiro): Filtros ajustados para exibir contas com status  nas visões de A Pagar, Vencidas e A Vencer (DONE)
+- Ferramenta de Exportação do DB: Criado endpoint admin que gera dump ZIP completo do MongoDB em tempo real (DONE)
+- Bug Fix (Exportação): Corrigido o helper de exportação para preservar a chave  em collections sem identificador UUID (ex: ) (DONE)
+- Bug Fix (Financeiro): Endpoint de edição blindado para preservar o status quitada em atualizações de payload parcial (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-   Nenhum pendente.
+   Nenhum.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: O arquivo  no backend continua extenso e requer abstração (Fase 2 pendente).
-  - Recurrence count: 16
-  - Status: NOT STARTED 
+  - Issue recurrence in previous fork: O arquivo  no backend continua extenso e requer abstração (Fase 2).
+  - Recurrence count: 19
+  - Status: NOT STARTED
 
 **Code Architecture**
-- : Central de exportações, agora suportando pesquisa unificada e renderização condicional baseada em dicionários expansíveis.
-- : Geração de relatórios. Contém múltiplos dicionários de mapeamento (collections/filtros) que foram estabilizados.
-- : Lógica de Contas a Pagar/Receber, atualizada para o novo fluxo destrutivo/construtivo de parcelamento via edição.
-- : Lógica de alertas de férias e dispensa.
+- : Contém as rotas do painel admin, agora com auditoria abrangente e endpoint de exportação do banco.
+- : Script isolado responsável por criar o manifesto e transformar as collections MongoDB em um ZIP para migração.
+- : Gerencia funcionários, jornadas e ponto eletrônico.
+- : Processa CRUD financeiro, lidando com pagamentos e fatiamento de contas.
 
 **Key Technical Concepts**
-- **Parcelamento na Edição**: Diferente da criação, a edição para parcelado deleta a conta alvo e reaproveita seus metadados (NF, links de NFE, documentos) repassando via  para o método gerador de parcelas.
-- **Export IDs**: O backend transita IDs em singular (), mas para evitar regressões e manter compatibilidade, foram criados mapeamentos/aliases em todos os dicionários (OFX, Excel, PDF, Multiple-Items).
+- **Dynamic HR Hours**: O cálculo de horas previstas e saldo no Ponto Eletrônico é processado on-the-fly (), garantindo que se a jornada do funcionário for alterada no cadastro, o banco de horas reflita a alteração instantaneamente.
+- **Rollback Universal**: Toda rota de Mutação (Create/Update/Delete) no módulo administrativo gera um  contendo um dict  do estado do documento, permitindo reverter dados deletados ou reverter modificações indesejadas na UI.
+- **Default Pydantic Fields Mitigation**: Rotas de PUT extraem o documento original do DB antes do update para mesclar status, prevenindo que defaults (como ) sobrescrevam campos estabilizados de contas.
 
 **key DB schema**
-  - : { funcionario_id, data_dispensa } -> Usado como blacklist no GET de alertas ativos.
-  -  / : { numero_doc, nfe_id, anexos, origem } -> Campos agora preservados estritamente na mutação de parcelamento.
+  - : { id, nome, is_padrao, configuracao_dias[] } -> define limites diários mapeados para funcionários.
+  - : { action, entity_type, snapshot, reversible, rolled_back }.
 
 **changes in tech stack**
   Nenhuma.
 
 **All files of reference** 
--  (Modal detalhado)
--  e  (Fluxo de edição e parcelamento)
--  (Mapeamentos de exportação e WeasyPrint)
--  (Rotas )
--  (Rotas )
+-  (Lógica de preservação de status)
+-  (Lógica de cálculo dinâmico da jornada)
+-  (Helper de dump ZIP)
+-  &  (Saldo Restante e filtros ajustados)
+-  (Aba de Database adicionada)
 
 **Areas that need refactoring**:
-- O  necessita da Fase 2 de extração de rotas para concluir a componentização do backend.
+-  continua grande, necessitando da Fase 2 de extração de rotas.
 
 **key api endpoints**
--  e  (Agora invocados também na Edição).
--  e  (Fortemente refatorados para aceitar aliases de chaves).
--  (Refatorado para cruzar com lista de dispensados).
+-  (Edit modificado para prevenir reset de status)
+-  (Gera o arquivo ZIP do banco)
+-  e  (Agora recebem  e )
 
 **Critical Info for New Agent**
-- **ATENÇÃO AO AMBIENTE DE PRODUÇÃO**: O usuário fez deploy da aplicação em produção (). Frequentemente ele testa na produção e reporta que o botão não existe ou o bug continua. NUNCA altere código cega ou freneticamente se você já atestou via Bash/Playwright que no Preview está funcionando. Sempre pergunte gentilmente se ele está verificando no preview ou na produção, lembrando-o de que o deploy é necessário para o fix ir ao ar.
-- Responda estritamente em Português do Brasil.
-- Ao lidar com exportações no , se criar novas categorias, assegure-se de registrar a chave tanto nas listas do frontend () quanto em *todos* os dicionários internos do backend (PDF, OFX, Excel, Múltiplos, Contagens).
+- **Ambiente de Produção Ativo**: O usuário frequentemente testa validações na URL de produção e não no ambiente Preview. Se ele relatar que o botão não apareceu ou o bug continua, verifique as alterações localmente (via curl/logs no ambiente do agente). Se estiver tudo correto, informe cordialmente que o código funciona no preview e requer que o usuário faça o deploy para surtir efeito em produção.
+- Ao atualizar (PUT) entidades no financeiro, sempre puxe o documento existente do banco primeiro e mescle campos que não são passados pelo payload do front (como status de conta).
 
 **documents and test reports created in this job**
-  - Não houve uso do subagente de testes nesta iteração, pois os fixes eram focados em fluxos lógicos e a validação foi maciça via script bash ( e simulações via Python diretamente nos dados do banco/endpoints) e Playwright (screenshots de UI).
+  -  (Atualizado repetidamente ao final de cada bloco de tarefas).
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. **User**: Reclamou que no detalhe da folha os dropdowns de plano de contas pararam de funcionar. (Resolvido, removido  conflitante com o portal).
-2. **User**: Alegou que os dropdowns continuavam sem funcionar. (Agente usou Playwright, provou que funcionava no Preview e instruiu que poderia ser cache/produção).
-3. **User**: Relatou que fatiar conta a pagar via edição estava salvando  sem alterar valores. (Resolvido, adicionado fluxo de delete/recreate).
-4. **User**: Pediu que os dados da nota original (NF, docs, anexos) fossem integralmente migrados para as parcelas recém criadas. (Resolvido).
-5. **User**: Relatou que o botão Dispensar Todos nas férias estava com problema. (Resolvido).
-6. **User**: Pediu barra de filtro por NF/Fornecedor na Exportação Quitadas. (Resolvido inserção de  nas chamadas).
-7. **User**: Avisou que Quitadas continuava sem a barra. (Agente notou conflito singular/plural no id e devolveu o ícone dropdown para abas afetadas).
-8. **User**: Envio agressivo de screenshot dizendo que a barra nem existia pra ser clicada. (Agente apontou que o fix acabou de resolver isso e enviou print provando).
-9. **User**: Erros de exportação (400/500). (Resolvido, o fix de singular/plural no front quebrou os dicionários de endpoint no back. Aliases adicionados).
-10. **User**: continuar. (Confirmação de que as exportações voltaram a funcionar).
+1. **User**: Pediu ordenação de colunas + paginação server-side na Importação NF.
+2. **Agent**: Implementou no backend e no frontend, testou e finalizou.
+3. **User**: Informou que o Ponto Eletrônico (RH) estava ignorando a carga horária atribuída e mantinha contagem normal.
+4. **Agent**: Removeu variáveis hardcoded (8h), forçou leitura da collection de jornadas no Ponto e testou a retroatividade.
+5. **User**: Reclamou que as contas com pagamento parcial pararam de aparecer na aba A Pagar.
+6. **Agent**: Ajustou as querys para incluir  nos filtros de em aberto/vencidas e testou fluxos de listagem.
+7. **User**: Pediu a exportação de todo o banco de produção para migrar para o Supabase.
+8. **Agent**: Criou script utilitário ZIP e o anexou a um botão no Painel Admin (UI).
+9. **User**: Disse que a exportação não estava trazendo TUDO (faltavam colunas/IDs).
+10. **Agent**: Revisou o exportador, removeu o drop  para collections genéricas (ex: ) e restabeleceu os dados nativos.
+11. **User**: Reportou bug onde contas quitadas voltavam para a pagar se um documento fosse anexado (edit).
+12. **Agent**: Resolveu a substituição acidental via Pydantic model ( default), blindou os endpoints e finalizou.
 *(Nenhuma mensagem humana pendente)*
 
 **Project Health Check:**
 Healthy.
 
 **3rd Party Integrations**
-- ABRASF Webservice (SOAP / WebISS)
-- Emergent LLM Key (Gemini OCR)
-- CBO API / ViaCEP / BrasilAPI.
+- ABRASF Webservice (SOAP)
+- Emergent LLM Key (OCR e Chat)
+- ViaCEP / BrasilAPI / CBO API.
 
 **Testing status**
-  - Testing agent used after significant changes: NO (Testado intensivamente via bash curl, chamadas python interativas e Playwright screenshot).
+  - Testing agent used after significant changes: NO (Utilizou-se amplamente , chamadas bash python-c e execução interativa para validar todos os cálculos matemáticos complexos e ordenações em tempo real).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None nesta sessão específica.
+  - Test files created: None
   - Known regressions: None
 
 **Credentials to test flow:**
@@ -125,8 +121,10 @@ Email: test@test.com
 Password: password
 
 **What agent forgot to execute**
-Nenhum fluxo deixado para trás.
+Nenhuma instrução pedida pelo usuário foi esquecida ou deixada de lado.
 
 **Debugging checklist for current issue**
-NA. Não há issues pendentes. O próximo passo lógico é validar se o usuário deseja iniciar a refatoração final da Fase 2 do  ou se quer construir o painel de Custo por Máquina. Utilize a tool  para oferecer essas opções.
-</handoff summary></analysis>
+Nenhum issue bloqueante pendente. O próximo passo lógico é consultar o usuário sobre a continuidade do projeto:
+- Ele deseja seguir para as Future Tasks do PRD (Gerar parcelas automáticas de OS)?
+- Deseja realizar a Fase 2 de refatoração do ?
+Use a ferramenta  apresentando essas opções.</analysis>

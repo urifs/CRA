@@ -7,7 +7,7 @@ import base64
 import io
 
 class FleetMaintenanceAPITester:
-    def __init__(self, base_url="https://erp-financeiro-fixes.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://audit-rollback.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.user_id = None
