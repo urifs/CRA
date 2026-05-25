@@ -56,9 +56,10 @@ VALID_ENTITY_TYPES = {
     "ordem_servico", "categoria",
     # Gerenciamento
     "maquina", "manutencao", "estoque", "obra", "fleet",
+    "medicao", "horimetro", "combustivel", "abastecedor",
     # RH
     "funcionario", "folha_pagamento", "solicitacao_folha", "ferias",
-    "banco_horas", "epi", "custo_rh", "abono",
+    "banco_horas", "epi", "epi_ficha", "custo_rh", "abono",
     # Outros
     "notificacao", "importacao_nf", "emissao_nf", "conciliacao",
 }

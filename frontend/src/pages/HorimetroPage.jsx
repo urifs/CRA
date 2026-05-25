@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { useAuth } from "@/App";
 import { toast } from "sonner";
+import AnexosManager from "@/components/AnexosManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,7 @@ export default function HorimetroPage() {
   const [filterMachine, setFilterMachine] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const anexosRef = useRef(null);
   const [formData, setFormData] = useState({
     machine_id: "",
     data: new Date().toISOString().split("T")[0],
@@ -148,11 +150,13 @@ export default function HorimetroPage() {
         await axios.put(`${API}/horimetro/${editingId}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(editingId);
         toast.success("Registro atualizado com sucesso!");
       } else {
-        await axios.post(`${API}/horimetro`, payload, {
+        const _r = await axios.post(`${API}/horimetro`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(_r.data?.id);
         toast.success("Registro criado com sucesso!");
       }
       
@@ -645,6 +649,12 @@ export default function HorimetroPage() {
                 rows={3}
               />
             </div>
+
+            <AnexosManager
+              ref={anexosRef}
+              entityType="horimetro"
+              entityId={editingId}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>

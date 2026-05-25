@@ -85,6 +85,7 @@ export default function MedicoesPage() {
   // Modal
   const [showModal, setShowModal] = useState(false);
   const [editingMedicao, setEditingMedicao] = useState(null);
+  const anexosRef = useRef(null);
   const [formLoading, setFormLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -220,9 +221,11 @@ export default function MedicoesPage() {
 
       if (editingMedicao) {
         await axios.put(`${API}/medicoes/${editingMedicao.id}`, payload);
+        await anexosRef.current?.flushPending(editingMedicao.id);
         toast.success("Medição atualizada!");
       } else {
-        await axios.post(`${API}/medicoes`, payload);
+        const _r = await axios.post(`${API}/medicoes`, payload);
+        await anexosRef.current?.flushPending(_r.data?.id);
         toast.success("Medição registrada!");
       }
       
@@ -667,6 +670,12 @@ export default function MedicoesPage() {
                 rows={2}
               />
             </div>
+
+            <AnexosManager
+              ref={anexosRef}
+              entityType="medicao"
+              entityId={editingMedicao?.id}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowModal(false)}>

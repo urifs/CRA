@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { API } from "@/App";
+import AnexosManager from "@/components/AnexosManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,8 @@ export default function CombustivelPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAbastecedorModalOpen, setIsAbastecedorModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const anexosRef = useRef(null);
+  const anexosAbastecedorRef = useRef(null);
   const [editingAbastecedorId, setEditingAbastecedorId] = useState(null);
   
   // Form states - Formulário unificado de combustível
@@ -136,11 +139,13 @@ export default function CombustivelPage() {
         await axios.put(`${API}/combustivel/${editingId}`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(editingId);
         toast.success("Registro atualizado com sucesso!");
       } else {
-        await axios.post(`${API}/combustivel`, payload, {
+        const _r = await axios.post(`${API}/combustivel`, payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(_r.data?.id);
         toast.success("Registro criado com sucesso!");
       }
       
@@ -929,6 +934,12 @@ export default function CombustivelPage() {
                 rows={2}
               />
             </div>
+
+            <AnexosManager
+              ref={anexosRef}
+              entityType="combustivel"
+              entityId={editingId}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
