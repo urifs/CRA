@@ -1,0 +1,38 @@
+{
+  "summary": "Validação do AnexosManager universal aplicado a 5 formulários (NewMaintenance, MaintenanceDetail, FolhaPagamento, EPI, Custos) + regressão Medicoes/Horimetro/Combustivel. Backend: 12/12 testes pytest (100%) cobrindo GET vazio para manutencao/epi_ficha/folha_pagamento/custo_rh/medicao/horimetro/combustivel, validação de entity_type inválido, POST multipart upload + GET persistência + DELETE cleanup para manutencao e epi_ficha, rejeição de nome errado 'ficha_epi' (correto é 'epi_ficha'), e exigência de autenticação. Frontend: confirmou que AnexosManager renderiza corretamente em NewMaintenancePage ('Anexos da Manutenção' + Do computador + Do armazenamento), MaintenanceDetailPage (screenshot confirma os 2 botões), modal 'Nova Ficha EPI' ('Anexos da Ficha EPI'), e modal 'Configurar Custos' (com 'Documentos', 'INSS', 'Tabelas oficiais', 'Do computador'). Páginas Horimetro/Combustivel/Medicoes carregam sem erros de React.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "EPIPage e CustosPage (regressão visual)", "issues": ["Console emite hydration warnings 'tr cannot be a child of span' devido a <span data-ve-dynamic='true'> injetado pelo visual editor da Emergent dentro de <tbody>. Já documentado na iteration_37; é efeito da tooling de runtime, NÃO bug do código da aplicação."]},
+      {"screen": "EPIPage / CustosPage modals", "issues": ["Warning 'Missing Description or aria-describedby={undefined} for DialogContent'. Acessibilidade: adicionar DialogDescription para leitores de tela."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_anexos_universal.py",
+    "/app/test_reports/pytest/anexos_universal.xml"
+  ],
+  "action_items": [
+    "Nenhum bloqueador. Recomendado (opcional): adicionar <DialogDescription> aos modais Nova Ficha EPI e Configurar Custos para eliminar warning de acessibilidade do Radix UI.",
+    "FolhaPagamentoPage: não foi possível validar runtime do modal 'Ver detalhes' pois não há folha cadastrada no preview env (mensagem 'Nenhuma folha gerada para este período'). Inspeção estática confirma AnexosManager presente em FolhaPagamentoPage.jsx:657. Main agent pode self-test após criar funcionário+folha, ou aceitar a validação estática."
+  ],
+  "critical_code_review_comments": [
+    "AnexosManager em FolhaPagamentoPage só aparece no modal de visualização (read-only), não no modal Nova Folha. Confirmado no review_request: o endpoint POST /api/rh/folha-pagamento não retorna o id criado, então flushPending não é viável. Comportamento intencional.",
+    "VALID_ENTITY_TYPES em /app/backend/routes/anexos.py:52 está sincronizado com os 7 entity_types testados (manutencao, epi_ficha, folha_pagamento, custo_rh, medicao, horimetro, combustivel). Bom isolamento; 400 retornado para 'ficha_epi' (typo comum) — UX adequada.",
+    "Endpoint /api/anexos/download/{anexo_id} aceita ?token= em query string para uso em <iframe>. Considerar rate-limit para evitar download abuse de tokens vazados."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_anexos_universal.py (criado)"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (6/7 modais validados runtime; 1 validado estaticamente por falta de seed data)"},
+  "test_credentials": "test@test.com / password (admin)",
+  "seed_data_creation": "Nenhuma seed permanente criada. Testes de upload criam anexos com entity_id prefixo 'TEST_' e fazem cleanup via DELETE no mesmo teste.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Test suite /app/backend/tests/test_anexos_universal.py é regression completa para os 7 entity_types do AnexosManager universal. Para validar FolhaPagamento modal runtime, crie uma folha antes (precisa de funcionário cadastrado, mês/ano e clicar 'Gerar Folha'). Hydration warnings span/tr são da Emergent visual editor tooling — NÃO são bugs.",
+  "rca_of_issues": "N/A — todos os fluxos passaram."
+}

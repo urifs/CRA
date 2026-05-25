@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import AnexosManager from "@/components/AnexosManager";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -650,6 +651,14 @@ export default function FolhaPagamentoPage() {
                   <span>FGTS (encargo empresa)</span>
                   <span className="text-purple-600">{formatCurrency(viewingFolha.fgts)}</span>
                 </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <AnexosManager
+                  entityType="folha_pagamento"
+                  entityId={viewingFolha.id}
+                  title="Anexos da Folha"
+                />
               </div>
             </div>
           )}

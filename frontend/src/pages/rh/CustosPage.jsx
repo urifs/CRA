@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import AnexosManager from "@/components/AnexosManager";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -760,6 +761,14 @@ export default function CustosPage() {
 
             <div className="bg-emerald-50 border border-emerald-200 rounded p-3 text-xs text-emerald-700">
               💡 Valores típicos no Brasil: FGTS 8%, INSS Patronal 20% (Anexo IV pode variar 7,5%–27,5%). Salve para recalcular toda a tabela.
+            </div>
+
+            <div className="pt-2 border-t border-gray-200">
+              <AnexosManager
+                entityType="custo_rh"
+                entityId="config-global"
+                title="Documentos / Tabelas oficiais (INSS, FGTS, CCT)"
+              />
             </div>
           </div>
           <DialogFooter>

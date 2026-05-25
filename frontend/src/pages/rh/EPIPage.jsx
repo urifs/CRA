@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import AnexosManager from "@/components/AnexosManager";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export default function EPIPage() {
   const [cboResults, setCboResults] = useState([]);
   const [cboNotFound, setCboNotFound] = useState(false);
   const [manualCbo, setManualCbo] = useState({ codigo: "", ocupacao: "" });
+  const anexosRef = useRef(null);
   
   const [formData, setFormData] = useState({
     funcionario_id: "",
@@ -191,10 +193,15 @@ export default function EPIPage() {
     }
     
     try {
-      await axios.post(`${API}/rh/epi/fichas`, {
+      const respFicha = await axios.post(`${API}/rh/epi/fichas`, {
         ...formData,
         epis: episSelecionados
       });
+      try {
+        await anexosRef.current?.flushPending(respFicha.data?.id);
+      } catch (anexErr) {
+        console.error("Erro ao enviar anexos:", anexErr);
+      }
       toast.success("Ficha de EPI salva!");
       fetchFichasEPI();
       closeModal();
@@ -678,6 +685,13 @@ export default function EPIPage() {
                 rows={2}
               />
             </div>
+
+            <AnexosManager
+              ref={anexosRef}
+              entityType="epi_ficha"
+              entityId={null}
+              title="Anexos da Ficha EPI"
+            />
           </div>
 
           <DialogFooter className="gap-2">

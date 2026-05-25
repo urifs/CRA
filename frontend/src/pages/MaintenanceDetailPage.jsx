@@ -22,6 +22,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function MaintenanceDetailPage() {
   const { id } = useParams();
@@ -283,6 +284,19 @@ export default function MaintenanceDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Anexos universais */}
+      {maintenance?.id && (
+        <Card>
+          <CardContent className="pt-6">
+            <AnexosManager
+              entityType="manutencao"
+              entityId={maintenance.id}
+              title="Anexos da Manutenção"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Photo Modal */}
       <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>

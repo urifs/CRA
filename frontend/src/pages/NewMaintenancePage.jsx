@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
 import { toast } from "sonner";
+import AnexosManager from "@/components/AnexosManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ export default function NewMaintenancePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [date, setDate] = useState(new Date());
+  const anexosRef = useRef(null);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -179,6 +181,13 @@ export default function NewMaintenancePage() {
       };
 
       const response = await axios.post(`${API}/maintenances`, payload);
+      
+      // Upload anexos pendentes vinculados à nova manutenção
+      try {
+        await anexosRef.current?.flushPending(response.data?.id);
+      } catch (anexErr) {
+        console.error("Erro ao enviar anexos:", anexErr);
+      }
       
       // Dar baixa no estoque para cada peça selecionada
       let stockUpdateSuccess = true;
@@ -581,6 +590,14 @@ export default function NewMaintenancePage() {
                   data-testid="maintenance-description-input"
                 />
               </div>
+
+              {/* Anexos */}
+              <AnexosManager
+                ref={anexosRef}
+                entityType="manutencao"
+                entityId={null}
+                title="Anexos da Manutenção"
+              />
 
               {/* Submit */}
               <div className="flex gap-4 pt-4 border-t border-gray-200">
