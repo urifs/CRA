@@ -460,16 +460,30 @@ export default function ExportPage({ module = "gerenciamento" }) {
     });
   };
 
-  // Selecionar/desselecionar todos os itens de uma subcategoria
-  const toggleAllIndividualItems = (subcategoryId) => {
-    const items = subcategoryItems[subcategoryId] || [];
+  // Selecionar/desselecionar todos os itens VISÍVEIS (após filtro de busca) de uma subcategoria
+  const toggleAllIndividualItems = (subcategoryId, visibleItems = null) => {
+    const items = visibleItems !== null
+      ? visibleItems
+      : (subcategoryItems[subcategoryId] || []);
     const selected = selectedIndividualItems[subcategoryId] || [];
-    const allSelected = items.length > 0 && items.every(item => selected.includes(item.id));
-    
-    setSelectedIndividualItems(prev => ({
-      ...prev,
-      [subcategoryId]: allSelected ? [] : items.map(item => item.id)
-    }));
+    const visibleIds = items.map(item => item.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selected.includes(id));
+
+    setSelectedIndividualItems(prev => {
+      const prevSelected = prev[subcategoryId] || [];
+      if (allVisibleSelected) {
+        // Desmarcar apenas os IDs visíveis (mantém seleções anteriores fora do filtro)
+        return {
+          ...prev,
+          [subcategoryId]: prevSelected.filter(id => !visibleIds.includes(id)),
+        };
+      }
+      // Marcar todos os IDs visíveis sem duplicar
+      return {
+        ...prev,
+        [subcategoryId]: Array.from(new Set([...prevSelected, ...visibleIds])),
+      };
+    });
   };
 
   // Exportar múltiplos itens selecionados
@@ -1315,84 +1329,88 @@ export default function ExportPage({ module = "gerenciamento" }) {
                               </div>
                             )}
 
-                            {/* Header com ações em lote */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <Checkbox 
-                                  checked={items.length > 0 && (selectedIndividualItems[sub.id] || []).length === items.length}
-                                  onCheckedChange={() => toggleAllIndividualItems(sub.id)}
-                                  className="shrink-0"
-                                />
-                                <p className="text-xs text-purple-700 font-medium">
-                                  Itens individuais ({(selectedIndividualItems[sub.id] || []).length} selecionados)
-                                </p>
-                              </div>
-                              {(selectedIndividualItems[sub.id] || []).length > 0 && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => exportSelectedIndividualItems(sub.id)}
-                                  disabled={exporting === `multi-${sub.id}`}
-                                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                                >
-                                  {exporting === `multi-${sub.id}` ? (
-                                    <Loader2 size={14} className="animate-spin mr-1" />
-                                  ) : (
-                                    <Download size={14} className="mr-1" />
-                                  )}
-                                  Exportar Selecionados
-                                </Button>
-                              )}
-                            </div>
-                            
-                            {isLoadingItems ? (
-                              <div className="flex items-center gap-2 text-purple-600">
-                                <Loader2 size={14} className="animate-spin" />
-                                <span className="text-sm">Carregando itens...</span>
-                              </div>
-                            ) : items.length > 0 ? (
-                              (() => {
-                                // Filtra itens pelo termo de busca
-                                const searchTerm = (itemSearch[sub.id] || "").trim().toLowerCase();
-                                const filteredItems = !searchTerm
-                                  ? items
-                                  : items.filter((item) => {
-                                      const haystack = [
-                                        item.name,
-                                        item.fornecedor_nome,
-                                        item.cliente_nome,
-                                        item.numero_doc,
-                                        item.model,
-                                        item.plate,
-                                        item.banco,
-                                        item.data_vencimento,
-                                        item.valor !== undefined ? String(item.valor) : "",
-                                        item.valor !== undefined
-                                          ? Number(item.valor).toLocaleString("pt-BR", {
-                                              minimumFractionDigits: 2,
-                                            })
-                                          : "",
-                                      ]
-                                        .filter(Boolean)
-                                        .join(" ")
-                                        .toLowerCase();
-                                      return haystack.includes(searchTerm);
-                                    });
-                                if (filteredItems.length === 0) {
-                                  return (
-                                    <p className="text-sm text-gray-500 py-3 text-center">
-                                      Nenhum item encontrado para "{searchTerm}"
-                                    </p>
-                                  );
-                                }
-                                return (
-                                  <>
-                                    {searchTerm && (
-                                      <p className="text-xs text-purple-600 mb-2">
-                                        Mostrando {filteredItems.length} de {items.length} itens
+                            {/* Header com ações em lote + lista filtrada (compartilham `filteredItems`) */}
+                            {(() => {
+                              const searchTerm = (itemSearch[sub.id] || "").trim().toLowerCase();
+                              const filteredItems = !searchTerm
+                                ? items
+                                : items.filter((item) => {
+                                    const haystack = [
+                                      item.name,
+                                      item.fornecedor_nome,
+                                      item.cliente_nome,
+                                      item.numero_doc,
+                                      item.model,
+                                      item.plate,
+                                      item.banco,
+                                      item.data_vencimento,
+                                      item.valor !== undefined ? String(item.valor) : "",
+                                      item.valor !== undefined
+                                        ? Number(item.valor).toLocaleString("pt-BR", {
+                                            minimumFractionDigits: 2,
+                                          })
+                                        : "",
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ")
+                                      .toLowerCase();
+                                    return haystack.includes(searchTerm);
+                                  });
+                              const selectedIds = selectedIndividualItems[sub.id] || [];
+                              const visibleIds = filteredItems.map(i => i.id);
+                              const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Checkbox 
+                                        checked={allVisibleSelected}
+                                        onCheckedChange={() => toggleAllIndividualItems(sub.id, filteredItems)}
+                                        className="shrink-0"
+                                        data-testid={`select-all-${sub.id}`}
+                                      />
+                                      <p className="text-xs text-purple-700 font-medium">
+                                        {searchTerm
+                                          ? `Selecionar visíveis (${visibleIds.filter(id => selectedIds.includes(id)).length}/${visibleIds.length}) — ${selectedIds.length} no total`
+                                          : `Itens individuais (${selectedIds.length} selecionados)`}
                                       </p>
+                                    </div>
+                                    {selectedIds.length > 0 && (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => exportSelectedIndividualItems(sub.id)}
+                                        disabled={exporting === `multi-${sub.id}`}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                                      >
+                                        {exporting === `multi-${sub.id}` ? (
+                                          <Loader2 size={14} className="animate-spin mr-1" />
+                                        ) : (
+                                          <Download size={14} className="mr-1" />
+                                        )}
+                                        Exportar Selecionados
+                                      </Button>
                                     )}
-                                    <div className="space-y-2 max-h-80 overflow-y-auto">
-                                      {filteredItems.map(item => {
+                                  </div>
+                                  
+                                  {isLoadingItems ? (
+                                    <div className="flex items-center gap-2 text-purple-600">
+                                      <Loader2 size={14} className="animate-spin" />
+                                      <span className="text-sm">Carregando itens...</span>
+                                    </div>
+                                  ) : items.length > 0 ? (
+                                    filteredItems.length === 0 ? (
+                                      <p className="text-sm text-gray-500 py-3 text-center">
+                                        Nenhum item encontrado para "{searchTerm}"
+                                      </p>
+                                    ) : (
+                                      <>
+                                        {searchTerm && (
+                                          <p className="text-xs text-purple-600 mb-2">
+                                            Mostrando {filteredItems.length} de {items.length} itens
+                                          </p>
+                                        )}
+                                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                                          {filteredItems.map(item => {
                                   const isItemSelected = (selectedIndividualItems[sub.id] || []).includes(item.id);
                                   const supportsReceipt = RECEIPT_CATEGORIES.includes(sub.id);
                                   
@@ -1538,13 +1556,15 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                     </div>
                                   );
                                 })}
-                                    </div>
-                                  </>
-                                );
-                              })()
-                            ) : (
-                              <p className="text-sm text-gray-500">Nenhum item cadastrado nesta categoria</p>
-                            )}
+                                        </div>
+                                      </>
+                                    )
+                                  ) : (
+                                    <p className="text-sm text-gray-500">Nenhum item cadastrado nesta categoria</p>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
