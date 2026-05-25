@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API, useAuth } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import AttachmentsSection from "@/components/AttachmentsSection";
 import CadastroFormModal from "@/components/CadastroFormModal";
 import ParcelasDetalhesModal from "@/components/ParcelasDetalhesModal";
+import AnexosManager from "@/components/AnexosManager";
 import { formatCurrency as formatCurrencyInput, parseCurrency } from "@/utils/masks";
 import { formatDateBR, formatDateTimeBR } from "@/utils/dateFormat";
 
@@ -48,6 +49,7 @@ export default function ContasPagarPage() {
   const [filterCentroCusto, setFilterCentroCusto] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
+  const anexosRef = useRef(null);
   const [planoContas, setPlanoContas] = useState([]);
   const [subcontas, setSubcontas] = useState([]);
   const [centrosCusto, setCentrosCusto] = useState([]);
@@ -293,9 +295,11 @@ export default function ContasPagarPage() {
         
         if (editingConta) {
           await axios.put(`${API}/admin/contas-pagar/${editingConta.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingConta.id);
           toast.success("Conta atualizada!");
         } else {
-          await axios.post(`${API}/admin/contas-pagar`, dataToSend);
+          const _resp = await axios.post(`${API}/admin/contas-pagar`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
           toast.success("Conta cadastrada!");
         }
       }
@@ -1250,6 +1254,12 @@ export default function ContasPagarPage() {
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">{editingConta ? "Atualizar" : "Cadastrar"}</Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="conta_pagar"
+              entityId={editingConta?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

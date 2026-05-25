@@ -20,6 +20,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { formatCPF, formatCNPJ, formatCEP, formatTelefone, formatCurrency, parseCurrency } from "@/utils/masks";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function CadastrosPage() {
   const [cadastros, setCadastros] = useState([]);
@@ -29,6 +30,7 @@ export default function CadastrosPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCadastro, setEditingCadastro] = useState(null);
+  const anexosRef = useRef(null);
   
   // Anexos
   const [anexos, setAnexos] = useState([]);
@@ -229,9 +231,11 @@ export default function CadastrosPage() {
       
       if (editingCadastro) {
         await axios.put(`${API}/admin/cadastros/${editingCadastro.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingCadastro.id);
         toast.success("Cadastro atualizado!");
       } else {
-        await axios.post(`${API}/admin/cadastros`, dataToSend);
+        const _resp = await axios.post(`${API}/admin/cadastros`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Cadastro criado!");
       }
       fetchCadastros();
@@ -670,6 +674,12 @@ export default function CadastrosPage() {
               </div>
             )}
 
+            <AnexosManager
+              ref={anexosRef}
+              entityType="cadastro"
+              entityId={editingCadastro?.id}
+            />
+
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingCadastro ? "Atualizar" : "Cadastrar"}</Button>
@@ -695,7 +705,7 @@ export default function CadastrosPage() {
               <p className="text-gray-500">Preview não disponível para este tipo de arquivo</p>
             )}
           </div>
-          <DialogFooter>
+<DialogFooter>
             <Button variant="outline" onClick={() => setPreviewModal({ open: false, url: null, name: null, type: null })}>
               Fechar
             </Button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +47,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function OrdensServicoPage() {
   const [ordens, setOrdens] = useState([]);
@@ -58,6 +59,7 @@ export default function OrdensServicoPage() {
   const [filter, setFilter] = useState("todas");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrdem, setEditingOrdem] = useState(null);
+  const anexosRef = useRef(null);
   const [formData, setFormData] = useState({
     numero_contrato: "",
     cliente_nome: "",
@@ -412,9 +414,11 @@ export default function OrdensServicoPage() {
       
       if (editingOrdem) {
         await axios.put(`${API}/admin/ordens-servico/${editingOrdem.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingOrdem.id);
         toast.success("Ordem de serviço atualizada!");
       } else {
-        await axios.post(`${API}/admin/ordens-servico`, dataToSend);
+        const _resp = await axios.post(`${API}/admin/ordens-servico`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Ordem de serviço criada!");
       }
       fetchOrdens();
@@ -1338,6 +1342,12 @@ export default function OrdensServicoPage() {
               </div>
             </fieldset>
 
+            <AnexosManager
+              ref={anexosRef}
+              entityType="ordem_servico"
+              entityId={editingOrdem?.id}
+            />
+
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">
                 Cancelar
@@ -1501,7 +1511,7 @@ export default function OrdensServicoPage() {
                 </div>
               )}
 
-              <DialogFooter>
+<DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEncerrarOS(null)} disabled={encerrando}>
                   Cancelar
                 </Button>

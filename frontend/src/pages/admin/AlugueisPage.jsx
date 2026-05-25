@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 import { formatCurrency as formatCurrencyInput, parseCurrency } from "@/utils/masks";
 
 const tiposPeriodo = [
@@ -39,6 +40,7 @@ export default function AlugueisPage() {
   const [filter, setFilter] = useState("todos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAluguel, setEditingAluguel] = useState(null);
+  const anexosRef = useRef(null);
   const [contractFile, setContractFile] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [previewModal, setPreviewModal] = useState({ open: false, url: null, name: null });
@@ -122,10 +124,12 @@ export default function AlugueisPage() {
       
       if (editingAluguel) {
         await axios.put(`${API}/admin/alugueis/${editingAluguel.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingAluguel.id);
         toast.success("Aluguel atualizado!");
       } else {
-        const response = await axios.post(`${API}/admin/alugueis`, dataToSend);
-        aluguelId = response.data.id;
+        const _resp = await axios.post(`${API}/admin/alugueis`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
+        aluguelId = _resp.data.id;
         toast.success("Aluguel registrado!");
       }
       
@@ -733,6 +737,12 @@ export default function AlugueisPage() {
                 {uploadingFile ? "Enviando..." : editingAluguel ? "Atualizar" : "Registrar Aluguel"}
               </Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="aluguel"
+              entityId={editingAluguel?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

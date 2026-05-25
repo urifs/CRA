@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ import {
   Wrench,
   X
 } from "lucide-react";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function StockPage() {
   const [items, setItems] = useState([]);
@@ -65,6 +66,7 @@ export default function StockPage() {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const anexosRef = useRef(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -161,9 +163,11 @@ export default function StockPage() {
 
       if (editingItem) {
         await axios.put(`${API}/stock/items/${editingItem.id}`, payload);
+        await anexosRef.current?.flushPending(editingItem.id);
         toast.success("Item atualizado com sucesso!");
       } else {
-        await axios.post(`${API}/stock/items`, payload);
+        const _resp = await axios.post(`${API}/stock/items`, payload);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Item cadastrado com sucesso!");
       }
       
@@ -966,7 +970,7 @@ export default function StockPage() {
             )}
           </div>
 
-          <DialogFooter>
+<DialogFooter>
             <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
               Fechar
             </Button>
@@ -1202,6 +1206,12 @@ export default function StockPage() {
                 data-testid="item-notes-input"
               />
             </div>
+
+            <AnexosManager
+              ref={anexosRef}
+              entityType="estoque"
+              entityId={editingItem?.id}
+            />
 
             <DialogFooter className="gap-2">
               <Button

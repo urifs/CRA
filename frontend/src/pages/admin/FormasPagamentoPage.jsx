@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 
 const tiposForma = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -36,6 +37,7 @@ export default function FormasPagamentoPage() {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingForma, setEditingForma] = useState(null);
+  const anexosRef = useRef(null);
   const [formData, setFormData] = useState({
     codigo: "", nome: "", tipo: "outros", taxa: "0", prazo_recebimento: "0", 
     conta_bancaria: "", ativo: true, observacoes: ""
@@ -61,9 +63,11 @@ export default function FormasPagamentoPage() {
       };
       if (editingForma) {
         await axios.put(`${API}/admin/formas-pagamento/${editingForma.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingForma.id);
         toast.success("Forma de pagamento atualizada!");
       } else {
-        await axios.post(`${API}/admin/formas-pagamento`, dataToSend);
+        const _resp = await axios.post(`${API}/admin/formas-pagamento`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Forma de pagamento cadastrada!");
       }
       fetchFormas(); closeModal();
@@ -296,6 +300,12 @@ export default function FormasPagamentoPage() {
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingForma ? "Atualizar" : "Cadastrar"}</Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="forma_pagamento"
+              entityId={editingForma?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

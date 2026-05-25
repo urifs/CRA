@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function PlanoContasPage() {
   const [contas, setContas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
+  const anexosRef = useRef(null);
   const [expandedContas, setExpandedContas] = useState(new Set());
   const [expandedSubcontas, setExpandedSubcontas] = useState(new Set());
   const [expandedExtratos, setExpandedExtratos] = useState(new Set());
@@ -81,9 +83,11 @@ export default function PlanoContasPage() {
       const dataToSend = { ...formData, tipo: "geral" }; // Tipo fixo como geral
       if (editingConta) {
         await axios.put(`${API}/admin/plano-contas/${editingConta.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingConta.id);
         toast.success("Conta atualizada!");
       } else {
-        await axios.post(`${API}/admin/plano-contas`, dataToSend);
+        const _resp = await axios.post(`${API}/admin/plano-contas`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Conta cadastrada!");
       }
       fetchContas(); closeModal();
@@ -553,6 +557,12 @@ export default function PlanoContasPage() {
                 {editingConta ? "Atualizar" : "Cadastrar"}
               </Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="plano_contas"
+              entityId={editingConta?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

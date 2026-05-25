@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AnexosManager from "@/components/AnexosManager";
 import { 
   Plus, 
   Edit, 
@@ -34,6 +35,7 @@ export default function FrotasPage() {
   const [showFleetModal, setShowFleetModal] = useState(false);
   const [showSubfleetModal, setShowSubfleetModal] = useState(false);
   const [editingFleet, setEditingFleet] = useState(null);
+  const anexosRef = useRef(null);
   const [editingSubfleet, setEditingSubfleet] = useState(null);
   
   // Form states
@@ -80,11 +82,13 @@ export default function FrotasPage() {
         await axios.put(`${API}/fleets/${editingFleet.id}`, fleetForm, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(editingFleet.id);
         toast.success("Frota atualizada!");
       } else {
-        await axios.post(`${API}/fleets`, fleetForm, {
+        const _resp = await axios.post(`${API}/fleets`, fleetForm, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Frota criada!");
       }
       setShowFleetModal(false);
@@ -400,6 +404,11 @@ export default function FrotasPage() {
               />
             </div>
           </div>
+          <AnexosManager
+            ref={anexosRef}
+            entityType="fleet"
+            entityId={editingFleet?.id}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowFleetModal(false)}>Cancelar</Button>
             <Button onClick={handleSaveFleet} disabled={formLoading} className="bg-[#E31A1A] hover:bg-red-700">

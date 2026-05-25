@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
@@ -35,6 +35,7 @@ import {
   MapPin,
   Calendar
 } from "lucide-react";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function ObrasPage() {
   const [obras, setObras] = useState([]);
@@ -42,6 +43,7 @@ export default function ObrasPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [editingObra, setEditingObra] = useState(null);
+  const anexosRef = useRef(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const navigate = useNavigate();
@@ -83,9 +85,11 @@ export default function ObrasPage() {
 
       if (editingObra) {
         await axios.put(`${API}/obras/${editingObra.id}`, payload);
+        await anexosRef.current?.flushPending(editingObra.id);
         toast.success("Obra atualizada com sucesso!");
       } else {
-        await axios.post(`${API}/obras`, payload);
+        const _resp = await axios.post(`${API}/obras`, payload);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Obra cadastrada com sucesso!");
       }
       
@@ -425,7 +429,12 @@ export default function ObrasPage() {
               </Select>
             </div>
 
-            <DialogFooter className="gap-2">
+                        <AnexosManager
+              ref={anexosRef}
+              entityType="obra"
+              entityId={editingObra?.id}
+            />
+<DialogFooter className="gap-2">
               <Button
                 type="button"
                 variant="outline"

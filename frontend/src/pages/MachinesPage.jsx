@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
@@ -36,6 +36,7 @@ import {
   List,
   ChevronRight
 } from "lucide-react";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function MachinesPage() {
   const [machines, setMachines] = useState([]);
@@ -48,6 +49,7 @@ export default function MachinesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [editingMachine, setEditingMachine] = useState(null);
+  const anexosRef = useRef(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [viewMode, setViewMode] = useState("grid"); // grid ou list
@@ -122,9 +124,11 @@ export default function MachinesPage() {
 
       if (editingMachine) {
         await axios.put(`${API}/machines/${editingMachine.id}`, payload);
+        await anexosRef.current?.flushPending(editingMachine.id);
         toast.success("Máquina atualizada com sucesso!");
       } else {
-        await axios.post(`${API}/machines`, payload);
+        const _resp = await axios.post(`${API}/machines`, payload);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Máquina cadastrada com sucesso!");
       }
       
@@ -831,7 +835,12 @@ export default function MachinesPage() {
               </Select>
             </div>
 
-            <DialogFooter className="gap-2">
+                        <AnexosManager
+              ref={anexosRef}
+              entityType="maquina"
+              entityId={editingMachine?.id}
+            />
+<DialogFooter className="gap-2">
               <Button
                 type="button"
                 variant="outline"

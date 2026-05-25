@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCPF, formatCEP, formatTelefone } from "@/utils/masks";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function FuncionariosPage() {
   const [funcionarios, setFuncionarios] = useState([]);
@@ -37,6 +38,7 @@ export default function FuncionariosPage() {
   const [filterRegime, setFilterRegime] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFuncionario, setEditingFuncionario] = useState(null);
+  const anexosRef = useRef(null);
   
   // Anexos
   const [anexos, setAnexos] = useState([]);
@@ -207,9 +209,11 @@ export default function FuncionariosPage() {
       
       if (editingFuncionario) {
         await axios.put(`${API}/rh/funcionarios/${editingFuncionario.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingFuncionario.id);
         toast.success("Funcionário atualizado!");
       } else {
-        await axios.post(`${API}/rh/funcionarios`, dataToSend);
+        const _resp = await axios.post(`${API}/rh/funcionarios`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Funcionário cadastrado!");
       }
       fetchFuncionarios();
@@ -680,7 +684,12 @@ export default function FuncionariosPage() {
               </div>
             )}
 
-            <DialogFooter className="gap-2">
+                        <AnexosManager
+              ref={anexosRef}
+              entityType="funcionario"
+              entityId={editingFuncionario?.id}
+            />
+<DialogFooter className="gap-2">
               <Button type="button" variant="outline" onClick={closeModal}>Cancelar</Button>
               <Button type="submit" className="bg-[#10B981] hover:bg-[#059669]">{editingFuncionario ? "Atualizar" : "Cadastrar"}</Button>
             </DialogFooter>

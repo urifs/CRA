@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { API } from "@/App";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AnexosManager from "@/components/AnexosManager";
 import { 
   Plus, 
   Edit, 
@@ -45,6 +46,7 @@ export default function CategoriesPage() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const anexosRef = useRef(null);
   const [editingSubcategory, setEditingSubcategory] = useState(null);
   
   // Form states
@@ -90,11 +92,13 @@ export default function CategoriesPage() {
         await axios.put(`${API}/categories/${editingCategory.id}`, categoryForm, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(editingCategory.id);
         toast.success("Categoria atualizada!");
       } else {
-        await axios.post(`${API}/categories`, categoryForm, {
+        const _resp = await axios.post(`${API}/categories`, categoryForm, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Categoria criada!");
       }
       setShowCategoryModal(false);
@@ -436,6 +440,11 @@ export default function CategoriesPage() {
               </p>
             </div>
           </div>
+          <AnexosManager
+            ref={anexosRef}
+            entityType="categoria"
+            entityId={editingCategory?.id}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCategoryModal(false)}>Cancelar</Button>
             <Button onClick={handleSaveCategory} disabled={formLoading} className="bg-[#E31A1A] hover:bg-red-700">

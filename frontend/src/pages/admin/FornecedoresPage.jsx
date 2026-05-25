@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function FornecedoresPage() {
   const [fornecedores, setFornecedores] = useState([]);
@@ -29,6 +30,7 @@ export default function FornecedoresPage() {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFornecedor, setEditingFornecedor] = useState(null);
+  const anexosRef = useRef(null);
   const [formData, setFormData] = useState({
     nome: "",
     cnpj: "",
@@ -61,9 +63,11 @@ export default function FornecedoresPage() {
     try {
       if (editingFornecedor) {
         await axios.put(`${API}/admin/fornecedores/${editingFornecedor.id}`, formData);
+        await anexosRef.current?.flushPending(editingFornecedor.id);
         toast.success("Fornecedor atualizado com sucesso!");
       } else {
-        await axios.post(`${API}/admin/fornecedores`, formData);
+        const _resp = await axios.post(`${API}/admin/fornecedores`, formData);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Fornecedor cadastrado com sucesso!");
       }
       fetchFornecedores();
@@ -324,6 +328,12 @@ export default function FornecedoresPage() {
                 {editingFornecedor ? "Atualizar" : "Cadastrar"}
               </Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="cadastro"
+              entityId={editingFornecedor?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

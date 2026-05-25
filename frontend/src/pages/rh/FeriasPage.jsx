@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import {
   Sun, ChevronLeft, ChevronRight, Search
 } from "lucide-react";
 import { toast } from "sonner";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function FeriasPage() {
   const [funcionarios, setFuncionarios] = useState([]);
@@ -32,6 +33,7 @@ export default function FeriasPage() {
   const [selectedAno, setSelectedAno] = useState(new Date().getFullYear());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFerias, setEditingFerias] = useState(null);
+  const anexosRef = useRef(null);
   const [alertas, setAlertas] = useState([]);
   
   const [formData, setFormData] = useState({
@@ -116,9 +118,11 @@ export default function FeriasPage() {
     try {
       if (editingFerias) {
         await axios.put(`${API}/rh/ferias/${editingFerias.id}`, formData);
+        await anexosRef.current?.flushPending(editingFerias.id);
         toast.success("Férias atualizadas!");
       } else {
-        await axios.post(`${API}/rh/ferias`, formData);
+        const _resp = await axios.post(`${API}/rh/ferias`, formData);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Férias agendadas!");
       }
       fetchFerias();
@@ -528,7 +532,12 @@ export default function FeriasPage() {
               <Input value={formData.observacoes} onChange={(e) => setFormData({...formData, observacoes: e.target.value})} />
             </div>
 
-            <DialogFooter className="gap-2">
+                        <AnexosManager
+              ref={anexosRef}
+              entityType="ferias"
+              entityId={editingFerias?.id}
+            />
+<DialogFooter className="gap-2">
               <Button type="button" variant="outline" onClick={closeModal}>Cancelar</Button>
               <Button type="submit" className="bg-[#10B981] hover:bg-[#059669]">{editingFerias ? "Atualizar" : "Agendar"}</Button>
             </DialogFooter>

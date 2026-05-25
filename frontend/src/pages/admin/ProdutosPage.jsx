@@ -16,6 +16,7 @@ import {
 import { Plus, Search, Package, Edit, Trash2, AlertTriangle, ExternalLink, Paperclip, Eye, Download, FileText, Image as ImageIcon, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 
 const unidades = [
   { value: "UN", label: "UN - Unidade" },
@@ -53,6 +54,7 @@ export default function ProdutosPage() {
   const [filterEstoqueBaixo, setFilterEstoqueBaixo] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduto, setEditingProduto] = useState(null);
+  const anexosRef = useRef(null);
   
   // Anexos
   const [anexos, setAnexos] = useState([]);
@@ -165,9 +167,11 @@ export default function ProdutosPage() {
       };
       if (editingProduto) {
         await axios.put(`${API}/admin/produtos/${editingProduto.id}`, dataToSend);
+        await anexosRef.current?.flushPending(editingProduto.id);
         toast.success("Produto atualizado!");
       } else {
-        await axios.post(`${API}/admin/produtos`, dataToSend);
+        const _resp = await axios.post(`${API}/admin/produtos`, dataToSend);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Produto cadastrado!");
       }
       fetchProdutos(); closeModal();
@@ -460,6 +464,12 @@ export default function ProdutosPage() {
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-700">{editingProduto ? "Atualizar" : "Cadastrar"}</Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="produto"
+              entityId={editingProduto?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 
 export default function CentroCustoPage() {
   const [centros, setCentros] = useState([]);
@@ -23,6 +24,7 @@ export default function CentroCustoPage() {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCentro, setEditingCentro] = useState(null);
+  const anexosRef = useRef(null);
   const [formData, setFormData] = useState({
     codigo: "", nome: "", descricao: "", status: "ativo",
     eh_empresa_emissora: false,
@@ -47,9 +49,11 @@ export default function CentroCustoPage() {
     try {
       if (editingCentro) {
         await axios.put(`${API}/admin/centros-custo/${editingCentro.id}`, formData);
+        await anexosRef.current?.flushPending(editingCentro.id);
         toast.success("Centro de custo atualizado!");
       } else {
-        await axios.post(`${API}/admin/centros-custo`, formData);
+        const _resp = await axios.post(`${API}/admin/centros-custo`, formData);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Centro de custo cadastrado!");
       }
       fetchCentros(); closeModal();
@@ -324,6 +328,12 @@ export default function CentroCustoPage() {
               <Button type="button" variant="outline" onClick={closeModal} className="flex-1">Cancelar</Button>
               <Button type="submit" className="flex-1 bg-[#D4A000] hover:bg-[#D4A000]">{editingCentro ? "Atualizar" : "Cadastrar"}</Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="centro_custo"
+              entityId={editingCentro?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

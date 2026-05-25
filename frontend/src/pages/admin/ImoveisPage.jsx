@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AnexosManager from "@/components/AnexosManager";
 import { formatCEP, formatTelefone, formatCurrency, parseCurrency } from "@/utils/masks";
 
 const tiposPeriodo = [
@@ -53,6 +54,7 @@ export default function ImoveisPage() {
   const [filter, setFilter] = useState("todos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingImovel, setEditingImovel] = useState(null);
+  const anexosRef = useRef(null);
   const [contractFile, setContractFile] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [previewModal, setPreviewModal] = useState({ open: false, url: null, name: null });
@@ -132,9 +134,11 @@ export default function ImoveisPage() {
 
       if (editingImovel) {
         await axios.put(`${API}/admin/imoveis/${editingImovel.id}`, payload);
+        await anexosRef.current?.flushPending(editingImovel.id);
         toast.success("Imóvel atualizado!");
       } else {
-        await axios.post(`${API}/admin/imoveis`, payload);
+        const _resp = await axios.post(`${API}/admin/imoveis`, payload);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Imóvel cadastrado!");
       }
       
@@ -859,6 +863,12 @@ export default function ImoveisPage() {
                 {editingImovel ? "Atualizar" : "Cadastrar"}
               </Button>
             </div>
+          
+            <AnexosManager
+              ref={anexosRef}
+              entityType="imovel"
+              entityId={editingImovel?.id}
+            />
           </form>
         </DialogContent>
       </Dialog>

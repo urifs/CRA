@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth, API } from "@/App";
 import axios from "axios";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import AnexosManager from "@/components/AnexosManager";
 import { 
   Building2, 
   Plus, 
@@ -78,6 +79,7 @@ export default function ContasBancariasPage() {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
+  const anexosRef = useRef(null);
   const [deleteId, setDeleteId] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -130,9 +132,11 @@ export default function ContasBancariasPage() {
 
       if (editingConta) {
         await axios.put(`${API}/admin/contas-bancarias/${editingConta.id}`, payload);
+        await anexosRef.current?.flushPending(editingConta.id);
         toast.success("Conta bancária atualizada!");
       } else {
-        await axios.post(`${API}/admin/contas-bancarias`, payload);
+        const _resp = await axios.post(`${API}/admin/contas-bancarias`, payload);
+        await anexosRef.current?.flushPending(_resp.data?.id);
         toast.success("Conta bancária cadastrada!");
       }
       
@@ -592,7 +596,12 @@ export default function ContasBancariasPage() {
               />
             </div>
 
-            <DialogFooter>
+                        <AnexosManager
+              ref={anexosRef}
+              entityType="conta_bancaria"
+              entityId={editingConta?.id}
+            />
+<DialogFooter>
               <Button type="button" variant="outline" onClick={closeModal}>Cancelar</Button>
               <Button type="submit" className="bg-[#D4A000] hover:bg-[#b8860b]">
                 {editingConta ? "Atualizar" : "Cadastrar"}
