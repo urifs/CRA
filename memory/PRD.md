@@ -6,35 +6,40 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 ## Módulos Principais
 - **Gerenciamento**: Máquinas, Manutenções, Estoque, Obras, Categorias, Frotas
 - **Administrativo (Financeiro)**: Contas a Pagar/Receber, OS, Cadastros, Plano de Contas, Centro de Custo, Conciliação, Aluguéis, Imóveis, Importação NF-e/NFS-e
-- **RH**: Funcionários, Jornadas de Trabalho, Ponto Eletrônico, Banco de Horas, EPIs, Solicitações de Folha, Férias, Anexos de Documentos
+- **RH**: Funcionários, Jornadas de Trabalho, Ponto Eletrônico, Banco de Horas, EPIs, Solicitações de Folha, Férias
 - **Armazenamento**: Pastas, Upload, Documentos
-- **Painel Admin**: Usuários, Permissões, Auditoria (com Rollback), Database Manager, Backup Exportação
-- **Sistema de Anexos Universal** (novo): qualquer formulário pode anexar arquivos via upload local OU vínculo com o módulo Armazenamento
+- **Sistema de Anexos Universal**: anexar arquivos a qualquer entidade via upload local ou vínculo com Armazenamento + preview inline
 
 ## Histórico de Implementações
 
 ### 25/05/2026
+- **Preview Inline de Anexos** (NOVO): modal abre direto no AnexosManager mostrando:
+  - **Imagens** (.jpg/.png/.gif/.webp/.svg) inline
+  - **PDFs** em iframe interno
+  - **Vídeos** (.mp4/.webm/.ogg) com player nativo
+  - **Áudios** (.mp3/.wav/.ogg) com player nativo
+  - **Texto** (.txt/.csv/.json/.xml/.md/.log) em iframe
+  - Outros formatos: mensagem com botão "Baixar"
+  - Endpoint `/api/anexos/download/{id}` aceita `?token=` query param para uso em <iframe>
 - **Sistema de Anexos Universal** (NOVO):
-  - Backend (`/app/backend/routes/anexos.py`): rotas genéricas `/api/anexos/{entity_type}/{entity_id}/...` para upload local, vínculo por referência do storage, listagem, download e remoção. Coleção MongoDB: `entity_anexos`.
-  - Frontend componente reutilizável (`/app/frontend/src/components/AnexosManager.jsx`): 2 botões — "Do computador" (upload) e "Do armazenamento" (abre picker). Modo criação mantém pendentes em memória; após salvar a entidade o pai chama `flushPending(newId)` via ref.
-  - Modal `StoragePickerModal.jsx`: navega pastas em árvore, busca por nome (server-side `/storage/search`), prompt de senha para pastas protegidas, multi-seleção.
-  - Aplicado em ~21 formulários: Máquinas, Estoque, Obras, Frotas, Categorias, Cadastros, Fornecedores, Produtos, Contas Pagar, Contas Receber, Centro Custo, Plano Contas, Contas Bancárias, Formas Pagamento, Aluguéis, Imóveis, OS, Funcionários, Férias.
-- **Histórico de Ações** restaurado ao filtro Administrativo com limite ampliado para 200 registros.
-- **Exportação PDF de Contas Parciais** corrigida (Já Pago / Saldo Restante / Histórico de Pagamentos / Status com valor faltante).
-- **Fix Seleção Filtrada (ExportPage)**: master checkbox respeita o filtro de busca.
-- **Fix Anexos Funcionários (RH)**: criados endpoints `/rh/funcionarios/{id}/anexos[...]` (mantidos para retrocompatibilidade).
+  - Backend (`/app/backend/routes/anexos.py`): rotas genéricas para upload local, vínculo por referência do storage, listagem, download, remoção.
+  - Frontend componentes: `AnexosManager.jsx` (botões "Do computador" / "Do armazenamento") e `StoragePickerModal.jsx` (navegação, busca, senha de pasta).
+  - Aplicado em ~21 formulários.
+- **Histórico de Ações** restaurado ao filtro Administrativo com limite 200.
+- **Exportação PDF Contas Parciais** corrigida (Já Pago / Saldo / Histórico de pagamentos).
+- **Fix Seleção Filtrada (ExportPage)**: master checkbox respeita filtro.
 
 ### Sessões anteriores
-- Coluna "Saldo Restante" e modal de parcelas em Contas a Pagar/Receber
-- Audit Logs e Rollback expandidos (`reversible=True`)
-- Ordenação de colunas server-side na Importação NF-e/NFS-e
-- Bug fix RH: Ponto Eletrônico usa `jornada_id` dinâmica
-- Bug fix Financeiro: Filtros incluem contas `parcial`
-- Exportação ZIP completa do banco (MongoDB → Supabase)
-- Bug fix Financeiro: PUT em conta quitada não reverte mais o status
+- Coluna "Saldo Restante" e modal de parcelas
+- Audit Logs e Rollback expandidos
+- Ordenação server-side Importação NF
+- Bug fix RH Ponto Eletrônico com `jornada_id` dinâmica
+- Bug fix Financeiro: filtros incluem `parcial`
+- Exportação ZIP do banco (MongoDB → Supabase)
+- Bug fix Financeiro: PUT em conta quitada preserva status
 
 ## Backlog (Pendente)
-- **P2**: Aplicar AnexosManager nos formulários restantes não cobertos (Manutenções, Folha Pagamento, EPI, Custos RH, Banco Horas, Solicitações Folha, etc.) — esses não têm padrão `editingX` claro
+- **P2**: Aplicar AnexosManager nos formulários restantes (Manutenções, Folha Pagamento, EPI, Custos RH, Banco Horas, Solicitações Folha)
 - **P2**: Refatoração Fase 2 do `server.py`
 - **P2**: Parcelas automáticas em Contas a Receber via OS recorrente
 - **P2**: Mini-histórico do cliente no dropdown da OS

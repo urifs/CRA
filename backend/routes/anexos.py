@@ -82,6 +82,45 @@ def _validate_entity_type(entity_type: str):
         )
 
 
+@anexos_router.get("/download/{anexo_id}")
+async def download_anexo(
+    anexo_id: str,
+    token: Optional[str] = None,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+):
+    """Download do anexo (local ou storage). Aceita ?token= para uso em <iframe>."""
+    if credentials and credentials.credentials:
+        try:
+            jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            raise HTTPException(status_code=401, detail="Token inválido")
+    elif token:
+        try:
+            jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            raise HTTPException(status_code=401, detail="Token inválido")
+    else:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    anexo = await db.entity_anexos.find_one({"id": anexo_id}, {"_id": 0})
+    if not anexo:
+        raise HTTPException(status_code=404, detail="Anexo não encontrado")
+
+    if anexo["source"] == "local":
+        file_path = ANEXOS_DIR / anexo["filename"]
+    else:
+        file_path = STORAGE_DIR / anexo["storage_path"].lstrip("/")
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo físico não encontrado")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=anexo.get("original_name") or file_path.name,
+        media_type=anexo.get("content_type") or "application/octet-stream",
+    )
+
+
 @anexos_router.get("/{entity_type}/{entity_id}")
 async def list_anexos(
     entity_type: str,
@@ -216,45 +255,6 @@ async def delete_anexo(
 
     await db.entity_anexos.delete_one({"id": anexo_id})
     return {"message": "Anexo removido"}
-
-
-@anexos_router.get("/download/{anexo_id}")
-async def download_anexo(
-    anexo_id: str,
-    token: Optional[str] = None,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
-):
-    """Download do anexo (local ou storage). Aceita ?token= para uso em <iframe>."""
-    if credentials and credentials.credentials:
-        try:
-            jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-            raise HTTPException(status_code=401, detail="Token inválido")
-    elif token:
-        try:
-            jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-            raise HTTPException(status_code=401, detail="Token inválido")
-    else:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    anexo = await db.entity_anexos.find_one({"id": anexo_id}, {"_id": 0})
-    if not anexo:
-        raise HTTPException(status_code=404, detail="Anexo não encontrado")
-
-    if anexo["source"] == "local":
-        file_path = ANEXOS_DIR / anexo["filename"]
-    else:
-        file_path = STORAGE_DIR / anexo["storage_path"].lstrip("/")
-
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Arquivo físico não encontrado")
-
-    return FileResponse(
-        path=str(file_path),
-        filename=anexo.get("original_name") or file_path.name,
-        media_type=anexo.get("content_type") or "application/octet-stream",
-    )
 
 
 def _guess_content_type(ext: str) -> str:

@@ -30,10 +30,18 @@ import {
   FileText,
   HardDrive,
   Cloud,
+  Eye,
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 import StoragePickerModal from "./StoragePickerModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { useAuth } from "../App";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -46,7 +54,9 @@ const AnexosManager = forwardRef(function AnexosManager(
   const [pendingStorage, setPendingStorage] = useState([]); // storage refs queued (create mode)
   const [uploading, setUploading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [preview, setPreview] = useState({ open: false, anexo: null });
   const fileInputRef = useRef(null);
+  const { token } = useAuth();
 
   const isCreateMode = !entityId;
 
@@ -268,6 +278,17 @@ const AnexosManager = forwardRef(function AnexosManager(
               type="button"
               size="sm"
               variant="ghost"
+              onClick={() => setPreview({ open: true, anexo: a })}
+              className="h-6 w-6 p-0 text-amber-700 hover:text-amber-800"
+              title="Visualizar"
+              data-testid={`anexo-preview-btn-${a.id}`}
+            >
+              <Eye size={12} />
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
               onClick={() => handleDownload(a)}
               className="h-6 w-6 p-0"
               title="Baixar"
@@ -331,9 +352,101 @@ const AnexosManager = forwardRef(function AnexosManager(
         onClose={() => setPickerOpen(false)}
         onSelect={handleStorageSelect}
       />
+
+      <PreviewDialog
+        preview={preview}
+        onClose={() => setPreview({ open: false, anexo: null })}
+        token={token}
+        onDownload={handleDownload}
+      />
     </div>
   );
 });
+
+function PreviewDialog({ preview, onClose, token, onDownload }) {
+  const { open, anexo } = preview;
+  if (!anexo) return null;
+
+  const ext = (anexo.original_name || "").split(".").pop().toLowerCase();
+  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext);
+  const isPdf = ext === "pdf";
+  const isVideo = ["mp4", "webm", "ogg"].includes(ext);
+  const isAudio = ["mp3", "wav", "ogg", "aac"].includes(ext);
+  const isText = ["txt", "csv", "json", "xml", "md", "log"].includes(ext);
+
+  const url = `${API}/anexos/download/${anexo.id}?token=${encodeURIComponent(token || "")}`;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col" data-testid="anexo-preview-modal">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 pr-8">
+            <FileText size={16} className="text-gray-500 shrink-0" />
+            <span className="truncate">{anexo.original_name}</span>
+            <span className="text-xs font-normal text-gray-500">({formatSize(anexo.size)})</span>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-100 rounded-md min-h-[400px]">
+          {isImage && (
+            <img
+              src={url}
+              alt={anexo.original_name}
+              className="max-w-full max-h-[70vh] object-contain"
+            />
+          )}
+          {isPdf && (
+            <iframe
+              src={url}
+              title={anexo.original_name}
+              className="w-full h-[70vh] border-0"
+            />
+          )}
+          {isVideo && (
+            <video controls src={url} className="max-w-full max-h-[70vh]" />
+          )}
+          {isAudio && <audio controls src={url} className="w-full" />}
+          {isText && (
+            <iframe
+              src={url}
+              title={anexo.original_name}
+              className="w-full h-[70vh] border-0 bg-white"
+            />
+          )}
+          {!isImage && !isPdf && !isVideo && !isAudio && !isText && (
+            <div className="flex flex-col items-center gap-3 p-8 text-gray-600">
+              <FileText size={48} className="text-gray-400" />
+              <p className="text-sm">
+                Preview não disponível para arquivos <span className="font-semibold">.{ext}</span>
+              </p>
+              <Button
+                type="button"
+                onClick={() => onDownload(anexo)}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <Download size={14} className="mr-1.5" />
+                Baixar arquivo
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 pt-2 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onDownload(anexo)}
+            data-testid="anexo-preview-download"
+          >
+            <Download size={14} className="mr-1.5" />
+            Baixar
+          </Button>
+          <Button type="button" onClick={onClose} data-testid="anexo-preview-close">
+            Fechar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function formatSize(bytes) {
   if (!bytes) return "";
