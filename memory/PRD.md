@@ -3272,3 +3272,49 @@ um endpoint admin que gera o backup sob demanda.
   + manifest + sql).
 - ✅ Lint Python: 0 erros.
 
+
+
+---
+
+## Atualização (2026-05-19) — Bug Fix: Edição revertia status `quitada` → `em_aberto`
+
+### Problema reportado (produção)
+Ao abrir uma conta quitada no Financeiro, clicar em "Editar" e anexar um
+documento (ou salvar qualquer alteração), o status voltava para `em_aberto`
+e a conta reaparecia em "A Pagar".
+
+### Causa raiz
+O modelo Pydantic `ContaPagarCreate` declara `status: str = "em_aberto"`.
+Como o frontend envia o form sem o campo `status` (ou com valor default),
+o endpoint `PUT /api/admin/contas-pagar/{id}` aplicava
+`update_data = data.model_dump()` que injetava `status="em_aberto"` por
+padrão, sobrescrevendo o status real da conta. Mesmo problema espelhado
+em `update_conta_receber`.
+
+### Correção (`/app/backend/routes/financeiro.py`)
+Ambos os endpoints `PUT /contas-pagar/{id}` e `PUT /contas-receber/{id}`
+agora **removem do payload os campos de pagamento** antes do `$set`:
+
+```python
+PAYMENT_FIELDS = {
+    "status", "valor_pago", "saldo_restante", "pagamentos",
+    "data_pagamento", "data_ultimo_pagamento", "data_cancelamento",
+}
+for f in PAYMENT_FIELDS:
+    update_data.pop(f, None)
+```
+
+Edição = apenas metadados (descrição, valor, vencimento, plano de contas,
+forma de pagamento, observações, etc.). Estado de pagamento só muda pelos
+endpoints `/quitar` e `/cancelar`.
+
+### Validação (curl)
+- ✅ Conta quitada (status=quitada, data_pagamento=2026-02-15).
+- ✅ PUT alterando apenas `descricao` e `valor` (sem enviar status).
+- ✅ Após PUT: status PERMANECE `quitada`, data_pagamento PRESERVADA.
+- ✅ GET `?status=quitada` ainda retorna a conta editada.
+- Lint Python: 0 erros.
+
+### Deploy
+Bug em produção. Para o fix ir ao ar, publicar deploy do preview.
+

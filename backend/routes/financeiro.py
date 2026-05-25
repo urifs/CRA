@@ -488,6 +488,18 @@ async def update_conta_pagar(
     update_data["valor_final"] = valor_final
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
+    # Editar apenas METADADOS da conta. NUNCA sobrescrever o estado de
+    # pagamento — o usuário pode editar uma conta quitada (ex: ajustar o
+    # plano de contas ou anexar nota) e o status DEVE permanecer quitada.
+    # Esses campos são alterados exclusivamente pelos endpoints /quitar
+    # e /cancelar.
+    PAYMENT_FIELDS = {
+        "status", "valor_pago", "saldo_restante", "pagamentos",
+        "data_pagamento", "data_ultimo_pagamento", "data_cancelamento",
+    }
+    for f in PAYMENT_FIELDS:
+        update_data.pop(f, None)
+
     await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
     await create_audit_log(
         current_user, "update", "conta_pagar", id, data.descricao,
@@ -910,6 +922,16 @@ async def update_conta_receber(
     update_data = data.model_dump()
     update_data["valor_final"] = valor_final
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    # Editar apenas METADADOS — preservar estado de recebimento. Status
+    # (quitada/parcial/cancelada) e histórico de pagamentos só mudam pelos
+    # endpoints /quitar e /cancelar.
+    PAYMENT_FIELDS = {
+        "status", "valor_pago", "saldo_restante", "pagamentos",
+        "data_pagamento", "data_ultimo_pagamento", "data_cancelamento",
+    }
+    for f in PAYMENT_FIELDS:
+        update_data.pop(f, None)
 
     await db.contas_receber.update_one({"id": id}, {"$set": update_data})
     await create_audit_log(
