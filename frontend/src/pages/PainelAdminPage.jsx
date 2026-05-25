@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -348,6 +348,75 @@ export default function PainelAdminPage() {
       toast.error("Falha ao gerar o backup do banco. Verifique se você é admin.", { id: tId });
     } finally {
       setDbExportLoading(false);
+    }
+  };
+
+  // === Object Storage (migração persistente entre deploys) ===
+  const [storageMigrating, setStorageMigrating] = useState(false);
+  const [storageExporting, setStorageExporting] = useState(false);
+  const [storageImporting, setStorageImporting] = useState(false);
+
+  const handleMigrateStorage = async () => {
+    if (storageMigrating) return;
+    setStorageMigrating(true);
+    const tId = toast.loading("Migrando arquivos do filesystem local para Object Storage...");
+    try {
+      const resp = await axios.post(`${API}/storage/migrate-to-object-storage`, null, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = resp.data || {};
+      toast.success(`Migração: ${d.files_migrated || 0} arquivos, ${d.folders_created || 0} pastas (pulou ${d.skipped || 0})`, { id: tId });
+    } catch (e) {
+      console.error("Erro ao migrar storage:", e);
+      toast.error("Falha na migração. Veja o console para detalhes.", { id: tId });
+    } finally {
+      setStorageMigrating(false);
+    }
+  };
+
+  const handleExportStorageZip = async () => {
+    if (storageExporting) return;
+    setStorageExporting(true);
+    const tId = toast.loading("Gerando ZIP de todo o armazenamento...");
+    try {
+      const resp = await axios.get(`${API}/storage/export-zip`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([resp.data], { type: "application/zip" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `storage_export_${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      toast.success("ZIP gerado com sucesso", { id: tId });
+    } catch (e) {
+      console.error("Erro ao exportar storage:", e);
+      toast.error("Falha ao exportar storage.", { id: tId });
+    } finally {
+      setStorageExporting(false);
+    }
+  };
+
+  const handleImportStorageZip = async (file) => {
+    if (!file || storageImporting) return;
+    setStorageImporting(true);
+    const tId = toast.loading(`Importando ${file.name}...`);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const resp = await axios.post(`${API}/storage/import-zip`, fd, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+      const d = resp.data || {};
+      toast.success(`Importação: ${d.files_imported || 0} arquivos, ${d.folders_created || 0} pastas`, { id: tId });
+    } catch (e) {
+      console.error("Erro ao importar storage:", e);
+      toast.error("Falha na importação. Verifique se é um ZIP válido.", { id: tId });
+    } finally {
+      setStorageImporting(false);
     }
   };
 
@@ -745,6 +814,66 @@ export default function PainelAdminPage() {
         {/* Database Tab */}
         {activeTab === "database" && (
           <>
+            {/* Object Storage - Migração e backup ZIP */}
+            <Card className="bg-gray-900 border-gray-800 mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-base flex items-center gap-2">
+                  <Database size={18} className="text-amber-500" />
+                  Armazenamento (Object Storage)
+                </CardTitle>
+                <p className="text-xs text-gray-400 mt-1">
+                  Migre os arquivos do disco local para o Object Storage da Emergent (persistente entre deploys). Use Exportar ZIP no preview e Importar ZIP em produção para migração one-shot.
+                </p>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2 pb-4">
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={handleMigrateStorage}
+                  disabled={storageMigrating}
+                  data-testid="storage-migrate-btn"
+                  title="Varre /app/backend/storage e move tudo para o Object Storage + MongoDB metadata."
+                >
+                  {storageMigrating ? <Loader2 size={16} className="mr-2 animate-spin" /> : <RefreshCw size={16} className="mr-2" />}
+                  Migrar FS → Object Storage
+                </Button>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={handleExportStorageZip}
+                  disabled={storageExporting}
+                  data-testid="storage-export-zip-btn"
+                  title="Baixa um ZIP com TODO o conteúdo do storage (MongoDB+OS+FS legado)."
+                >
+                  {storageExporting ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Download size={16} className="mr-2" />}
+                  Exportar Storage (ZIP)
+                </Button>
+                <label className="inline-flex">
+                  <input
+                    type="file"
+                    accept=".zip,application/zip"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleImportStorageZip(f);
+                      e.target.value = "";
+                    }}
+                    data-testid="storage-import-zip-input"
+                  />
+                  <Button
+                    asChild
+                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                    disabled={storageImporting}
+                    data-testid="storage-import-zip-btn"
+                    title="Sobe um ZIP (gerado pelo Exportar Storage) para popular MongoDB + Object Storage."
+                  >
+                    <span>
+                      {storageImporting ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Plus size={16} className="mr-2" />}
+                      Importar Storage (ZIP)
+                    </span>
+                  </Button>
+                </label>
+              </CardContent>
+            </Card>
+
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <Select value={selectedCollection} onValueChange={(v) => { setSelectedCollection(v); setDbPage(1); }}>
                 <SelectTrigger className="w-[250px] bg-gray-900 border-gray-700 text-white">

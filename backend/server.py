@@ -69,6 +69,7 @@ from routes.chatbot import chatbot_router
 from routes.folha_importacao import folha_router as folha_importacao_router, fin_folha_router as fin_folha_solicitacoes_router
 from routes.storage import storage_router
 from routes.anexos import anexos_router
+from routes.storage_migrate import storage_migrate_router
 from routes.exports import export_router
 from routes.stock import stock_router
 from routes.obras import obras_router
@@ -7807,61 +7808,82 @@ async def list_storage_items(
     path: str = "/",
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """List files and folders in a path"""
+    """List files and folders in a path.
+
+    Source of truth: MongoDB `storage_files` (Object Storage backed).
+    Para compatibilidade durante a transição, faz merge com o filesystem local
+    `STORAGE_DIR` quando algum item ainda só existe no FS.
+    """
     await get_current_user(credentials)
-    
+    from utils.storage_metadata import list_children, _ensure_root_slash
+
     # Normalize path
     if not path.startswith("/"):
         path = "/" + path
-    
+
     # Pasta virtual /Sistemas — consolida anexos de todas as ferramentas
     virtual_items = await _virtual_storage_list(path)
     if path.rstrip("/") == "" or path == "/":
-        # Raiz: vamos exibir a pasta virtual junto com o conteúdo físico abaixo
         pass
     elif virtual_items is not None:
-        # Está dentro de /Sistemas — retorna apenas a listagem virtual
         return virtual_items
-    
-    # Build absolute path
-    abs_path = STORAGE_DIR / path.lstrip("/")
-    
-    if not abs_path.exists():
-        abs_path.mkdir(parents=True, exist_ok=True)
-    
-    # Buscar todas as pastas protegidas de uma vez
+
+    p_norm = _ensure_root_slash(path)
+
+    # Mongo é a fonte primária
+    mongo_items_raw = await list_children(p_norm)
+
+    # Buscar todas as pastas protegidas
     protected_folders = await db.folder_passwords.find({}, {"_id": 0, "path": 1}).to_list(1000)
     protected_paths = {f["path"] for f in protected_folders}
-    
-    items = []
-    try:
-        for entry in abs_path.iterdir():
-            rel_path = "/" + str(entry.relative_to(STORAGE_DIR)).replace("\\", "/")
-            
-            if entry.is_dir():
-                # Count items inside folder
-                items_count = len(list(entry.iterdir())) if entry.exists() else 0
-                items.append({
-                    "name": entry.name,
-                    "type": "folder",
-                    "path": rel_path,
-                    "items_count": items_count,
-                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat(),
-                    "has_password": rel_path in protected_paths
-                })
-            else:
-                items.append({
-                    "name": entry.name,
-                    "type": "file",
-                    "path": rel_path,
-                    "size": entry.stat().st_size,
-                    "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat()
-                })
-    except Exception as e:
-        logger.error(f"Error listing storage: {e}")
-        raise HTTPException(status_code=500, detail=f"Erro ao listar arquivos: {str(e)}")
-    
-    # Sort: folders first, then files, both alphabetically
+
+    # Formata: garante items_count para folders e has_password
+    from utils.storage_metadata import count_in_folder
+    items_map = {}
+    for it in mongo_items_raw:
+        out = {
+            "name": it.get("name"),
+            "type": it.get("type"),
+            "path": it.get("path"),
+            "modified_at": it.get("modified_at"),
+        }
+        if it.get("type") == "folder":
+            out["items_count"] = await count_in_folder(it["path"])
+            out["has_password"] = it["path"] in protected_paths
+        else:
+            out["size"] = it.get("size", 0)
+        items_map[it["path"]] = out
+
+    # Fallback / merge com FS local (para legado pré-migração)
+    abs_path = STORAGE_DIR / path.lstrip("/")
+    if abs_path.exists() and abs_path.is_dir():
+        try:
+            for entry in abs_path.iterdir():
+                rel_path = "/" + str(entry.relative_to(STORAGE_DIR)).replace("\\", "/")
+                if rel_path in items_map:
+                    continue  # já temos no Mongo
+                if entry.is_dir():
+                    items_count = len(list(entry.iterdir())) if entry.exists() else 0
+                    items_map[rel_path] = {
+                        "name": entry.name,
+                        "type": "folder",
+                        "path": rel_path,
+                        "items_count": items_count,
+                        "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat(),
+                        "has_password": rel_path in protected_paths,
+                    }
+                else:
+                    items_map[rel_path] = {
+                        "name": entry.name,
+                        "type": "file",
+                        "path": rel_path,
+                        "size": entry.stat().st_size,
+                        "modified_at": datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat(),
+                    }
+        except Exception as e:
+            logger.warning(f"FS fallback list failed: {e}")
+
+    items = list(items_map.values())
     items.sort(key=lambda x: (0 if x["type"] == "folder" else 1, x["name"].lower()))
 
     # Na raiz, prepende a pasta virtual /Sistemas no topo
@@ -7876,27 +7898,23 @@ async def create_folder(
     data: FolderCreate,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Create a new folder"""
+    """Create a new folder (MongoDB metadata)."""
     current_user = await get_current_user(credentials)
-    
-    # Validate folder name
+    from utils.storage_metadata import create_folder as _create_folder_meta, get_node
+
     if not data.name or "/" in data.name or "\\" in data.name:
         raise HTTPException(status_code=400, detail="Nome de pasta inválido")
-    
-    # Normalize parent path
+
     parent = data.parent_path if data.parent_path.startswith("/") else "/" + data.parent_path
-    
-    # Build full path
-    full_path = STORAGE_DIR / parent.lstrip("/") / data.name
-    folder_path = "/" + str(full_path.relative_to(STORAGE_DIR)).replace("\\", "/")
-    
-    if full_path.exists():
+    folder_path = (parent.rstrip("/") + "/" + data.name) if parent != "/" else ("/" + data.name)
+
+    existing = await get_node(folder_path)
+    if existing:
         raise HTTPException(status_code=400, detail="Pasta já existe")
-    
+
     try:
-        full_path.mkdir(parents=True, exist_ok=False)
-        
-        # Se tiver senha, salvar no MongoDB
+        await _create_folder_meta(folder_path, user_id=current_user.get("id"))
+
         if data.password:
             password_hash = hash_password(data.password)
             await db.folder_passwords.update_one(
@@ -7909,8 +7927,7 @@ async def create_folder(
                 }},
                 upsert=True
             )
-        
-        # Auditoria
+
         await create_audit_log(
             user=current_user,
             action="criar pasta",
@@ -7920,7 +7937,7 @@ async def create_folder(
             details=f"Pasta criada em {parent}" + (" (protegida com senha)" if data.password else ""),
             module="Armazenamento"
         )
-        
+
         return {"message": "Pasta criada com sucesso", "path": folder_path, "has_password": bool(data.password)}
     except Exception as e:
         logger.error(f"Error creating folder: {e}")
@@ -8027,54 +8044,38 @@ async def upload_storage_file(
     path: str = Form("/"),
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Upload a file to storage"""
+    """Upload a file to storage (Object Storage + MongoDB metadata)."""
     current_user = await get_current_user(credentials)
-    
-    # Normalize path
+    from utils.storage_metadata import put_file
+
     if not path.startswith("/"):
         path = "/" + path
-    
-    # Build full path
-    dir_path = STORAGE_DIR / path.lstrip("/")
-    dir_path.mkdir(parents=True, exist_ok=True)
-    
-    # Read file content
+
     content = await file.read()
-    
-    # Save file with original name (handle duplicates)
     filename = file.filename or "arquivo"
-    file_path = dir_path / filename
-    
-    # If file exists, add number suffix
-    counter = 1
-    base_name = Path(filename).stem
-    ext = Path(filename).suffix
-    while file_path.exists():
-        filename = f"{base_name}_{counter}{ext}"
-        file_path = dir_path / filename
-        counter += 1
-    
+
     try:
-        with open(file_path, "wb") as f:
-            f.write(content)
-        
-        # Auditoria
+        node = await put_file(
+            parent_path=path,
+            filename=filename,
+            data=content,
+            content_type=file.content_type,
+            user_id=current_user.get("id"),
+        )
         await create_audit_log(
             user=current_user,
             action="upload arquivo",
             entity_type="storage",
-            entity_id=filename,
-            entity_name=filename,
+            entity_id=node["name"],
+            entity_name=node["name"],
             details=f"Arquivo enviado para {path}",
             module="Armazenamento"
         )
-        
-        rel_path = "/" + str(file_path.relative_to(STORAGE_DIR)).replace("\\", "/")
         return {
             "message": "Arquivo enviado com sucesso",
-            "name": filename,
-            "path": rel_path,
-            "size": len(content)
+            "name": node["name"],
+            "path": node["path"],
+            "size": node["size"],
         }
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
@@ -8086,55 +8087,59 @@ async def download_storage_file(
     token: Optional[str] = None,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security)
 ):
-    """Download a file from storage"""
-    # Support both Authorization header and query param token (for iframe/img src)
+    """Download a file from storage (Object Storage primário, FS fallback legado)."""
+    # Suporta tanto header Authorization quanto ?token= (iframe/img src)
     if credentials and credentials.credentials:
         try:
-            payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+            jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             raise HTTPException(status_code=401, detail="Token inválido")
     elif token:
         try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expirado")
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Token inválido")
     else:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    # Normalize path
+
     if not path.startswith("/"):
         path = "/" + path
-    
-    # Build absolute path
+
+    # 1) Object Storage via MongoDB
+    try:
+        from utils.storage_metadata import fetch_file_bytes
+        data, content_type, name = await fetch_file_bytes(path)
+        if data is not None:
+            from fastapi.responses import Response
+            return Response(
+                content=data,
+                media_type=content_type or "application/octet-stream",
+                headers={"Content-Disposition": f'inline; filename="{name}"'},
+            )
+    except Exception as e:
+        logger.warning(f"OS download falhou para {path}: {e}; tentando FS legado")
+
+    # 2) Fallback FS legado
     abs_path = STORAGE_DIR / path.lstrip("/")
-    
     if not abs_path.exists() or not abs_path.is_file():
         raise HTTPException(status_code=404, detail="Arquivo não encontrado")
-    
-    # Determine content type
+
     content_type = "application/octet-stream"
     ext = abs_path.suffix.lower()
     content_types = {
         ".pdf": "application/pdf",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".gif": "image/gif",
-        ".webp": "image/webp",
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp",
         ".svg": "image/svg+xml",
-        ".txt": "text/plain",
-        ".csv": "text/csv",
-        ".json": "application/json",
-        ".xml": "application/xml",
-        ".mp4": "video/mp4",
-        ".mp3": "audio/mpeg",
-        ".wav": "audio/wav",
-        ".zip": "application/zip"
+        ".txt": "text/plain", ".csv": "text/csv",
+        ".json": "application/json", ".xml": "application/xml",
+        ".mp4": "video/mp4", ".mp3": "audio/mpeg", ".wav": "audio/wav",
+        ".zip": "application/zip",
     }
     content_type = content_types.get(ext, content_type)
-    
+
     return FileResponse(
         path=str(abs_path),
         filename=abs_path.name,
@@ -8326,58 +8331,68 @@ async def delete_storage_item(
     permanent: bool = False,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Move a file or folder to trash (or delete permanently if permanent=True)"""
+    """Move a file or folder to trash (or delete permanently if permanent=True).
+    Funciona com MongoDB metadata (Object Storage) e com FS legado."""
     current_user = await get_current_user(credentials)
-    
-    # Normalize path
+    from utils.storage_metadata import get_node, delete_node, _ensure_root_slash
+
     if not path.startswith("/"):
         path = "/" + path
-    
-    # Build absolute path
+
+    p = _ensure_root_slash(path)
+    node = await get_node(p)
     abs_path = STORAGE_DIR / path.lstrip("/")
-    
-    if not abs_path.exists():
+
+    if not node and not abs_path.exists():
         raise HTTPException(status_code=404, detail="Item não encontrado")
-    
-    item_name = abs_path.name
-    is_folder = abs_path.is_dir()
-    
+
+    item_name = (node and node.get("name")) or abs_path.name
+    is_folder = (node and node.get("type") == "folder") or (abs_path.exists() and abs_path.is_dir())
+
     try:
         if permanent:
-            # Delete permanently
-            if is_folder:
+            # Apaga do Mongo (e Object Storage marcado via TODO no helper) E do FS
+            if node:
+                await delete_node(p)
+            if abs_path.exists():
                 import shutil
-                shutil.rmtree(abs_path)
-            else:
-                abs_path.unlink()
+                if abs_path.is_dir():
+                    shutil.rmtree(abs_path)
+                else:
+                    abs_path.unlink()
             action = "excluir permanentemente"
         else:
-            # Move to trash
-            import shutil
+            # Move para lixeira: guarda referência completa
             trash_item_id = str(uuid.uuid4())
-            trash_path = STORAGE_TRASH_DIR / trash_item_id
-            
-            # Move the item
-            shutil.move(str(abs_path), str(trash_path))
-            
-            # Save metadata to database
             trash_record = {
                 "id": trash_item_id,
                 "original_name": item_name,
-                "original_path": path,
+                "original_path": p,
                 "type": "folder" if is_folder else "file",
                 "deleted_by": current_user["id"],
-                "deleted_by_name": current_user["name"],
-                "deleted_at": datetime.now(timezone.utc).isoformat()
+                "deleted_by_name": current_user.get("name"),
+                "deleted_at": datetime.now(timezone.utc).isoformat(),
             }
-            
-            # Get file size if it's a file
-            if not is_folder and trash_path.exists():
-                trash_record["size"] = trash_path.stat().st_size
-            
+
+            # Caso 1: existe no Mongo → snapshot e remove
+            if node:
+                trash_record["meta_snapshot"] = node
+                if not is_folder:
+                    trash_record["size"] = node.get("size", 0)
+                await delete_node(p)
+
+            # Caso 2: arquivo/pasta legado no FS — move pro diretório de trash físico
+            if abs_path.exists():
+                import shutil
+                trash_path = STORAGE_TRASH_DIR / trash_item_id
+                shutil.move(str(abs_path), str(trash_path))
+                trash_record["fs_trash_path"] = str(trash_path)
+                if not is_folder and trash_path.exists():
+                    trash_record["size"] = trash_path.stat().st_size
+
             await db.storage_trash.insert_one(trash_record)
             action = "mover para lixeira"
-        
+
         # Auditoria
         await create_audit_log(
             user=current_user,
@@ -8388,7 +8403,7 @@ async def delete_storage_item(
             details=f"{'Pasta' if is_folder else 'Arquivo'}: {path}",
             module="Armazenamento"
         )
-        
+
         return {"message": "Item movido para lixeira" if not permanent else "Item excluído permanentemente"}
     except Exception as e:
         logger.error(f"Error deleting item: {e}")
@@ -8631,6 +8646,7 @@ api_router.include_router(folha_importacao_router)
 api_router.include_router(fin_folha_solicitacoes_router)
 api_router.include_router(storage_router)
 api_router.include_router(anexos_router)
+api_router.include_router(storage_migrate_router)
 api_router.include_router(export_router)
 api_router.include_router(stock_router)
 api_router.include_router(obras_router)
@@ -8974,6 +8990,14 @@ async def startup_event():
         logger.info("Object storage inicializado (Emergent)")
     except Exception as e:
         logger.warning(f"Falha ao inicializar object storage: {e}. Uploads ficarão indisponíveis até reinicializar.")
+    
+    # Inicializar índices de metadados do Storage (MongoDB)
+    try:
+        from utils.storage_metadata import ensure_indexes as _sm_ensure_idx
+        await _sm_ensure_idx()
+        logger.info("Storage metadata: índices verificados")
+    except Exception as e:
+        logger.warning(f"Falha ao criar índices de storage_metadata: {e}")
     
     # Bootstrap da Base de Conhecimento do Chat IA do RH
     # Idempotente: só baixa/insere o que ainda não existe na coleção.

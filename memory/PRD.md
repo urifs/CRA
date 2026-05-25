@@ -12,6 +12,25 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 25/05/2026 (sessão 4 - Object Storage Persistente)
+- **NOVO: Módulo de Armazenamento migrado para Object Storage persistente** (resolução definitiva do problema "arquivos perdidos no deploy"):
+  - Nova camada de metadados em MongoDB (`storage_files`) — pasta + arquivo com `path`, `parent_path`, `name`, `type`, `size`, `object_key`, `modified_at`
+  - Helper `/app/backend/utils/storage_metadata.py`: list_children, create_folder, put_file, fetch_file_bytes, delete_node, rename_node, move_node, search
+  - Endpoints reescritos para usar MongoDB + Object Storage:
+    - `GET /api/storage/list` — Mongo primário + FS fallback (legado)
+    - `POST /api/storage/upload` — sobe para OS + Mongo metadata
+    - `GET /api/storage/download` — OS primário, FS fallback
+    - `POST /api/storage/folder` — cria registro em Mongo
+    - `DELETE /api/storage/delete` — remove de Mongo + FS legado (lixeira preservada)
+    - `GET /api/storage/search` (em `routes/storage.py`) — Mongo + FS
+  - Anexos universais (`routes/anexos.py`): `from-storage` e download integram com a nova camada (OS primário, FS fallback)
+  - **3 novos endpoints admin** em `routes/storage_migrate.py`:
+    - `POST /api/storage/migrate-to-object-storage` — varre FS local e migra tudo para OS+Mongo (idempotente)
+    - `GET /api/storage/export-zip` — baixa ZIP completo (todos os arquivos do Mongo+OS+FS)
+    - `POST /api/storage/import-zip` — recebe ZIP e popula MongoDB+OS (uso ideal: preview→produção)
+  - **UI no Painel Admin** (aba "Banco de Dados"): card "Armazenamento (Object Storage)" com 3 botões (Migrar / Exportar ZIP / Importar ZIP)
+- Testado em preview: 4 arquivos do `rh_normativos` (~18MB) migrados; upload/download/folder/delete/search funcionando 100%
+
 ### 25/05/2026 (sessão 3)
 - **Fix Export Selecionados (PDF Multi-Item)**: rewriting do bloco contas_pagar/contas_receber em `/api/export/individual-multiple` para espelhar EXATAMENTE o layout do PDF single-item:
   - Logo CRA no topo de cada item

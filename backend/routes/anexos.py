@@ -109,9 +109,30 @@ async def download_anexo(
 
     if anexo["source"] == "local":
         file_path = ANEXOS_DIR / anexo["filename"]
-    else:
-        file_path = STORAGE_DIR / anexo["storage_path"].lstrip("/")
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Arquivo físico não encontrado")
+        return FileResponse(
+            path=str(file_path),
+            filename=anexo.get("original_name") or file_path.name,
+            media_type=anexo.get("content_type") or "application/octet-stream",
+        )
 
+    # source == "storage": tenta MongoDB+Object Storage primeiro, depois FS legado
+    storage_path = anexo.get("storage_path") or ""
+    try:
+        from utils.storage_metadata import fetch_file_bytes
+        data, content_type, name = await fetch_file_bytes(storage_path)
+        if data is not None:
+            from fastapi.responses import Response
+            return Response(
+                content=data,
+                media_type=content_type or anexo.get("content_type") or "application/octet-stream",
+                headers={"Content-Disposition": f'inline; filename="{name or anexo.get("original_name") or "arquivo"}"'},
+            )
+    except Exception as e:
+        logger.warning(f"Anexo OS download falhou para {storage_path}: {e}; tentando FS")
+
+    file_path = STORAGE_DIR / storage_path.lstrip("/")
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Arquivo físico não encontrado")
 
@@ -205,23 +226,50 @@ async def attach_from_storage(
     for path in paths:
         if not path.startswith("/"):
             path = "/" + path
-        abs_path = STORAGE_DIR / path.lstrip("/")
-        if not abs_path.exists() or not abs_path.is_file():
-            raise HTTPException(status_code=404, detail=f"Arquivo não encontrado no armazenamento: {path}")
 
-        anexo = {
-            "id": str(uuid.uuid4()),
-            "entity_type": entity_type,
-            "entity_id": entity_id,
-            "source": "storage",
-            "filename": abs_path.name,
-            "original_name": abs_path.name,
-            "storage_path": path,
-            "size": abs_path.stat().st_size,
-            "content_type": _guess_content_type(abs_path.suffix.lower()),
-            "uploaded_at": datetime.now(timezone.utc).isoformat(),
-            "uploaded_by": payload.get("user_id") or payload.get("sub") or "system",
-        }
+        # 1) Tenta resolver via MongoDB metadata (Object Storage)
+        node = None
+        try:
+            from utils.storage_metadata import get_node
+            node = await get_node(path)
+        except Exception:
+            node = None
+
+        if node and node.get("type") == "file":
+            anexo = {
+                "id": str(uuid.uuid4()),
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "source": "storage",
+                "filename": node.get("name"),
+                "original_name": node.get("name"),
+                "storage_path": path,
+                "size": node.get("size", 0),
+                "content_type": node.get("content_type") or _guess_content_type(
+                    ("." + node.get("name").rsplit(".", 1)[1].lower()) if "." in node.get("name", "") else ""
+                ),
+                "uploaded_at": datetime.now(timezone.utc).isoformat(),
+                "uploaded_by": payload.get("user_id") or payload.get("sub") or "system",
+            }
+        else:
+            # 2) Fallback FS legado
+            abs_path = STORAGE_DIR / path.lstrip("/")
+            if not abs_path.exists() or not abs_path.is_file():
+                raise HTTPException(status_code=404, detail=f"Arquivo não encontrado no armazenamento: {path}")
+            anexo = {
+                "id": str(uuid.uuid4()),
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "source": "storage",
+                "filename": abs_path.name,
+                "original_name": abs_path.name,
+                "storage_path": path,
+                "size": abs_path.stat().st_size,
+                "content_type": _guess_content_type(abs_path.suffix.lower()),
+                "uploaded_at": datetime.now(timezone.utc).isoformat(),
+                "uploaded_by": payload.get("user_id") or payload.get("sub") or "system",
+            }
+
         await db.entity_anexos.insert_one(anexo)
         anexo.pop("_id", None)
         created.append(anexo)

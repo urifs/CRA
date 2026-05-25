@@ -109,30 +109,47 @@ async def search_storage(
     query: str,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Search for files and folders"""
+    """Search for files and folders (MongoDB metadata + FS legado)."""
     await get_current_user(credentials)
+    from utils.storage_metadata import search as search_meta
 
+    seen_paths = set()
     results = []
-    query_lower = query.lower()
 
+    # 1) MongoDB metadata
+    try:
+        for it in await search_meta(query):
+            results.append({
+                "name": it.get("name"),
+                "type": it.get("type"),
+                "path": it.get("path"),
+                "size": it.get("size", 0),
+            })
+            seen_paths.add(it.get("path"))
+    except Exception as e:
+        logger.warning(f"Mongo search falhou: {e}")
+
+    # 2) Fallback FS legado
+    query_lower = query.lower()
     for root, dirs, files in os.walk(STORAGE_DIR):
         for name in dirs + files:
             if query_lower in name.lower():
                 full_path = Path(root) / name
                 rel_path = "/" + str(full_path.relative_to(STORAGE_DIR)).replace("\\", "/")
-
+                if rel_path in seen_paths:
+                    continue
                 if full_path.is_dir():
                     results.append({
                         "name": name,
                         "type": "folder",
-                        "path": rel_path
+                        "path": rel_path,
                     })
                 else:
                     results.append({
                         "name": name,
                         "type": "file",
                         "path": rel_path,
-                        "size": full_path.stat().st_size
+                        "size": full_path.stat().st_size,
                     })
 
-    return results[:50]
+    return results[:100]
