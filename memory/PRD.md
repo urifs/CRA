@@ -12,6 +12,15 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 7 - Fix CRÍTICO: PUT contas perdendo vínculo de parcela)
+- **Bug**: Ao editar uma conta parcelada (PUT `/api/admin/contas-pagar/{id}`) sem enviar `parcela_origem_id` no payload (caso típico do form do frontend), o Pydantic `ContaPagarCreate` preenchia o campo com `None` (default) e o `$set` SOBRESCREVIA o vínculo da parcela com o grupo. Sintomas para o usuário:
+  - A parcela editada saía do grupo (coluna "Saldo Restante" virava "—")
+  - As demais parcelas do grupo recalculavam o saldo total considerando apenas N-1 parcelas
+  - Aparência de que a parcela tinha sido "quitada" (mesmo sem ser)
+- **Fix**: adicionado `parcela_origem_id` à lista `PAYMENT_FIELDS` em `update_conta_pagar` e `update_conta_receber` (`/app/backend/routes/financeiro.py:472,907`). Agora o campo é removido do payload antes do `$set`, preservando o vínculo da parcela com o grupo.
+- Bônus em contas a receber: incluídos também `valor_recebido`, `recebimentos`, `data_recebimento`, `data_ultimo_recebimento` na lista de campos protegidos.
+- Reproduzido via curl: parcela 1/3 perdia origem_id e grupo virava `None`. Após o fix: TODAS as 3 parcelas mantêm `parcela_origem_id` e `grupo=(total=8196, saldo=8196)`.
+
 ### 27/05/2026 (sessão 6 - Fix Storage: pastas faltando no modal + duplicação "Sistemas")
 - **Fix StoragePickerModal**: trocado filtro hard-coded `i.name !== "Sistemas"` por `!i.virtual` em `/app/frontend/src/components/StoragePickerModal.jsx:73`. Agora pastas reais (mesmo se chamadas "Sistemas") aparecem no modal — só a virtual fica oculta (arquivos virtuais não podem ser anexados).
 - **Fix duplicação "Sistemas"**: renomeado `VIRTUAL_ROOT` em `/app/backend/server.py:7610` de `"Sistemas"` para `"Sistemas (Anexos)"`. Resolve dois problemas:

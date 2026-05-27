@@ -493,9 +493,13 @@ async def update_conta_pagar(
     # plano de contas ou anexar nota) e o status DEVE permanecer quitada.
     # Esses campos são alterados exclusivamente pelos endpoints /quitar
     # e /cancelar.
+    # Também blindamos `parcela_origem_id`: ele identifica o grupo de
+    # parcelas e NÃO pode ser zerado por uma edição que não envie o campo
+    # no payload (caso típico: Pydantic preenche com None o default).
     PAYMENT_FIELDS = {
         "status", "valor_pago", "saldo_restante", "pagamentos",
         "data_pagamento", "data_ultimo_pagamento", "data_cancelamento",
+        "parcela_origem_id",
     }
     for f in PAYMENT_FIELDS:
         update_data.pop(f, None)
@@ -925,10 +929,15 @@ async def update_conta_receber(
 
     # Editar apenas METADADOS — preservar estado de recebimento. Status
     # (quitada/parcial/cancelada) e histórico de pagamentos só mudam pelos
-    # endpoints /quitar e /cancelar.
+    # endpoints /quitar e /cancelar. Também blindamos `parcela_origem_id`:
+    # ele identifica o grupo de parcelas e NÃO pode ser zerado por uma
+    # edição que não envie o campo no payload.
     PAYMENT_FIELDS = {
-        "status", "valor_pago", "saldo_restante", "pagamentos",
-        "data_pagamento", "data_ultimo_pagamento", "data_cancelamento",
+        "status", "valor_pago", "valor_recebido", "saldo_restante",
+        "pagamentos", "recebimentos",
+        "data_pagamento", "data_recebimento", "data_ultimo_pagamento",
+        "data_ultimo_recebimento", "data_cancelamento",
+        "parcela_origem_id",
     }
     for f in PAYMENT_FIELDS:
         update_data.pop(f, None)
