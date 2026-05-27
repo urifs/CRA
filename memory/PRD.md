@@ -12,6 +12,14 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 8 - Fix Exportação: filtro centro de custo ignorado em coleções não-financeiras)
+- **Bug**: Ao selecionar um Centro de Custo na página de Exportação e exportar categorias como Ordens de Serviço, Aluguéis, Manutenções, Folha de Pagamento, Custos RH, etc., o filtro era IGNORADO — vinham registros de todos os centros de custo. O filtro só era aplicado em `contas_pagar` e `contas_receber` (hard-coded em `FINANCIAL_COLLECTIONS`).
+- **Fix em `/app/backend/routes/exports_all.py`**:
+  - Nova função helper `_apply_centro_custo_filter(collection_name, query, centro_custo)` que filtra qualquer coleção do conjunto `CENTRO_CUSTO_COLLECTIONS` casando contra os 3 campos possíveis (`centro_custo`, `centro_custo_nome`, `centro_custo_id` resolvido via lookup em `centros_custo`).
+  - 15 coleções agora respeitam o filtro: contas_pagar, contas_receber, ordens_servico, alugueis, maintenances, obras, folha_pagamento, custos_rh, combustivel, abastecimentos, imoveis, stock_movements, ferias, ponto_registros, epi_fichas.
+  - Substituído o gate hard-coded `FINANCIAL_COLLECTIONS` em 4 endpoints: `/export/pdf/{cat}`, `/export/combined`, `/export/excel/{cat}`, `/export/ofx/{cat}`.
+- Validado via curl + análise do PDF: filtro `centro_custo=Obra Jardins do Vale` agora retorna apenas 1 conta (a única com esse CC), versus 42 sem filtro.
+
 ### 27/05/2026 (sessão 7 - Fix CRÍTICO: PUT contas perdendo vínculo de parcela)
 - **Bug**: Ao editar uma conta parcelada (PUT `/api/admin/contas-pagar/{id}`) sem enviar `parcela_origem_id` no payload (caso típico do form do frontend), o Pydantic `ContaPagarCreate` preenchia o campo com `None` (default) e o `$set` SOBRESCREVIA o vínculo da parcela com o grupo. Sintomas para o usuário:
   - A parcela editada saía do grupo (coluna "Saldo Restante" virava "—")

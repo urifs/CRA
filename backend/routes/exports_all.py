@@ -154,6 +154,60 @@ def _apply_forma_pagamento_filter(
     return query_filter
 
 
+# Coleções que possuem algum campo relacionado a centro de custo
+# (centro_custo, centro_custo_id, centro_custo_nome). Usado pelo filtro
+# global da página de Exportação no módulo Administrativo.
+CENTRO_CUSTO_COLLECTIONS = {
+    "contas_pagar", "contas_receber", "ordens_servico", "alugueis",
+    "maintenances", "obras", "folha_pagamento", "custos_rh",
+    "combustivel", "abastecimentos", "imoveis", "stock_movements",
+    "ferias", "ponto_registros", "epi_fichas",
+}
+
+
+async def _apply_centro_custo_filter(
+    collection_name: str,
+    query_filter: dict,
+    centro_custo: Optional[str],
+) -> dict:
+    """Filtra qualquer coleção pelo centro de custo selecionado.
+
+    O frontend envia o NOME do centro de custo. O backend casa contra
+    qualquer uma das três variantes de campo encontradas no banco:
+    `centro_custo` (string com o nome), `centro_custo_nome` (idem) e
+    `centro_custo_id` (resolvido a partir da collection centros_custo).
+    """
+    if not centro_custo or centro_custo == "todos":
+        return query_filter
+    if collection_name not in CENTRO_CUSTO_COLLECTIONS:
+        return query_filter
+
+    # Resolve o ID a partir do nome (case-insensitive)
+    cc_doc = await db.centros_custo.find_one(
+        {"nome": {"$regex": f"^{re.escape(centro_custo)}$", "$options": "i"}},
+        {"_id": 0, "id": 1},
+    )
+    cc_id = cc_doc.get("id") if cc_doc else None
+
+    or_clauses = [
+        {"centro_custo": centro_custo},
+        {"centro_custo_nome": centro_custo},
+    ]
+    if cc_id:
+        or_clauses.append({"centro_custo_id": cc_id})
+
+    # Mescla com $or existente usando $and para não conflitar
+    if "$or" in query_filter:
+        existing_or = query_filter.pop("$or")
+        query_filter.setdefault("$and", []).extend([
+            {"$or": existing_or},
+            {"$or": or_clauses},
+        ])
+    else:
+        query_filter["$or"] = or_clauses
+    return query_filter
+
+
 # ============ PDF EXPORT ROUTES ============
 
 from fastapi.responses import StreamingResponse
@@ -1100,10 +1154,9 @@ async def export_pdf(
     title = config["title"]
     query_filter = dict(config["filter"])  # Cópia para não mutar o original
     
-    # Aplicar filtro de centro de custo para coleções financeiras
-    FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
-    if centro_custo and centro_custo != "todos" and collection_name in FINANCIAL_COLLECTIONS:
-        query_filter["centro_custo"] = centro_custo
+    # Aplicar filtro de centro de custo (qualquer coleção que tenha o campo)
+    query_filter = await _apply_centro_custo_filter(collection_name, query_filter, centro_custo)
+    if centro_custo and centro_custo != "todos":
         title += f" - {centro_custo}"
 
     # Aplicar filtro de período (global)
@@ -1212,10 +1265,10 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
             if "ids" in specific_filter:
                 query_filter["id"] = {"$in": specific_filter["ids"]}
         
-        # Aplicar filtro de centro de custo para coleções financeiras
-        FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
-        if data.centro_custo and data.centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
-            query_filter["centro_custo"] = data.centro_custo
+        # Aplicar filtro de centro de custo (qualquer coleção com o campo)
+        query_filter = await _apply_centro_custo_filter(
+            config["collection"], query_filter, data.centro_custo
+        )
 
         # Aplicar filtro global de período
         query_filter = _apply_period_filter(
@@ -1230,7 +1283,7 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
         items = await db[config["collection"]].find(query_filter, {"_id": 0}).to_list(1000)
         if items:
             section_title = config["title"]
-            if data.centro_custo and data.centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
+            if data.centro_custo and data.centro_custo != "todos":
                 section_title += f" - {data.centro_custo}"
             if data.data_inicio or data.data_fim:
                 section_title += f" ({data.data_inicio or '...'} a {data.data_fim or '...'})"
@@ -3587,10 +3640,8 @@ async def export_excel(
     config = category_configs[category]
     excel_filter = dict(config["filter"])
     
-    # Aplicar filtro de centro de custo para coleções financeiras
-    FINANCIAL_COLLECTIONS = ["contas_pagar", "contas_receber"]
-    if centro_custo and centro_custo != "todos" and config["collection"] in FINANCIAL_COLLECTIONS:
-        excel_filter["centro_custo"] = centro_custo
+    # Aplicar filtro de centro de custo (qualquer coleção com o campo)
+    excel_filter = await _apply_centro_custo_filter(config["collection"], excel_filter, centro_custo)
 
     # Aplicar filtro global de período
     excel_filter = _apply_period_filter(config["collection"], excel_filter, data_inicio, data_fim)
@@ -3650,8 +3701,7 @@ async def export_ofx(
     
     config = valid_categories[category]
     query_filter = dict(config.get("filter", {}))
-    if centro_custo and centro_custo != "todos":
-        query_filter["centro_custo"] = centro_custo
+    query_filter = await _apply_centro_custo_filter(config["collection"], query_filter, centro_custo)
     # Filtro de período
     query_filter = _apply_period_filter(config["collection"], query_filter, data_inicio, data_fim)
     # Filtro de forma de pagamento
