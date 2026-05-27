@@ -1630,9 +1630,15 @@ Ações suportadas:
     – "Quero esse resumo em PDF"
     – "Exporta a tabela de pisos salariais em PDF"
     – "Manda em PDF a lista de exames admissionais"
-  Coloque em `conteudo` o TEXTO COMPLETO que deve aparecer no documento (use \\n para
-  novas linhas e \\n\\n para separar parágrafos). VOCÊ TEM ESTA FERRAMENTA — JAMAIS
-  responda "não posso gerar PDF" quando o usuário pedir um PDF; sempre use esta ação.
+  🔴 REGRA CRÍTICA — `conteudo` é OBRIGATÓRIO e NÃO PODE ESTAR VAZIO:
+     Você DEVE construir o TEXTO COMPLETO do documento DENTRO DO PRÓPRIO BLOCO TOOL,
+     no campo `conteudo`. NÃO escreva o documento na mensagem antes/depois do bloco
+     achando que ele "será transferido sozinho" — isso QUEBRA a ferramenta.
+     Use \\n para novas linhas e \\n\\n para separar parágrafos. Para uma OS típica
+     o `conteudo` deve ter pelo menos 1.500 caracteres (várias seções formatadas:
+     Identificação, Riscos, EPIs, Exames, Treinamentos, Medidas de Controle, etc.).
+     Exemplo VÁLIDO: <<TOOL>>{{"action":"gerar_pdf_documento","params":{{"titulo":"Ordem de Serviço - Motorista","conteudo":"FUNCIONÁRIO: Fulano\\nCARGO: Motorista\\n\\n1. RISCOS OCUPACIONAIS\\n- Ruído (NEN 85 dB)..."}}}}<<END>>
+     VOCÊ TEM ESTA FERRAMENTA — JAMAIS responda "não posso gerar PDF" quando o usuário pedir um PDF.
 
 Após o bloco <<TOOL>>...<<END>>, escreva uma mensagem natural em português confirmando
 o que está sendo feito. NÃO emita uma ação se não tiver os parâmetros necessários —
@@ -1686,6 +1692,19 @@ Exemplos para PDF GENÉRICO (gerar_pdf_documento):
             tool_data = _json_tools.loads(tool_match.group(1))
             tool_action = (tool_data.get("action") or "").strip()
             tool_params = tool_data.get("params") or {}
+
+            # Fallback inteligente para `gerar_pdf_documento`: a IA às vezes esquece
+            # de popular `conteudo` no bloco TOOL e o coloca apenas no texto narrativo
+            # ao redor. Quando isso acontece, usamos a própria resposta textual da
+            # IA (sem o bloco TOOL) como conteúdo do PDF, evitando o erro
+            # "campo 'conteudo' é obrigatório".
+            if tool_action == "gerar_pdf_documento" and not (tool_params.get("conteudo") or "").strip():
+                fallback_text = _re_tools.sub(
+                    r"<<TOOL>>.*?<<END>>", "", ai_response, flags=_re_tools.DOTALL
+                ).strip()
+                if len(fallback_text) >= 30:  # evita usar mensagens curtas tipo "Ok, vou gerar..."
+                    tool_params["conteudo"] = fallback_text
+
             artifact, tool_result_text = await _execute_chat_tool(
                 tool_action, tool_params, current_user
             )

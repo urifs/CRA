@@ -12,6 +12,13 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 9 - Fix Chat RH: erro "campo 'conteudo' é obrigatório para gerar o PDF")
+- **Bug**: Ao pedir geração de O.S. (Ordem de Serviço) pelo Chat IA do RH, o Gemini emitia o bloco `<<TOOL>>{"action":"gerar_pdf_documento", "params":{...}}<<END>>` com `conteudo` vazio (ou ausente), só escrevendo o texto narrativo ao redor. Resultado: erro "⚠ Falha ao executar a ação solicitada: O campo 'conteudo' é obrigatório para gerar o PDF.".
+- **Fix em `/app/backend/routes/chatbot.py`**:
+  - **Fallback inteligente**: quando o tool `gerar_pdf_documento` chega com `conteudo` vazio E a IA já produziu pelo menos 30 caracteres de texto narrativo, usamos esse texto como conteúdo do PDF — evitando o erro e ainda gerando um documento útil.
+  - **Reforço no prompt do sistema**: adicionada regra crítica explícita com exemplo VÁLIDO completo do bloco TOOL e um requisito mínimo de ~1.500 caracteres de conteúdo para uma OS típica.
+- Validado via curl: enviar "Redija uma O.S. de Motorista CAT E baseado no PGR/PCMSO" agora retorna PDF de 42KB sem erro.
+
 ### 27/05/2026 (sessão 8 - Fix Exportação: filtro centro de custo ignorado em coleções não-financeiras)
 - **Bug**: Ao selecionar um Centro de Custo na página de Exportação e exportar categorias como Ordens de Serviço, Aluguéis, Manutenções, Folha de Pagamento, Custos RH, etc., o filtro era IGNORADO — vinham registros de todos os centros de custo. O filtro só era aplicado em `contas_pagar` e `contas_receber` (hard-coded em `FINANCIAL_COLLECTIONS`).
 - **Fix em `/app/backend/routes/exports_all.py`**:
