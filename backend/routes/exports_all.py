@@ -1281,6 +1281,27 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
         "centros_custo": {"collection": "centros_custo", "title": "Centros de Custo", "filter": {}},
         "formas_pagamento": {"collection": "formas_pagamento", "title": "Formas de Pagamento", "filter": {}},
         "fleets": {"collection": "fleets", "title": "Frotas", "filter": {}},
+        # RH - Funcionários
+        "funcionarios": {"collection": "funcionarios", "title": "Funcionários", "filter": {}},
+        "funcionarios_ativos": {"collection": "funcionarios", "title": "Funcionários Ativos", "filter": {"status": {"$ne": "desligado"}}},
+        "funcionarios_desligados": {"collection": "funcionarios", "title": "Funcionários Desligados", "filter": {"status": "desligado"}},
+        # RH - Ponto
+        "ponto_registros": {"collection": "ponto_registros", "title": "Registros de Ponto", "filter": {}},
+        "ponto_hoje": {"collection": "ponto_registros", "title": "Ponto de Hoje", "filter": {"data": datetime.now().strftime("%Y-%m-%d")}},
+        "ponto_mes": {"collection": "ponto_registros", "title": "Ponto do Mês", "filter": {"data": {"$regex": f"^{datetime.now().strftime('%Y-%m')}"}}},
+        # RH - Folha de Pagamento
+        "folha_pagamento": {"collection": "folha_pagamento", "title": "Folha de Pagamento", "filter": {}},
+        "holerites": {"collection": "folha_pagamento", "title": "Holerites", "filter": {}},
+        # RH - Férias
+        "ferias": {"collection": "ferias", "title": "Férias", "filter": {}},
+        "ferias_proximas": {"collection": "ferias", "title": "Férias Próximas", "filter": {}},
+        "ferias_vencidas": {"collection": "ferias", "title": "Férias Vencidas", "filter": {}},
+        # RH - EPIs
+        "epi_fichas": {"collection": "epi_fichas", "title": "Fichas de EPI", "filter": {}},
+        "epi_vencidos": {"collection": "epi_fichas", "title": "EPIs Vencidos", "filter": {}},
+        # RH - Custos
+        "custos_funcionarios": {"collection": "funcionarios", "title": "Custos por Funcionário", "filter": {}},
+        "custos_encargos": {"collection": "folha_pagamento", "title": "Encargos Sociais", "filter": {}},
     }
     
     all_data = []
@@ -1484,6 +1505,25 @@ _EXPORT_ITEMS_CONFIG = {
     "imoveis_pendente": {"collection": "imoveis", "filter": {"status": "pendente"}},
     "usuarios": {"collection": "users"},
     "extrato_bancario": {"collection": "contas_bancarias"},
+    # RH - Funcionários
+    "funcionarios": {"collection": "funcionarios"},
+    "funcionarios_ativos": {"collection": "funcionarios", "filter": {"status": {"$ne": "desligado"}}},
+    "funcionarios_desligados": {"collection": "funcionarios", "filter": {"status": "desligado"}},
+    # RH - Ponto
+    "ponto_registros": {"collection": "ponto_registros"},
+    # RH - Folha
+    "folha_pagamento": {"collection": "folha_pagamento"},
+    "holerites": {"collection": "folha_pagamento"},
+    # RH - Férias
+    "ferias": {"collection": "ferias"},
+    "ferias_proximas": {"collection": "ferias"},
+    "ferias_vencidas": {"collection": "ferias"},
+    # RH - EPIs
+    "epi_fichas": {"collection": "epi_fichas"},
+    "epi_vencidos": {"collection": "epi_fichas"},
+    # RH - Custos
+    "custos_funcionarios": {"collection": "funcionarios"},
+    "custos_encargos": {"collection": "folha_pagamento"},
 }
 
 

@@ -12,6 +12,15 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 17 - Fix Exportação Combinada RH + contagens)
+- **Pedido**: usuário relatou erro 400 "Erro ao exportar relatório combinado" ao tentar exportar funcionários no `/rh/exportar`, mesmo após o fix da sessão 15. Botão mostrava "0 itens" no total.
+- **Causa raiz**: `category_configs` do endpoint `POST /api/export/combined` em `/app/backend/routes/exports_all.py` cobria apenas Gerenciamento + Administrativo (machines, contas_pagar, plano_contas, etc.), mas NÃO continha as categorias do módulo RH (funcionarios, funcionarios_ativos, funcionarios_desligados, ponto_*, folha_pagamento, holerites, ferias*, epi_*, custos_*). Resultado: todas as categorias do RH caíam no `continue` do loop e `all_data` ficava vazio → 400. Adicionalmente `_EXPORT_ITEMS_CONFIG` (usado em `/api/export/items-count`) também não tinha as categorias RH → contagem retornava `-1` e UI mostrava "0 itens".
+- **Fix**: adicionadas 18 entradas do RH em ambos os configs (`category_configs` do combined e `_EXPORT_ITEMS_CONFIG` do items-count): funcionarios, funcionarios_ativos, funcionarios_desligados, ponto_registros, ponto_hoje, ponto_mes, folha_pagamento, holerites, ferias, ferias_proximas, ferias_vencidas, epi_fichas, epi_vencidos, custos_funcionarios, custos_encargos.
+- **Validação**:
+  - `GET /api/export/items-count?collections=funcionarios,...` → retorna 9, 9, 0, 135, 1, 0, 1 (valores reais) ✅
+  - `POST /api/export/combined` com `["funcionarios","funcionarios_ativos","funcionarios_desligados"]` → 200 + PDF 73KB ✅
+  - Screenshot do `/rh/exportar`: "Exportar (3 categorias · 18 itens)" + badges visíveis em todas as subcategorias ✅
+
 ### 27/05/2026 (sessão 16 - Prévia de contagem antes de exportar)
 - **Pedido**: mostrar a quantidade de itens que cada subcategoria retornará antes do usuário clicar em Exportar (evitar exportações vazias / surpresas).
 - **Implementação em `/app/frontend/src/pages/ExportPage.jsx`**:
