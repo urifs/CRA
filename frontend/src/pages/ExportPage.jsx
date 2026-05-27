@@ -200,7 +200,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
     );
     if (expandedIds.length === 0) return;
     // Limpa seleções para evitar exportar item filtrado que não está mais visível
-    setSelectedItems({});
+    setSelectedItems([]);
     expandedIds.forEach((id) => {
       fetchSubcategoryItems(id);
     });
@@ -216,7 +216,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
 
   const fetchFormasPagamento = async () => {
     try {
-      const response = await axios.get(`${API}/formas-pagamento`, {
+      const response = await axios.get(`${API}/admin/formas-pagamento`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFormasPagamento(response.data || []);

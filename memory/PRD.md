@@ -12,6 +12,19 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 15 - Fix Exportação P0: state corrompido + endpoint 404)
+- **Pedido**: usuário relatou que "qualquer coisa que tenta exportar dá erro 400 / Erro ao exportar relatório combinado". Console mostrava também 404 em `/api/formas-pagamento`.
+- **Causas identificadas**:
+  1. **State corrompido (`/app/frontend/src/pages/ExportPage.jsx` linha 203)**: o `useEffect` que reagia a mudanças de filtro global (período / centro de custo) chamava `setSelectedItems({})` — mas `selectedItems` é declarado como **array** (`useState([])`) e usado em todo o componente com `.length`, `.includes()`, `.filter()` e spread. Resultado: ao mudar qualquer filtro, o state virava `{}`, quebrando todas as operações subsequentes e enviando ao backend `categories: {}` → Pydantic retornava 422 / 400.
+  2. **Endpoint 404 (`fetchFormasPagamento`)**: chamava `/api/formas-pagamento` mas o endpoint real é `/api/admin/formas-pagamento`.
+- **Fix**:
+  - `setSelectedItems({})` → `setSelectedItems([])`.
+  - `${API}/formas-pagamento` → `${API}/admin/formas-pagamento`.
+- **Validação via curl**:
+  - `GET /api/admin/formas-pagamento` → 200 ✅
+  - `POST /api/export/combined` com array correto → 200 + PDF 43KB ✅
+  - `POST /api/export/combined` com objeto vazio (bug antigo) → 422 (confirmação da reprodução)
+
 ### 27/05/2026 (sessão 14 - Excluir Fichas de EPI)
 - **Pedido**: permitir excluir fichas de EPI no módulo RH.
 - **Implementação**:
