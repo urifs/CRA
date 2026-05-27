@@ -638,6 +638,7 @@ export default function ContasReceberPage() {
                 <th className="text-left p-3 font-medium text-gray-600">Vencimento</th>
                 <th className="text-left p-3 font-medium text-gray-600">Recebido em</th>
                 <th className="text-right p-3 font-medium text-gray-600">Valor R$</th>
+                <th className="text-right p-3 font-medium text-gray-600">Recebido R$</th>
                 <th className="text-right p-3 font-medium text-gray-600">Saldo Restante</th>
                 <th className="text-left p-3 font-medium text-gray-600">Forma Pag.</th>
                 <th className="text-left p-3 font-medium text-gray-600">Status</th>
@@ -671,6 +672,9 @@ export default function ContasReceberPage() {
                       {c.data_recebimento ? formatDateBR(c.data_recebimento) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-3 text-right font-medium text-green-600">{formatCurrency(c.valor_final || c.valor)}</td>
+                    <td className="p-3 text-right font-medium text-emerald-700" data-testid={`cell-valor-recebido-${c.id}`}>
+                      {(c.valor_recebido || 0) > 0 ? formatCurrency(c.valor_recebido) : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                       {c.parcela_origem_id && c.grupo_parcelas ? (
                         <button

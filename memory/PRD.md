@@ -12,6 +12,13 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 11 - Coluna "Pago R$" / "Recebido R$" nas listagens)
+- **Pedido**: além de "Valor R$" e "Saldo Restante", exibir nas tabelas de Contas a Pagar e Contas a Receber uma coluna com o **valor já pago/recebido** de cada conta.
+- **Implementação** em `/app/frontend/src/pages/admin/`:
+  - `ContasPagarPage.jsx`: nova coluna **"Pago R$"** (verde esmeralda) entre "Valor R$" e "Saldo Restante", lê `c.valor_pago` (ou "—" se zerado).
+  - `ContasReceberPage.jsx`: nova coluna **"Recebido R$"** (verde esmeralda) entre "Valor R$" e "Saldo Restante", lê `c.valor_recebido` (ou "—" se zerado).
+- Lint passou nos dois arquivos sem warnings.
+
 ### 27/05/2026 (sessão 10 - P0: Endpoint de recuperação para parcela_origem_id zerado)
 - **Contexto**: O bug da sessão 7 (PUT zerando `parcela_origem_id`) afetou parcelas em produção. Foi criado um endpoint admin para detectar e restaurar os vínculos automaticamente.
 - **Endpoint**: `POST /api/admin/recover-parcela-vinculos?dry_run=true|false`

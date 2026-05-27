@@ -639,6 +639,7 @@ export default function ContasPagarPage() {
                 <th className="text-left p-3 font-medium text-gray-600">Vencimento</th>
                 <th className="text-left p-3 font-medium text-gray-600">Pago em</th>
                 <th className="text-right p-3 font-medium text-gray-600">Valor R$</th>
+                <th className="text-right p-3 font-medium text-gray-600">Pago R$</th>
                 <th className="text-right p-3 font-medium text-gray-600">Saldo Restante</th>
                 <th className="text-left p-3 font-medium text-gray-600">Forma Pag.</th>
                 <th className="text-left p-3 font-medium text-gray-600">Status</th>
@@ -672,6 +673,9 @@ export default function ContasPagarPage() {
                       {c.data_pagamento ? formatDateBR(c.data_pagamento) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-3 text-right font-medium text-red-600">{formatCurrency(c.valor_final || c.valor)}</td>
+                    <td className="p-3 text-right font-medium text-emerald-700" data-testid={`cell-valor-pago-${c.id}`}>
+                      {(c.valor_pago || 0) > 0 ? formatCurrency(c.valor_pago) : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                       {c.parcela_origem_id && c.grupo_parcelas ? (
                         <button
