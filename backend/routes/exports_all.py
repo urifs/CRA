@@ -1347,6 +1347,7 @@ async def get_export_items(
     status: str = None,
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    centro_custo: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Retorna itens de uma coleção para seleção em exportação.
@@ -1395,6 +1396,9 @@ async def get_export_items(
 
     # Aplicar filtro de período (global) sobre o campo de data principal da coleção
     query_filter = _apply_period_filter(db_collection, query_filter, data_inicio, data_fim)
+
+    # Aplicar filtro de centro de custo (qualquer coleção com o campo)
+    query_filter = await _apply_centro_custo_filter(db_collection, query_filter, centro_custo)
 
     projection = {"_id": 0, config["id_field"]: 1, config["name_field"]: 1}
     for field in config.get("extra_fields", []):
@@ -1454,6 +1458,7 @@ async def get_export_items_count(
     collections: str = Query(..., description="Lista de subcategorias separadas por vírgula"),
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    centro_custo: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Retorna a contagem de itens de várias subcategorias em uma única chamada,
@@ -1481,6 +1486,7 @@ async def get_export_items_count(
             else:
                 query_filter["data_vencimento"] = {"$lt": hoje}
         query_filter = _apply_period_filter(db_collection, query_filter, data_inicio, data_fim)
+        query_filter = await _apply_centro_custo_filter(db_collection, query_filter, centro_custo)
         try:
             count = await db[db_collection].count_documents(query_filter)
         except Exception:
@@ -2193,6 +2199,7 @@ class MultipleItemsExport(BaseModel):
     data_inicio: Optional[str] = None
     data_fim: Optional[str] = None
     forma_pagamento: Optional[str] = None
+    centro_custo: Optional[str] = None
 
 @exports_all_router.post("/export/individual-multiple")
 async def export_multiple_individual_items(data: MultipleItemsExport, current_user: dict = Depends(get_current_user)):
@@ -2239,6 +2246,10 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     multi_filter: dict = {"id": {"$in": data.item_ids}}
     multi_filter = _apply_period_filter(config["collection"], multi_filter, data.data_inicio, data.data_fim)
     multi_filter = _apply_forma_pagamento_filter(config["collection"], multi_filter, data.forma_pagamento)
+    # Defesa em profundidade: mesmo que o user tenha conseguido selecionar
+    # IDs de outros centros de custo (cenário pré-fix), aplicamos o filtro
+    # aqui para garantir que SÓ saiam itens do CC selecionado.
+    multi_filter = await _apply_centro_custo_filter(config["collection"], multi_filter, data.centro_custo)
     items = await db[config["collection"]].find(multi_filter, {"_id": 0}).to_list(100)
     
     if not items:

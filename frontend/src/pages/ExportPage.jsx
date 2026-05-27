@@ -177,6 +177,9 @@ export default function ExportPage({ module = "gerenciamento" }) {
       params.append("collections", Array.from(ids).join(","));
       if (globalDataInicio) params.append("data_inicio", globalDataInicio);
       if (globalDataFim) params.append("data_fim", globalDataFim);
+      if (selectedCentroCusto && selectedCentroCusto !== "todos") {
+        params.append("centro_custo", selectedCentroCusto);
+      }
       const r = await axios.get(`${API}/export/items-count?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -189,8 +192,8 @@ export default function ExportPage({ module = "gerenciamento" }) {
     }
   };
 
-  // Quando o período global muda, invalida cache de itens já carregados
-  // e re-busca para subcategorias atualmente expandidas (mantém UX consistente)
+  // Quando o período global ou centro de custo mudam, invalida cache de itens
+  // já carregados e re-busca para subcategorias atualmente expandidas.
   useEffect(() => {
     const expandedIds = Object.keys(expandedSubcategories).filter(
       (id) => expandedSubcategories[id]
@@ -202,14 +205,14 @@ export default function ExportPage({ module = "gerenciamento" }) {
       fetchSubcategoryItems(id);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [globalDataInicio, globalDataFim]);
+  }, [globalDataInicio, globalDataFim, selectedCentroCusto]);
 
   // Atualiza contagens de itens por subcategoria sempre que categorias carregam
-  // ou o filtro global de período é alterado.
+  // ou o filtro global de período / centro de custo é alterado.
   useEffect(() => {
     fetchSubcategoryCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categories, globalDataInicio, globalDataFim]);
+  }, [categories, globalDataInicio, globalDataFim, selectedCentroCusto]);
 
   const fetchFormasPagamento = async () => {
     try {
@@ -348,6 +351,9 @@ export default function ExportPage({ module = "gerenciamento" }) {
       const params = new URLSearchParams();
       if (globalDataInicio) params.append("data_inicio", globalDataInicio);
       if (globalDataFim) params.append("data_fim", globalDataFim);
+      if (selectedCentroCusto && selectedCentroCusto !== "todos") {
+        params.append("centro_custo", selectedCentroCusto);
+      }
       const qs = params.toString();
       const url = `${API}/export/items/${collection}${qs ? `?${qs}` : ""}`;
       const response = await axios.get(url, {
@@ -502,6 +508,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
         data_inicio: globalDataInicio || null,
         data_fim: globalDataFim || null,
         forma_pagamento: globalFormaPagamento && globalFormaPagamento !== "todas" ? globalFormaPagamento : null,
+        centro_custo: selectedCentroCusto && selectedCentroCusto !== "todos" ? selectedCentroCusto : null,
       }, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'

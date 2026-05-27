@@ -12,6 +12,20 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 12 - Fix Exportação P0: filtro CC não chegava nos seletores de itens)
+- **Causa raiz**: o fix da sessão 8 cobria os endpoints de **geração** do PDF/Excel (`/export/pdf/{cat}`, `/export/combined`, etc.), mas os endpoints que **listam itens disponíveis para o usuário selecionar** não recebiam nem aplicavam o filtro:
+  - `GET /api/export/items/{collection}` — montava a lista do checkbox sem filtro de CC → o usuário VIA itens de outros CCs e podia marcá-los acidentalmente.
+  - `GET /api/export/items-count` — contagem de itens por subcategoria também sem filtro.
+  - `POST /api/export/individual-multiple` — gerava o PDF com os IDs marcados sem revalidar o CC.
+- **Fix em `/app/backend/routes/exports_all.py`**:
+  - Adicionado parâmetro `centro_custo` aos 3 endpoints acima.
+  - Aplicação consistente via `_apply_centro_custo_filter` em todos eles (defesa em profundidade no `/export/individual-multiple`).
+- **Fix em `/app/frontend/src/pages/ExportPage.jsx`**:
+  - `fetchSubcategoryItems` e `fetchSubcategoryCounts` agora enviam `centro_custo` na query string.
+  - `POST /export/individual-multiple` envia `centro_custo` no body.
+  - `useEffect` de invalidação de cache passa a observar `selectedCentroCusto` — quando o usuário troca o CC, as listas e contagens são recarregadas automaticamente e seleções são limpas.
+- Validado via curl: filtro `centro_custo=Obra Jardins do Vale` reduz contas_pagar de 42 → 1, maintenances de 6 → 0.
+
 ### 27/05/2026 (sessão 11 - Coluna "Pago R$" / "Recebido R$" nas listagens)
 - **Pedido**: além de "Valor R$" e "Saldo Restante", exibir nas tabelas de Contas a Pagar e Contas a Receber uma coluna com o **valor já pago/recebido** de cada conta.
 - **Implementação** em `/app/frontend/src/pages/admin/`:
