@@ -7607,7 +7607,7 @@ class RenameItem(BaseModel):
 # download_url, evitando duplicação de armazenamento.
 # =========================================================================
 
-VIRTUAL_ROOT = "Sistemas"
+VIRTUAL_ROOT = "Sistemas (Anexos)"
 
 # Estrutura: sistema -> { label, ferramentas: [(slug, label, entity_types)] }
 SYSTEM_TOOLS_MAP = {

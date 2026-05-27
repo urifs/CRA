@@ -69,8 +69,10 @@ export default function StoragePickerModal({
     setLoadingRoot(true);
     try {
       const r = await axios.get(`${API}/storage/list`, { params: { path: "/" } });
-      // Filter out virtual /Sistemas folder (it's a special read-only group)
-      const items = (r.data || []).filter((i) => i.name !== "Sistemas");
+      // Filter out virtual folders (e.g. Sistemas virtual) — só esconde pastas
+      // marcadas como `virtual: true`, mantendo pastas reais (mesmo se tiverem
+      // o mesmo nome de alguma virtual).
+      const items = (r.data || []).filter((i) => !i.virtual);
       setRootItems(items);
     } catch (e) {
       toast.error("Erro ao carregar pastas");

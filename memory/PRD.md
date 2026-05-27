@@ -12,6 +12,14 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 6 - Fix Storage: pastas faltando no modal + duplicação "Sistemas")
+- **Fix StoragePickerModal**: trocado filtro hard-coded `i.name !== "Sistemas"` por `!i.virtual` em `/app/frontend/src/components/StoragePickerModal.jsx:73`. Agora pastas reais (mesmo se chamadas "Sistemas") aparecem no modal — só a virtual fica oculta (arquivos virtuais não podem ser anexados).
+- **Fix duplicação "Sistemas"**: renomeado `VIRTUAL_ROOT` em `/app/backend/server.py:7610` de `"Sistemas"` para `"Sistemas (Anexos)"`. Resolve dois problemas:
+  - Página principal não exibe mais duas pastas "Sistemas" duplicadas (virtual vs real do user).
+  - Pasta REAL chamada `/Sistemas` (criada pelo usuário) agora é navegável (antes era interceptada pela virtual).
+- Validado via curl: `/api/storage/list?path=/` retorna agora `"Sistemas (Anexos)"` como virtual. Navegação `/Sistemas (Anexos)/RH/...` funciona normalmente.
+- **Auditoria de anexos**: novo script `/app/backend/utils/audit_anexos.py` para diagnosticar persistência de anexos. Resultado preview: 13/18 (72%) já em Object Storage; 5/18 (28%) ainda em FS local (precisam migrar); 0 órfãos.
+
 ### 25/05/2026 (sessão 5 - Fix definitivo Exportação PDF Múltipla)
 - **Fix Exportação Selecionados (correção definitiva)**: O endpoint `POST /api/export/individual-multiple` em `exports_all.py` (linhas 2186-2206) agora chama o helper `generate_pdf_report(base_category, items, title)` produzindo uma **TABELA CONSOLIDADA única** (mesmo padrão da "Exportação Total"), em vez de gerar recibos individuais concatenados.
 - Validado via curl + `analyze_file_tool`: PDF gerado é uma única página com tabela contendo colunas Fornecedor / Vencimento / Quitação / Valor / Pago / Descrição / Status e TOTAL GERAL — exatamente o formato solicitado pelo usuário.
