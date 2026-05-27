@@ -12,6 +12,22 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 10 - P0: Endpoint de recuperação para parcela_origem_id zerado)
+- **Contexto**: O bug da sessão 7 (PUT zerando `parcela_origem_id`) afetou parcelas em produção. Foi criado um endpoint admin para detectar e restaurar os vínculos automaticamente.
+- **Endpoint**: `POST /api/admin/recover-parcela-vinculos?dry_run=true|false`
+  - `dry_run=true`: preview do que será feito (sem alterar nada).
+  - `dry_run=false`: aplica as correções e cria audit log.
+- **Estratégia em `/app/backend/routes/financeiro.py`**:
+  1. Busca contas com `parcela_origem_id=None` E `total_parcelas > 1` (órfãs candidatas).
+  2. Agrupa pelo critério: `fornecedor_id/cliente_id + documento + numero_doc + data_emissao + valor + total_parcelas`.
+  3. **Reaproveita origem_id**: se já existe alguma parcela COM origem_id e mesmo critério (caso típico: editou apenas 1 das 3 parcelas), aplica esse origem_id existente nas órfãs.
+  4. **Cria novo origem_id**: se todas as N parcelas do grupo estão órfãs e count == total_parcelas.
+  5. **Conflitos**: grupos incompletos (ex: 1 de 12 parcelas) ficam sem ação — exigem revisão manual.
+- Validado via curl com 2 cenários reais:
+  - Grupo A (3 parcelas, 1 órfã): reaproveitou origem_id das irmãs ✅
+  - Grupo B (2 parcelas órfãs): criou novo origem_id ✅
+- Rodou com `dry_run=false`: 3 parcelas restauradas, 2 conflitos listados (de dados legados antigos).
+
 ### 27/05/2026 (sessão 9 - Fix Chat RH: erro "campo 'conteudo' é obrigatório para gerar o PDF")
 - **Bug**: Ao pedir geração de O.S. (Ordem de Serviço) pelo Chat IA do RH, o Gemini emitia o bloco `<<TOOL>>{"action":"gerar_pdf_documento", "params":{...}}<<END>>` com `conteudo` vazio (ou ausente), só escrevendo o texto narrativo ao redor. Resultado: erro "⚠ Falha ao executar a ação solicitada: O campo 'conteudo' é obrigatório para gerar o PDF.".
 - **Fix em `/app/backend/routes/chatbot.py`**:

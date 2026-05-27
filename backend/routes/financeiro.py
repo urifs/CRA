@@ -1088,3 +1088,162 @@ async def delete_conta_receber(id: str, current_user: dict = Depends(get_current
         module="Administrativo", snapshot=conta, reversible=True,
     )
     return {"message": "Conta excluída"}
+
+
+# ============================================================================
+# RECOVERY — Restaurar parcela_origem_id de contas que perderam o vínculo
+# devido ao bug do PUT (sessão 7). Use ?dry_run=true para preview.
+# ============================================================================
+
+async def _recover_parcela_vinculos(
+    collection_name: str,
+    fornecedor_key: str,
+    dry_run: bool,
+    current_user: dict,
+) -> dict:
+    """Restaura `parcela_origem_id` em contas órfãs (None) que pertencem a um
+    grupo de parcelas. Critério de agrupamento (deve ser idêntico em todas
+    as parcelas do mesmo grupo):
+       fornecedor/cliente + documento + data_emissao + valor + total_parcelas
+
+    Estratégia:
+       1) Buscar todas as contas com parcela_origem_id=None E total_parcelas>1
+       2) Agrupar pelos critérios acima
+       3) Se um grupo tem EXATAMENTE `total_parcelas` itens, gera novo
+          parcela_origem_id e atribui a todos.
+       4) Grupos incompletos viram "conflitos" (não tocados).
+
+    Quando há parcelas no banco com parcela_origem_id JÁ preenchido que casam
+    com o mesmo critério (algumas órfãs + algumas com vínculo), reaproveitamos
+    o origem_id existente em vez de criar um novo.
+    """
+    collection = db[collection_name]
+
+    # 1) Buscar parcelas órfãs (com indício de fazer parte de grupo)
+    query = {
+        "$or": [
+            {"parcela_origem_id": None},
+            {"parcela_origem_id": {"$exists": False}},
+        ],
+        "total_parcelas": {"$gt": 1},
+    }
+    orfas = await collection.find(query, {"_id": 0}).to_list(20000)
+
+    def _grupo_key(c: dict) -> tuple:
+        return (
+            c.get(fornecedor_key) or "",
+            (c.get("documento") or "").strip().lower(),
+            (c.get("numero_doc") or "").strip().lower(),
+            (c.get("data_emissao") or "")[:10],
+            round(float(c.get("valor") or 0), 2),
+            int(c.get("total_parcelas") or 0),
+        )
+
+    # 2) Agrupar órfãs pelo critério
+    grupos: dict[tuple, list[dict]] = {}
+    for c in orfas:
+        grupos.setdefault(_grupo_key(c), []).append(c)
+
+    resultado = {
+        "collection": collection_name,
+        "dry_run": dry_run,
+        "orfas_encontradas": len(orfas),
+        "grupos_completos_restaurados": 0,
+        "parcelas_restauradas": 0,
+        "grupos_reutilizando_origem_existente": 0,
+        "conflitos": [],  # grupos incompletos
+        "exemplos": [],
+    }
+
+    for chave, parcelas in grupos.items():
+        total_parcelas = chave[5]
+        # Procurar se já existe alguma parcela COM origem_id e mesmo critério
+        # (caso típico: 1 parcela perdeu vínculo, outras 2 mantiveram).
+        # Como fornecedor_id/documento/numero_doc podem estar None ou "" no
+        # banco, usamos $in para casar ambas variantes.
+        def _eq_or_empty(val):
+            if val in (None, ""):
+                return {"$in": [None, ""]}
+            return val
+
+        sibling_query = {
+            fornecedor_key: _eq_or_empty(parcelas[0].get(fornecedor_key)),
+            "documento": _eq_or_empty(parcelas[0].get("documento")),
+            "numero_doc": _eq_or_empty(parcelas[0].get("numero_doc")),
+            "data_emissao": parcelas[0].get("data_emissao"),
+            "valor": parcelas[0].get("valor"),
+            "total_parcelas": total_parcelas,
+            "parcela_origem_id": {"$nin": [None, ""], "$exists": True},
+        }
+        sibling = await collection.find_one(sibling_query, {"_id": 0, "parcela_origem_id": 1})
+
+        if sibling and sibling.get("parcela_origem_id"):
+            # Reaproveita o origem_id existente em TODAS as órfãs do grupo
+            origem_id = sibling["parcela_origem_id"]
+            resultado["grupos_reutilizando_origem_existente"] += 1
+            if not dry_run:
+                await collection.update_many(
+                    {"id": {"$in": [p["id"] for p in parcelas]}},
+                    {"$set": {"parcela_origem_id": origem_id}},
+                )
+            resultado["parcelas_restauradas"] += len(parcelas)
+            resultado["exemplos"].append({
+                "tipo": "reaproveitado",
+                "origem_id": origem_id,
+                "criterio": {"fornecedor": chave[0], "documento": chave[1], "valor": chave[4], "total_parcelas": total_parcelas},
+                "ids_restaurados": [p["id"] for p in parcelas],
+            })
+        elif len(parcelas) == total_parcelas:
+            # Grupo completo de órfãs — cria um novo origem_id
+            new_origem = str(uuid.uuid4())
+            resultado["grupos_completos_restaurados"] += 1
+            if not dry_run:
+                await collection.update_many(
+                    {"id": {"$in": [p["id"] for p in parcelas]}},
+                    {"$set": {"parcela_origem_id": new_origem}},
+                )
+            resultado["parcelas_restauradas"] += len(parcelas)
+            resultado["exemplos"].append({
+                "tipo": "novo_grupo",
+                "origem_id": new_origem,
+                "criterio": {"fornecedor": chave[0], "documento": chave[1], "valor": chave[4], "total_parcelas": total_parcelas},
+                "ids_restaurados": [p["id"] for p in parcelas],
+            })
+        else:
+            # Grupo incompleto — não toca
+            resultado["conflitos"].append({
+                "criterio": {"fornecedor": chave[0], "documento": chave[1], "valor": chave[4], "total_parcelas": total_parcelas},
+                "encontradas": len(parcelas),
+                "esperadas": total_parcelas,
+                "ids": [p["id"] for p in parcelas],
+            })
+
+    if not dry_run and resultado["parcelas_restauradas"] > 0:
+        await create_audit_log(
+            current_user, "recover", collection_name, None,
+            f"Recuperação de vínculo de parcelas: {resultado['parcelas_restauradas']} parcelas em {resultado['grupos_completos_restaurados'] + resultado['grupos_reutilizando_origem_existente']} grupos",
+            module="Administrativo",
+        )
+
+    return resultado
+
+
+@financeiro_router.post("/recover-parcela-vinculos")
+async def recover_parcela_vinculos(
+    dry_run: bool = True,
+    current_user: dict = Depends(get_current_user),
+):
+    """Restaura `parcela_origem_id` em parcelas órfãs (contas a pagar e receber)
+    decorrentes do bug do PUT (sessão 7). Use `?dry_run=true` para visualizar
+    o que será feito; `?dry_run=false` para aplicar.
+
+    Retorna estatísticas por coleção e exemplos dos grupos restaurados.
+    """
+    cp = await _recover_parcela_vinculos("contas_pagar", "fornecedor_id", dry_run, current_user)
+    cr = await _recover_parcela_vinculos("contas_receber", "cliente_id", dry_run, current_user)
+    return {
+        "dry_run": dry_run,
+        "contas_pagar": cp,
+        "contas_receber": cr,
+        "total_parcelas_restauradas": cp["parcelas_restauradas"] + cr["parcelas_restauradas"],
+    }
