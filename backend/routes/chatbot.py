@@ -998,8 +998,11 @@ async def delete_conversation(conv_id: str, current_user: dict = Depends(get_cur
 
 # ============ Execução de ferramentas (tool calling) ============
 
-async def _execute_chat_tool(action: str, params: dict, current_user: dict):
-    """Executa a ação solicitada pela IA. Retorna (artifact_dict|None, result_text)."""
+async def _execute_chat_tool(action: str, params: dict, current_user: dict, module: str = "geral"):
+    """Executa a ação solicitada pela IA. Retorna (artifact_dict|None, result_text).
+    `module` identifica o contexto da conversa (ex.: "rh") e ajusta detalhes
+    visuais como a razão social no cabeçalho dos PDFs.
+    """
 
     if action == "criar_notificacao":
         funcionario_id = params.get("funcionario_id")
@@ -1232,7 +1235,10 @@ async def _execute_chat_tool(action: str, params: dict, current_user: dict):
         subtitulo = (params.get("subtitulo") or "").strip()
         if not conteudo:
             raise ValueError("O campo 'conteudo' é obrigatório para gerar o PDF.")
-        pdf_bytes = _gerar_pdf_documento_livre(titulo, conteudo, subtitulo)
+        pdf_bytes = _gerar_pdf_documento_livre(
+            titulo, conteudo, subtitulo,
+            company_name="CRA Apoio" if module == "rh" else "CRA Construtora",
+        )
         artifact_id = str(uuid.uuid4())
         slug = "".join(c if c.isalnum() else "_" for c in titulo).strip("_")[:40] or "documento"
         await db.chat_artifacts.insert_one({
@@ -1253,7 +1259,7 @@ async def _execute_chat_tool(action: str, params: dict, current_user: dict):
     raise ValueError(f"Ação desconhecida: {action}")
 
 
-def _gerar_pdf_documento_livre(titulo: str, conteudo: str, subtitulo: str = "") -> bytes:
+def _gerar_pdf_documento_livre(titulo: str, conteudo: str, subtitulo: str = "", company_name: str = "CRA Construtora") -> bytes:
     """Gera um PDF corporativo com título, subtítulo opcional e conteúdo livre.
 
     O conteúdo é texto plano (pode conter quebras de linha e bullets simples).
@@ -1271,7 +1277,7 @@ def _gerar_pdf_documento_livre(titulo: str, conteudo: str, subtitulo: str = "") 
     styles = get_corporate_styles()
 
     story = []
-    add_corporate_header(story, doc_title=titulo, subtitle=subtitulo or None)
+    add_corporate_header(story, doc_title=titulo, subtitle=subtitulo or None, company_name=company_name)
 
     # Quebra o conteúdo em parágrafos preservando linhas vazias como separadores
     paragrafos = conteudo.replace("\r\n", "\n").split("\n\n")
@@ -1311,7 +1317,7 @@ def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorr
     titulo_doc = titulos_pt.get(tipo, "NOTIFICAÇÃO INTERNA")
 
     elements = []
-    add_corporate_header(elements, doc_title=titulo_doc)
+    add_corporate_header(elements, doc_title=titulo_doc, company_name="CRA Apoio")
 
     # Bloco de dados do colaborador
     def _f(v):
@@ -1366,7 +1372,7 @@ def _gerar_pdf_notificacao_formal(func: dict, tipo: str, motivo: str, data_ocorr
     elements.append(Spacer(1, 36))
 
     elements.append(build_signatures_table())
-    add_footer(elements, "Documento gerado pelo Assistente IA do RH · CRA Construtora")
+    add_footer(elements, "Documento gerado pelo Assistente IA do RH · CRA Apoio")
 
     doc.build(elements)
     return buf.getvalue()
@@ -1384,7 +1390,7 @@ def _gerar_pdf_funcionario(func: dict) -> bytes:
     doc = create_corporate_doc(buf, title=f"Ficha - {func.get('nome','-')}")
     styles = get_corporate_styles()
     elements = []
-    add_corporate_header(elements, doc_title="FICHA DO FUNCIONÁRIO")
+    add_corporate_header(elements, doc_title="FICHA DO FUNCIONÁRIO", company_name="CRA Apoio")
 
     def _f(v):
         return str(v) if v not in (None, "") else "-"
@@ -1433,6 +1439,7 @@ def _gerar_pdf_lista_funcionarios(funcionarios: list) -> bytes:
         elements,
         doc_title="LISTA DE FUNCIONÁRIOS",
         subtitle=f"{len(funcionarios)} colaboradores · {datetime.now().strftime('%d/%m/%Y às %H:%M')}",
+        company_name="CRA Apoio",
     )
 
     if not funcionarios:
@@ -1451,7 +1458,7 @@ def _gerar_pdf_lista_funcionarios(funcionarios: list) -> bytes:
         elements.append(t)
 
     elements.append(Spacer(1, 12))
-    add_footer(elements, "Documento gerado pelo Assistente IA do RH · CRA Construtora")
+    add_footer(elements, "Documento gerado pelo Assistente IA do RH · CRA Apoio")
     doc.build(elements)
     return buf.getvalue()
 
@@ -1706,7 +1713,7 @@ Exemplos para PDF GENÉRICO (gerar_pdf_documento):
                     tool_params["conteudo"] = fallback_text
 
             artifact, tool_result_text = await _execute_chat_tool(
-                tool_action, tool_params, current_user
+                tool_action, tool_params, current_user, module=conv.get("module") or "geral"
             )
             # Remove o bloco <<TOOL>>...<<END>> da resposta final e prefixa com resultado
             ai_response = _re_tools.sub(

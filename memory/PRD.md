@@ -12,6 +12,18 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 13 - PDFs do RH agora assinam como "CRA Apoio")
+- **Pedido**: todas as exportações do módulo de RH (financeiro/admin continuam como "CRA Construtora") devem sair com o nome **"CRA Apoio"**.
+- **Implementação**:
+  - **Helper genérico em `/app/backend/utils/pdf_template.py`**: `add_corporate_header` agora aceita parâmetro opcional `company_name` (default "CRA Construtora"). Esse helper é usado por todos os PDFs corporativos da plataforma.
+  - **`/app/backend/routes/exports_all.py`**: criado helper `_company_name_for_collection(name)` que retorna "CRA Apoio" para coleções/categorias do RH (`funcionarios`, `holerites`, `ponto_*`, `ferias*`, `epi_*`, `folha_*`, `custos_func*`, `custos_rh`, etc.) e "CRA Construtora" para o resto. Aplicado em `generate_pdf_report` (title + footer).
+  - **`/app/backend/routes/rh.py`**: 5 chamadas a `add_corporate_header` (extrato banco de horas, espelho de ponto, holerite, ficha de EPI, termo de responsabilidade) passam `company_name="CRA Apoio"`. Textos de declaração que mencionavam "CRA Construtora" foram trocados por "CRA Apoio".
+  - **`/app/backend/routes/chatbot.py`**: `_execute_chat_tool` aceita `module` da conversa. `gerar_pdf_documento` (tool genérica) usa "CRA Apoio" quando módulo é RH. PDFs de notificação formal, ficha do funcionário e lista de funcionários sempre usam "CRA Apoio". Footers ("Assistente IA do RH · CRA Construtora") trocados por "... · CRA Apoio".
+- **Validação via curl + extração de texto com pypdf**:
+  - `/export/pdf/funcionarios`: ✅ contém "CRA Apoio", NÃO contém "CRA Construtora"
+  - `/export/pdf/contas_pagar`: ✅ contém "CRA Construtora", NÃO contém "CRA Apoio"
+  - Teste direto do template com `company_name="CRA Apoio"`: ✅ correto
+
 ### 27/05/2026 (sessão 12 - Fix Exportação P0: filtro CC não chegava nos seletores de itens)
 - **Causa raiz**: o fix da sessão 8 cobria os endpoints de **geração** do PDF/Excel (`/export/pdf/{cat}`, `/export/combined`, etc.), mas os endpoints que **listam itens disponíveis para o usuário selecionar** não recebiam nem aplicavam o filtro:
   - `GET /api/export/items/{collection}` — montava a lista do checkbox sem filtro de CC → o usuário VIA itens de outros CCs e podia marcá-los acidentalmente.

@@ -1881,6 +1881,7 @@ def _build_extrato_banco_horas_pdf(extrato: dict) -> bytes:
         elements,
         doc_title="EXTRATO DE BANCO DE HORAS",
         subtitle=f"Apuração até {_br_date(extrato['ate_data'])}",
+        company_name="CRA Apoio",
     )
 
     # Identificação
@@ -2028,6 +2029,7 @@ def _build_espelho_ponto_pdf(funcionarios: list, mes: int, ano: int) -> bytes:
             elements,
             doc_title="ESPELHO DE PONTO ELETRÔNICO",
             subtitle=f"Competência: {meses_pt[mes]} / {ano}",
+            company_name="CRA Apoio",
         )
         
         # Bloco de identificação do funcionário
@@ -3170,6 +3172,7 @@ def _build_holerite_pdf(folha: dict, func: dict) -> bytes:
         elements,
         doc_title="HOLERITE DE PAGAMENTO",
         subtitle=f"Competência: {meses[folha['mes']]} / {folha['ano']}",
+        company_name="CRA Apoio",
     )
     
     # Identificação do funcionário
@@ -3844,6 +3847,7 @@ def _build_ficha_epi_pdf(ficha: dict, func: dict) -> bytes:
         elements,
         doc_title="FICHA DE CONTROLE DE EPI",
         subtitle="Equipamento de Proteção Individual — NR-06",
+        company_name="CRA Apoio",
     )
 
     # Dados do funcionário
@@ -3897,7 +3901,7 @@ def _build_ficha_epi_pdf(ficha: dict, func: dict) -> bytes:
     # Termo de recebimento (texto compacto)
     elements.append(Paragraph("TERMO DE RECEBIMENTO E RESPONSABILIDADE", styles["section"]))
     termo_txt = (
-        "Declaro, para os devidos fins, que recebi gratuitamente da empresa CRA Construtora "
+        "Declaro, para os devidos fins, que recebi gratuitamente da empresa CRA Apoio "
         "os Equipamentos de Proteção Individual (EPI) discriminados nesta ficha, em perfeitas "
         "condições de uso, comprometendo-me a: <br/>"
         "<b>I –</b> usá-los apenas para a finalidade a que se destinam, durante toda a jornada de trabalho;<br/>"
@@ -3955,6 +3959,7 @@ def _build_termo_responsabilidade_pdf(ficha: dict, func: dict) -> bytes:
         elements,
         doc_title="TERMO DE RESPONSABILIDADE - EPI",
         subtitle="NR-06 — Portaria 3.214/78 do Ministério do Trabalho",
+        company_name="CRA Apoio",
     )
 
     elements.append(Paragraph("IDENTIFICAÇÃO", styles["section"]))
@@ -3971,7 +3976,7 @@ def _build_termo_responsabilidade_pdf(ficha: dict, func: dict) -> bytes:
     declaracao = (
         f"Eu, <b>{func.get('nome','-')}</b>, portador(a) do CPF nº "
         f"<b>{func.get('cpf','-')}</b>, declaro para os devidos fins que recebi "
-        f"da <b>CRA Construtora</b>, em "
+        f"da <b>CRA Apoio</b>, em "
         f"<b>{_br_date(ficha.get('data_entrega',''))}</b>, gratuitamente e em perfeitas "
         "condições de uso, os Equipamentos de Proteção Individual (EPI) discriminados a "
         "seguir, comprometendo-me a:<br/><br/>"

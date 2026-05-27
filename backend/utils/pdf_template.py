@@ -121,9 +121,15 @@ def get_corporate_styles():
     }
 
 
-def add_corporate_header(elements, doc_title: str = None, subtitle: str = None):
+def add_corporate_header(
+    elements,
+    doc_title: str = None,
+    subtitle: str = None,
+    company_name: str = "CRA Construtora",
+):
     """Adiciona logo (se existir) + nome da empresa + subtítulo + linha divisória.
-    Use no início de TODO PDF da plataforma."""
+    Use no início de TODO PDF da plataforma.
+    Passe ``company_name="CRA Apoio"`` para PDFs do módulo RH."""
     styles = get_corporate_styles()
 
     # Logo (se disponível)
@@ -134,7 +140,7 @@ def add_corporate_header(elements, doc_title: str = None, subtitle: str = None):
     except Exception:
         pass
 
-    elements.append(Paragraph("CRA Construtora", styles["title"]))
+    elements.append(Paragraph(company_name, styles["title"]))
 
     sub = subtitle or f"Documento emitido em {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
     elements.append(Paragraph(sub, styles["subtitle"]))

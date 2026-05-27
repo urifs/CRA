@@ -165,6 +165,40 @@ CENTRO_CUSTO_COLLECTIONS = {
 }
 
 
+# Coleções pertencentes ao módulo de Recursos Humanos. Exportações dessas
+# coleções devem assinar como "CRA Apoio" (entidade jurídica do RH) em vez
+# de "CRA Construtora". Mantém compatibilidade visual com a marca.
+RH_COLLECTIONS = {
+    "funcionarios", "employees", "folha_pagamento", "holerites",
+    "ponto_registros", "ferias", "epi_fichas", "custos_rh",
+    "jornadas_trabalho", "afastamentos", "treinamentos",
+    "exames_admissionais",
+}
+
+
+def _company_name_for_collection(name: Optional[str]) -> str:
+    """Retorna a razão social que deve aparecer no cabeçalho do PDF.
+    Aceita tanto o nome da collection (ex.: ``funcionarios``) quanto a
+    chave de uma categoria de exportação (ex.: ``funcionarios_ativos``,
+    ``ponto_hoje``, ``holerites``).
+    Exportações do módulo RH usam "CRA Apoio"; o restante usa "CRA Construtora".
+    """
+    if not name:
+        return "CRA Construtora"
+    if name in RH_COLLECTIONS:
+        return "CRA Apoio"
+    # Cobertura por prefixo para chaves de categoria do RH
+    rh_prefixes = (
+        "funcionarios", "employees", "ponto_", "ferias", "epi_",
+        "folha_", "holerite", "custos_func", "custos_encargos",
+        "custos_rh", "jornada", "afastamento", "treinamento",
+        "exames_admissionais",
+    )
+    if name.startswith(rh_prefixes):
+        return "CRA Apoio"
+    return "CRA Construtora"
+
+
 async def _apply_centro_custo_filter(
     collection_name: str,
     query_filter: dict,
@@ -559,7 +593,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
         logging.warning(f"Não foi possível carregar o logo: {e}")
     
     # Título
-    elements.append(Paragraph(f"CRA Construtora", title_style))
+    elements.append(Paragraph(_company_name_for_collection(category), title_style))
     elements.append(Paragraph(f"Relatório de {title}", section_style))
     elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
     elements.append(Spacer(1, 20))
@@ -1010,7 +1044,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
     # Rodapé
     elements.append(Spacer(1, 30))
     footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
-    elements.append(Paragraph("CRA Construtora - Sistema de Gestão Empresarial", footer_style))
+    elements.append(Paragraph(f"{_company_name_for_collection(category)} - Sistema de Gestão Empresarial", footer_style))
     elements.append(Paragraph(f"Documento gerado automaticamente em {datetime.now().strftime('%d/%m/%Y %H:%M')}", footer_style))
     
     # Gerar PDF
