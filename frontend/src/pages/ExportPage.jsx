@@ -163,11 +163,12 @@ export default function ExportPage({ module = "gerenciamento" }) {
   // Busca contagem de itens por subcategoria (respeitando filtro global de período)
   const fetchSubcategoryCounts = async () => {
     if (!categories || categories.length === 0) return;
-    // Coleta todos os sub.id que são "expandable" (têm itens contáveis)
+    // Coleta TODOS os sub.id das categorias visíveis (o backend devolve -1 p/ inválidos
+    // e a UI ignora valores negativos).
     const ids = new Set();
     categories.forEach((cat) => {
       (cat.subcategories || []).forEach((sub) => {
-        if (EXPANDABLE_SUBCATEGORIES.includes(sub.id)) ids.add(sub.id);
+        if (sub?.id) ids.add(sub.id);
       });
     });
     if (ids.size === 0) return;
@@ -974,13 +975,22 @@ export default function ExportPage({ module = "gerenciamento" }) {
             disabled={selectedItems.length === 0 || exporting}
             style={{ backgroundColor: accentColor }}
             className="text-white"
+            data-testid="btn-exportar-selected"
           >
             {exporting ? (
               <Loader2 size={18} className="animate-spin mr-2" />
             ) : (
               <Download size={18} className="mr-2" />
             )}
-            Exportar ({selectedItems.length})
+            {(() => {
+              const selectedCount = selectedItems.length;
+              const totalItems = selectedItems.reduce((acc, id) => {
+                const c = subcategoryCounts[id];
+                return acc + (typeof c === "number" && c > 0 ? c : 0);
+              }, 0);
+              if (selectedCount === 0) return "Exportar (0)";
+              return `Exportar (${selectedCount} ${selectedCount === 1 ? "categoria" : "categorias"} · ${totalItems} ${totalItems === 1 ? "item" : "itens"})`;
+            })()}
           </Button>
         </div>
       </div>
@@ -1205,19 +1215,21 @@ export default function ExportPage({ module = "gerenciamento" }) {
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm flex items-center gap-2 ${isSubSelected ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
                               {sub.label}
-                              {canExpand && subcategoryCounts[sub.id] !== undefined && subcategoryCounts[sub.id] >= 0 && (
+                              {subcategoryCounts[sub.id] !== undefined && subcategoryCounts[sub.id] >= 0 && (
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                                    (globalDataInicio || globalDataFim)
-                                      ? subcategoryCounts[sub.id] === 0
-                                        ? "bg-gray-100 text-gray-400"
-                                        : "bg-indigo-100 text-indigo-700"
-                                      : "bg-gray-100 text-gray-600"
+                                    subcategoryCounts[sub.id] === 0
+                                      ? "bg-gray-100 text-gray-400"
+                                      : (globalDataInicio || globalDataFim || (selectedCentroCusto && selectedCentroCusto !== "todos"))
+                                        ? "bg-indigo-100 text-indigo-700"
+                                        : "bg-gray-100 text-gray-600"
                                   }`}
                                   title={
-                                    (globalDataInicio || globalDataFim)
-                                      ? `${subcategoryCounts[sub.id]} item(ns) no período selecionado`
-                                      : `${subcategoryCounts[sub.id]} item(ns) no total`
+                                    subcategoryCounts[sub.id] === 0
+                                      ? "Nenhum item neste filtro — a exportação retornará vazia"
+                                      : (globalDataInicio || globalDataFim || (selectedCentroCusto && selectedCentroCusto !== "todos"))
+                                        ? `${subcategoryCounts[sub.id]} item(ns) com os filtros aplicados`
+                                        : `${subcategoryCounts[sub.id]} item(ns) no total`
                                   }
                                   data-testid={`count-${sub.id}`}
                                 >

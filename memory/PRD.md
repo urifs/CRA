@@ -12,6 +12,16 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 16 - Prévia de contagem antes de exportar)
+- **Pedido**: mostrar a quantidade de itens que cada subcategoria retornará antes do usuário clicar em Exportar (evitar exportações vazias / surpresas).
+- **Implementação em `/app/frontend/src/pages/ExportPage.jsx`**:
+  - `fetchSubcategoryCounts` agora coleta **todas** as subcategorias visíveis (antes só pegava `EXPANDABLE_SUBCATEGORIES`). Backend já devolve `-1` para subcategorias inválidas (UI ignora).
+  - Badge de contagem agora aparece em **todas** as subcategorias, não só nas expansíveis. Cores: cinza quando 0 itens, indigo quando há filtros ativos, cinza normal sem filtros.
+  - Botão "Exportar" agora mostra "Exportar (X categorias · Y itens)" calculando o total de itens das subcategorias selecionadas (somando `subcategoryCounts`).
+- **Validado via curl + screenshot**:
+  - `GET /api/export/items-count?collections=...` retorna contagem para todas as categorias mapeadas e `-1` para inválidas.
+  - Screenshot mostra: "Exportar (2 categorias · 60 itens)" quando 42 + 18 selecionados.
+
 ### 27/05/2026 (sessão 15 - Fix Exportação P0: state corrompido + endpoint 404)
 - **Pedido**: usuário relatou que "qualquer coisa que tenta exportar dá erro 400 / Erro ao exportar relatório combinado". Console mostrava também 404 em `/api/formas-pagamento`.
 - **Causas identificadas**:
