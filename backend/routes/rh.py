@@ -3816,6 +3816,15 @@ async def create_ficha_epi(data: FichaEPICreate):
     return ficha_doc
 
 
+@rh_router.delete("/epi/fichas/{ficha_id}")
+async def delete_ficha_epi(ficha_id: str):
+    """Excluir ficha de EPI"""
+    result = await epi_fichas_collection.delete_one({"id": ficha_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Ficha de EPI não encontrada")
+    return {"success": True, "message": "Ficha de EPI excluída com sucesso"}
+
+
 def _build_ficha_epi_pdf(ficha: dict, func: dict) -> bytes:
     """Gera o PDF da Ficha de EPI completa com layout corporativo padronizado."""
     from reportlab.lib import colors

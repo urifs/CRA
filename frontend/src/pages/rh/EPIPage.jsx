@@ -24,7 +24,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   HardHat, Users, Plus, Search, Download, AlertTriangle, 
-  Check, Loader2, Sparkles, FileText, Shield, AlertCircle, BookOpen
+  Check, Loader2, Sparkles, FileText, Shield, AlertCircle, BookOpen, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -259,6 +259,19 @@ export default function EPIPage() {
     }
   };
 
+  const handleExcluirFicha = async (ficha) => {
+    const nome = getFuncionarioNome(ficha.funcionario_id);
+    if (!window.confirm(`Excluir a ficha de EPI de ${nome}?\n\nEsta ação é irreversível.`)) return;
+    try {
+      await axios.delete(`${API}/rh/epi/fichas/${ficha.id}`);
+      toast.success("Ficha de EPI excluída");
+      fetchFichasEPI();
+    } catch (error) {
+      const msg = error?.response?.data?.detail || "Erro ao excluir ficha";
+      toast.error(typeof msg === "string" ? msg : "Erro ao excluir ficha");
+    }
+  };
+
   const openModal = () => {
     setFormData({
       funcionario_id: "",
@@ -407,6 +420,16 @@ export default function EPIPage() {
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleExportarTermo(ficha.id)} title="Exportar Termo">
                       <FileText size={14} className="mr-1" />Termo
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleExcluirFicha(ficha)}
+                      title="Excluir Ficha"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      data-testid={`btn-excluir-ficha-epi-${ficha.id}`}
+                    >
+                      <Trash2 size={14} className="mr-1" />Excluir
                     </Button>
                   </div>
                 </div>

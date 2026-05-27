@@ -12,6 +12,13 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 27/05/2026 (sessão 14 - Excluir Fichas de EPI)
+- **Pedido**: permitir excluir fichas de EPI no módulo RH.
+- **Implementação**:
+  - **Backend** (`/app/backend/routes/rh.py`): novo endpoint `DELETE /api/rh/epi/fichas/{ficha_id}` que retorna 200 em caso de sucesso e 404 se a ficha não existir.
+  - **Frontend** (`/app/frontend/src/pages/rh/EPIPage.jsx`): adicionado botão "Excluir" (vermelho, ícone `Trash2`) ao lado de "Ficha" e "Termo" em cada card de funcionário. Confirmação via `window.confirm` antes da exclusão. Toast de sucesso/erro e refresh automático da lista.
+- **Validação via curl**: criação + delete (200) + delete novamente (404 esperado) → ✅ funcionando.
+
 ### 27/05/2026 (sessão 13 - PDFs do RH agora assinam como "CRA Apoio")
 - **Pedido**: todas as exportações do módulo de RH (financeiro/admin continuam como "CRA Construtora") devem sair com o nome **"CRA Apoio"**.
 - **Implementação**:

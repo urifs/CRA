@@ -8,7 +8,7 @@ incluindo contas vencendo em meses anteriores. Causa: o endpoint
 import os
 import requests
 
-API = os.environ.get("REACT_APP_BACKEND_URL", "https://audit-rollback.preview.emergentagent.com")
+API = os.environ.get("REACT_APP_BACKEND_URL", "https://erp-fixes-preview.preview.emergentagent.com")
 URL = f"{API}/api"
 
 
