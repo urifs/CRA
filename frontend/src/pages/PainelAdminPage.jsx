@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import ChatbotWidget from "@/components/ChatbotWidget";
+import DriveConnectionCard from "@/components/DriveConnectionCard";
 import {
   Shield,
   Users,
@@ -65,7 +66,8 @@ import {
   Paperclip,
   X as XIcon,
   KeyRound,
-  Copy
+  Copy,
+  Cloud
 } from "lucide-react";
 
 // Tipos de usuário
@@ -707,6 +709,9 @@ export default function PainelAdminPage() {
           <Button size="sm" variant={activeTab === "tasks" ? "default" : "outline"} className={activeTab === "tasks" ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("tasks")}>
             <Send size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Lançar Tarefa</span><span className="sm:hidden">Tarefas</span>
           </Button>
+          <Button size="sm" variant={activeTab === "integrations" ? "default" : "outline"} className={activeTab === "integrations" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-transparent border-gray-700 text-gray-400 hover:bg-gray-800"} onClick={() => setActiveTab("integrations")} data-testid="tab-integracoes">
+            <Cloud size={16} className="mr-1 md:mr-2" /><span className="hidden sm:inline">Integrações</span><span className="sm:hidden">Integrações</span>
+          </Button>
         </div>
 
         {/* Users Tab */}
@@ -1151,6 +1156,22 @@ export default function PainelAdminPage() {
                 )}
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Integrations Tab */}
+        {activeTab === "integrations" && (
+          <div className="space-y-4" data-testid="integrations-tab-content">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <Cloud size={20} className="text-blue-500" />
+                Integrações Externas
+              </h3>
+              <p className="text-sm text-gray-400">
+                Conecte serviços externos para estender as funcionalidades do sistema.
+              </p>
+            </div>
+            <DriveConnectionCard />
           </div>
         )}
       </main>

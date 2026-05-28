@@ -97,10 +97,10 @@ export default function DriveConnectionCard() {
 
   if (loading) {
     return (
-      <Card className="mb-4 border-gray-200">
+      <Card className="mb-4 border-gray-800 bg-gray-900/60">
         <CardContent className="flex items-center gap-3 py-4">
           <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-          <span className="text-sm text-gray-500">Verificando conexão com Google Drive…</span>
+          <span className="text-sm text-gray-400">Verificando conexão com Google Drive…</span>
         </CardContent>
       </Card>
     );
@@ -108,15 +108,15 @@ export default function DriveConnectionCard() {
 
   if (!status.connected) {
     return (
-      <Card className="mb-4 border-amber-200 bg-amber-50" data-testid="drive-card-disconnected">
+      <Card className="mb-4 border-amber-500/40 bg-amber-500/10" data-testid="drive-card-disconnected">
         <CardContent className="flex flex-col md:flex-row md:items-center gap-4 py-4">
           <div className="flex items-center gap-3 flex-1">
-            <div className="p-2 rounded-full bg-white">
-              <CloudOff className="w-5 h-5 text-amber-600" />
+            <div className="p-2 rounded-full bg-amber-500/20">
+              <CloudOff className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-amber-900">Google Drive não conectado</p>
-              <p className="text-xs text-amber-800">
+              <p className="text-sm font-semibold text-amber-100">Google Drive não conectado</p>
+              <p className="text-xs text-amber-200/80">
                 Conecte uma conta Google para armazenar todos os arquivos no Drive. Sem conexão, os uploads continuam no armazenamento local.
               </p>
             </div>
@@ -136,19 +136,19 @@ export default function DriveConnectionCard() {
   }
 
   return (
-    <Card className="mb-4 border-emerald-200 bg-emerald-50" data-testid="drive-card-connected">
+    <Card className="mb-4 border-emerald-500/40 bg-emerald-500/10" data-testid="drive-card-connected">
       <CardContent className="flex flex-col md:flex-row md:items-center gap-4 py-4">
         <div className="flex items-center gap-3 flex-1">
-          <div className="p-2 rounded-full bg-white">
-            <Check className="w-5 h-5 text-emerald-600" />
+          <div className="p-2 rounded-full bg-emerald-500/20">
+            <Check className="w-5 h-5 text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-900 flex items-center gap-2">
+            <p className="text-sm font-semibold text-emerald-100 flex items-center gap-2 flex-wrap">
               Google Drive conectado
-              <span className="text-emerald-700 font-normal">— pasta raiz <code className="text-xs bg-white/60 px-1 py-0.5 rounded">CRA-ERP</code></span>
+              <span className="text-emerald-200/80 font-normal">— pasta raiz <code className="text-xs bg-white/10 px-1 py-0.5 rounded">CRA-ERP</code></span>
             </p>
-            <p className="text-xs text-emerald-800 truncate">
-              Conta: <strong>{status.email || "—"}</strong>
+            <p className="text-xs text-emerald-200/80 truncate">
+              Conta: <strong className="text-emerald-100">{status.email || "—"}</strong>
               {status.connected_at && <> · desde {fmtDate(status.connected_at)}</>}
             </p>
           </div>
@@ -159,6 +159,7 @@ export default function DriveConnectionCard() {
             size="sm"
             onClick={handleTest}
             disabled={busy}
+            className="border-emerald-500/40 text-emerald-100 hover:bg-emerald-500/10"
             data-testid="btn-testar-drive"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
@@ -169,7 +170,7 @@ export default function DriveConnectionCard() {
             size="sm"
             onClick={handleDisconnect}
             disabled={busy}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            className="text-red-300 hover:text-red-200 hover:bg-red-500/10 border-red-500/40"
             data-testid="btn-desconectar-drive"
           >
             <CloudOff className="w-4 h-4 mr-1" />

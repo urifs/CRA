@@ -19,7 +19,8 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
   - `/app/backend/services/google_drive_service.py`: serviço com OAuth flow, refresh automático de token, `upload_bytes`, `download_bytes`, `delete_file`, `list_folder`, `ensure_path` (cria hierarquia de pastas). Pasta raiz fixa: `CRA-ERP`. Credenciais persistidas em `drive_credentials` (key=`workspace`).
   - `/app/backend/routes/drive.py`: endpoints `/api/drive/status`, `/api/drive/connect` (gera authorization URL com state CSRF), `/api/drive/callback` (persiste tokens + busca email), `/api/drive/disconnect`, `/api/drive/test`. Redirect URI dinâmico baseado em `Origin/Referer` para funcionar em preview e produção.
   - `/app/backend/.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_DRIVE_REDIRECT_URI`, `FRONTEND_URL`.
-  - `/app/frontend/src/components/DriveConnectionCard.jsx`: card no topo da página `/armazenamento` mostrando status (desconectado=amber, conectado=emerald) com botões Conectar / Testar / Desconectar. Lê `?drive=connected` ou `?drive=error` da URL após callback.
+  - `/app/frontend/src/components/DriveConnectionCard.jsx`: card com tema escuro (amber/emerald translúcidos) mostrando status com botões Conectar / Testar / Desconectar. Lê `?drive=connected` ou `?drive=error` da URL após callback.
+  - **Localização final**: aba "Integrações" no `/painel-admin` (Painel Admin) — após o usuário pedir explicitamente que ficasse no admin. A página `/armazenamento` voltou ao estado original.
 - **Validação**:
   - `GET /api/drive/status` → `{"connected":false}` ✅
   - `GET /api/drive/connect` → URL `accounts.google.com/o/oauth2/auth?...&access_type=offline&prompt=consent` ✅
