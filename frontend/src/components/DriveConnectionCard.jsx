@@ -5,7 +5,7 @@ import { API } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Cloud, CloudOff, Check, Loader2, ExternalLink } from "lucide-react";
+import { Cloud, CloudOff, Check, Loader2, ExternalLink, Database, UploadCloud } from "lucide-react";
 
 const fmtDate = (iso) => {
   if (!iso) return "";
@@ -95,6 +95,28 @@ export default function DriveConnectionCard() {
     }
   };
 
+  const handleMigrate = async (dryRun) => {
+    const confirmMsg = dryRun
+      ? "Listar (sem migrar) todos os arquivos que serão movidos para o Drive?"
+      : "Migrar TODOS os arquivos legados (Object Storage + filesystem) para o Google Drive?\n\nEsse processo pode levar alguns minutos. Não interrompa.";
+    if (!window.confirm(confirmMsg)) return;
+    setBusy(true);
+    try {
+      const { data } = await axios.post(
+        `${API}/drive/migrate${dryRun ? "?dry_run=true" : ""}`,
+        {},
+        authHeaders
+      );
+      const msg = `${dryRun ? "[Simulação] " : ""}${data.grand_migrated}/${data.grand_total} arquivo(s) ${dryRun ? "seriam migrados" : "migrados"} · ${data.grand_failed} falha(s)`;
+      if (data.grand_failed > 0) toast.warning(msg);
+      else toast.success(msg);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Erro na migração");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="mb-4 border-gray-800 bg-gray-900/60">
@@ -137,45 +159,82 @@ export default function DriveConnectionCard() {
 
   return (
     <Card className="mb-4 border-emerald-500/40 bg-emerald-500/10" data-testid="drive-card-connected">
-      <CardContent className="flex flex-col md:flex-row md:items-center gap-4 py-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="p-2 rounded-full bg-emerald-500/20">
-            <Check className="w-5 h-5 text-emerald-400" />
+      <CardContent className="flex flex-col gap-4 py-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="p-2 rounded-full bg-emerald-500/20">
+              <Check className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-emerald-100 flex items-center gap-2 flex-wrap">
+                Google Drive conectado
+                <span className="text-emerald-200/80 font-normal">— pasta raiz <code className="text-xs bg-white/10 px-1 py-0.5 rounded">CRA-ERP</code></span>
+              </p>
+              <p className="text-xs text-emerald-200/80 truncate">
+                Conta: <strong className="text-emerald-100">{status.email || "—"}</strong>
+                {status.connected_at && <> · desde {fmtDate(status.connected_at)}</>}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-100 flex items-center gap-2 flex-wrap">
-              Google Drive conectado
-              <span className="text-emerald-200/80 font-normal">— pasta raiz <code className="text-xs bg-white/10 px-1 py-0.5 rounded">CRA-ERP</code></span>
-            </p>
-            <p className="text-xs text-emerald-200/80 truncate">
-              Conta: <strong className="text-emerald-100">{status.email || "—"}</strong>
-              {status.connected_at && <> · desde {fmtDate(status.connected_at)}</>}
-            </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTest}
+              disabled={busy}
+              className="border-emerald-500/40 text-emerald-100 hover:bg-emerald-500/10"
+              data-testid="btn-testar-drive"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+              <span className="ml-1">Testar conexão</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnect}
+              disabled={busy}
+              className="text-red-300 hover:text-red-200 hover:bg-red-500/10 border-red-500/40"
+              data-testid="btn-desconectar-drive"
+            >
+              <CloudOff className="w-4 h-4 mr-1" />
+              Desconectar
+            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTest}
-            disabled={busy}
-            className="border-emerald-500/40 text-emerald-100 hover:bg-emerald-500/10"
-            data-testid="btn-testar-drive"
-          >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-            <span className="ml-1">Testar conexão</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDisconnect}
-            disabled={busy}
-            className="text-red-300 hover:text-red-200 hover:bg-red-500/10 border-red-500/40"
-            data-testid="btn-desconectar-drive"
-          >
-            <CloudOff className="w-4 h-4 mr-1" />
-            Desconectar
-          </Button>
+
+        {/* Migration controls */}
+        <div className="pt-3 mt-1 border-t border-emerald-500/20 flex flex-col md:flex-row md:items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-emerald-100 flex items-center gap-2">
+              <Database className="w-4 h-4" /> Migração de arquivos legados
+            </p>
+            <p className="text-xs text-emerald-200/70">
+              Move todos os arquivos antigos (Object Storage + filesystem) para o Drive. Pode levar alguns minutos.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleMigrate(true)}
+              disabled={busy}
+              className="border-emerald-500/40 text-emerald-100 hover:bg-emerald-500/10"
+              data-testid="btn-simular-migracao"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
+              <span className="ml-1">Simular</span>
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleMigrate(false)}
+              disabled={busy}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              data-testid="btn-migrar-drive"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <UploadCloud className="w-4 h-4 mr-1" />}
+              Migrar tudo
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

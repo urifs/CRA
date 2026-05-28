@@ -12,6 +12,22 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 28/05/2026 (sessão 19 - Google Drive Fases 2+3: Storage abstraction + Migração)
+- **Implementação Fase 2 — Abstração de Storage transparente**:
+  - `/app/backend/utils/storage.py` reescrito: agora `put_object(path, data, content_type)` automaticamente roteia para Google Drive (se conectado) ou Object Storage. Mesma assinatura, todos os endpoints existentes (`/api/storage/upload`, `/api/attachments/upload`, `/api/anexos/upload`, módulos folha, RH, etc.) ganharam Drive de graça sem qualquer mudança no código.
+  - Uso de PyMongo síncrono (não Motor) para o índice `storage_index` e leitura de `drive_credentials`, evitando conflito de event loops em FastAPI.
+  - Nova collection `storage_index`: mapeia `{ path, backend: drive|object_storage, drive_file_id, size, mime_type }` — fonte de verdade do roteamento de downloads.
+  - Fallback automático: se upload no Drive falhar, cai pro Object Storage e indexa como `object_storage` (migrável depois).
+- **Implementação Fase 3 — Migração**:
+  - `/app/backend/utils/migrate_to_drive.py`: CLI `python -m utils.migrate_to_drive [--dry-run]` que migra 3 fontes — collection `storage_files` (módulo Armazenamento), collection `anexos` (financeiro/OS/RH), e `/app/uploads/` (legacy filesystem). Idempotente via `storage_index`.
+  - Endpoint `POST /api/drive/migrate?dry_run=true|false` (admin-only): roda a migração em thread auxiliar e retorna estatísticas por fonte.
+  - Botões "Simular" / "Migrar tudo" no `DriveConnectionCard` (`/painel-admin → Integrações`).
+- **Validação**:
+  - Upload via `POST /api/storage/upload` → arquivo cai em `CRA-ERP/teste_drive_v2/hello.txt` no Drive ✅
+  - Download via `GET /api/storage/download` → CCT.pdf (14MB) baixou direto do Drive em 2.5s ✅
+  - Migração real: 6 arquivos migrados (CCT.pdf, LTCAT.pdf, PCMSO.pdf, PGR.pdf + 2 testes) com 0 falhas ✅
+  - Drive hoje contém 4 pastas raiz: `rh_normativos`, `storage`, `teste_drive`, `teste_os` ✅
+
 ### 28/05/2026 (sessão 18 - Google Drive Fase 1: Conexão OAuth)
 - **Pedido**: refatorar todo o sistema de armazenamento para usar Google Drive como backend, com OAuth do admin, migração total, escopo global e fallback para Object Storage local.
 - **Decisões do usuário**: OAuth do admin (não service account, não per-user) · migrar tudo · escopo global (incluindo anexos do sistema) · fallback para Object Storage quando Drive desconectado · estrutura `CRA-ERP/` com subpastas por entidade.

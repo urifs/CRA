@@ -139,3 +139,45 @@ async def drive_test(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Drive não conectado.")
     files = await drive.list_folder(service, [])  # lists CRA-ERP root
     return {"success": True, "root_folder": drive.ROOT_FOLDER_NAME, "items": len(files), "files": files[:10]}
+
+
+@router.post("/migrate")
+async def drive_migrate(
+    dry_run: bool = Query(False),
+    current_user: dict = Depends(get_current_user),
+):
+    """Migrates legacy files (Object Storage + filesystem) to Google Drive.
+    Runs synchronously and returns a per-source summary.
+    """
+    if (current_user or {}).get("role") not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Apenas administradores.")
+
+    if not await drive.get_status(db) or not (await drive.get_status(db)).get("connected"):
+        raise HTTPException(status_code=400, detail="Drive não conectado.")
+
+    # Run sync helpers in a thread so we don't block the event loop
+    import asyncio
+
+    from utils.migrate_to_drive import (
+        migrate_anexos,
+        migrate_filesystem,
+        migrate_storage_files,
+    )
+
+    def _do() -> dict:
+        sf_t, sf_m, sf_f = migrate_storage_files(dry_run)
+        an_t, an_m, an_f = migrate_anexos(dry_run)
+        fs_t, fs_m, fs_f = migrate_filesystem(dry_run)
+        return {
+            "dry_run": dry_run,
+            "storage_files": {"total": sf_t, "migrated": sf_m, "failed": sf_f},
+            "anexos": {"total": an_t, "migrated": an_m, "failed": an_f},
+            "filesystem": {"total": fs_t, "migrated": fs_m, "failed": fs_f},
+            "grand_total": sf_t + an_t + fs_t,
+            "grand_migrated": sf_m + an_m + fs_m,
+            "grand_failed": sf_f + an_f + fs_f,
+        }
+
+    result = await asyncio.to_thread(_do)
+    logger.info("Drive migration finished: %s", result)
+    return {"success": True, **result}
