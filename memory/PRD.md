@@ -12,6 +12,23 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 28/05/2026 (sessão 18 - Google Drive Fase 1: Conexão OAuth)
+- **Pedido**: refatorar todo o sistema de armazenamento para usar Google Drive como backend, com OAuth do admin, migração total, escopo global e fallback para Object Storage local.
+- **Decisões do usuário**: OAuth do admin (não service account, não per-user) · migrar tudo · escopo global (incluindo anexos do sistema) · fallback para Object Storage quando Drive desconectado · estrutura `CRA-ERP/` com subpastas por entidade.
+- **Implementação Fase 1 — Conexão & UI**:
+  - `/app/backend/services/google_drive_service.py`: serviço com OAuth flow, refresh automático de token, `upload_bytes`, `download_bytes`, `delete_file`, `list_folder`, `ensure_path` (cria hierarquia de pastas). Pasta raiz fixa: `CRA-ERP`. Credenciais persistidas em `drive_credentials` (key=`workspace`).
+  - `/app/backend/routes/drive.py`: endpoints `/api/drive/status`, `/api/drive/connect` (gera authorization URL com state CSRF), `/api/drive/callback` (persiste tokens + busca email), `/api/drive/disconnect`, `/api/drive/test`. Redirect URI dinâmico baseado em `Origin/Referer` para funcionar em preview e produção.
+  - `/app/backend/.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_DRIVE_REDIRECT_URI`, `FRONTEND_URL`.
+  - `/app/frontend/src/components/DriveConnectionCard.jsx`: card no topo da página `/armazenamento` mostrando status (desconectado=amber, conectado=emerald) com botões Conectar / Testar / Desconectar. Lê `?drive=connected` ou `?drive=error` da URL após callback.
+- **Validação**:
+  - `GET /api/drive/status` → `{"connected":false}` ✅
+  - `GET /api/drive/connect` → URL `accounts.google.com/o/oauth2/auth?...&access_type=offline&prompt=consent` ✅
+  - Screenshot mostra o card amber no topo do Armazenamento com botão de conectar ✅
+- **Próximas fases**:
+  - Fase 2: abstração `storage_service.py` que automaticamente roteia para Drive (se conectado) ou Object Storage. Refatorar endpoints `/api/anexos/upload`, `/api/attachments/upload`, `/api/storage/upload` para usar a abstração.
+  - Fase 3: script `migrate_to_drive.py` que sobe todos os arquivos legados para o Drive.
+  - Fase 4: ArmazenamentoPage listar arquivos do Drive quando conectado.
+
 ### 27/05/2026 (sessão 17 - Fix Exportação Combinada RH + contagens)
 - **Pedido**: usuário relatou erro 400 "Erro ao exportar relatório combinado" ao tentar exportar funcionários no `/rh/exportar`, mesmo após o fix da sessão 15. Botão mostrava "0 itens" no total.
 - **Causa raiz**: `category_configs` do endpoint `POST /api/export/combined` em `/app/backend/routes/exports_all.py` cobria apenas Gerenciamento + Administrativo (machines, contas_pagar, plano_contas, etc.), mas NÃO continha as categorias do módulo RH (funcionarios, funcionarios_ativos, funcionarios_desligados, ponto_*, folha_pagamento, holerites, ferias*, epi_*, custos_*). Resultado: todas as categorias do RH caíam no `continue` do loop e `all_data` ficava vazio → 400. Adicionalmente `_EXPORT_ITEMS_CONFIG` (usado em `/api/export/items-count`) também não tinha as categorias RH → contagem retornava `-1` e UI mostrava "0 itens".

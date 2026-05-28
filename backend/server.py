@@ -8667,6 +8667,10 @@ api_router.include_router(medicoes_router)
 # Include the router in the main app
 app.include_router(api_router)
 
+# Google Drive integration (own /api/drive prefix)
+from routes.drive import router as drive_router  # noqa: E402
+app.include_router(drive_router)
+
 # Serve uploaded files
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 

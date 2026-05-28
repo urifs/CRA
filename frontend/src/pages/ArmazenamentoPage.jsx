@@ -56,6 +56,7 @@ import {
   FolderInput
 } from "lucide-react";
 import { Lock, LockOpen, KeyRound } from "lucide-react";
+import DriveConnectionCard from "@/components/DriveConnectionCard";
 
 const getFileIcon = (filename) => {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -777,6 +778,9 @@ export default function ArmazenamentoPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-6 relative z-10">
+        {/* Google Drive Connection */}
+        <DriveConnectionCard />
+
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           {/* Search */}
