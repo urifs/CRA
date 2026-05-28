@@ -52,10 +52,6 @@ async def drive_connect(request: Request, current_user: dict = Depends(get_curre
 
     redirect_uri = _redirect_uri(request)
     state = secrets.token_urlsafe(24)
-    # Store state with the requesting frontend so callback can route back correctly
-    await db.drive_oauth_states.insert_one(
-        {"state": state, "frontend": _frontend_url(request), "redirect_uri": redirect_uri}
-    )
 
     flow = drive.build_oauth_flow(redirect_uri)
     authorization_url, _ = flow.authorization_url(
@@ -63,6 +59,16 @@ async def drive_connect(request: Request, current_user: dict = Depends(get_curre
         include_granted_scopes="true",
         prompt="consent",
         state=state,
+    )
+    # Persist the PKCE code_verifier so the callback (in a different request) can reuse it
+    code_verifier = getattr(flow, "code_verifier", None)
+    await db.drive_oauth_states.insert_one(
+        {
+            "state": state,
+            "frontend": _frontend_url(request),
+            "redirect_uri": redirect_uri,
+            "code_verifier": code_verifier,
+        }
     )
     return {"authorization_url": authorization_url}
 
@@ -91,6 +97,10 @@ async def drive_callback(
     try:
         # scopes=None on callback -> accept whatever Google granted (playbook recommendation)
         flow = drive.build_oauth_flow(redirect_uri, scopes=None)
+        # Restore PKCE verifier from the original authorization request
+        verifier = state_doc.get("code_verifier")
+        if verifier:
+            flow.code_verifier = verifier
         flow.fetch_token(code=code)
         creds = flow.credentials
 
