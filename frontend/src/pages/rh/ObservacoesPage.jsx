@@ -59,6 +59,8 @@ export default function ObservacoesPage() {
   const [filterFuncionario, setFilterFuncionario] = useState("todos");
   const [filterLembrete, setFilterLembrete] = useState("todos");
   const [exporting, setExporting] = useState(false);
+  const [detailObs, setDetailObs] = useState(null);
+  const [exportingOne, setExportingOne] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -165,6 +167,27 @@ export default function ObservacoesPage() {
       (filterLembrete === "sem" && !o.lembrete_ativo);
     return matchSearch && matchFunc && matchLembrete;
   });
+
+  const openDetail = (obs) => setDetailObs(obs);
+
+  const exportarObservacaoUnica = async (obs) => {
+    if (!obs?.id) return;
+    setExportingOne(true);
+    try {
+      const r = await axios.get(`${API}/rh/observacoes/${obs.id}/export/pdf`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([r.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Observacao_${(obs.titulo || "obs").replace(/\s+/g, "_").slice(0, 40)}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Observação exportada em PDF!");
+    } catch (error) {
+      toast.error("Erro ao exportar observação");
+    } finally {
+      setExportingOne(false);
+    }
+  };
 
   const exportarPDF = async () => {
     setExporting(true);
@@ -284,13 +307,13 @@ export default function ObservacoesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="quadro-observacoes">
           {filtered.map((o) => (
-            <Card key={o.id} className="hover:shadow-lg transition-shadow border-l-4 border-l-[#10B981]" data-testid={`observacao-card-${o.id}`}>
+            <Card key={o.id} onClick={() => openDetail(o)} className="hover:shadow-lg transition-shadow border-l-4 border-l-[#10B981] cursor-pointer" data-testid={`observacao-card-${o.id}`}>
               <CardContent className="p-4 flex flex-col h-full">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h3 className="font-semibold text-gray-900 leading-snug">{o.titulo}</h3>
                   <div className="flex gap-1 shrink-0">
                     <button
-                      onClick={() => openModal(o)}
+                      onClick={(e) => { e.stopPropagation(); openModal(o); }}
                       className="p-1.5 rounded-md text-gray-400 hover:text-[#10B981] hover:bg-emerald-50 transition-colors"
                       title="Editar"
                       data-testid={`editar-observacao-${o.id}`}
@@ -298,7 +321,7 @@ export default function ObservacoesPage() {
                       <Edit size={15} />
                     </button>
                     <button
-                      onClick={() => handleDelete(o.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(o.id); }}
                       className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                       title="Excluir"
                       data-testid={`excluir-observacao-${o.id}`}
@@ -308,7 +331,7 @@ export default function ObservacoesPage() {
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-600 whitespace-pre-wrap mb-3 flex-1">{o.descricao}</p>
+                <p className="text-sm text-gray-600 whitespace-pre-wrap mb-3 flex-1 line-clamp-3">{o.descricao}</p>
 
                 <div className="space-y-1.5 text-xs border-t pt-3 mt-auto">
                   <div className="flex items-center gap-2 text-gray-600">
@@ -336,6 +359,76 @@ export default function ObservacoesPage() {
           ))}
         </div>
       )}
+
+      {/* Modal Detalhe (visualização completa) */}
+      <Dialog open={!!detailObs} onOpenChange={(open) => !open && setDetailObs(null)}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" data-testid="detalhe-observacao-modal">
+          {detailObs && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="pr-6">{detailObs.titulo}</DialogTitle>
+                <DialogDescription>Detalhes da observação</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="rounded-lg border bg-gray-50 p-4">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap" data-testid="detalhe-descricao">
+                    {detailObs.descricao}
+                  </p>
+                </div>
+
+                <div className="space-y-2 text-sm border-t pt-3">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <User size={15} className="text-gray-400" />
+                    <span className="font-medium">{detailObs.funcionario_nome || "Geral (sem vínculo)"}</span>
+                  </div>
+                  {detailObs.lembrete_ativo ? (
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <Bell size={15} />
+                      <span>Lembrete em {formatDateBR(detailObs.lembrete_data)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <BellOff size={15} />
+                      <span>Sem lembrete</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Calendar size={15} />
+                    <span>Criada em {formatDateTimeBR(detailObs.created_at)}</span>
+                  </div>
+                </div>
+
+                {/* Anexos */}
+                <AnexosManager
+                  entityType="observacao_rh"
+                  entityId={detailObs.id}
+                  title="Anexos"
+                />
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => { const o = detailObs; setDetailObs(null); openModal(o); }}
+                    data-testid="detalhe-editar-btn"
+                  >
+                    <Edit size={16} className="mr-2" />Editar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-[#10B981] hover:bg-[#0d9668]"
+                    disabled={exportingOne}
+                    onClick={() => exportarObservacaoUnica(detailObs)}
+                    data-testid="detalhe-exportar-btn"
+                  >
+                    <FileDown size={16} className="mr-2" />{exportingOne ? "Exportando..." : "Exportar PDF"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Form */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

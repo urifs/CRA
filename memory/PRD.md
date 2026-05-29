@@ -12,6 +12,13 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 26 - Observações: card clicável + detalhe + exportar individual)
+- **Pedido**: o card de observação deve ser clicável, abrir a observação completa em um detalhe, e ter um botão para exportar aquela observação específica.
+- **Backend** (`/app/backend/routes/rh.py`): endpoint `GET /api/rh/observacoes/{id}/export/pdf` → PDF detalhado de UMA observação (CRA Apoio, seções DADOS + OBSERVAÇÃO, quebras de linha preservadas). Helper `_build_observacao_unica_pdf`.
+- **Frontend** (`ObservacoesPage.jsx`): card agora é clicável (`cursor-pointer`, botões editar/excluir com `stopPropagation`) e abre um **modal de detalhe** com observação completa, funcionário, lembrete, data, anexos e botões **Editar** + **Exportar PDF** (exporta só aquela observação). Descrição no card truncada em 3 linhas (`line-clamp-3`).
+- **Validação**: curl single PDF (HTTP 200, header/colunas via pypdf) ✅; screenshot do modal de detalhe ✅. Lint OK.
+
+
 ### 29/05/2026 (sessão 25 - Observações RH: filtros + exportação PDF)
 - **Pedido**: aprimorar a ferramenta de Observações com filtros no quadro e exportação em PDF.
 - **Backend** (`/app/backend/routes/rh.py`): novo endpoint `GET /api/rh/observacoes/export/pdf?funcionario_id=&lembrete=com|sem` → PDF (landscape, padrão "CRA Apoio") com tabela Título/Funcionário/Observação/Lembrete/Criada em, respeitando filtros. Helper `_build_observacoes_pdf`.

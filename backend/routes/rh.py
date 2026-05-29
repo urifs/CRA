@@ -3097,6 +3097,76 @@ async def exportar_observacoes_pdf(
     )
 
 
+@rh_router.get("/observacoes/{observacao_id}/export/pdf")
+async def exportar_observacao_unica_pdf(observacao_id: str):
+    """Exporta UMA observação específica em PDF (documento detalhado)."""
+    obs = await observacoes_collection.find_one({"id": observacao_id}, {"_id": 0})
+    if not obs:
+        raise HTTPException(status_code=404, detail="Observação não encontrada")
+    pdf_bytes = _build_observacao_unica_pdf(obs)
+    titulo_safe = (obs.get("titulo") or "observacao").replace(" ", "_")[:40]
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=Observacao_{titulo_safe}.pdf"},
+    )
+
+
+def _build_observacao_unica_pdf(obs: dict) -> bytes:
+    """Gera PDF detalhado de uma única observação (CRA Apoio)."""
+    from reportlab.platypus import Paragraph, Spacer
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, build_data_table,
+    )
+
+    def _br_dt(s: str) -> str:
+        if not s:
+            return "-"
+        try:
+            d = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+            return d.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return str(s)[:10]
+
+    def _br_date(s: str) -> str:
+        if not s:
+            return "-"
+        t = str(s)[:10]
+        if len(t) == 10 and t[4] == "-":
+            return f"{t[8:10]}/{t[5:7]}/{t[0:4]}"
+        return t
+
+    buffer = io.BytesIO()
+    doc = create_corporate_doc(buffer, title=obs.get("titulo", "Observação"))
+    styles = get_corporate_styles()
+
+    elements = []
+    add_corporate_header(
+        elements,
+        doc_title=obs.get("titulo", "Observação"),
+        subtitle="Observação de RH",
+        company_name="CRA Apoio",
+    )
+
+    elements.append(Paragraph("DADOS", styles["section"]))
+    elements.append(build_data_table([
+        ("Funcionário:", obs.get("funcionario_nome") or "Geral (sem vínculo)"),
+        ("Lembrete:", f"Sim · {_br_date(obs.get('lembrete_data'))}" if obs.get("lembrete_ativo") else "Não"),
+        ("Criada em:", _br_dt(obs.get("created_at"))),
+    ]))
+    elements.append(Spacer(1, 14))
+
+    elements.append(Paragraph("OBSERVAÇÃO", styles["section"]))
+    texto = (obs.get("descricao") or "-").replace("\n", "<br/>")
+    elements.append(Paragraph(texto, styles["body"]))
+
+    add_footer(elements, "Sistema CRA · Observação de RH")
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 def _build_observacoes_pdf(observacoes: list, funcionario_nome_filtro: Optional[str]) -> bytes:
     """Gera PDF da lista de observações com layout corporativo (CRA Apoio)."""
     from reportlab.lib.units import cm
