@@ -199,6 +199,25 @@ def _company_name_for_collection(name: Optional[str]) -> str:
     return "CRA Construtora"
 
 
+def _company_name_for_export(name: Optional[str], centro_custo: Optional[str] = None) -> str:
+    """Razão social do cabeçalho do PDF considerando o centro de custo selecionado.
+
+    Regras (definidas com o usuário):
+    - Documentos do RH SEMPRE assinam como "CRA Apoio", independentemente do
+      centro de custo selecionado.
+    - Para os demais documentos, quando um centro de custo está selecionado na
+      página de Exportação, o NOME do centro de custo aparece embaixo da logo.
+    - Sem centro de custo selecionado (ou "todos"), mantém o padrão atual
+      ("CRA Construtora").
+    """
+    base = _company_name_for_collection(name)
+    if base == "CRA Apoio":
+        return base
+    if centro_custo and centro_custo != "todos":
+        return centro_custo
+    return base
+
+
 async def _apply_centro_custo_filter(
     collection_name: str,
     query_filter: dict,
@@ -541,7 +560,7 @@ async def get_export_categories(module: str, current_user: dict = Depends(get_cu
         raise HTTPException(status_code=400, detail="Módulo inválido")
     return EXPORT_CATEGORIES_V2[module]
 
-async def generate_pdf_report(category: str, data: list, title: str) -> io.BytesIO:
+async def generate_pdf_report(category: str, data: list, title: str, centro_custo: Optional[str] = None) -> io.BytesIO:
     """Gera um relatório PDF formatado"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm, leftMargin=2*cm, rightMargin=2*cm)
@@ -593,7 +612,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
         logging.warning(f"Não foi possível carregar o logo: {e}")
     
     # Título
-    elements.append(Paragraph(_company_name_for_collection(category), title_style))
+    elements.append(Paragraph(_company_name_for_export(category, centro_custo), title_style))
     elements.append(Paragraph(f"Relatório de {title}", section_style))
     elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
     elements.append(Spacer(1, 20))
@@ -1044,7 +1063,7 @@ async def generate_pdf_report(category: str, data: list, title: str) -> io.Bytes
     # Rodapé
     elements.append(Spacer(1, 30))
     footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
-    elements.append(Paragraph(f"{_company_name_for_collection(category)} - Sistema de Gestão Empresarial", footer_style))
+    elements.append(Paragraph(f"{_company_name_for_export(category, centro_custo)} - Sistema de Gestão Empresarial", footer_style))
     elements.append(Paragraph(f"Documento gerado automaticamente em {datetime.now().strftime('%d/%m/%Y %H:%M')}", footer_style))
     
     # Gerar PDF
@@ -1219,7 +1238,7 @@ async def export_pdf(
         base_category = "categories"
     
     # Gerar PDF
-    pdf_buffer = await generate_pdf_report(base_category, data, title)
+    pdf_buffer = await generate_pdf_report(base_category, data, title, centro_custo=centro_custo)
     
     # Registrar na auditoria
     await create_audit_log(
@@ -1377,7 +1396,8 @@ async def export_combined(data: CombinedExportRequest, current_user: dict = Depe
         section_buffer = await generate_pdf_report(
             base_cat,
             section["items"],
-            section["title"]
+            section["title"],
+            centro_custo=data.centro_custo,
         )
         reader = PyPDFReader(section_buffer)
         for page in reader.pages:
@@ -2333,7 +2353,7 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     # passando a sub-categoria como collection-base para que o layout
     # contas_pagar/contas_receber/etc seja escolhido corretamente.
     base_category = config["collection"]
-    buffer = await generate_pdf_report(base_category, items, config["title"])
+    buffer = await generate_pdf_report(base_category, items, config["title"], centro_custo=data.centro_custo)
 
     await create_audit_log(current_user, "export", data.category, None, f"Múltiplos itens: {len(items)}")
 

@@ -12,6 +12,20 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 22 - Nome da empresa no PDF segue o Centro de Custo selecionado)
+- **Pedido**: o nome embaixo da logo nas exportações estava sempre fixo ("CRA Construtora"). Deve refletir o **Centro de Custo selecionado** na página de Exportar, valendo para TODA exportação.
+- **Decisões do usuário**: (1) com CC selecionado → exibir o **Nome do Centro de Custo**; (2) sem CC ("Todos") → manter padrão atual ("CRA Construtora"); (3) RH continua SEMPRE "CRA Apoio", independente do CC.
+- **Implementação** em `/app/backend/routes/exports_all.py`:
+  - Novo helper `_company_name_for_export(name, centro_custo)`: parte do `_company_name_for_collection` (RH→"CRA Apoio" vence sempre) e, quando não-RH e há CC selecionado (≠ "todos"), retorna o nome do CC; senão "CRA Construtora".
+  - `generate_pdf_report(category, data, title, centro_custo=None)`: cabeçalho (logo) e rodapé agora usam `_company_name_for_export`.
+  - 3 pontos de chamada atualizados para repassar o CC: `/export/pdf/{cat}` (param `centro_custo`), `/export/combined` (`data.centro_custo`), `/export/individual-multiple` (`data.centro_custo`).
+- **Validação via curl + extração pypdf**:
+  - `/export/pdf/contas_pagar` sem CC → "CRA Construtora" ✅
+  - `/export/pdf/contas_pagar?centro_custo=Administrativo` → "Administrativo" ✅
+  - `/export/pdf/funcionarios?centro_custo=Administrativo` (RH) → "CRA Apoio" (não sobrescreve) ✅
+  - `/export/combined` com `centro_custo=Obra Jardins do Vale` → "Obra Jardins do Vale" ✅
+
+
 ### 29/05/2026 (sessão 21 - Sincronização Drive → Sistema)
 - **Pedido**: criar botão "Sincronizar" para que arquivos/pastas criados manualmente no Drive (fora do ERP) apareçam no módulo Armazenamento do sistema.
 - **Implementação**:
