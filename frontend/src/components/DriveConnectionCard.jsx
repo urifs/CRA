@@ -5,7 +5,7 @@ import { API } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Cloud, CloudOff, Check, Loader2, ExternalLink, Database, UploadCloud } from "lucide-react";
+import { Cloud, CloudOff, Check, Loader2, ExternalLink, Database, UploadCloud, RefreshCw } from "lucide-react";
 
 const fmtDate = (iso) => {
   if (!iso) return "";
@@ -90,6 +90,22 @@ export default function DriveConnectionCard() {
       toast.success(`Conexão OK · ${data.items} item(ns) na pasta ${data.root_folder}`);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Falha no teste de conexão");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!window.confirm("Sincronizar com o Google Drive?\n\nIsso vai trazer pastas e arquivos criados manualmente no Drive para o sistema.")) return;
+    setBusy(true);
+    try {
+      const { data } = await axios.post(`${API}/drive/sync`, {}, authHeaders);
+      const added = (data.folders_added || 0) + (data.files_added || 0);
+      const msg = `${added} novo(s) item(ns) · ${data.folders_added} pasta(s) + ${data.files_added} arquivo(s) · ${data.skipped} já existentes`;
+      if (added === 0) toast.info(msg);
+      else toast.success(msg);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Erro ao sincronizar");
     } finally {
       setBusy(false);
     }
@@ -187,6 +203,17 @@ export default function DriveConnectionCard() {
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
               <span className="ml-1">Testar conexão</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSync}
+              disabled={busy}
+              className="border-blue-500/40 text-blue-100 hover:bg-blue-500/10"
+              data-testid="btn-sincronizar-drive"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              <span className="ml-1">Sincronizar do Drive</span>
             </Button>
             <Button
               variant="outline"

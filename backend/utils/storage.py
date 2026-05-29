@@ -353,6 +353,148 @@ def sanitize_filename(name: str) -> str:
     return name or "file.bin"
 
 
+# ---------------- Drive -> System sync ----------------
+
+def _walk_drive(service, folder_id: str, parent_path: str = "/") -> list[dict]:
+    """Lista recursivamente arquivos+pastas a partir de ``folder_id``.
+
+    Retorna: lista de dicts {path, name, parent_path, type, mime_type, size, drive_file_id}.
+    """
+    items: list[dict] = []
+    page_token = None
+    while True:
+        res = (
+            service.files()
+            .list(
+                q=f"'{folder_id}' in parents and trashed = false",
+                fields="nextPageToken, files(id, name, mimeType, size, modifiedTime)",
+                pageSize=1000,
+                pageToken=page_token,
+                orderBy="folder,name",
+            )
+            .execute()
+        )
+        for f in res.get("files", []):
+            name = f["name"]
+            full_path = (parent_path.rstrip("/") + "/" + name) if parent_path != "/" else ("/" + name)
+            is_folder = f["mimeType"] == "application/vnd.google-apps.folder"
+            items.append(
+                {
+                    "path": full_path,
+                    "name": name,
+                    "parent_path": parent_path,
+                    "type": "folder" if is_folder else "file",
+                    "mime_type": f["mimeType"],
+                    "size": int(f.get("size") or 0),
+                    "modified_time": f.get("modifiedTime"),
+                    "drive_file_id": f["id"],
+                }
+            )
+            if is_folder:
+                items.extend(_walk_drive(service, f["id"], full_path))
+        page_token = res.get("nextPageToken")
+        if not page_token:
+            break
+    return items
+
+
+def sync_from_drive() -> dict:
+    """Sincroniza o sistema com o estado atual do Drive (CRA-ERP/).
+
+    Para cada arquivo/pasta encontrado no Drive que ainda NÃO existe em ``storage_files``,
+    cria a entrada correspondente. Para arquivos, também grava no ``storage_index`` apontando
+    para o ``drive_file_id`` para que ``get_object`` consiga baixá-los.
+
+    Retorna: {folders_added, files_added, total_scanned, skipped}.
+    """
+    if not _drive_credentials_doc():
+        return {"error": "Drive não conectado", "folders_added": 0, "files_added": 0, "total_scanned": 0, "skipped": 0}
+    service = _drive_service()
+    if not service:
+        return {"error": "Drive indisponível", "folders_added": 0, "files_added": 0, "total_scanned": 0, "skipped": 0}
+
+    root_id = _find_folder_id(service, [DRIVE_ROOT])
+    if not root_id:
+        return {"folders_added": 0, "files_added": 0, "total_scanned": 0, "skipped": 0}
+
+    db = _sync_db()
+    items = _walk_drive(service, root_id, "/")
+    folders_added = files_added = skipped = 0
+
+    # 1. Pastas primeiro (para garantir parent_path correto)
+    for item in [i for i in items if i["type"] == "folder"]:
+        existing = db.storage_files.find_one({"path": item["path"]})
+        if existing:
+            skipped += 1
+            continue
+        from uuid import uuid4
+
+        doc = {
+            "id": str(uuid4()),
+            "path": item["path"],
+            "parent_path": item["parent_path"],
+            "name": item["name"],
+            "type": "folder",
+            "modified_at": item["modified_time"] or datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "drive_file_id": item["drive_file_id"],
+            "synced_from_drive": True,
+        }
+        db.storage_files.insert_one(doc)
+        folders_added += 1
+
+    # 2. Arquivos
+    for item in [i for i in items if i["type"] == "file"]:
+        existing = db.storage_files.find_one({"path": item["path"]})
+        if existing:
+            skipped += 1
+            continue
+        from uuid import uuid4
+
+        # Use drive_file_id-derived object_key so put/get can find it
+        object_key = f"drive/{item['drive_file_id']}"
+        doc = {
+            "id": str(uuid4()),
+            "path": item["path"],
+            "parent_path": item["parent_path"],
+            "name": item["name"],
+            "type": "file",
+            "size": item["size"],
+            "content_type": item["mime_type"],
+            "object_key": object_key,
+            "modified_at": item["modified_time"] or datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "drive_file_id": item["drive_file_id"],
+            "backend": "drive",
+            "synced_from_drive": True,
+        }
+        db.storage_files.insert_one(doc)
+        # Index for downloads
+        db.storage_index.update_one(
+            {"path": object_key},
+            {
+                "$set": {
+                    "path": object_key,
+                    "backend": "drive",
+                    "drive_file_id": item["drive_file_id"],
+                    "filename": item["name"],
+                    "mime_type": item["mime_type"],
+                    "size": item["size"],
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+            upsert=True,
+        )
+        files_added += 1
+
+    return {
+        "folders_added": folders_added,
+        "files_added": files_added,
+        "total_scanned": len(items),
+        "skipped": skipped,
+    }
+
+
 # ---------------- Public folder operations on Drive ----------------
 
 def drive_create_folder(virtual_path: str) -> Optional[str]:

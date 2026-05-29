@@ -141,6 +141,22 @@ async def drive_test(current_user: dict = Depends(get_current_user)):
     return {"success": True, "root_folder": drive.ROOT_FOLDER_NAME, "items": len(files), "files": files[:10]}
 
 
+@router.post("/sync")
+async def drive_sync(current_user: dict = Depends(get_current_user)):
+    """Sincroniza do Drive para o sistema: traz pastas/arquivos criados manualmente
+    no Drive (fora do ERP) para a listagem do módulo Armazenamento.
+    """
+    if (current_user or {}).get("role") not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Apenas administradores.")
+
+    import asyncio
+    from utils.storage import sync_from_drive
+
+    result = await asyncio.to_thread(sync_from_drive)
+    logger.info("Drive sync finished: %s", result)
+    return {"success": True, **result}
+
+
 @router.post("/migrate")
 async def drive_migrate(
     dry_run: bool = Query(False),

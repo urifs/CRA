@@ -12,6 +12,18 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 21 - Sincronização Drive → Sistema)
+- **Pedido**: criar botão "Sincronizar" para que arquivos/pastas criados manualmente no Drive (fora do ERP) apareçam no módulo Armazenamento do sistema.
+- **Implementação**:
+  - `/app/backend/utils/storage.py`: helper `sync_from_drive()` que faz walk recursivo do `CRA-ERP/` no Drive, e para cada pasta/arquivo que ainda não existe em `storage_files`, cria a entrada compatível com o esquema esperado (`type`, `path`, `parent_path`, `name`, `object_key=drive/<id>`). Para arquivos, indexa também em `storage_index` apontando para `backend=drive` com o `drive_file_id`, garantindo que downloads via `get_object` funcionem.
+  - Helper `_walk_drive(service, folder_id, parent_path)` faz busca recursiva ordenada (pastas antes de arquivos) com paginação.
+  - `/app/backend/routes/drive.py`: novo endpoint `POST /api/drive/sync` (admin-only) que roda o `sync_from_drive` em thread auxiliar para não bloquear o event loop.
+  - `/app/frontend/src/components/DriveConnectionCard.jsx`: novo handler `handleSync` + botão **"Sincronizar do Drive"** (azul, ícone `RefreshCw`) ao lado de "Testar conexão". Toast mostra X pastas + Y arquivos adicionados, Z já existentes.
+- **Validação via curl**:
+  - Antes: 6 itens em `storage_files`. Drive tinha 25 itens.
+  - Após `POST /api/drive/sync`: 16 novos itens importados (6 pastas + 10 arquivos), 9 já existentes pulados ✅
+  - Total após sync: 22 itens, com `synced_from_drive=True` marcando os importados ✅
+
 ### 29/05/2026 (sessão 20 - Drive como espelho: criar/excluir pastas reflete no Drive)
 - **Pedido**: ao criar ou excluir uma pasta no sistema, a ação não estava sendo refletida no Google Drive — usuário pediu que "o sistema de armazenamento seja um reflexo do Google Drive".
 - **Implementação** em `/app/backend/utils/storage.py`:
