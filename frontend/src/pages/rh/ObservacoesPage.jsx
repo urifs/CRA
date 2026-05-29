@@ -21,7 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Plus, StickyNote, User, Bell, BellOff, Calendar, Edit, Trash2, Search,
+  Plus, StickyNote, User, Bell, BellOff, Calendar, Edit, Trash2, Search, FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import AnexosManager from "@/components/AnexosManager";
@@ -56,6 +56,9 @@ export default function ObservacoesPage() {
   const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filterFuncionario, setFilterFuncionario] = useState("todos");
+  const [filterLembrete, setFilterLembrete] = useState("todos");
+  const [exporting, setExporting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -151,12 +154,38 @@ export default function ObservacoesPage() {
 
   const filtered = observacoes.filter((o) => {
     const q = search.toLowerCase();
-    return (
+    const matchSearch =
       o.titulo?.toLowerCase().includes(q) ||
       o.descricao?.toLowerCase().includes(q) ||
-      o.funcionario_nome?.toLowerCase().includes(q)
-    );
+      o.funcionario_nome?.toLowerCase().includes(q);
+    const matchFunc = filterFuncionario === "todos" || o.funcionario_id === filterFuncionario;
+    const matchLembrete =
+      filterLembrete === "todos" ||
+      (filterLembrete === "com" && o.lembrete_ativo) ||
+      (filterLembrete === "sem" && !o.lembrete_ativo);
+    return matchSearch && matchFunc && matchLembrete;
   });
+
+  const exportarPDF = async () => {
+    setExporting(true);
+    try {
+      const params = {};
+      if (filterFuncionario !== "todos") params.funcionario_id = filterFuncionario;
+      if (filterLembrete !== "todos") params.lembrete = filterLembrete;
+      const r = await axios.get(`${API}/rh/observacoes/export/pdf`, { params, responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([r.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Observacoes_RH.pdf";
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Observações exportadas em PDF!");
+    } catch (error) {
+      toast.error("Erro ao exportar PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const comLembrete = observacoes.filter((o) => o.lembrete_ativo).length;
 
@@ -173,9 +202,14 @@ export default function ObservacoesPage() {
           </h1>
           <p className="text-gray-500 mt-1">Notas e anotações vinculadas aos funcionários</p>
         </div>
-        <Button onClick={() => openModal()} className="bg-[#10B981] hover:bg-[#0d9668]" data-testid="nova-observacao-btn">
-          <Plus size={18} className="mr-2" />Nova Observação
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportarPDF} variant="outline" disabled={exporting} data-testid="exportar-pdf-btn">
+            <FileDown size={18} className="mr-2" />{exporting ? "Exportando..." : "Exportar PDF"}
+          </Button>
+          <Button onClick={() => openModal()} className="bg-[#10B981] hover:bg-[#0d9668]" data-testid="nova-observacao-btn">
+            <Plus size={18} className="mr-2" />Nova Observação
+          </Button>
+        </div>
       </div>
 
       {/* Resumo */}
@@ -204,16 +238,39 @@ export default function ObservacoesPage() {
         </Card>
       </div>
 
-      {/* Busca */}
-      <div className="mb-6 relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-        <Input
-          placeholder="Buscar por título, descrição ou funcionário..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-          data-testid="busca-observacoes"
-        />
+      {/* Busca + Filtros */}
+      <div className="flex flex-col md:flex-row gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Input
+            placeholder="Buscar por título, descrição ou funcionário..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+            data-testid="busca-observacoes"
+          />
+        </div>
+        <Select value={filterFuncionario} onValueChange={setFilterFuncionario}>
+          <SelectTrigger className="w-full md:w-56 h-11" data-testid="filtro-funcionario">
+            <SelectValue placeholder="Funcionário" />
+          </SelectTrigger>
+          <SelectContent className="z-[9999] max-h-72">
+            <SelectItem value="todos">Todos os funcionários</SelectItem>
+            {funcionarios.map((f) => (
+              <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterLembrete} onValueChange={setFilterLembrete}>
+          <SelectTrigger className="w-full md:w-44 h-11" data-testid="filtro-lembrete">
+            <SelectValue placeholder="Lembrete" />
+          </SelectTrigger>
+          <SelectContent className="z-[9999]">
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="com">Com lembrete</SelectItem>
+            <SelectItem value="sem">Sem lembrete</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Quadro de Observações */}

@@ -12,6 +12,12 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 25 - Observações RH: filtros + exportação PDF)
+- **Pedido**: aprimorar a ferramenta de Observações com filtros no quadro e exportação em PDF.
+- **Backend** (`/app/backend/routes/rh.py`): novo endpoint `GET /api/rh/observacoes/export/pdf?funcionario_id=&lembrete=com|sem` → PDF (landscape, padrão "CRA Apoio") com tabela Título/Funcionário/Observação/Lembrete/Criada em, respeitando filtros. Helper `_build_observacoes_pdf`.
+- **Frontend** (`ObservacoesPage.jsx`): linha de filtros (busca + dropdown de funcionário + dropdown de lembrete "Com/Sem"); botão **"Exportar PDF"** no cabeçalho que baixa o PDF aplicando os filtros ativos (axios blob).
+- **Validação**: curl (export "todos"=2 registros, "com lembrete"=1, HTTP 200, CRA Apoio + colunas corretas via pypdf) ✅; screenshot dos filtros + botão renderizados ✅. Lint OK.
+
 ### 29/05/2026 (sessão 24 - Nova ferramenta "Observações" no RH)
 - **Pedido**: criar uma função "Observações" na barra lateral do RH com formulário (título, texto, vínculo a funcionário via dropdown, anexar arquivo, agendamento de aviso) e um quadro listando todas as observações (título, descrição, funcionário, se tem lembrete e data, data de criação).
 - **Decisões do usuário**: lembrete agendado deve **aparecer nas Notificações do RH quando a data chegar** (integração completa); agendamento é **somente data**.

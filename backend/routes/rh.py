@@ -3068,6 +3068,105 @@ async def excluir_observacao(observacao_id: str):
     return {"message": "Observação excluída"}
 
 
+@rh_router.get("/observacoes/export/pdf")
+async def exportar_observacoes_pdf(
+    funcionario_id: Optional[str] = None,
+    lembrete: Optional[str] = None,  # "com" | "sem" | None
+):
+    """Exporta as observações (com filtros) em PDF no padrão CRA Apoio."""
+    query = {}
+    funcionario_nome_filtro = None
+    if funcionario_id:
+        query["funcionario_id"] = funcionario_id
+        func = await funcionarios_collection.find_one({"id": funcionario_id}, {"_id": 0, "nome": 1})
+        funcionario_nome_filtro = func.get("nome") if func else None
+    if lembrete == "com":
+        query["lembrete_ativo"] = True
+    elif lembrete == "sem":
+        query["lembrete_ativo"] = {"$ne": True}
+
+    obs = await observacoes_collection.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    pdf_bytes = _build_observacoes_pdf(obs, funcionario_nome_filtro)
+    filename = "Observacoes_RH.pdf"
+    if funcionario_nome_filtro:
+        filename = f"Observacoes_{funcionario_nome_filtro.replace(' ', '_')[:40]}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def _build_observacoes_pdf(observacoes: list, funcionario_nome_filtro: Optional[str]) -> bytes:
+    """Gera PDF da lista de observações com layout corporativo (CRA Apoio)."""
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, Spacer, Table
+    from utils.pdf_template import (
+        create_corporate_doc, add_corporate_header, add_footer,
+        get_corporate_styles, header_table_style,
+    )
+
+    def _br_dt(s: str) -> str:
+        if not s:
+            return "-"
+        try:
+            d = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+            return d.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return str(s)[:10]
+
+    def _br_date(s: str) -> str:
+        if not s:
+            return "-"
+        t = str(s)[:10]
+        if len(t) == 10 and t[4] == "-":
+            return f"{t[8:10]}/{t[5:7]}/{t[0:4]}"
+        return t
+
+    buffer = io.BytesIO()
+    doc = create_corporate_doc(buffer, landscape_mode=True, title="Observações RH")
+    styles = get_corporate_styles()
+
+    subtitle = f"Funcionário: {funcionario_nome_filtro}" if funcionario_nome_filtro else "Todas as observações"
+    subtitle += f" · {len(observacoes)} registro(s)"
+
+    elements = []
+    add_corporate_header(
+        elements,
+        doc_title="RELATÓRIO DE OBSERVAÇÕES",
+        subtitle=subtitle,
+        company_name="CRA Apoio",
+    )
+
+    cell = styles["body_left"]
+    if not observacoes:
+        elements.append(Paragraph("Nenhuma observação encontrada para os filtros selecionados.", styles["body"]))
+    else:
+        rows = [["Título", "Funcionário", "Observação", "Lembrete", "Criada em"]]
+        for o in observacoes:
+            lembrete_txt = f"Sim · {_br_date(o.get('lembrete_data'))}" if o.get("lembrete_ativo") else "Não"
+            rows.append([
+                Paragraph(o.get("titulo", "-") or "-", cell),
+                Paragraph(o.get("funcionario_nome") or "Geral", cell),
+                Paragraph((o.get("descricao") or "-").replace("\n", "<br/>"), cell),
+                Paragraph(lembrete_txt, cell),
+                Paragraph(_br_dt(o.get("created_at")), cell),
+            ])
+        t = Table(
+            rows,
+            colWidths=[5.0 * cm, 4.5 * cm, 10.5 * cm, 3.2 * cm, 3.3 * cm],
+            repeatRows=1,
+        )
+        t.setStyle(header_table_style())
+        elements.append(t)
+
+    elements.append(Spacer(1, 10))
+    add_footer(elements, "Sistema CRA · Relatório de Observações")
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 
 
 
