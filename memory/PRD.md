@@ -12,6 +12,22 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 20 - Drive como espelho: criar/excluir pastas reflete no Drive)
+- **Pedido**: ao criar ou excluir uma pasta no sistema, a ação não estava sendo refletida no Google Drive — usuário pediu que "o sistema de armazenamento seja um reflexo do Google Drive".
+- **Implementação** em `/app/backend/utils/storage.py`:
+  - `drive_create_folder(virtual_path)`: cria toda a hierarquia em `CRA-ERP/<path>` se não existir (idempotente).
+  - `drive_delete_folder(virtual_path)`: localiza pelo path e envia para a lixeira do Drive. Bloqueia tentativa de apagar a raiz `CRA-ERP`. Também limpa entries do `storage_index` sob esse prefixo.
+  - `drive_delete_file(path_or_object_key)`: localiza via `storage_index` e apaga do Drive.
+  - `drive_rename(virtual_path, new_name)`: renomeia pasta ou arquivo no Drive.
+  - Helper `_find_folder_id` (busca exata) e `_virtual_path_parts` (normalização).
+- **Integração nos endpoints** em `/app/backend/server.py` e `/app/backend/routes/storage.py`:
+  - `POST /api/storage/folder` → chama `drive_create_folder` após criar no Mongo.
+  - `DELETE /api/storage/delete` → chama `drive_delete_folder` / `drive_delete_file` antes da remoção local.
+  - `POST /api/storage/rename` → chama `drive_rename`.
+- **Validação via curl**:
+  - Criar `TestePastaDrive` no sistema → Drive passou de 5 para 6 itens, com `TestePastaDrive` na lista ✅
+  - Excluir `TestePastaDrive` no sistema → Drive voltou para 5 itens ✅
+
 ### 28/05/2026 (sessão 19 - Google Drive Fases 2+3: Storage abstraction + Migração)
 - **Implementação Fase 2 — Abstração de Storage transparente**:
   - `/app/backend/utils/storage.py` reescrito: agora `put_object(path, data, content_type)` automaticamente roteia para Google Drive (se conectado) ou Object Storage. Mesma assinatura, todos os endpoints existentes (`/api/storage/upload`, `/api/attachments/upload`, `/api/anexos/upload`, módulos folha, RH, etc.) ganharam Drive de graça sem qualquer mudança no código.

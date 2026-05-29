@@ -187,6 +187,33 @@ def _path_to_drive(path: str) -> tuple[list[str], str]:
     return folder_parts, filename
 
 
+def _virtual_path_parts(virtual_path: str) -> list[str]:
+    """Splits a user-facing storage path like '/Sistemas/Financeiro' into folder parts under CRA-ERP."""
+    parts = [p for p in virtual_path.split("/") if p]
+    if parts and parts[0] == APP_NAME:
+        parts = parts[1:]
+    return [DRIVE_ROOT, *parts]
+
+
+def _find_folder_id(service, path_parts: list[str]) -> Optional[str]:
+    """Returns the folder id of the given path or None if it doesn't exist."""
+    parent = None
+    for name in path_parts:
+        safe = name.replace("'", "\\'")
+        q = (
+            f"name = '{safe}' and mimeType = 'application/vnd.google-apps.folder' "
+            f"and trashed = false"
+        )
+        if parent:
+            q += f" and '{parent}' in parents"
+        res = service.files().list(q=q, fields="files(id)", pageSize=1).execute()
+        files = res.get("files", [])
+        if not files:
+            return None
+        parent = files[0]["id"]
+    return parent
+
+
 def _drive_upload(path: str, data: bytes, content_type: str, *, drive_path: Optional[str] = None) -> Optional[dict]:
     """Uploads to Drive and indexes the mapping.
 
@@ -324,3 +351,108 @@ _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 def sanitize_filename(name: str) -> str:
     name = _SAFE_NAME_RE.sub("_", name).strip("._-")
     return name or "file.bin"
+
+
+# ---------------- Public folder operations on Drive ----------------
+
+def drive_create_folder(virtual_path: str) -> Optional[str]:
+    """Cria a hierarquia de pastas no Drive se ela ainda não existir.
+    Retorna o folder_id da pasta criada (ou None se Drive não conectado/falhou).
+    """
+    if not _drive_credentials_doc():
+        return None
+    service = _drive_service()
+    if not service:
+        return None
+    try:
+        parts = _virtual_path_parts(virtual_path)
+        return _ensure_path(service, parts)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("drive_create_folder falhou para %s: %s", virtual_path, e)
+        return None
+
+
+def drive_delete_folder(virtual_path: str) -> bool:
+    """Apaga (envia para a lixeira do Drive) uma pasta inteira pelo seu path virtual.
+    Retorna True se foi apagada (ou já não existia). False em falha real.
+    """
+    if not _drive_credentials_doc():
+        return True  # Drive não conectado: ok, nada a fazer
+    service = _drive_service()
+    if not service:
+        return True
+    try:
+        parts = _virtual_path_parts(virtual_path)
+        if len(parts) <= 1:
+            # Não deixa apagar a raiz CRA-ERP
+            logger.warning("drive_delete_folder: bloqueado tentativa de apagar raiz %s", virtual_path)
+            return False
+        folder_id = _find_folder_id(service, parts)
+        if not folder_id:
+            return True  # já não existe
+        service.files().delete(fileId=folder_id).execute()
+        # Limpa entries do storage_index sob esse path
+        prefix = virtual_path.rstrip("/") + "/"
+        _sync_db().storage_index.delete_many({"path": {"$regex": f"^{re.escape(prefix)}"}})
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.exception("drive_delete_folder falhou para %s: %s", virtual_path, e)
+        return False
+
+
+def drive_delete_file(path_or_object_key: str) -> bool:
+    """Apaga um arquivo do Drive usando o ``storage_index`` para localizar o ``drive_file_id``.
+    Aceita o object_key (forma usada por put_object) OU um virtual path.
+    """
+    if not _drive_credentials_doc():
+        return True
+    service = _drive_service()
+    if not service:
+        return True
+    db = _sync_db()
+    idx = db.storage_index.find_one(
+        {"path": path_or_object_key, "backend": "drive"}
+    )
+    if not idx:
+        return True  # não está no Drive (talvez Object Storage), ok
+    try:
+        service.files().delete(fileId=idx["drive_file_id"]).execute()
+        db.storage_index.delete_one({"_id": idx["_id"]})
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.exception("drive_delete_file falhou para %s: %s", path_or_object_key, e)
+        return False
+
+
+def drive_rename(virtual_path: str, new_name: str) -> bool:
+    """Renomeia uma pasta ou arquivo no Drive."""
+    if not _drive_credentials_doc():
+        return True
+    service = _drive_service()
+    if not service:
+        return True
+    try:
+        parts = _virtual_path_parts(virtual_path)
+        # Tenta como pasta primeiro
+        node_id = _find_folder_id(service, parts)
+        if not node_id and parts:
+            # Tenta como arquivo: localiza dentro do parent
+            parent_id = _find_folder_id(service, parts[:-1])
+            if not parent_id:
+                return True
+            safe = parts[-1].replace("'", "\\'")
+            res = (
+                service.files()
+                .list(q=f"name = '{safe}' and '{parent_id}' in parents and trashed = false",
+                      fields="files(id)", pageSize=1)
+                .execute()
+            )
+            files = res.get("files", [])
+            if not files:
+                return True
+            node_id = files[0]["id"]
+        service.files().update(fileId=node_id, body={"name": new_name}).execute()
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.exception("drive_rename falhou para %s -> %s: %s", virtual_path, new_name, e)
+        return False

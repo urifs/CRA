@@ -7915,6 +7915,13 @@ async def create_folder(
     try:
         await _create_folder_meta(folder_path, user_id=current_user.get("id"))
 
+        # Refletir no Google Drive (se conectado)
+        try:
+            from utils.storage import drive_create_folder
+            drive_create_folder(folder_path)
+        except Exception as e:
+            logger.warning(f"Falha ao criar pasta no Drive: {e}")
+
         if data.password:
             password_hash = hash_password(data.password)
             await db.folder_passwords.update_one(
@@ -8350,6 +8357,19 @@ async def delete_storage_item(
     is_folder = (node and node.get("type") == "folder") or (abs_path.exists() and abs_path.is_dir())
 
     try:
+        # Refletir exclusão no Google Drive (se conectado)
+        try:
+            from utils.storage import drive_delete_folder, drive_delete_file
+            if is_folder:
+                drive_delete_folder(p)
+            else:
+                # arquivo: o object_key vive no metadado mongo, mas se não tiver
+                # cai no path virtual para localizar via storage_index
+                obj_key = (node or {}).get("object_key") or p
+                drive_delete_file(obj_key)
+        except Exception as e:
+            logger.warning(f"Falha ao refletir exclusão no Drive: {e}")
+
         if permanent:
             # Apaga do Mongo (e Object Storage marcado via TODO no helper) E do FS
             if node:

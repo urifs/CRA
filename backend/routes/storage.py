@@ -95,6 +95,13 @@ async def rename_storage_item(
                 {"$set": {"path": new_rel_path}}
             )
 
+        # Refletir rename no Drive
+        try:
+            from utils.storage import drive_rename
+            drive_rename(path, data.new_name)
+        except Exception as e:
+            logger.warning(f"Falha ao renomear no Drive: {e}")
+
         return {
             "message": "Item renomeado com sucesso",
             "new_path": "/" + str(new_path.relative_to(STORAGE_DIR)).replace("\\", "/")
