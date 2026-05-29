@@ -689,6 +689,10 @@ export default function ContasReceberPage() {
                         >
                           {formatCurrency(c.grupo_parcelas.saldo_restante)}
                         </button>
+                      ) : ((c.valor_recebido || 0) > 0 && c.status !== "quitada" && c.status !== "cancelada") ? (
+                        <span className="text-amber-700 font-semibold" data-testid={`saldo-restante-parcial-${c.id}`}>
+                          {formatCurrency(c.saldo_restante != null ? c.saldo_restante : (c.valor_final || c.valor || 0) - (c.valor_recebido || 0))}
+                        </span>
                       ) : (
                         <span className="text-gray-300">—</span>
                       )}

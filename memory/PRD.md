@@ -12,6 +12,14 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 23 - Coluna "Saldo Restante" mostra saldo de contas com pagamento parcial)
+- **Pedido**: o "SALDO" exibido no modal de Histórico de Pagamentos (ex: R$ 14.740,00) não aparecia na coluna **Saldo Restante** da tabela — mostrava "—" para contas únicas com pagamento parcial (só funcionava para parcelas agrupadas).
+- **Causa raiz**: a coluna só renderizava valor quando `c.parcela_origem_id && c.grupo_parcelas` (grupo de parcelas). Contas únicas com status "parcial" (valor_pago/valor_recebido > 0, sem parcela_origem_id) caíam no `else` e exibiam "—".
+- **Fix** em `/app/frontend/src/pages/admin/ContasPagarPage.jsx` e `ContasReceberPage.jsx`: novo ramo condicional — quando `valor_pago`/`valor_recebido > 0` e status ≠ quitada/cancelada, exibe `c.saldo_restante` (com fallback computado `(valor_final||valor) − valor_pago/recebido`). Mantido o botão clicável para grupos de parcelas.
+- **Validação**: lint OK nas 2 páginas; banco confirma `saldo_restante` armazenado em contas parciais (`/api/admin/...` registra ao quitar parcialmente, financeiro.py linha 572/1018).
+- **Obs deploy**: correção no preview; usuário precisa redeployar para refletir em produção.
+
+
 ### 29/05/2026 (sessão 22 - Nome da empresa no PDF segue o Centro de Custo selecionado)
 - **Pedido**: o nome embaixo da logo nas exportações estava sempre fixo ("CRA Construtora"). Deve refletir o **Centro de Custo selecionado** na página de Exportar, valendo para TODA exportação.
 - **Decisões do usuário**: (1) com CC selecionado → exibir o **Nome do Centro de Custo**; (2) sem CC ("Todos") → manter padrão atual ("CRA Construtora"); (3) RH continua SEMPRE "CRA Apoio", independente do CC.
