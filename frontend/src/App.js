@@ -71,6 +71,7 @@ import EPIPage from "@/pages/rh/EPIPage";
 import CustosPage from "@/pages/rh/CustosPage";
 import RHNotificacoesPage from "@/pages/rh/RHNotificacoesPage";
 import RHMorePage from "@/pages/rh/RHMorePage";
+import ObservacoesPage from "@/pages/rh/ObservacoesPage";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -253,6 +254,7 @@ function App() {
             <Route path="ferias" element={<FeriasPage />} />
             <Route path="epi" element={<EPIPage />} />
             <Route path="custos" element={<CustosPage />} />
+            <Route path="observacoes" element={<ObservacoesPage />} />
             <Route path="notificacoes" element={<RHNotificacoesPage />} />
             <Route path="more" element={<RHMorePage />} />
             <Route path="exportar" element={<ExportPage module="rh" />} />

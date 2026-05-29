@@ -59,7 +59,7 @@ VALID_ENTITY_TYPES = {
     "medicao", "horimetro", "combustivel", "abastecedor",
     # RH
     "funcionario", "folha_pagamento", "solicitacao_folha", "ferias",
-    "banco_horas", "epi", "epi_ficha", "custo_rh", "abono",
+    "banco_horas", "epi", "epi_ficha", "custo_rh", "abono", "observacao_rh",
     # Outros
     "notificacao", "importacao_nf", "emissao_nf", "conciliacao",
 }

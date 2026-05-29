@@ -41,6 +41,7 @@ folha_pagamento_collection = db["folha_pagamento"]
 ferias_collection = db["ferias"]
 epi_fichas_collection = db["epi_fichas"]
 epi_cargos_collection = db["epi_cargos"]
+observacoes_collection = db["rh_observacoes"]
 
 # Create router
 rh_router = APIRouter(prefix="/rh", tags=["RH"])
@@ -2967,6 +2968,106 @@ async def get_observacao(funcionario_id: str, mes: int, ano: int):
     return obs or {"funcionario_id": funcionario_id, "mes": mes, "ano": ano, "texto": ""}
 
 
+# ===== OBSERVAÇÕES (notas livres do RH vinculadas a funcionário) =====
+
+@rh_router.post("/observacoes")
+async def criar_observacao(payload: dict = Body(...)):
+    """Cria uma nova observação do RH.
+    Body: { titulo, descricao, funcionario_id, lembrete_ativo, lembrete_data }
+    """
+    titulo = (payload.get("titulo") or "").strip()
+    descricao = (payload.get("descricao") or "").strip()
+    funcionario_id = (payload.get("funcionario_id") or "").strip()
+    lembrete_ativo = bool(payload.get("lembrete_ativo"))
+    lembrete_data = (payload.get("lembrete_data") or "").strip() or None
+
+    if not titulo:
+        raise HTTPException(status_code=400, detail="O título é obrigatório")
+    if not descricao:
+        raise HTTPException(status_code=400, detail="A descrição da observação é obrigatória")
+    if lembrete_ativo and not lembrete_data:
+        raise HTTPException(status_code=400, detail="Informe a data do lembrete ou desative o agendamento")
+
+    funcionario_nome = None
+    if funcionario_id:
+        func = await funcionarios_collection.find_one({"id": funcionario_id}, {"_id": 0, "nome": 1})
+        if not func:
+            raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+        funcionario_nome = func.get("nome")
+
+    obs = {
+        "id": str(uuid.uuid4()),
+        "titulo": titulo,
+        "descricao": descricao,
+        "funcionario_id": funcionario_id or None,
+        "funcionario_nome": funcionario_nome,
+        "lembrete_ativo": lembrete_ativo,
+        "lembrete_data": lembrete_data if lembrete_ativo else None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await observacoes_collection.insert_one(obs)
+    obs.pop("_id", None)
+    return obs
+
+
+@rh_router.get("/observacoes")
+async def listar_observacoes():
+    """Lista todas as observações ordenadas da mais recente para a mais antiga."""
+    obs = await observacoes_collection.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return obs
+
+
+@rh_router.put("/observacoes/{observacao_id}")
+async def atualizar_observacao(observacao_id: str, payload: dict = Body(...)):
+    """Atualiza uma observação existente."""
+    existente = await observacoes_collection.find_one({"id": observacao_id}, {"_id": 0})
+    if not existente:
+        raise HTTPException(status_code=404, detail="Observação não encontrada")
+
+    titulo = (payload.get("titulo") or "").strip()
+    descricao = (payload.get("descricao") or "").strip()
+    funcionario_id = (payload.get("funcionario_id") or "").strip()
+    lembrete_ativo = bool(payload.get("lembrete_ativo"))
+    lembrete_data = (payload.get("lembrete_data") or "").strip() or None
+
+    if not titulo:
+        raise HTTPException(status_code=400, detail="O título é obrigatório")
+    if not descricao:
+        raise HTTPException(status_code=400, detail="A descrição da observação é obrigatória")
+    if lembrete_ativo and not lembrete_data:
+        raise HTTPException(status_code=400, detail="Informe a data do lembrete ou desative o agendamento")
+
+    funcionario_nome = None
+    if funcionario_id:
+        func = await funcionarios_collection.find_one({"id": funcionario_id}, {"_id": 0, "nome": 1})
+        if not func:
+            raise HTTPException(status_code=404, detail="Funcionário não encontrado")
+        funcionario_nome = func.get("nome")
+
+    update = {
+        "titulo": titulo,
+        "descricao": descricao,
+        "funcionario_id": funcionario_id or None,
+        "funcionario_nome": funcionario_nome,
+        "lembrete_ativo": lembrete_ativo,
+        "lembrete_data": lembrete_data if lembrete_ativo else None,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await observacoes_collection.update_one({"id": observacao_id}, {"$set": update})
+    obs = await observacoes_collection.find_one({"id": observacao_id}, {"_id": 0})
+    return obs
+
+
+@rh_router.delete("/observacoes/{observacao_id}")
+async def excluir_observacao(observacao_id: str):
+    """Exclui uma observação."""
+    res = await observacoes_collection.delete_one({"id": observacao_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Observação não encontrada")
+    return {"message": "Observação excluída"}
+
+
 
 
 
@@ -4210,13 +4311,33 @@ async def get_rh_notificacoes():
                 except:
                     pass
     
+    # Lembretes de observações agendadas (data do lembrete já alcançada)
+    lembretes_observacoes = []
+    async for obs in observacoes_collection.find({"lembrete_ativo": True}):
+        ld = obs.get("lembrete_data")
+        if not ld:
+            continue
+        if str(ld)[:10] <= hoje_str:
+            if _disp("lembrete_observacao", obs["id"]):
+                continue
+            lembretes_observacoes.append({
+                "ref_id": obs["id"],
+                "observacao_id": obs["id"],
+                "titulo": obs.get("titulo", "Observação"),
+                "descricao": obs.get("descricao", ""),
+                "funcionario_id": obs.get("funcionario_id"),
+                "funcionario_nome": obs.get("funcionario_nome") or "Geral",
+                "lembrete_data": ld,
+            })
+
     return {
         "aniversariantes": aniversariantes,
         "alertas_ferias": alertas_ferias,
         "funcionarios_sem_ferias": funcionarios_sem_ferias,
         "alertas_epi": alertas_epi,
         "alertas_atestados": [],
-        "inconsistencias_ponto": inconsistencias_ponto
+        "inconsistencias_ponto": inconsistencias_ponto,
+        "lembretes_observacoes": lembretes_observacoes,
     }
 
 
@@ -4232,7 +4353,7 @@ async def dispensar_notificacao_rh(payload: DispensarNotificacaoRH):
     """Dispensa (oculta) uma notificação RH específica."""
     tipos_validos = {
         "aniversariante", "alerta_ferias", "funcionario_sem_ferias",
-        "alerta_epi", "inconsistencia_ponto",
+        "alerta_epi", "inconsistencia_ponto", "lembrete_observacao",
     }
     if payload.tipo not in tipos_validos:
         raise HTTPException(status_code=400, detail=f"Tipo inválido. Use um de: {tipos_validos}")
@@ -4276,7 +4397,8 @@ async def get_rh_notificacoes_contagem():
         len(notifs["alertas_ferias"]) +
         len(notifs["funcionarios_sem_ferias"]) +
         len(notifs["alertas_epi"]) +
-        len(notifs["inconsistencias_ponto"])
+        len(notifs["inconsistencias_ponto"]) +
+        len(notifs.get("lembretes_observacoes", []))
     )
     
     urgentes = len(notifs["funcionarios_sem_ferias"]) + len([e for e in notifs["alertas_epi"] if e.get("dias_restantes", 30) <= 7])

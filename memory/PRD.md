@@ -12,6 +12,21 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 24 - Nova ferramenta "Observações" no RH)
+- **Pedido**: criar uma função "Observações" na barra lateral do RH com formulário (título, texto, vínculo a funcionário via dropdown, anexar arquivo, agendamento de aviso) e um quadro listando todas as observações (título, descrição, funcionário, se tem lembrete e data, data de criação).
+- **Decisões do usuário**: lembrete agendado deve **aparecer nas Notificações do RH quando a data chegar** (integração completa); agendamento é **somente data**.
+- **Backend** (`/app/backend/routes/rh.py`):
+  - Nova collection `rh_observacoes`.
+  - Endpoints: `POST /api/rh/observacoes`, `GET /api/rh/observacoes`, `PUT /api/rh/observacoes/{id}`, `DELETE /api/rh/observacoes/{id}`. Campos: titulo, descricao, funcionario_id/nome, lembrete_ativo, lembrete_data, created_at.
+  - Integração em `GET /api/rh/notificacoes`: nova chave `lembretes_observacoes` (observações com `lembrete_ativo` e `lembrete_data <= hoje`), incluída no contador (`/notificacoes/contagem`) e nos tipos dispensáveis (`lembrete_observacao`).
+  - `observacao_rh` adicionado a `VALID_ENTITY_TYPES` em `/app/backend/routes/anexos.py` (anexos via AnexosManager).
+- **Frontend**:
+  - Nova página `/app/frontend/src/pages/rh/ObservacoesPage.jsx`: form em modal (Título, Observação, dropdown Funcionário, Switch "Agendar aviso" + data, AnexosManager) + quadro de cards. Busca + cards de resumo.
+  - Rota `/rh/observacoes` em `App.js` e item "Observações" (ícone StickyNote) na sidebar `RHLayout.jsx`.
+  - `RHNotificacoesPage.jsx`: nova seção "Lembretes de Observações" com botão Ver + dispensar.
+- **Validação**: curl (create/list/put/delete + notificação retornando lembrete) ✅; screenshots da lista, do modal completo e da seção de lembretes nas Notificações ✅. Lint OK em todos os arquivos.
+
+
 ### 29/05/2026 (sessão 23 - Coluna "Saldo Restante" mostra saldo de contas com pagamento parcial)
 - **Pedido**: o "SALDO" exibido no modal de Histórico de Pagamentos (ex: R$ 14.740,00) não aparecia na coluna **Saldo Restante** da tabela — mostrava "—" para contas únicas com pagamento parcial (só funcionava para parcelas agrupadas).
 - **Causa raiz**: a coluna só renderizava valor quando `c.parcela_origem_id && c.grupo_parcelas` (grupo de parcelas). Contas únicas com status "parcial" (valor_pago/valor_recebido > 0, sem parcela_origem_id) caíam no `else` e exibiam "—".

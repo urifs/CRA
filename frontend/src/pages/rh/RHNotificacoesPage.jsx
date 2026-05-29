@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   Bell, Gift, Calendar, HardHat, Clock, AlertTriangle, 
-  CheckCircle, Users, FileText, ChevronRight, Trash2, RotateCcw
+  CheckCircle, Users, FileText, ChevronRight, Trash2, RotateCcw, StickyNote
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +19,8 @@ export default function RHNotificacoesPage() {
     alertas_epi: [],
     alertas_atestados: [],
     inconsistencias_ponto: [],
-    funcionarios_sem_ferias: []
+    funcionarios_sem_ferias: [],
+    lembretes_observacoes: []
   });
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function RHNotificacoesPage() {
         if (tipo === "funcionario_sem_ferias") next.funcionarios_sem_ferias = prev.funcionarios_sem_ferias.filter((i) => !matchRef(i));
         if (tipo === "alerta_epi") next.alertas_epi = prev.alertas_epi.filter((i) => !matchRef(i));
         if (tipo === "inconsistencia_ponto") next.inconsistencias_ponto = prev.inconsistencias_ponto.filter((i) => !matchRef(i));
+        if (tipo === "lembrete_observacao") next.lembretes_observacoes = (prev.lembretes_observacoes || []).filter((i) => !matchRef(i));
         return next;
       });
     } catch (err) {
@@ -75,6 +77,7 @@ export default function RHNotificacoesPage() {
     notificacoes.alertas_epi.length +
     notificacoes.alertas_atestados.length +
     notificacoes.inconsistencias_ponto.length +
+    (notificacoes.lembretes_observacoes?.length || 0) +
     notificacoes.funcionarios_sem_ferias.length;
 
   if (loading) {
@@ -378,6 +381,51 @@ export default function RHNotificacoesPage() {
                       className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                       title="Excluir notificação"
                       data-testid={`btn-excluir-ponto-${inc.ref_id}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Lembretes de Observações */}
+      <Card className="mb-6" id="lembretes-observacoes">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+            <StickyNote className="text-emerald-600" size={20} />
+            Lembretes de Observações
+          </h3>
+
+          {(notificacoes.lembretes_observacoes?.length || 0) === 0 ? (
+            <div className="flex items-center gap-2 text-green-600 py-4">
+              <CheckCircle size={20} />
+              <span>Nenhum lembrete de observação pendente</span>
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {notificacoes.lembretes_observacoes.map((lem, idx) => (
+                <div key={lem.ref_id || idx} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
+                  <div className="min-w-0">
+                    <p className="font-medium">{lem.titulo}</p>
+                    <p className="text-sm text-gray-600 truncate">{lem.descricao}</p>
+                    <p className="text-xs text-emerald-700 mt-0.5">
+                      {lem.funcionario_nome} · Lembrete: {lem.lembrete_data?.split('-').reverse().join('/')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => navigate('/rh/observacoes')}>
+                      Ver
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => dispensar("lembrete_observacao", lem.ref_id, `Lembrete: ${lem.titulo}`)}
+                      className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Excluir notificação"
+                      data-testid={`btn-excluir-lembrete-${lem.ref_id}`}
                     >
                       <Trash2 size={16} />
                     </button>

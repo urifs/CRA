@@ -22,6 +22,7 @@ import {
   FileDown,
   Sparkles
 } from "lucide-react";
+import { StickyNote } from "lucide-react";
 import TasksInbox from "@/components/TasksInbox";
 
 export const RHLayout = () => {
@@ -75,6 +76,7 @@ export const RHLayout = () => {
     { path: "/rh/ferias", icon: Calendar, label: "Férias e Escalas" },
     { path: "/rh/epi", icon: HardHat, label: "Gestão de EPI/EPC" },
     { path: "/rh/custos", icon: Calculator, label: "Gestão de Custos" },
+    { path: "/rh/observacoes", icon: StickyNote, label: "Observações" },
     { path: "/rh/exportar", icon: FileDown, label: "Exportação" },
   ];
 
