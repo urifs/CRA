@@ -7,7 +7,7 @@ import io
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://erp-fixes-preview.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://cra-finance-ops.preview.emergentagent.com").rstrip("/")
 
 CREDS = {"email": "test@test.com", "password": "password"}
 

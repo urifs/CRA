@@ -14,7 +14,7 @@ import pytest
 import requests
 from datetime import datetime
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://erp-fixes-preview.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://cra-finance-ops.preview.emergentagent.com").rstrip("/")
 EMAIL = "test@test.com"
 PASSWORD = "password"
 
