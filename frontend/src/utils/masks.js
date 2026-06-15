@@ -88,7 +88,22 @@ export const formatCurrency = (value) => {
   }
   
   // Remove tudo que não é número
-  let numbers = value.toString().replace(/\D/g, "");
+  let str = value.toString();
+
+  // Defesa contra artefato de ponto flutuante:
+  // quando o valor vem de (numero * 100).toString(), o JavaScript pode gerar
+  // strings como "113813.00000000001" (ex.: 1138.13 * 100) ou "1998.9999999999998"
+  // (ex.: 19.99 * 100). Se removêssemos os não-dígitos diretamente, o valor
+  // explodiria para trilhões. Detectamos um número com ponto decimal e SEM vírgula
+  // (entrada digitada usa vírgula como separador decimal) e arredondamos para os
+  // centavos corretos antes de prosseguir.
+  const semRS = str.replace(/R\$\s?/g, "").trim();
+  if (semRS.indexOf(",") === -1 && /^\d+\.\d+$/.test(semRS)) {
+    const arredondado = Math.round(parseFloat(semRS));
+    if (!isNaN(arredondado)) str = String(arredondado);
+  }
+
+  let numbers = str.replace(/\D/g, "");
   
   // Limita a 15 dígitos (trilhões)
   numbers = numbers.slice(0, 15);
