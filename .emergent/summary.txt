@@ -1,117 +1,134 @@
-<analysis>**original_problem_statement**: O usuário solicitou diversas implementações e correções abrangendo múltiplos módulos: criação de coluna Saldo Restante e modal para contas parceladas; expansão do sistema de Audit Logs e Rollback para abranger todas as ações do painel administrativo (Cadastros, OS, etc.); implementação de ordenação de colunas na Importação de NFs; correção do cálculo do Ponto Eletrônico (RH) que ignorava jornadas personalizadas; correção de filtros no Financeiro que ocultavam contas Parciais; criação de um endpoint para exportação total do banco de dados (MongoDB para Supabase) incluindo chaves primárias originais (); e correção de um bug onde a inserção de anexos em contas quitadas revertia o status da conta para em aberto. PRODUCT REQUIREMENTS: Full-stack ERP (React + FastAPI + MongoDB) cobrindo módulos de Finanças, RH e Operações.
+<analysis>**original_problem_statement**: Full-stack ERP (React + FastAPI + MongoDB) cobrindo módulos de Finanças, RH e Operações com integração profunda ao Google Drive para I/O de arquivos. O usuário recentemente solicitou ajustes nos relatórios PDF (para refletir o Centro de Custo da empresa), correções na exibição de saldos de contas parciais, a criação de uma nova ferramenta completa de Observações no módulo de RH e, de forma crítica, reportou e pediu correção para contas financeiras que estavam sendo salvas com valores exorbitantes (na casa dos trilhões) devido a um bug na edição. PRODUCT REQUIREMENTS: Full-stack ERP com módulos unificados e estáveis, priorizando precisão financeira e rastreabilidade no RH.
 
 **User's preferred language**: Portuguese (Brazil)
 INSTRUCT NEXT AGENT: The next agent MUST respond strictly in Portuguese (Brazil) only.
 
 **what currently exists?** 
-Um ERP Full-stack React + FastAPI + MongoDB estável e em produção. Possui módulos robustos de Financeiro, RH (com controle de Ponto Eletrônico e Jornadas), Gestão de Frota, Importação de Notas Fiscais via OCR e um painel de administração com sistema de auditoria (Rollback) e capacidade de gerar exportações completas do banco de dados em formato ZIP via UI.
+ERP Full-stack React + FastAPI + MongoDB. Possui módulos unificados de RH, Financeiro e Exportações com integração nativa ao Google Drive via OAuth 2.0. Foi implementada uma área de Observações no RH (com lembretes vinculados ao sistema de notificações e geração de PDF) e uma ferramenta de Manutenção de Dados no Painel Admin (Aba Integrações) projetada especificamente para corrigir via engenharia reversa dados financeiros corrompidos por falhas de cálculo de ponto flutuante (JS floating-point precision bug).
 
 **Last working item**: 
-    - Last item agent was working: Correção de bug no Financeiro onde editar/anexar um documento em uma conta já quitada revertia o status para em aberto. O problema ocorria porque o Pydantic model () injetava o valor default ao realizar o update sem a chave de status.
-    - Status: COMPLETED
+    - Last item agent was working: O agente estava explicando ao usuário por que a recém-criada ferramenta de Manutenção de Dados (para corrigir os valores financeiros corrompidos) não estava aparecendo no domínio de produção () mesmo após o usuário relatar ter feito o deploy. O agente construiu localmente e provou que o código estava correto, concluindo que o navegador em produção está puxando o bundle JS antigo (cache) ou o deploy falhou de forma silenciosa na infraestrutura.
+    - Status: USER VERIFICATION PENDING
     - Agent Testing Done: Y
-    - Which testing method agent to use? manual testing by curl
+    - Which testing method agent to use? manual testing by curl / python -c e screenshot tool.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:  
-  Nenhum issue bloqueante ou reportado pendente no momento. Todas as requisições da última sessão foram solucionadas.
+  - Issue 1: Ferramenta nova não aparece em Produção
+     - Attempted fixes: O agente verificou o último commit e gerou um build de produção no ambiente preview, confirmando que o código novo está presente.
+     - Next debug checklist: Confirmar com o usuário se o deploy foi concluído com sucesso e pedir que o usuário faça um hard-refresh (Ctrl+Shift+R) na página em produção para contornar o cache do bundle antigo. Se não resolver, o usuário precisará contatar support@emergent.sh.
+     - Why fix this issue and what will be achieved with the fix? O usuário precisa acessar a ferramenta de correção para limpar o banco de dados de produção de valores corrompidos.
+     - Status: USER VERIFICATION PENDING
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? NA
+     - Blocked on other issue: None
+     
+  - Issue 2: Erro  no domínio 
+     - Attempted fixes: O agente informou ao usuário que este é um erro de infraestrutura de domínio/SSL (não de código) e sugeriu reconfigurar o DNS ou acessar pelo domínio de fallback ().
+     - Next debug checklist: Instruir o usuário a contatar o suporte da Emergent se o problema persistir após propagação de DNS.
+     - Why fix this issue and what will be achieved with the fix? Restaurar o acesso ao ambiente de produção pelo domínio oficial.
+     - Status: BLOCKED (Depende de infra/suporte externo)
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? NA
 
 **In progress Task List**: 
-  Nenhuma tarefa em progresso.
+  Nenhuma tarefa pendente no código.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - P2: Retomar refatoração do  (Fase 2 - extrair rotas restantes para modularização).
+    - P1: Adicionar funcionalidade de rotação de imagens, zoom, e botões Anterior/Próximo no Modal de Preview Inline de anexos. (Pendente do PRD original)
     
     Future Tasks:
+    - P2: Sincronização automática em background (via APScheduler) do Google Drive (Sugerido pelo agente, aguardando aprovação do usuário).
+    - P2: Retomar refatoração do  (Fase 2 - extrair rotas restantes para modularização).
     - P2: Gerar parcelas automáticas em Contas a Receber quando uma Ordem de Serviço (OS) recorrente é criada.
     - P2: Exibir um mini-histórico do cliente ao selecioná-lo no dropdown da OS.
     - P3: Dashboard de Custo por Máquina (combustível, manutenção, peças vs. aluguel recebido).
     - P3: Links públicos de compartilhamento para relatórios em PDF gerados pelo sistema.
 
 **Completed work in this session**
-- Coluna Saldo Restante e modal de listagem de parcelas implementados em Contas a Pagar/Receber (DONE)
-- Audit Logs e Rollback expandidos () para Cadastros, Aluguéis, Imóveis, Centro de Custo, etc (DONE)
-- Ordenação de colunas (, ) implementada no backend e UI da Importação de NF-e/NFS-e (DONE)
-- Bug Fix (RH): Ponto Eletrônico agora lê a  do funcionário em vez de usar 8h diárias fixas, recalculando o saldo retroativamente (DONE)
-- Bug Fix (Financeiro): Filtros ajustados para exibir contas com status  nas visões de A Pagar, Vencidas e A Vencer (DONE)
-- Ferramenta de Exportação do DB: Criado endpoint admin que gera dump ZIP completo do MongoDB em tempo real (DONE)
-- Bug Fix (Exportação): Corrigido o helper de exportação para preservar a chave  em collections sem identificador UUID (ex: ) (DONE)
-- Bug Fix (Financeiro): Endpoint de edição blindado para preservar o status quitada em atualizações de payload parcial (DONE)
+- Fix Exportação: Nome da empresa e CNPJ no cabeçalho dos PDFs exportados agora refletem as informações do Centro de Custo selecionado (DONE)
+- Fix Financeiro: Corrigida a coluna Saldo Restante na tabela que mostrava — incorretamente para contas não-parceladas com pagamentos parciais (DONE)
+- Feature RH: Criado CRUD completo da página de Observações () integrado às Notificações do painel com filtros (DONE)
+- Feature RH: Implementada exportação em PDF da listagem e de uma observação individual detalhada com o clique no card (DONE)
+- Fix Financeiro Crítico: Bug de precisão de ponto flutuante em  (onde  virava R$ 1,138 trilhão na edição) foi resolvido usando  (DONE)
+- Feature Admin: Ferramenta  e endpoints de recuperação em  criados para encontrar e corrigir retrospectivamente os valores corrompidos pelo bug supracitado (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-   Nenhum.
+  - Nenhum. Todas as issues reportadas pelo usuário no chat foram mapeadas e o código corrigido.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: O arquivo  no backend continua extenso e requer abstração (Fase 2).
-  - Recurrence count: 19
+  - Issue recurrence in previous fork: O arquivo  continua muito grande e requer modularização.
+  - Recurrence count: 24
   - Status: NOT STARTED
 
 **Code Architecture**
-- : Contém as rotas do painel admin, agora com auditoria abrangente e endpoint de exportação do banco.
-- : Script isolado responsável por criar o manifesto e transformar as collections MongoDB em um ZIP para migração.
-- : Gerencia funcionários, jornadas e ponto eletrônico.
-- : Processa CRUD financeiro, lidando com pagamentos e fatiamento de contas.
+- : Centraliza a conversão e sanitização de inputs monetários. Fortificada agora contra artefatos IEEE754 de ponto flutuante (JS float precision bugs).
+- : Gerencia os novos endpoints de observações, alertas e geração de templates PDF usando ReportLab.
+- : Inclui agora rotas operacionais de recuperação/manutenção de integridade do BD financeiro.
+- : Serve como hub de configurações e agora possui aba de Integrações (Google Drive) e ferramentas de Manutenção de BD.
 
 **Key Technical Concepts**
-- **Dynamic HR Hours**: O cálculo de horas previstas e saldo no Ponto Eletrônico é processado on-the-fly (), garantindo que se a jornada do funcionário for alterada no cadastro, o banco de horas reflita a alteração instantaneamente.
-- **Rollback Universal**: Toda rota de Mutação (Create/Update/Delete) no módulo administrativo gera um  contendo um dict  do estado do documento, permitindo reverter dados deletados ou reverter modificações indesejadas na UI.
-- **Default Pydantic Fields Mitigation**: Rotas de PUT extraem o documento original do DB antes do update para mesclar status, prevenindo que defaults (como ) sobrescrevam campos estabilizados de contas.
+- **Floating Point Math in JS**: Solucionada manipulação arriscada de decimals multiplicados para centavos usando arredondamentos diretos para preservar integridade nas transações.
+- **Relatórios PDF Híbridos**: O sistema consome templates dinâmicos (), usando as propriedades do documento  para customizar as informações do cabeçalho da exportação dinamicamente.
 
 **key DB schema**
-  - : { id, nome, is_padrao, configuracao_dias[] } -> define limites diários mapeados para funcionários.
-  - : { action, entity_type, snapshot, reversible, rolled_back }.
+  - : { uid=0(root) gid=0(root) groups=0(root), , , , , , ,  }.
+  -  / : { , ,  } (Protegidos agora na escrita pelo ).
 
 **changes in tech stack**
-  Nenhuma.
+  - Nenhuma nova dependência; uso robusto do ReportLab que já estava em vigência.
 
 **All files of reference** 
--  (Lógica de preservação de status)
--  (Lógica de cálculo dinâmico da jornada)
--  (Helper de dump ZIP)
--  &  (Saldo Restante e filtros ajustados)
--  (Aba de Database adicionada)
+  -  (Atualizado - PDF Headers)
+  -  &  (Atualizado - Saldo)
+  -  (Rotas Observações)
+  -  (Criado)
+  -  (Atualizado - Lembretes)
+  -  (Fix de cálculo Monetário)
+  -  (Rotas Recover Parcelas)
+  -  (Criado)
+  -  (Atualizado - Ferramenta de Correção)
 
 **Areas that need refactoring**:
--  continua grande, necessitando da Fase 2 de extração de rotas.
+-  (Rotas legadas pendentes de extração).
 
 **key api endpoints**
--  (Edit modificado para prevenir reset de status)
--  (Gera o arquivo ZIP do banco)
--  e  (Agora recebem  e )
+-  &  (CRUD Observações RH).
+-  &  (Geração de PDFs das notas).
+-  &  (Scan e Dry-Run de contas corrompidas e posterior correção).
 
 **Critical Info for New Agent**
-- **Ambiente de Produção Ativo**: O usuário frequentemente testa validações na URL de produção e não no ambiente Preview. Se ele relatar que o botão não apareceu ou o bug continua, verifique as alterações localmente (via curl/logs no ambiente do agente). Se estiver tudo correto, informe cordialmente que o código funciona no preview e requer que o usuário faça o deploy para surtir efeito em produção.
-- Ao atualizar (PUT) entidades no financeiro, sempre puxe o documento existente do banco primeiro e mescle campos que não são passados pelo payload do front (como status de conta).
+- **Ambientes (Preview vs Produção)**: O usuário reporta frequentemente bugs baseados no ambiente de PRODUÇÃO (), enquanto o código do preview () já contém a solução e funciona. Se o usuário afirmar que não aparece/não está funcionando, **lembre-o de limpar o cache/hard refresh** após o deploy, ou verificar se o deploy da plataforma não quebrou silenciosamente. Não reescreva funcionalidades que já estão prontas apenas porque o usuário não vê na produção por cache.
+- O endpoint de recover-parcela-vinculos utiliza um algoritmo rigoroso e matemático que atua reconstruindo strings flutuantes (IEEE754 bug) para garantir que apenas as contas estragadas pela UI via bug JavaScript antigo sejam corrigidas. Nunca altere o threshold desse sistema para não sobreescrever valores válidos na base de dados por engano.
 
 **documents and test reports created in this job**
-  -  (Atualizado repetidamente ao final de cada bloco de tarefas).
+  -  (Atualizado com funcionalidades novas e correções efetuadas).
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. **User**: Pediu ordenação de colunas + paginação server-side na Importação NF.
-2. **Agent**: Implementou no backend e no frontend, testou e finalizou.
-3. **User**: Informou que o Ponto Eletrônico (RH) estava ignorando a carga horária atribuída e mantinha contagem normal.
-4. **Agent**: Removeu variáveis hardcoded (8h), forçou leitura da collection de jornadas no Ponto e testou a retroatividade.
-5. **User**: Reclamou que as contas com pagamento parcial pararam de aparecer na aba A Pagar.
-6. **Agent**: Ajustou as querys para incluir  nos filtros de em aberto/vencidas e testou fluxos de listagem.
-7. **User**: Pediu a exportação de todo o banco de produção para migrar para o Supabase.
-8. **Agent**: Criou script utilitário ZIP e o anexou a um botão no Painel Admin (UI).
-9. **User**: Disse que a exportação não estava trazendo TUDO (faltavam colunas/IDs).
-10. **Agent**: Revisou o exportador, removeu o drop  para collections genéricas (ex: ) e restabeleceu os dados nativos.
-11. **User**: Reportou bug onde contas quitadas voltavam para a pagar se um documento fosse anexado (edit).
-12. **Agent**: Resolveu a substituição acidental via Pydantic model ( default), blindou os endpoints e finalizou.
-*(Nenhuma mensagem humana pendente)*
+1. **User**: Pediu para aplicar filtros e PDF para a área de observações criadas.
+2. **Agent**: Implementou os filtros e endpoint de exportação PDF da lista.
+3. **User**: Pediu que os cards de observações fossem clicáveis, abrissem os detalhes da observação e tivessem a opção de exportar o PDF de forma individual.
+4. **Agent**: Criou o modal e um endpoint novo de ReportLab exclusivo para o PDF unitário e testou com sucesso.
+5. **User**: Reportou que a Plataforma não está funcionando, enviando uma print de erro  de produção ().
+6. **Agent**: Acionou o Support Agent e guiou o usuário sobre os problemas no certificado do Domínio, pedindo a ele tentar o link temporário de produção ().
+7. **User**: Mandou uma print de faturas financeiras exibindo R$ 1,138 Trilhões (valores exorbitantemente altos).
+8. **Agent**: Depurou o erro até descobrir que uma falha matemática com floats no Javascript durante a edição multiplicava certos números de maneira absurda (Ex: 1138.13 virava 1138130000000.0). Corrigiu o  e criou um Painel de Correção no Admin para consertar o BD retroativamente e pediu confirmação.
+9. **User**: Relatou que a manutenção de dados não aparece.
+10. **Agent**: Confirmou o código, verificou o build e instruiu o usuário que o Deploy de Produção reteve o arquivo JS antigo no cache, pedindo para realizar deploy de novo/Ctrl+Shift+R e reportar via email se bloqueasse novamente.
+*(Pending Human Message: O usuário informará o resultado do reload da produção ou solicitará novos ajustes caso o cache não limpe)*
 
 **Project Health Check:**
-Healthy.
+Healthy em código (Preview), porém a Produção possui um problema pendente de Certificado SSL de domínio e de caching de UI no CDN.
 
 **3rd Party Integrations**
-- ABRASF Webservice (SOAP)
-- Emergent LLM Key (OCR e Chat)
+- Google Drive API (Requer chaves do usuário: , ).
+- Emergent LLM Key (Gemini no Chatbot RH e OCR).
+- ABRASF Webservice (SOAP).
 - ViaCEP / BrasilAPI / CBO API.
 
 **Testing status**
-  - Testing agent used after significant changes: NO (Utilizou-se amplamente , chamadas bash python-c e execução interativa para validar todos os cálculos matemáticos complexos e ordenações em tempo real).
+  - Testing agent used after significant changes: NO (Foram feitos inúmeros testes profundos pelo main agent em bash com scripts Python e screenshots end-to-end confirmando cada ação nas UIs construídas).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
   - Known regressions: None
@@ -121,10 +138,9 @@ Email: test@test.com
 Password: password
 
 **What agent forgot to execute**
-Nenhuma instrução pedida pelo usuário foi esquecida ou deixada de lado.
+O agente executou todas as tarefas corretamente.
 
 **Debugging checklist for current issue**
-Nenhum issue bloqueante pendente. O próximo passo lógico é consultar o usuário sobre a continuidade do projeto:
-- Ele deseja seguir para as Future Tasks do PRD (Gerar parcelas automáticas de OS)?
-- Deseja realizar a Fase 2 de refatoração do ?
-Use a ferramenta  apresentando essas opções.</analysis>
+Issue 1 (Manutenção de Dados missing em Produção): 
+ - Nenhum bug no código; verificado no preview.
+ - Checklist: Aguardar retorno do usuário quanto ao deploy. Caso ele persista em dizer que não aparece, pode-se tentar forçar uma alteração aleatória pequena em  (como adicionar um comentário) e solicitar deploy novamente para forçar o cache-busting do hash do webpack. Aconselhe sempre usar  para atestar a estabilidade.</analysis>
