@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import ChatbotWidget from "@/components/ChatbotWidget";
 import DriveConnectionCard from "@/components/DriveConnectionCard";
+import ValoresCorrigirCard from "@/components/ValoresCorrigirCard";
 import {
   Shield,
   Users,
@@ -1172,6 +1173,17 @@ export default function PainelAdminPage() {
               </p>
             </div>
             <DriveConnectionCard />
+
+            <div className="mt-6 mb-4 pt-4 border-t border-gray-800">
+              <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <Wrench size={20} className="text-amber-500" />
+                Manutenção de Dados
+              </h3>
+              <p className="text-sm text-gray-400">
+                Ferramentas para corrigir inconsistências de dados do sistema.
+              </p>
+            </div>
+            <ValoresCorrigirCard />
           </div>
         )}
       </main>

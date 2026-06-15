@@ -1247,3 +1247,173 @@ async def recover_parcela_vinculos(
         "contas_receber": cr,
         "total_parcelas_restauradas": cp["parcelas_restauradas"] + cr["parcelas_restauradas"],
     }
+
+
+
+# ============================================================================
+# CORREÇÃO DE VALORES CORROMPIDOS (bug de ponto flutuante — sessão 27)
+# ----------------------------------------------------------------------------
+# Contexto: ao abrir uma conta para edição, o frontend convertia o valor para
+# centavos com `valor * 100`. Por limitação do IEEE754 do JavaScript, valores
+# como 1138.13 viravam "113813.00000000001" e, ao serem lidos como centavos,
+# explodiam para 1.138.130.000.000,00. A causa raiz foi corrigida em
+# utils/masks.js. Estes endpoints corrigem os registros JÁ gravados errados,
+# reconstruindo o valor original APENAS quando é matematicamente comprovável
+# (re-simulação do bug bate exatamente com o valor armazenado).
+# ============================================================================
+
+_VALOR_CORROMPIDO_THRESHOLD = 1_000_000_000.0  # R$ 1 bilhão — abaixo disso nunca é corrupção
+_CAMPOS_MONETARIOS = [
+    "valor", "valor_desconto", "valor_juros", "valor_multa",
+    "valor_retencao", "valor_pago", "valor_recebido",
+]
+
+
+def _js_corrupt(real: float) -> float:
+    """Reproduz EXATAMENTE o bug do JavaScript: formatCurrency((real*100).toString()).
+    Python e JS usam o mesmo IEEE754 (double) e o mesmo repr de menor round-trip,
+    então o resultado é idêntico ao que o frontend gravou."""
+    x = real * 100.0
+    s = repr(x)
+    digits = "".join(ch for ch in s if ch.isdigit())[:15]
+    digits = digits.lstrip("0") or "0"
+    return int(digits) / 100.0
+
+
+def _reconstruir_valor(valor) -> Optional[float]:
+    """Tenta reconstruir o valor original a partir do valor corrompido.
+    Retorna o valor correto SOMENTE se for seguro (gold-check), senão None."""
+    if not isinstance(valor, (int, float)):
+        return None
+    if valor < _VALOR_CORROMPIDO_THRESHOLD:
+        return None
+    cents = round(valor * 100)
+    s = str(int(cents)).rstrip("0")
+    if not s:
+        return None
+    real = int(s) / 100.0
+    if not (0 < real < 100_000_000):  # valor plausível para o ERP
+        return None
+    # GOLD CHECK: re-simula o bug e confere se reproduz o valor armazenado
+    if abs(_js_corrupt(real) - float(valor)) < 0.01:
+        return round(real, 2)
+    return None
+
+
+def _calcular_correcao(doc: dict) -> Optional[dict]:
+    """Monta o conjunto de mudanças seguras para um documento, ou None se não
+    for possível reconstruir TODOS os campos corrompidos com segurança."""
+    changes: dict = {}
+    tem_corrompido = False
+    for campo in _CAMPOS_MONETARIOS:
+        v = doc.get(campo)
+        if isinstance(v, (int, float)) and v >= _VALOR_CORROMPIDO_THRESHOLD:
+            tem_corrompido = True
+            r = _reconstruir_valor(v)
+            if r is None:
+                return None  # há campo corrompido irrecuperável → revisão manual
+            changes[campo] = r
+    # valor_final também pode estar corrompido isoladamente
+    vf = doc.get("valor_final")
+    if isinstance(vf, (int, float)) and vf >= _VALOR_CORROMPIDO_THRESHOLD:
+        tem_corrompido = True
+    if not tem_corrompido:
+        return None
+    # Recalcula valor_final e saldo_restante a partir dos valores corrigidos
+    valor = changes.get("valor", doc.get("valor") or 0) or 0
+    desc = changes.get("valor_desconto", doc.get("valor_desconto") or 0) or 0
+    juros = changes.get("valor_juros", doc.get("valor_juros") or 0) or 0
+    multa = changes.get("valor_multa", doc.get("valor_multa") or 0) or 0
+    ret = changes.get("valor_retencao", doc.get("valor_retencao") or 0) or 0
+    changes["valor_final"] = round(valor - desc + juros + multa - ret, 2)
+    pago = changes.get("valor_pago", doc.get("valor_pago") or 0) or 0
+    recebido = changes.get("valor_recebido", doc.get("valor_recebido") or 0) or 0
+    pago_total = pago or recebido
+    changes["saldo_restante"] = round(changes["valor_final"] - pago_total, 2)
+    return changes
+
+
+async def _scan_valores_corrompidos(collection_name: str, nome_campo: str):
+    coll = db[collection_name]
+    corrigiveis = []
+    manuais = []
+    query = {"$or": [{c: {"$gte": _VALOR_CORROMPIDO_THRESHOLD}} for c in _CAMPOS_MONETARIOS + ["valor_final"]]}
+    async for doc in coll.find(query):
+        item = {
+            "collection": collection_name,
+            "id": doc.get("id"),
+            "numero": doc.get("numero"),
+            "descricao": doc.get("descricao"),
+            "nome": doc.get(nome_campo),
+            "documento": doc.get("documento"),
+            "numero_parcela": doc.get("numero_parcela"),
+            "total_parcelas": doc.get("total_parcelas"),
+            "valor_atual": doc.get("valor_final") or doc.get("valor"),
+        }
+        changes = _calcular_correcao(doc)
+        if changes is not None:
+            item["valor_sugerido"] = changes.get("valor", doc.get("valor"))
+            item["valor_final_sugerido"] = changes.get("valor_final")
+            item["changes"] = changes
+            corrigiveis.append(item)
+        else:
+            manuais.append(item)
+    return corrigiveis, manuais
+
+
+@financeiro_router.get("/valores-corrompidos")
+async def listar_valores_corrompidos(current_user: dict = Depends(get_current_user)):
+    """Lista contas (a pagar e a receber) com valores absurdos (bug de ponto
+    flutuante), separando as que podem ser corrigidas automaticamente com
+    segurança das que precisam de revisão manual."""
+    cp_ok, cp_manual = await _scan_valores_corrompidos("contas_pagar", "fornecedor_nome")
+    cr_ok, cr_manual = await _scan_valores_corrompidos("contas_receber", "cliente_nome")
+    corrigiveis = cp_ok + cr_ok
+    manuais = cp_manual + cr_manual
+    return {
+        "corrigiveis": corrigiveis,
+        "manuais": manuais,
+        "total_corrigiveis": len(corrigiveis),
+        "total_manuais": len(manuais),
+    }
+
+
+class CorrigirValoresRequest(BaseModel):
+    ids: Optional[list[str]] = None  # IDs específicos; se vazio/None, corrige TODOS os corrigíveis
+
+
+@financeiro_router.post("/valores-corrompidos/corrigir")
+async def corrigir_valores_corrompidos(
+    payload: CorrigirValoresRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Aplica as correções seguras. Se `ids` for informado, corrige apenas esses
+    registros; caso contrário, corrige todos os reconstruíveis com segurança."""
+    cp_ok, _ = await _scan_valores_corrompidos("contas_pagar", "fornecedor_nome")
+    cr_ok, _ = await _scan_valores_corrompidos("contas_receber", "cliente_nome")
+    todos = cp_ok + cr_ok
+
+    ids_filtro = set(payload.ids) if payload.ids else None
+    corrigidos = []
+    for item in todos:
+        if ids_filtro is not None and item["id"] not in ids_filtro:
+            continue
+        coll = db[item["collection"]]
+        await coll.update_one({"id": item["id"]}, {"$set": item["changes"]})
+        corrigidos.append({
+            "collection": item["collection"],
+            "id": item["id"],
+            "numero": item["numero"],
+            "valor_antigo": item["valor_atual"],
+            "valor_novo": item["changes"].get("valor_final"),
+        })
+
+    try:
+        await create_audit_log(
+            current_user, "corrigir_valores_corrompidos", "financeiro", "batch",
+            f"{len(corrigidos)} registro(s) corrigido(s)", module="Financeiro",
+        )
+    except Exception:
+        pass
+
+    return {"total_corrigidos": len(corrigidos), "registros": corrigidos}

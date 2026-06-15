@@ -12,6 +12,19 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 29/05/2026 (sessão 27 - BUG CRÍTICO: valores inflados (trilhões) + ferramenta de correção)
+- **Sintoma**: contas exibindo valores absurdos (ex: R$ 1.138.130.000.000,00 por parcela; total em aberto em trilhões). Dados corrompidos só na PRODUÇÃO.
+- **Causa raiz**: na edição de contas, o frontend convertia valor→centavos com `(valor * 100).toString()`. Por ponto flutuante do JS, `1138.13*100 = 113813.00000000001`; ao remover não-dígitos e ler como centavos, explodia para 1.138.130.000.000,00. O valor real era R$ 1.138,13. Afetava qualquer valor com certos centavos (ex: 19,99 também).
+- **Correção da causa (preventiva)** em `/app/frontend/src/utils/masks.js` `formatCurrency`: blindagem contra o artefato (detecta string numérica com ponto e sem vírgula e arredonda os centavos). Cobre as 18 chamadas do sistema. Testado: 11/11 cenários (bug + digitação normal sem regressão).
+- **Ferramenta de correção dos dados já gravados** (`/app/backend/routes/financeiro.py`):
+  - `GET /api/admin/valores-corrompidos`: escaneia contas_pagar/receber (valor ≥ R$ 1 bilhão), separa "corrigíveis" de "revisão manual".
+  - `POST /api/admin/valores-corrompidos/corrigir`: aplica correções seguras (audit log).
+  - **Gold-check**: só corrige se re-simular o bug (`_js_corrupt`, IEEE754 idêntico ao JS) reproduzir EXATAMENTE o valor armazenado — impede tocar valores legítimos. Recalcula valor_final e saldo_restante.
+  - Frontend: `ValoresCorrigirCard.jsx` na aba Integrações → "Manutenção de Dados" do Painel Admin (botão Verificar + Aplicar, com tabela de revisão).
+- **Validação**: backend via curl (seed conta corrompida → scan detecta R$ 1.138,13 → aplica → banco corrigido; conta legítima R$ 15.750 intacta); UI via screenshot (lista 1.138.130.000.000,00 → 1.138,13). Lint OK.
+- **Ação do usuário**: precisa **redeployar**; depois ir em Painel Admin → Integrações → Manutenção de Dados → Verificar → Aplicar correção.
+
+
 ### 29/05/2026 (sessão 26 - Observações: card clicável + detalhe + exportar individual)
 - **Pedido**: o card de observação deve ser clicável, abrir a observação completa em um detalhe, e ter um botão para exportar aquela observação específica.
 - **Backend** (`/app/backend/routes/rh.py`): endpoint `GET /api/rh/observacoes/{id}/export/pdf` → PDF detalhado de UMA observação (CRA Apoio, seções DADOS + OBSERVAÇÃO, quebras de linha preservadas). Helper `_build_observacao_unica_pdf`.
