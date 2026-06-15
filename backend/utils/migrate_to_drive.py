@@ -57,11 +57,11 @@ def _already_in_drive(path: str) -> bool:
     return bool(db.storage_index.find_one({"path": path, "backend": "drive"}))
 
 
-def migrate_storage_files(dry_run: bool) -> tuple[int, int, int]:
-    """Migra a collection storage_files (módulo Armazenamento). Retorna (total, migrados, falhas)."""
+def migrate_storage_files(dry_run: bool) -> tuple[int, int, int, int]:
+    """Migra a collection storage_files (módulo Armazenamento). Retorna (total, migrados, falhas, pulados)."""
     db = _sync_db()
     cursor = db.storage_files.find({"type": "file"})
-    total = migrated = failed = 0
+    total = migrated = failed = skipped = 0
 
     for doc in cursor:
         total += 1
@@ -75,6 +75,7 @@ def migrate_storage_files(dry_run: bool) -> tuple[int, int, int]:
 
         if _already_in_drive(object_key):
             log.info("[storage_files] já no Drive: %s", virtual_path)
+            skipped += 1
             continue
 
         if dry_run:
@@ -104,10 +105,10 @@ def migrate_storage_files(dry_run: bool) -> tuple[int, int, int]:
             log.exception("[storage_files] erro %s: %s", virtual_path, e)
             failed += 1
 
-    return total, migrated, failed
+    return total, migrated, failed, skipped
 
 
-def migrate_anexos(dry_run: bool) -> tuple[int, int, int]:
+def migrate_anexos(dry_run: bool) -> tuple[int, int, int, int]:
     """Migra a collection ``anexos`` (anexos vinculados a entidades como contas, OS, RH).
 
     Cada documento tem ``storage_path`` apontando para um path no Object Storage
@@ -115,7 +116,7 @@ def migrate_anexos(dry_run: bool) -> tuple[int, int, int]:
     """
     db = _sync_db()
     cursor = db.anexos.find({})
-    total = migrated = failed = 0
+    total = migrated = failed = skipped = 0
 
     for doc in cursor:
         total += 1
@@ -130,6 +131,7 @@ def migrate_anexos(dry_run: bool) -> tuple[int, int, int]:
         # Use storage_path as the canonical key in storage_index
         if _already_in_drive(storage_path):
             log.info("[anexos] já no Drive: %s", storage_path)
+            skipped += 1
             continue
 
         if dry_run:
@@ -155,16 +157,16 @@ def migrate_anexos(dry_run: bool) -> tuple[int, int, int]:
             log.exception("[anexos] erro %s: %s", storage_path, e)
             failed += 1
 
-    return total, migrated, failed
+    return total, migrated, failed, skipped
 
 
-def migrate_filesystem(dry_run: bool) -> tuple[int, int, int]:
+def migrate_filesystem(dry_run: bool) -> tuple[int, int, int, int]:
     """Varre /app/uploads e sobe para CRA-ERP/uploads-legacy/..."""
     base = Path("/app/uploads")
     if not base.exists():
         log.info("[fs] /app/uploads não existe — pulando")
-        return 0, 0, 0
-    total = migrated = failed = 0
+        return 0, 0, 0, 0
+    total = migrated = failed = skipped = 0
     for f in base.rglob("*"):
         if not f.is_file():
             continue
@@ -174,6 +176,7 @@ def migrate_filesystem(dry_run: bool) -> tuple[int, int, int]:
 
         if _already_in_drive(virtual_path):
             log.info("[fs] já no Drive: %s", virtual_path)
+            skipped += 1
             continue
 
         if dry_run:
@@ -193,7 +196,7 @@ def migrate_filesystem(dry_run: bool) -> tuple[int, int, int]:
         except Exception as e:  # noqa: BLE001
             log.exception("[fs] erro %s: %s", virtual_path, e)
             failed += 1
-    return total, migrated, failed
+    return total, migrated, failed, skipped
 
 
 def main() -> int:
@@ -210,30 +213,33 @@ def main() -> int:
 
     log.info("=== Migração iniciada (dry_run=%s) ===", args.dry_run)
 
-    grand = {"total": 0, "migrated": 0, "failed": 0}
+    grand = {"total": 0, "migrated": 0, "failed": 0, "skipped": 0}
 
     if not args.skip_storage_files:
-        t, m, f = migrate_storage_files(args.dry_run)
-        log.info("storage_files: total=%d migrados=%d falhas=%d", t, m, f)
+        t, m, f, s = migrate_storage_files(args.dry_run)
+        log.info("storage_files: total=%d migrados=%d falhas=%d pulados=%d", t, m, f, s)
         grand["total"] += t
         grand["migrated"] += m
         grand["failed"] += f
+        grand["skipped"] += s
 
     if not args.skip_anexos:
-        t, m, f = migrate_anexos(args.dry_run)
-        log.info("anexos: total=%d migrados=%d falhas=%d", t, m, f)
+        t, m, f, s = migrate_anexos(args.dry_run)
+        log.info("anexos: total=%d migrados=%d falhas=%d pulados=%d", t, m, f, s)
         grand["total"] += t
         grand["migrated"] += m
         grand["failed"] += f
+        grand["skipped"] += s
 
     if not args.skip_fs:
-        t, m, f = migrate_filesystem(args.dry_run)
-        log.info("filesystem: total=%d migrados=%d falhas=%d", t, m, f)
+        t, m, f, s = migrate_filesystem(args.dry_run)
+        log.info("filesystem: total=%d migrados=%d falhas=%d pulados=%d", t, m, f, s)
         grand["total"] += t
         grand["migrated"] += m
         grand["failed"] += f
+        grand["skipped"] += s
 
-    log.info("=== Resumo: total=%(total)d migrados=%(migrated)d falhas=%(failed)d ===", grand)
+    log.info("=== Resumo: total=%(total)d migrados=%(migrated)d falhas=%(failed)d pulados=%(skipped)d ===", grand)
     return 0 if grand["failed"] == 0 else 1
 
 

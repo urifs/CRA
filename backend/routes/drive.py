@@ -181,17 +181,18 @@ async def drive_migrate(
     )
 
     def _do() -> dict:
-        sf_t, sf_m, sf_f = migrate_storage_files(dry_run)
-        an_t, an_m, an_f = migrate_anexos(dry_run)
-        fs_t, fs_m, fs_f = migrate_filesystem(dry_run)
+        sf_t, sf_m, sf_f, sf_s = migrate_storage_files(dry_run)
+        an_t, an_m, an_f, an_s = migrate_anexos(dry_run)
+        fs_t, fs_m, fs_f, fs_s = migrate_filesystem(dry_run)
         return {
             "dry_run": dry_run,
-            "storage_files": {"total": sf_t, "migrated": sf_m, "failed": sf_f},
-            "anexos": {"total": an_t, "migrated": an_m, "failed": an_f},
-            "filesystem": {"total": fs_t, "migrated": fs_m, "failed": fs_f},
+            "storage_files": {"total": sf_t, "migrated": sf_m, "failed": sf_f, "skipped": sf_s},
+            "anexos": {"total": an_t, "migrated": an_m, "failed": an_f, "skipped": an_s},
+            "filesystem": {"total": fs_t, "migrated": fs_m, "failed": fs_f, "skipped": fs_s},
             "grand_total": sf_t + an_t + fs_t,
             "grand_migrated": sf_m + an_m + fs_m,
             "grand_failed": sf_f + an_f + fs_f,
+            "grand_skipped": sf_s + an_s + fs_s,
         }
 
     result = await asyncio.to_thread(_do)

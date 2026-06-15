@@ -123,8 +123,12 @@ export default function DriveConnectionCard() {
         {},
         authHeaders
       );
-      const msg = `${dryRun ? "[Simulação] " : ""}${data.grand_migrated}/${data.grand_total} arquivo(s) ${dryRun ? "seriam migrados" : "migrados"} · ${data.grand_failed} falha(s)`;
+      const skipped = data.grand_skipped || 0;
+      const skippedTxt = skipped > 0 ? ` · ${skipped} já no Drive` : "";
+      const msg = `${dryRun ? "[Simulação] " : ""}${data.grand_migrated}/${data.grand_total} arquivo(s) ${dryRun ? "seriam migrados" : "migrados"}${skippedTxt} · ${data.grand_failed} falha(s)`;
       if (data.grand_failed > 0) toast.warning(msg);
+      else if (data.grand_migrated === 0 && skipped > 0)
+        toast.info(`Tudo certo! Todos os ${skipped} arquivo(s) já estão no Google Drive — nada a migrar.`);
       else toast.success(msg);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Erro na migração");
