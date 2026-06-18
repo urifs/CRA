@@ -12,6 +12,18 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 18/06/2026 (sessão 29 - Exportação Plano de Contas hierárquica com subplanos)
+- **Pedido**: na ferramenta de exportação, os subplanos (subcontas, nível 2) do Plano de Contas não apareciam de forma identificável e não dava para exportar só um subplano selecionado.
+- **Decisão do usuário**: selecionar o plano pai (nível 1) → exporta o pai + TODOS os subplanos; selecionar subplanos específicos → exporta só os selecionados.
+- **Backend** (`/app/backend/routes/exports_all.py`): `get_export_items` para `plano_contas` agora retorna `extra_fields=[codigo, nivel, pai_id, tipo]`. `generate_pdf_report` (bloco plano_contas) resolve o nome da Conta Pai a partir do `pai_id`, ordena por `codigo` e prefixa subcontas com "» " (glifo compatível com Helvetica).
+- **Frontend** (`/app/frontend/src/pages/ExportPage.jsx`): lista de plano_contas renderizada em HIERARQUIA — pais (nível 1) seguidos das subcontas (nível 2) indentadas (margin-left + borda esquerda roxa + badge "subplano"); pais com filhos mostram badge "N subplanos"; código em monospace antes do nome. `toggleIndividualItem` faz CASCATA: marcar pai marca todos os filhos (e desmarcar pai desmarca). Busca casa por nome E código; ao casar o pai mostra todos os filhos, ao casar só filhos mostra pai (contexto) + filhos que casam.
+- **Validação**: testing agent (iteration_39) — backend 100% (curl: items com hierarquia + individual-multiple HTTP 200 PDF), frontend 95% (hierarquia/cascata/busca/botão Exportar OK). Sem bugs. Test file: `/app/backend/tests/test_export_apis.py`.
+
+### 18/06/2026 (sessão 28 - Fix UX "Migrar tudo" mostrava 0/16)
+- **Sintoma**: ao clicar "Migrar tudo" (Drive) aparecia "0/16 migrados · 0 falhas" e parecia que nada acontecia.
+- **Causa**: não era bug — todos os arquivos já estavam no Drive (`backend=drive`) de migração anterior; a ferramenta os pulava mas não exibia a contagem de "pulados".
+- **Fix**: `migrate_to_drive.py` e `routes/drive.py` agora retornam `grand_skipped`; `DriveConnectionCard.jsx` exibe "Todos os N arquivo(s) já estão no Drive — nada a migrar". Validado via curl (migrados=0, pulados=14).
+
 ### 29/05/2026 (sessão 27 - BUG CRÍTICO: valores inflados (trilhões) + ferramenta de correção)
 - **Sintoma**: contas exibindo valores absurdos (ex: R$ 1.138.130.000.000,00 por parcela; total em aberto em trilhões). Dados corrompidos só na PRODUÇÃO.
 - **Causa raiz**: na edição de contas, o frontend convertia valor→centavos com `(valor * 100).toString()`. Por ponto flutuante do JS, `1138.13*100 = 113813.00000000001`; ao remover não-dígitos e ler como centavos, explodia para 1.138.130.000.000,00. O valor real era R$ 1.138,13. Afetava qualquer valor com certos centavos (ex: 19,99 também).
