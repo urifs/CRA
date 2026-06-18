@@ -12,6 +12,11 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 18/06/2026 (sessão 34 - Ordenação por vencimento decrescente em todas as exportações)
+- **Pedido**: a ordem dos vencimentos nas exportações deve ser decrescente (mais recente primeiro), tanto no relatório de planos/subplanos quanto em todas as outras.
+- **Fix** (`exports_all.py`): (1) `generate_plano_contas_report` ordena as contas lançadas (pagar/receber) por `data_vencimento` desc; (2) `generate_pdf_report` ordena `data` por `data_vencimento` desc quando a coleção tem o campo (cobre export por categoria, combinada e "Exportar Selecionados"); (3) `export_excel` idem. Datas em "YYYY-MM-DD" → `reverse=True`.
+- **Validação**: curl `export/pdf/contas_pagar` → vencimentos 13/09 → 14/08 → 19/07 → ... → 20/05 (decrescente). ⚠️ Requer redeploy.
+
 ### 18/06/2026 (sessão 33 - FIX: contas lançadas em SUBPLANO não apareciam no relatório)
 - **Bug**: ao exportar um subplano (subconta nível 2), o relatório dizia "Nenhuma conta lançada neste plano" mesmo havendo várias. Causa: contas lançadas em subconta são vinculadas pelos campos `subconta_id`/`subconta_nome`, mas a query só buscava `plano_conta_id`/`plano_conta_nome`.
 - **Fix** (`generate_plano_contas_report`): vínculo agora distingue — subplano (nível 2) casa por `subconta_id`/`subconta_nome`; plano pai (nível 1) casa por `plano_conta_id`/`plano_conta_nome` E sem subconta (evita duplicar as contas que já saem na seção da subconta).

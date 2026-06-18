@@ -601,6 +601,11 @@ async def generate_pdf_report(category: str, data: list, title: str, centro_cust
     
     elements = []
     
+    # Ordena por data de vencimento DECRESCENTE (mais recente primeiro) quando a coleção
+    # possui esse campo. Aplica-se a todas as exportações de contas/aluguéis/etc.
+    if data and any(isinstance(d, dict) and d.get("data_vencimento") for d in data):
+        data = sorted(data, key=lambda d: str(d.get("data_vencimento") or ""), reverse=True)
+    
     # Logo CRA (tentar carregar do arquivo local)
     try:
         logo_path = "/app/frontend/public/logo.png"
@@ -1225,6 +1230,9 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
             ]}
         cp = await db["contas_pagar"].find(link_q, {"_id": 0}).to_list(1000)
         cr = await db["contas_receber"].find(link_q, {"_id": 0}).to_list(1000)
+        # Ordena por vencimento decrescente (mais recente primeiro)
+        cp = sorted(cp, key=lambda c: str(c.get("data_vencimento") or ""), reverse=True)
+        cr = sorted(cr, key=lambda c: str(c.get("data_vencimento") or ""), reverse=True)
 
         if not cp and not cr:
             elements.append(Paragraph("Nenhuma conta lançada neste plano.", normal_style))
@@ -3950,6 +3958,9 @@ async def export_excel(
 
     collection = db[config["collection"]]
     data = await collection.find(excel_filter, {"_id": 0}).to_list(5000)
+    # Ordena por vencimento decrescente (mais recente primeiro) quando aplicável
+    if data and any(isinstance(d, dict) and d.get("data_vencimento") for d in data):
+        data = sorted(data, key=lambda d: str(d.get("data_vencimento") or ""), reverse=True)
     
     excel_buffer = await generate_excel_report(config["collection"], data, config["title"])
     
