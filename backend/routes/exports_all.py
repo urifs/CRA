@@ -1083,6 +1083,139 @@ async def generate_pdf_report(category: str, data: list, title: str, centro_cust
     buffer.seek(0)
     return buffer
 
+async def generate_plano_contas_report(planos: list, centro_custo: Optional[str] = None) -> io.BytesIO:
+    """Relatório DETALHADO de Plano de Contas no padrão da plataforma.
+
+    Para cada plano/subplano selecionado mostra: dados (código, nome, tipo, conta pai)
+    e as CONTAS LANÇADAS nele (contas a pagar e a receber vinculadas), com totais.
+    Mantém o cabeçalho padrão (logo CRA + razão social) e tabelas de cabeçalho vermelho.
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2 * cm, bottomMargin=2 * cm, leftMargin=2 * cm, rightMargin=2 * cm)
+    styles = getSampleStyleSheet()
+    company = _company_name_for_export("plano_contas", centro_custo)
+
+    title_style = ParagraphStyle('PCTitle', parent=styles['Heading1'], fontSize=18, textColor=colors.black, alignment=TA_CENTER, spaceAfter=12)
+    rel_style = ParagraphStyle('PCRel', parent=styles['Heading2'], fontSize=14, textColor=colors.black, alignment=TA_CENTER, spaceAfter=4)
+    subtitle_style = ParagraphStyle('PCSub', parent=styles['Normal'], fontSize=10, textColor=colors.grey, alignment=TA_CENTER, spaceAfter=18)
+    plano_title_style = ParagraphStyle('PCPlano', parent=styles['Heading2'], fontSize=13, textColor=colors.black, spaceBefore=16, spaceAfter=2)
+    plano_meta_style = ParagraphStyle('PCPlanoMeta', parent=styles['Normal'], fontSize=9, textColor=colors.grey, spaceAfter=8)
+    section_style = ParagraphStyle('PCSection', parent=styles['Heading3'], fontSize=10, textColor=colors.HexColor("#dc3545"), spaceBefore=8, spaceAfter=4)
+    normal_style = ParagraphStyle('PCNormal', parent=styles['Normal'], fontSize=10, textColor=colors.black, spaceAfter=5)
+    cell_style = ParagraphStyle('PCCell', parent=styles['Normal'], fontSize=8, textColor=colors.black, wordWrap='LTR', leading=10)
+    hcell_style = ParagraphStyle('PCHCell', parent=styles['Normal'], fontSize=9, textColor=colors.white, fontName='Helvetica-Bold', leading=11)
+
+    def fmt_money(val):
+        try:
+            f = float(val or 0)
+            return "R$ " + f"{f:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        except (ValueError, TypeError):
+            return "R$ 0,00"
+
+    def fmt_date(val):
+        if not val:
+            return "-"
+        s = str(val).strip()[:10]
+        if len(s) == 10 and s[4] == '-':
+            return f"{s[8:10]}/{s[5:7]}/{s[0:4]}"
+        return s or "-"
+
+    _ST = {"quitada": "Quitada", "recebida": "Recebida", "em_aberto": "Em Aberto",
+           "pendente": "Pendente", "parcial": "Parcial", "cancelada": "Cancelada"}
+
+    def build_contas_table(contas, pessoa_field, pessoa_label):
+        rows = [[Paragraph(h, hcell_style) for h in ["Vencimento", "Descrição", pessoa_label, "Valor", "Status"]]]
+        total = 0.0
+        for c in contas:
+            valor = float(c.get("valor_final") or c.get("valor", 0) or 0)
+            total += valor
+            st = c.get("status", "")
+            rows.append([
+                Paragraph(fmt_date(c.get("data_vencimento")), cell_style),
+                Paragraph((c.get("descricao") or "-")[:50], cell_style),
+                Paragraph((c.get(pessoa_field) or "-")[:28], cell_style),
+                Paragraph(fmt_money(valor), cell_style),
+                Paragraph(_ST.get(st, st or "-"), cell_style),
+            ])
+        rows.append([
+            Paragraph("", cell_style), Paragraph("<b>TOTAL</b>", cell_style), Paragraph("", cell_style),
+            Paragraph(f"<b>{fmt_money(total)}</b>", cell_style), Paragraph("", cell_style),
+        ])
+        t = Table(rows, colWidths=[2.3 * cm, 6.2 * cm, 4 * cm, 2.5 * cm, 2 * cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#f5f5f5")),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        return t, total
+
+    elements = []
+    try:
+        logo_path = "/app/frontend/public/logo.png"
+        if os.path.exists(logo_path):
+            elements.append(RLImage(logo_path, width=3 * cm, height=3 * cm, kind='proportional'))
+            elements.append(Spacer(1, 10))
+    except Exception:
+        pass
+    elements.append(Paragraph(company, title_style))
+    elements.append(Paragraph("Relatório de Plano de Contas", rel_style))
+    elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}", subtitle_style))
+
+    # Resolve nome das contas pai
+    pai_ids = {p.get("pai_id") for p in planos if p.get("pai_id")}
+    pai_map = {}
+    if pai_ids:
+        async for pp in db.plano_contas.find({"id": {"$in": list(pai_ids)}}, {"_id": 0, "id": 1, "nome": 1}):
+            pai_map[pp["id"]] = pp.get("nome", "-")
+
+    planos_sorted = sorted(planos, key=lambda x: str(x.get("codigo") or x.get("nome") or ""))
+    total_geral = 0.0
+
+    for plano in planos_sorted:
+        plano_id = plano.get("id")
+        plano_nome = plano.get("nome", "")
+        codigo = plano.get("codigo") or "-"
+        tipo = "Receita" if plano.get("tipo") == "receita" else "Despesa"
+        is_sub = (plano.get("nivel") or 1) >= 2 or bool(plano.get("pai_id"))
+        pai_nome = pai_map.get(plano.get("pai_id")) or plano.get("conta_pai_nome") or "Raiz"
+        rotulo = "Subplano" if is_sub else "Plano de Contas"
+
+        elements.append(Paragraph(f"{rotulo}: {codigo} — {plano_nome}", plano_title_style))
+        elements.append(Paragraph(f"Tipo: {tipo}  ·  Conta Pai: {pai_nome}", plano_meta_style))
+
+        cp = await db["contas_pagar"].find({"$or": [{"plano_conta_id": plano_id}, {"plano_conta_nome": plano_nome}]}, {"_id": 0}).to_list(500)
+        cr = await db["contas_receber"].find({"$or": [{"plano_conta_id": plano_id}, {"plano_conta_nome": plano_nome}]}, {"_id": 0}).to_list(500)
+
+        if not cp and not cr:
+            elements.append(Paragraph("Nenhuma conta lançada neste plano.", normal_style))
+        if cp:
+            elements.append(Paragraph("CONTAS A PAGAR LANÇADAS", section_style))
+            t, tot = build_contas_table(cp, "fornecedor_nome", "Fornecedor")
+            elements.append(t)
+            total_geral += tot
+            elements.append(Spacer(1, 6))
+        if cr:
+            elements.append(Paragraph("CONTAS A RECEBER LANÇADAS", section_style))
+            t, tot = build_contas_table(cr, "cliente_nome", "Cliente")
+            elements.append(t)
+            total_geral += tot
+            elements.append(Spacer(1, 6))
+        elements.append(Spacer(1, 8))
+
+    elements.append(Spacer(1, 24))
+    footer_style = ParagraphStyle('PCFooter', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
+    elements.append(Paragraph(f"{company} - Sistema de Gestão Empresarial", footer_style))
+    elements.append(Paragraph(f"Documento gerado automaticamente em {datetime.now().strftime('%d/%m/%Y %H:%M')}", footer_style))
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+
 @exports_all_router.get("/export/pdf/{category}")
 async def export_pdf(
     category: str,
@@ -1644,11 +1777,10 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
-    # Plano de Contas: usa o gerador PADRÃO da plataforma (mesma tabela de cabeçalho
-    # vermelho dos demais relatórios) em vez do layout de recibo com títulos amarelos,
-    # mantendo a exportação no mesmo padrão das outras categorias.
+    # Plano de Contas: relatório DETALHADO no padrão da plataforma (logo + razão social,
+    # cabeçalho de tabela vermelho) com os dados do plano e as contas lançadas nele.
     if category == "plano_contas":
-        buffer = await generate_pdf_report("plano_contas", [item], "Plano de Contas")
+        buffer = await generate_plano_contas_report([item], None)
         return Response(
             content=buffer.getvalue(),
             media_type="application/pdf",
@@ -2376,7 +2508,11 @@ async def export_multiple_individual_items(data: MultipleItemsExport, current_us
     # passando a sub-categoria como collection-base para que o layout
     # contas_pagar/contas_receber/etc seja escolhido corretamente.
     base_category = config["collection"]
-    buffer = await generate_pdf_report(base_category, items, config["title"], centro_custo=data.centro_custo)
+    if base_category == "plano_contas":
+        # Plano de Contas: relatório detalhado com dados + contas lançadas em cada plano/subplano.
+        buffer = await generate_plano_contas_report(items, centro_custo=data.centro_custo)
+    else:
+        buffer = await generate_pdf_report(base_category, items, config["title"], centro_custo=data.centro_custo)
 
     await create_audit_log(current_user, "export", data.category, None, f"Múltiplos itens: {len(items)}")
 

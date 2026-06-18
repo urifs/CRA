@@ -12,6 +12,12 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 18/06/2026 (sessão 31 - Relatório detalhado de Plano de Contas com contas lançadas)
+- **Pedido**: o relatório de Plano de Contas não mostrava o nome do plano/subplano, código, nem as contas lançadas nem detalhes — só uma tabela seca (Código/Nome/Tipo/Conta Pai).
+- **Fix** (`/app/backend/routes/exports_all.py`): novo gerador `generate_plano_contas_report(planos, centro_custo)` no padrão da plataforma (logo CRA, razão social via centro de custo, cabeçalho de tabela VERMELHO, rodapé). Para cada plano/subplano selecionado: linha "Plano de Contas/Subplano: {código} — {nome}", Tipo + Conta Pai, e as tabelas "CONTAS A PAGAR/RECEBER LANÇADAS" (Vencimento, Descrição, Fornecedor/Cliente, Valor, Status) com TOTAL; se não houver, "Nenhuma conta lançada neste plano." Vínculo por `plano_conta_id`/`plano_conta_nome`.
+- Ambos os caminhos usam o novo gerador: `/export/individual/{cat}/{id}` (item único) e `/export/individual-multiple` (botão "Exportar Selecionados"). Removido o layout de recibo com títulos amarelos (#D4A000) para plano_contas.
+- **Validação**: curl (pai com conta lançada + subplano sem contas → HTTP 200) + analyze_file (confirma: sem amarelo, cabeçalhos vermelhos, layout profissional). ⚠️ Requer redeploy para produção.
+
 ### 18/06/2026 (sessão 30 - Padronização do PDF de exportação do Plano de Contas)
 - **Pedido**: "Exportar Selecionados" do Plano de Contas saía fora do padrão (títulos em amarelo, tabela desformatada).
 - **Causa**: a exportação de item único (`/export/individual/{cat}/{id}`) usa um layout de recibo com títulos amarelos (#D4A000) — fora do padrão de tabela vermelha usado pelos relatórios de lista.
