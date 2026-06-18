@@ -12,6 +12,11 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 18/06/2026 (sessão 32 - Relatório de Plano de Contas: máximo de informações por conta lançada)
+- **Pedido**: o relatório de Plano de Contas deve trazer o máximo de informações por conta lançada (referência: tela de Contas a Pagar de outro sistema — Documento, Emissão, Vencimento, Pagamento, Fornecedor/Cliente, Forma Pgto, Valor, Status, Observação).
+- **Fix** (`generate_plano_contas_report` em `exports_all.py`): relatório agora em **paisagem (landscape A4)**; tabela de contas lançadas expandida para 9 colunas — Doc. (com nº de parcela ex. "25566-2/3 (2/3)"), Emissão, Venc., Pagamento, Fornecedor/Cliente, Forma Pgto (mapeada: Boleto, Cartão Crédito, Carteira, PIX...), Valor, Status, Observação (observacoes→descricao) + linha TOTAL. Contas a receber usam data_recebimento (forma/doc inexistentes mostram "-").
+- **Validação**: curl + analyze_file confirmam paisagem 841×595, 9 colunas sem corte, cabeçalho vermelho, dados completos. ⚠️ Requer redeploy.
+
 ### 18/06/2026 (sessão 31 - Relatório detalhado de Plano de Contas com contas lançadas)
 - **Pedido**: o relatório de Plano de Contas não mostrava o nome do plano/subplano, código, nem as contas lançadas nem detalhes — só uma tabela seca (Código/Nome/Tipo/Conta Pai).
 - **Fix** (`/app/backend/routes/exports_all.py`): novo gerador `generate_plano_contas_report(planos, centro_custo)` no padrão da plataforma (logo CRA, razão social via centro de custo, cabeçalho de tabela VERMELHO, rodapé). Para cada plano/subplano selecionado: linha "Plano de Contas/Subplano: {código} — {nome}", Tipo + Conta Pai, e as tabelas "CONTAS A PAGAR/RECEBER LANÇADAS" (Vencimento, Descrição, Fornecedor/Cliente, Valor, Status) com TOTAL; se não houver, "Nenhuma conta lançada neste plano." Vínculo por `plano_conta_id`/`plano_conta_nome`.

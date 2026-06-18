@@ -1091,7 +1091,8 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
     Mantém o cabeçalho padrão (logo CRA + razão social) e tabelas de cabeçalho vermelho.
     """
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2 * cm, bottomMargin=2 * cm, leftMargin=2 * cm, rightMargin=2 * cm)
+    from reportlab.lib.pagesizes import landscape
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), topMargin=1.5 * cm, bottomMargin=1.5 * cm, leftMargin=1.2 * cm, rightMargin=1.2 * cm)
     styles = getSampleStyleSheet()
     company = _company_name_for_export("plano_contas", centro_custo)
 
@@ -1102,8 +1103,8 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
     plano_meta_style = ParagraphStyle('PCPlanoMeta', parent=styles['Normal'], fontSize=9, textColor=colors.grey, spaceAfter=8)
     section_style = ParagraphStyle('PCSection', parent=styles['Heading3'], fontSize=10, textColor=colors.HexColor("#dc3545"), spaceBefore=8, spaceAfter=4)
     normal_style = ParagraphStyle('PCNormal', parent=styles['Normal'], fontSize=10, textColor=colors.black, spaceAfter=5)
-    cell_style = ParagraphStyle('PCCell', parent=styles['Normal'], fontSize=8, textColor=colors.black, wordWrap='LTR', leading=10)
-    hcell_style = ParagraphStyle('PCHCell', parent=styles['Normal'], fontSize=9, textColor=colors.white, fontName='Helvetica-Bold', leading=11)
+    cell_style = ParagraphStyle('PCCell', parent=styles['Normal'], fontSize=7, textColor=colors.black, wordWrap='LTR', leading=9)
+    hcell_style = ParagraphStyle('PCHCell', parent=styles['Normal'], fontSize=7.5, textColor=colors.white, fontName='Helvetica-Bold', leading=10)
 
     def fmt_money(val):
         try:
@@ -1122,26 +1123,50 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
 
     _ST = {"quitada": "Quitada", "recebida": "Recebida", "em_aberto": "Em Aberto",
            "pendente": "Pendente", "parcial": "Parcial", "cancelada": "Cancelada"}
+    _FORMA = {"boleto": "Boleto", "dinheiro": "Dinheiro", "pix": "PIX", "cartao_credito": "Cartão Crédito",
+              "cartao_debito": "Cartão Débito", "cheque": "Cheque", "carteira": "Carteira", "deposito": "Depósito",
+              "transferencia": "Transferência", "debito_conta": "Débito Conta", "vale": "Vale", "cheque_pre": "Cheque Pré"}
 
-    def build_contas_table(contas, pessoa_field, pessoa_label):
-        rows = [[Paragraph(h, hcell_style) for h in ["Vencimento", "Descrição", pessoa_label, "Valor", "Status"]]]
+    def fmt_forma(f):
+        if not f:
+            return "-"
+        return _FORMA.get(str(f).lower(), str(f).replace("_", " ").title())
+
+    def doc_label(c):
+        d = c.get("numero_doc") or c.get("documento") or c.get("numero") or "-"
+        tp = c.get("total_parcelas") or 0
+        np_ = c.get("numero_parcela")
+        if tp and tp > 1 and np_:
+            return f"{d} ({np_}/{tp})"
+        return str(d)
+
+    def build_contas_table(contas, pessoa_field, pessoa_label, is_pagar):
+        headers = ["Doc.", "Emissão", "Venc.", "Pagamento", pessoa_label, "Forma Pgto", "Valor", "Status", "Observação"]
+        rows = [[Paragraph(h, hcell_style) for h in headers]]
         total = 0.0
         for c in contas:
             valor = float(c.get("valor_final") or c.get("valor", 0) or 0)
             total += valor
             st = c.get("status", "")
+            pag_date = c.get("data_pagamento") if is_pagar else c.get("data_recebimento")
+            obs = c.get("observacoes") or c.get("descricao") or "-"
             rows.append([
+                Paragraph(doc_label(c), cell_style),
+                Paragraph(fmt_date(c.get("data_emissao")), cell_style),
                 Paragraph(fmt_date(c.get("data_vencimento")), cell_style),
-                Paragraph((c.get("descricao") or "-")[:50], cell_style),
-                Paragraph((c.get(pessoa_field) or "-")[:28], cell_style),
+                Paragraph(fmt_date(pag_date), cell_style),
+                Paragraph((c.get(pessoa_field) or "-")[:32], cell_style),
+                Paragraph(fmt_forma(c.get("forma_pagamento")) if is_pagar else "-", cell_style),
                 Paragraph(fmt_money(valor), cell_style),
                 Paragraph(_ST.get(st, st or "-"), cell_style),
+                Paragraph((obs or "-")[:60], cell_style),
             ])
         rows.append([
-            Paragraph("", cell_style), Paragraph("<b>TOTAL</b>", cell_style), Paragraph("", cell_style),
-            Paragraph(f"<b>{fmt_money(total)}</b>", cell_style), Paragraph("", cell_style),
+            Paragraph("", cell_style), Paragraph("", cell_style), Paragraph("", cell_style), Paragraph("", cell_style),
+            Paragraph("", cell_style), Paragraph("<b>TOTAL</b>", cell_style),
+            Paragraph(f"<b>{fmt_money(total)}</b>", cell_style), Paragraph("", cell_style), Paragraph("", cell_style),
         ])
-        t = Table(rows, colWidths=[2.3 * cm, 6.2 * cm, 4 * cm, 2.5 * cm, 2 * cm])
+        t = Table(rows, colWidths=[2.6 * cm, 1.9 * cm, 1.9 * cm, 2.1 * cm, 4.3 * cm, 2.3 * cm, 2.4 * cm, 1.9 * cm, 6.5 * cm])
         t.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#dc3545")),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -1194,13 +1219,13 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
             elements.append(Paragraph("Nenhuma conta lançada neste plano.", normal_style))
         if cp:
             elements.append(Paragraph("CONTAS A PAGAR LANÇADAS", section_style))
-            t, tot = build_contas_table(cp, "fornecedor_nome", "Fornecedor")
+            t, tot = build_contas_table(cp, "fornecedor_nome", "Fornecedor", True)
             elements.append(t)
             total_geral += tot
             elements.append(Spacer(1, 6))
         if cr:
             elements.append(Paragraph("CONTAS A RECEBER LANÇADAS", section_style))
-            t, tot = build_contas_table(cr, "cliente_nome", "Cliente")
+            t, tot = build_contas_table(cr, "cliente_nome", "Cliente", False)
             elements.append(t)
             total_geral += tot
             elements.append(Spacer(1, 6))
