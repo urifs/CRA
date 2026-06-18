@@ -12,6 +12,11 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 18/06/2026 (sessão 33 - FIX: contas lançadas em SUBPLANO não apareciam no relatório)
+- **Bug**: ao exportar um subplano (subconta nível 2), o relatório dizia "Nenhuma conta lançada neste plano" mesmo havendo várias. Causa: contas lançadas em subconta são vinculadas pelos campos `subconta_id`/`subconta_nome`, mas a query só buscava `plano_conta_id`/`plano_conta_nome`.
+- **Fix** (`generate_plano_contas_report`): vínculo agora distingue — subplano (nível 2) casa por `subconta_id`/`subconta_nome`; plano pai (nível 1) casa por `plano_conta_id`/`plano_conta_nome` E sem subconta (evita duplicar as contas que já saem na seção da subconta).
+- **Validação**: curl com seed cobrindo os 2 cenários — subplano sozinho traz sua conta; pai+subplano (cascata) traz a conta direta no pai e a da subconta separadamente, sem duplicação. ⚠️ Requer redeploy.
+
 ### 18/06/2026 (sessão 32 - Relatório de Plano de Contas: máximo de informações por conta lançada)
 - **Pedido**: o relatório de Plano de Contas deve trazer o máximo de informações por conta lançada (referência: tela de Contas a Pagar de outro sistema — Documento, Emissão, Vencimento, Pagamento, Fornecedor/Cliente, Forma Pgto, Valor, Status, Observação).
 - **Fix** (`generate_plano_contas_report` em `exports_all.py`): relatório agora em **paisagem (landscape A4)**; tabela de contas lançadas expandida para 9 colunas — Doc. (com nº de parcela ex. "25566-2/3 (2/3)"), Emissão, Venc., Pagamento, Fornecedor/Cliente, Forma Pgto (mapeada: Boleto, Cartão Crédito, Carteira, PIX...), Valor, Status, Observação (observacoes→descricao) + linha TOTAL. Contas a receber usam data_recebimento (forma/doc inexistentes mostram "-").

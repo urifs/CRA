@@ -1212,8 +1212,19 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
         elements.append(Paragraph(f"{rotulo}: {codigo} — {plano_nome}", plano_title_style))
         elements.append(Paragraph(f"Tipo: {tipo}  ·  Conta Pai: {pai_nome}", plano_meta_style))
 
-        cp = await db["contas_pagar"].find({"$or": [{"plano_conta_id": plano_id}, {"plano_conta_nome": plano_nome}]}, {"_id": 0}).to_list(500)
-        cr = await db["contas_receber"].find({"$or": [{"plano_conta_id": plano_id}, {"plano_conta_nome": plano_nome}]}, {"_id": 0}).to_list(500)
+        # Vínculo das contas lançadas:
+        # - Subplano (nível 2): contas onde ele é a SUBCONTA (subconta_id/subconta_nome).
+        # - Plano pai (nível 1): contas lançadas DIRETAMENTE nele (plano_conta_id/nome) e
+        #   sem subconta — as contas das subcontas saem na seção da própria subconta (evita duplicar).
+        if is_sub:
+            link_q = {"$or": [{"subconta_id": plano_id}, {"subconta_nome": plano_nome}]}
+        else:
+            link_q = {"$and": [
+                {"$or": [{"plano_conta_id": plano_id}, {"plano_conta_nome": plano_nome}]},
+                {"$or": [{"subconta_id": {"$in": [None, ""]}}, {"subconta_id": {"$exists": False}}]},
+            ]}
+        cp = await db["contas_pagar"].find(link_q, {"_id": 0}).to_list(1000)
+        cr = await db["contas_receber"].find(link_q, {"_id": 0}).to_list(1000)
 
         if not cp and not cr:
             elements.append(Paragraph("Nenhuma conta lançada neste plano.", normal_style))
