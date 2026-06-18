@@ -762,14 +762,26 @@ async def generate_pdf_report(category: str, data: list, title: str, centro_cust
                     cell(str(item.get("estoque", 0)))
                 ])
         elif category == "plano_contas":
+            # Resolve nome da conta pai para as subcontas e ordena por código
+            pai_ids = {item.get("pai_id") for item in data if item.get("pai_id")}
+            pai_map = {}
+            if pai_ids:
+                async for p in db.plano_contas.find({"id": {"$in": list(pai_ids)}}, {"_id": 0, "id": 1, "nome": 1}):
+                    pai_map[p["id"]] = p.get("nome", "-")
+            data = sorted(data, key=lambda x: str(x.get("codigo") or x.get("nome") or ""))
             headers = [cell("Código", True), cell("Nome", True), cell("Tipo", True), cell("Conta Pai", True)]
             table_data = [headers]
             for item in data:
+                pai_nome = pai_map.get(item.get("pai_id")) or item.get("pai_nome") or "Raiz"
+                # Subcontas (nível 2) recebem um leve recuo visual no nome
+                nome = item.get("nome", "-")
+                if (item.get("nivel") or 1) >= 2 or item.get("pai_id"):
+                    nome = f"» {nome}"
                 table_data.append([
                     cell(item.get("codigo", "-")),
-                    cell(item.get("nome", "-")),
+                    cell(nome),
                     cell("Receita" if item.get("tipo") == "receita" else "Despesa"),
-                    cell(item.get("pai_nome", "Raiz"))
+                    cell(pai_nome)
                 ])
         elif category == "centros_custo":
             headers = [cell("Código", True), cell("Nome", True), cell("Descrição", True)]
@@ -1429,7 +1441,7 @@ async def get_export_items(
     Aceita filtro de período opcional (data_inicio/data_fim em YYYY-MM-DD) — quando passado,
     filtra pelo campo de data principal da coleção (ex.: data_vencimento p/ contas)."""
     valid_collections = {
-        "plano_contas": {"name_field": "nome", "id_field": "id", "collection": "plano_contas"},
+        "plano_contas": {"name_field": "nome", "id_field": "id", "collection": "plano_contas", "extra_fields": ["codigo", "nivel", "pai_id", "tipo"]},
         "centros_custo": {"name_field": "nome", "id_field": "id", "collection": "centros_custo"},
         "fleets": {"name_field": "name", "id_field": "id", "collection": "fleets"},
         "cadastros": {"name_field": "nome", "id_field": "id", "collection": "cadastros"},

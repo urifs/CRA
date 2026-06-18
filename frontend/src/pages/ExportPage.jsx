@@ -458,12 +458,22 @@ export default function ExportPage({ module = "gerenciamento" }) {
     setSelectedIndividualItems(prev => {
       const current = prev[subcategoryId] || [];
       const isSelected = current.includes(itemId);
-      return {
-        ...prev,
-        [subcategoryId]: isSelected 
-          ? current.filter(id => id !== itemId)
-          : [...current, itemId]
-      };
+      // Plano de Contas: selecionar um plano pai (nível 1) inclui automaticamente
+      // todas as suas subcontas; desmarcá-lo remove as subcontas também.
+      let affectedIds = [itemId];
+      if (subcategoryId === 'plano_contas') {
+        const all = subcategoryItems[subcategoryId] || [];
+        const item = all.find(i => i.id === itemId);
+        const isParent = item && ((item.nivel || 1) === 1) && !item.pai_id;
+        if (isParent) {
+          const childIds = all.filter(c => c.pai_id === itemId).map(c => c.id);
+          affectedIds = [itemId, ...childIds];
+        }
+      }
+      const set = new Set(current);
+      if (isSelected) affectedIds.forEach(id => set.delete(id));
+      else affectedIds.forEach(id => set.add(id));
+      return { ...prev, [subcategoryId]: Array.from(set) };
     });
   };
 
@@ -1351,7 +1361,40 @@ export default function ExportPage({ module = "gerenciamento" }) {
                             {/* Header com ações em lote + lista filtrada (compartilham `filteredItems`) */}
                             {(() => {
                               const searchTerm = (itemSearch[sub.id] || "").trim().toLowerCase();
-                              const filteredItems = !searchTerm
+                              let filteredItems;
+                              if (sub.id === 'plano_contas') {
+                                // Monta hierarquia: plano pai (nível 1) seguido de suas subcontas (nível 2) indentadas.
+                                const matchPC = (i) =>
+                                  !searchTerm ||
+                                  `${i.name || ""} ${i.codigo || ""}`.toLowerCase().includes(searchTerm);
+                                const parents = items.filter((i) => (i.nivel || 1) === 1 && !i.pai_id);
+                                const childrenByParent = {};
+                                items.forEach((i) => {
+                                  if (i.pai_id) (childrenByParent[i.pai_id] ||= []).push(i);
+                                });
+                                const sortByCodigo = (a, b) =>
+                                  String(a.codigo || a.name || "").localeCompare(String(b.codigo || b.name || ""), "pt-BR", { numeric: true });
+                                filteredItems = [];
+                                parents.sort(sortByCodigo).forEach((p) => {
+                                  const kids = (childrenByParent[p.id] || []).sort(sortByCodigo);
+                                  const parentMatch = matchPC(p);
+                                  const matchingKids = kids.filter(matchPC);
+                                  if (parentMatch) {
+                                    filteredItems.push({ ...p, _depth: 0, _isParent: true, _childCount: kids.length });
+                                    kids.forEach((c) => filteredItems.push({ ...c, _depth: 1 }));
+                                  } else if (matchingKids.length) {
+                                    filteredItems.push({ ...p, _depth: 0, _isParent: true, _childCount: kids.length });
+                                    matchingKids.forEach((c) => filteredItems.push({ ...c, _depth: 1 }));
+                                  }
+                                });
+                                // Subcontas órfãs (pai inexistente) — exibe se casar com a busca
+                                const parentIds = new Set(parents.map((p) => p.id));
+                                items
+                                  .filter((i) => i.pai_id && !parentIds.has(i.pai_id) && matchPC(i))
+                                  .sort(sortByCodigo)
+                                  .forEach((c) => filteredItems.push({ ...c, _depth: 0 }));
+                              } else {
+                                filteredItems = !searchTerm
                                 ? items
                                 : items.filter((item) => {
                                     const haystack = [
@@ -1375,6 +1418,7 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                       .toLowerCase();
                                     return haystack.includes(searchTerm);
                                   });
+                              }
                               const selectedIds = selectedIndividualItems[sub.id] || [];
                               const visibleIds = filteredItems.map(i => i.id);
                               const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
@@ -1436,9 +1480,11 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                   return (
                                     <div
                                       key={item.id}
+                                      style={item._depth ? { marginLeft: `${item._depth * 24}px` } : undefined}
                                       className={`flex items-center gap-3 bg-white rounded-lg px-3 py-2 border transition-colors ${
                                         isItemSelected ? 'border-purple-500 bg-purple-50' : 'border-purple-200 hover:border-purple-400'
-                                      }`}
+                                      } ${item._depth ? 'border-l-4 border-l-purple-300' : ''}`}
+                                      data-testid={`export-item-${sub.id}-${item.id}`}
                                     >
                                       <Checkbox 
                                         checked={isItemSelected}
@@ -1446,8 +1492,21 @@ export default function ExportPage({ module = "gerenciamento" }) {
                                         className="shrink-0"
                                       />
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900" title={item.name}>
-                                          {item.name || "Sem descrição"}
+                                        <p className="text-sm font-medium text-gray-900 flex items-center gap-2 flex-wrap" title={item.name}>
+                                          {item.codigo && (
+                                            <span className="font-mono text-xs text-purple-600">{item.codigo}</span>
+                                          )}
+                                          <span>{item.name || "Sem descrição"}</span>
+                                          {item._isParent && item._childCount > 0 && (
+                                            <span className="text-[10px] font-semibold uppercase tracking-wide bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                                              {item._childCount} subplano{item._childCount > 1 ? "s" : ""}
+                                            </span>
+                                          )}
+                                          {item._depth > 0 && (
+                                            <span className="text-[10px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                                              subplano
+                                            </span>
+                                          )}
                                         </p>
                                         {/* Informações extras dependendo do tipo */}
                                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">

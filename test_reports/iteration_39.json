@@ -1,0 +1,31 @@
+{
+  "summary": "Validação da hierarquia/cascata no Plano de Contas dentro de /administrativo/exportar. Backend (curl) confirmou GET /api/export/items/plano_contas devolve 6 itens com campos codigo/nivel/pai_id/tipo, e POST /api/export/individual-multiple retorna HTTP 200 + PDF válido (%PDF-1.4, 36KB) ao enviar parent+child ids. Frontend: tela /administrativo/exportar renderiza corretamente a HIERARQUIA. Após clicar expand-plano_contas, vê-se 1.0 TEST_Despesas Operacionais [badge '2 subplanos'] com 1.1 e 2.1 indentados (margin-left + border-l-purple-300 + badge 'subplano'), e 2.0 TEST_Receitas de Serviços [badge '2 subplanos'] com 2.1.1 e 2.1.2 indentados. Códigos exibidos em monospace antes do nome. Cascata funcionando: clicar checkbox do pai 1.0 marca 3 (pai + 2 filhos com pai_id correto); desmarcar pai zera. Clicar somente em filho 1.1 marca apenas 1. Busca por '1.1' retorna 4 linhas (1.0 pai porque 1.1 filho casa, 1.1, 2.0 pai porque 2.1.1 filho casa, 2.1.1). Busca por 'Despesas' retorna 3 linhas (pai 1.0 + seus 2 filhos por pai_id). Botão 'Exportar Selecionados' aparece quando ao menos 1 item está selecionado.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/administrativo/exportar (todas as páginas com Layout)", "issues": ["Console warning de hydration: '<span> cannot be a child of <select>/<option>' originado pelo visual editor da Emergent (x-ve-dynamic). NÃO é bug do código da aplicação, já documentado em iterations anteriores."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_export_apis.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ExportPage.jsx 1365-1395: lógica IIFE de hierarquia para plano_contas está bem isolada e correta — quando o pai casa com a busca, mostra todos os filhos; quando só filhos casam, mostra pai + filhos que casam (contexto preservado). Bom UX.",
+    "ExportPage.jsx 463-471 toggleIndividualItem: cascata pai->filhos identifica parent por (nivel===1 && !pai_id). Funciona com o dataset real onde pai_id é '' (string vazia) — '!pai_id' avalia true. OK. Considerar normalizar pai_id null/'' no backend para evitar bugs futuros se o schema mudar.",
+    "Observação de dados de seed: TEST_Serviços de Manutenção (codigo 2.1, tipo=despesa) tem pai_id apontando para o parent de Despesas (ca7848ea), o que faz com que apareça como filho de 1.0 e não de 2.0. Isso é dado seed inconsistente (código 2.x deveria estar sob parent 2.0), mas a tela responde corretamente à hierarquia que o backend devolve."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (GET items + POST individual-multiple OK via curl)", "frontend": "95% (hierarquia, cascata, busca, botão Exportar Selecionados — todos OK; download via Playwright não capturado pelo expect_download mas isso é limitação do teste pois o backend retorna PDF 200 ok)"},
+  "test_credentials": "test@test.com / password (admin)",
+  "seed_data_creation": "Nenhuma nova seed criada. Usou seed existente: 6 planos TEST_ no DB (ca7848ea Despesas Operacionais 1.0, a34e7807 1.1, 0b348c36 Receitas 2.0, e80e8e07 2.1, 265ebf95 2.1.1, 725d03c5 2.1.2).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Para acessar a tela: login (Entrar) -> click card 'Administrativo' Acessar -> /administrativo/exportar. Plano de Contas fica dentro da categoria 'Contabilidade' (já vem expandida). Use data-testid 'expand-plano_contas' (botão) para abrir a lista, 'search-plano_contas' para buscar, e 'export-item-plano_contas-<id>' para cada linha. Cuidado: o link da sidebar 'Plano de Contas' colide com get_by_text — sempre use data-testid ou scope para 'main'.",
+  "rca_of_issues": "N/A — todos os fluxos da hierarquia/cascata/busca passam. Comportamento de export confirmado por backend curl (PDF 200)."
+}
