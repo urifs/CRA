@@ -1644,6 +1644,17 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
+    # Plano de Contas: usa o gerador PADRÃO da plataforma (mesma tabela de cabeçalho
+    # vermelho dos demais relatórios) em vez do layout de recibo com títulos amarelos,
+    # mantendo a exportação no mesmo padrão das outras categorias.
+    if category == "plano_contas":
+        buffer = await generate_pdf_report("plano_contas", [item], "Plano de Contas")
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=CRA_Plano_de_Contas_{item_id[:8]}.pdf"},
+        )
+    
     # Função auxiliar para formatar valor
     def fmt_valor(v):
         if v is None or v == "":

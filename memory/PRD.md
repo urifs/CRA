@@ -12,6 +12,12 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 18/06/2026 (sessão 30 - Padronização do PDF de exportação do Plano de Contas)
+- **Pedido**: "Exportar Selecionados" do Plano de Contas saía fora do padrão (títulos em amarelo, tabela desformatada).
+- **Causa**: a exportação de item único (`/export/individual/{cat}/{id}`) usa um layout de recibo com títulos amarelos (#D4A000) — fora do padrão de tabela vermelha usado pelos relatórios de lista.
+- **Fix** (`/app/backend/routes/exports_all.py`): em `export_individual_item`, `category == "plano_contas"` agora é roteado para `generate_pdf_report` (tabela padrão: logo CRA, cabeçalho vermelho, Código/Nome/Tipo/Conta Pai, rodapé). O `/export/individual-multiple` já usava esse gerador. Resultado: TODAS as exportações de plano de contas ficam no mesmo padrão.
+- **Validação**: curl — single e multiple retornam "Relatório de Plano de Contas" com tabela padrão (sem amarelo). ⚠️ Requer redeploy para refletir em produção.
+
 ### 18/06/2026 (sessão 29 - Exportação Plano de Contas hierárquica com subplanos)
 - **Pedido**: na ferramenta de exportação, os subplanos (subcontas, nível 2) do Plano de Contas não apareciam de forma identificável e não dava para exportar só um subplano selecionado.
 - **Decisão do usuário**: selecionar o plano pai (nível 1) → exporta o pai + TODOS os subplanos; selecionar subplanos específicos → exporta só os selecionados.
