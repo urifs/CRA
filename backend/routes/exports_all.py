@@ -1204,6 +1204,41 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
 
     planos_sorted = sorted(planos, key=lambda x: str(x.get("codigo") or x.get("nome") or ""))
     total_geral = 0.0
+    grand_cp = 0.0
+    grand_cr = 0.0
+
+    resumo_label_style = ParagraphStyle('PCResLbl', parent=styles['Normal'], fontSize=9, textColor=colors.black, fontName='Helvetica-Bold')
+    resumo_val_style = ParagraphStyle('PCResVal', parent=styles['Normal'], fontSize=9, textColor=colors.black)
+
+    def build_resumo(tot_cp, tot_cr, titulo):
+        saldo = tot_cr - tot_cp
+        if saldo < -0.005:
+            saldo_txt = f"Falta pagar: {fmt_money(abs(saldo))}"
+            saldo_color = "#dc3545"
+        elif saldo > 0.005:
+            saldo_txt = f"Saldo a receber: {fmt_money(saldo)}"
+            saldo_color = "#198754"
+        else:
+            saldo_txt = "Saldo zerado"
+            saldo_color = "#555555"
+        rows = [[
+            Paragraph(titulo, resumo_label_style),
+            Paragraph("Total a Pagar", resumo_label_style), Paragraph(fmt_money(tot_cp), resumo_val_style),
+            Paragraph("Total a Receber", resumo_label_style), Paragraph(fmt_money(tot_cr), resumo_val_style),
+            Paragraph("Saldo (Receber − Pagar)", resumo_label_style),
+            Paragraph(f'<font color="{saldo_color}"><b>{saldo_txt}</b></font>', resumo_val_style),
+        ]]
+        rt = Table(rows, colWidths=[3.2 * cm, 2.8 * cm, 2.6 * cm, 2.9 * cm, 2.6 * cm, 4.3 * cm, 4.6 * cm])
+        rt.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f3f3')),
+            ('BOX', (0, 0), (-1, -1), 0.6, colors.HexColor('#cccccc')),
+            ('LINEBEFORE', (1, 0), (1, -1), 0.4, colors.HexColor('#dddddd')),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        return rt
 
     for plano in planos_sorted:
         plano_id = plano.get("id")
@@ -1236,19 +1271,31 @@ async def generate_plano_contas_report(planos: list, centro_custo: Optional[str]
 
         if not cp and not cr:
             elements.append(Paragraph("Nenhuma conta lançada neste plano.", normal_style))
+        tot_cp = 0.0
+        tot_cr = 0.0
         if cp:
             elements.append(Paragraph("CONTAS A PAGAR LANÇADAS", section_style))
-            t, tot = build_contas_table(cp, "fornecedor_nome", "Fornecedor", True)
+            t, tot_cp = build_contas_table(cp, "fornecedor_nome", "Fornecedor", True)
             elements.append(t)
-            total_geral += tot
             elements.append(Spacer(1, 6))
         if cr:
             elements.append(Paragraph("CONTAS A RECEBER LANÇADAS", section_style))
-            t, tot = build_contas_table(cr, "cliente_nome", "Cliente", False)
+            t, tot_cr = build_contas_table(cr, "cliente_nome", "Cliente", False)
             elements.append(t)
-            total_geral += tot
             elements.append(Spacer(1, 6))
+        # Subtotal do plano/subplano: pagar, receber e saldo (quanto falta pagar/receber)
+        if cp or cr:
+            elements.append(build_resumo(tot_cp, tot_cr, "RESUMO DESTE PLANO"))
+            grand_cp += tot_cp
+            grand_cr += tot_cr
+            total_geral += tot_cp + tot_cr
         elements.append(Spacer(1, 8))
+
+    # Resumo geral consolidado (quando há mais de um plano/subplano com lançamentos)
+    if (grand_cp or grand_cr):
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph("RESUMO GERAL", section_style))
+        elements.append(build_resumo(grand_cp, grand_cr, "TODOS OS SELECIONADOS"))
 
     elements.append(Spacer(1, 24))
     footer_style = ParagraphStyle('PCFooter', parent=styles['Normal'], fontSize=8, textColor=colors.grey, alignment=TA_CENTER)

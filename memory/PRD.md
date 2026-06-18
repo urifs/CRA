@@ -12,6 +12,11 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 18/06/2026 (sessão 35 - Subtotal/saldo (pagar x receber) no relatório de Plano de Contas)
+- **Pedido**: quando um plano/subplano tem contas a pagar e a receber, mostrar o subtotal, a subtração (um menos o outro) e quanto falta pagar ou receber.
+- **Fix** (`generate_plano_contas_report`): após as tabelas de cada plano/subplano, caixa "RESUMO DESTE PLANO" com **Total a Pagar**, **Total a Receber** e **Saldo (Receber − Pagar)** → "Falta pagar: R$ X" (vermelho) se negativo, "Saldo a receber: R$ X" (verde) se positivo, ou "Saldo zerado". Ao final, caixa **RESUMO GERAL** consolidando todos os planos/subplanos selecionados.
+- **Validação**: curl + analyze_file — ex.: Pagar 15.085,62 / Receber 1.241,12 / Falta pagar 13.844,50; textos legíveis, sem corte. ⚠️ Requer redeploy.
+
 ### 18/06/2026 (sessão 34 - Ordenação por vencimento decrescente em todas as exportações)
 - **Pedido**: a ordem dos vencimentos nas exportações deve ser decrescente (mais recente primeiro), tanto no relatório de planos/subplanos quanto em todas as outras.
 - **Fix** (`exports_all.py`): (1) `generate_plano_contas_report` ordena as contas lançadas (pagar/receber) por `data_vencimento` desc; (2) `generate_pdf_report` ordena `data` por `data_vencimento` desc quando a coleção tem o campo (cobre export por categoria, combinada e "Exportar Selecionados"); (3) `export_excel` idem. Datas em "YYYY-MM-DD" → `reverse=True`.
