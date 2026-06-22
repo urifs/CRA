@@ -12,6 +12,12 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 22/06/2026 (sessão 36 - Quantidade em Valores Adicionais da OS)
+- **Pedido**: cada valor adicional da Ordem de Serviço precisa de um campo Quantidade, e o total da OS deve ser a soma de (valor unitário × quantidade) − desconto.
+- **Frontend** (`OrdensServicoPage.jsx`): adicionado input **Qtd** (padrão 1) e **Subtotal** (valor×qtd, somente leitura) por item; "Valor Total da OS" recalculado como Σ(valor×qtd) − desconto; submit envia `quantidade`; edição preserva a quantidade (default 1 para OS antigas).
+- **Backend**: `OrdemServicoCreate.valores_extras` é `List[dict]` (extra=allow) → persiste `quantidade` sem mudança de modelo. PDF da OS (`admin.py`) passou a exibir a coluna Qtd e o total da linha = valor×qtd.
+- **Validação**: curl (OS 5500×2 + 1500×3 → total 15.500; PDF com 11.000/4.500/15.500) + testing agent frontend 100% (subtotais ao vivo, total automático, edição preserva qtd). ⚠️ Requer redeploy.
+
 ### 18/06/2026 (sessão 35 - Subtotal/saldo (pagar x receber) no relatório de Plano de Contas)
 - **Pedido**: quando um plano/subplano tem contas a pagar e a receber, mostrar o subtotal, a subtração (um menos o outro) e quanto falta pagar ou receber.
 - **Fix** (`generate_plano_contas_report`): após as tabelas de cada plano/subplano, caixa "RESUMO DESTE PLANO" com **Total a Pagar**, **Total a Receber** e **Saldo (Receber − Pagar)** → "Falta pagar: R$ X" (vermelho) se negativo, "Saldo a receber: R$ X" (verde) se positivo, ou "Saldo zerado". Ao final, caixa **RESUMO GERAL** consolidando todos os planos/subplanos selecionados.
