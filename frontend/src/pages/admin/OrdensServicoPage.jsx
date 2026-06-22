@@ -400,8 +400,9 @@ export default function OrdensServicoPage() {
           maquina_id: v.maquina_id || "",
           maquina_nome: v.maquina_nome || "",
           valor: Number(v.valor) || 0,
+          quantidade: Number(v.quantidade) > 0 ? Number(v.quantidade) : 1,
         }));
-      const totalExtras = extras.reduce((s, v) => s + v.valor, 0);
+      const totalExtras = extras.reduce((s, v) => s + v.valor * v.quantidade, 0);
       const valorFinal = totalExtras - valorDesconto;
 
       const dataToSend = {
@@ -496,7 +497,7 @@ export default function OrdensServicoPage() {
             if (v == null) return [k, baseEmpty[k]];
             if (k.startsWith("data_")) return [k, String(v).split("T")[0]];
             if (k.startsWith("valor_") && k !== "valores_extras") return [k, String(v)];
-            if (k === "valores_extras") return [k, Array.isArray(v) ? v : []];
+            if (k === "valores_extras") return [k, Array.isArray(v) ? v.map((x) => ({ ...x, quantidade: Number(x.quantidade) > 0 ? Number(x.quantidade) : 1 })) : []];
             if (k.endsWith("_ids")) return [k, Array.isArray(v) ? v : []];
             return [k, v];
           })
@@ -1061,7 +1062,7 @@ export default function OrdensServicoPage() {
                       className="h-7 px-2 text-xs"
                       onClick={() => setFormData({
                         ...formData,
-                        valores_extras: [...(formData.valores_extras || []), { descricao: "", maquina_id: "", maquina_nome: "", valor: "" }]
+                        valores_extras: [...(formData.valores_extras || []), { descricao: "", maquina_id: "", maquina_nome: "", valor: "", quantidade: 1 }]
                       })}
                       data-testid="btn-add-valor-extra"
                     >
@@ -1074,7 +1075,7 @@ export default function OrdensServicoPage() {
                   )}
                   {(formData.valores_extras || []).map((v, idx) => (
                     <div key={idx} className="grid grid-cols-12 gap-2 mt-2 items-end border-b border-amber-200/60 pb-2 last:border-b-0">
-                      <div className="col-span-4">
+                      <div className="col-span-3">
                         <label className="text-[11px] text-gray-500">Descrição</label>
                         <Input
                           value={v.descricao}
@@ -1087,7 +1088,7 @@ export default function OrdensServicoPage() {
                           data-testid={`input-valor-extra-desc-${idx}`}
                         />
                       </div>
-                      <div className="col-span-4">
+                      <div className="col-span-3">
                         <label className="text-[11px] text-gray-500">Máquina vinculada <span className="text-gray-400">(opcional)</span></label>
                         <Select
                           value={v.maquina_id || "none"}
@@ -1119,8 +1120,32 @@ export default function OrdensServicoPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="col-span-3">
-                        <label className="text-[11px] text-gray-500">Valor</label>
+                      <div className="col-span-1">
+                        <label className="text-[11px] text-gray-500">Qtd</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={v.quantidade ?? 1}
+                          onChange={(e) => {
+                            const arr = [...formData.valores_extras];
+                            const q = parseFloat(e.target.value);
+                            arr[idx] = { ...arr[idx], quantidade: isNaN(q) || q <= 0 ? "" : q };
+                            setFormData({ ...formData, valores_extras: arr });
+                          }}
+                          onBlur={(e) => {
+                            if (!e.target.value || Number(e.target.value) <= 0) {
+                              const arr = [...formData.valores_extras];
+                              arr[idx] = { ...arr[idx], quantidade: 1 };
+                              setFormData({ ...formData, valores_extras: arr });
+                            }
+                          }}
+                          className="text-center"
+                          data-testid={`input-valor-extra-qtd-${idx}`}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-gray-500">Valor unitário</label>
                         <MoneyInput
                           value={v.valor}
                           onChange={(num) => {
@@ -1130,6 +1155,15 @@ export default function OrdensServicoPage() {
                           }}
                           data-testid={`input-valor-extra-val-${idx}`}
                         />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-gray-500">Subtotal</label>
+                        <div
+                          className="h-9 flex items-center px-2 rounded-md bg-gray-100 text-sm font-semibold text-gray-800 truncate"
+                          data-testid={`valor-extra-subtotal-${idx}`}
+                        >
+                          {formatCurrency((Number(v.valor) || 0) * (Number(v.quantidade) > 0 ? Number(v.quantidade) : 1))}
+                        </div>
                       </div>
                       <div className="col-span-1">
                         <Button
@@ -1167,11 +1201,11 @@ export default function OrdensServicoPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-xs text-gray-600 uppercase tracking-wide font-semibold">Valor Total da OS</span>
-                      <p className="text-[11px] text-gray-500">Soma dos valores adicionais − desconto</p>
+                      <p className="text-[11px] text-gray-500">Soma de (valor × quantidade) − desconto</p>
                     </div>
                     <span className="text-2xl font-bold text-[#D4A000]" data-testid="os-valor-total-calc">
                       {formatCurrency(
-                        (formData.valores_extras || []).reduce((s, v) => s + (Number(v.valor) || 0), 0)
+                        (formData.valores_extras || []).reduce((s, v) => s + (Number(v.valor) || 0) * (Number(v.quantidade) > 0 ? Number(v.quantidade) : 1), 0)
                         - (Number(formData.valor_desconto) || 0)
                       )}
                     </span>

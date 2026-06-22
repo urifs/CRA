@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend testing of Ordem de Serviço (OS) Valores Adicionais with new Quantidade (Qtd) field. All UI calculations and edit-load persistence verified successfully via Playwright on REACT_APP_BACKEND_URL.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "create_modal_qtd_field": "PASS - new Qtd input (data-testid input-valor-extra-qtd-{idx}) appears with default value 1 when adding a row via btn-add-valor-extra",
+    "live_subtotal_per_item": "PASS - Subtotal for item 0 (Qtd=2, Valor=R$ 5.500,00) shows R$ 11.000,00 (valor-extra-subtotal-0). Subtotal for item 1 (Qtd=3, Valor=R$ 1.500,00) shows R$ 4.500,00 (valor-extra-subtotal-1)",
+    "auto_computed_total_os": "PASS - os-valor-total-calc shows R$ 15.500,00 (11.000 + 4.500) when no discount; updates to R$ 15.000,00 with R$ 500 discount entered in input-valor-desconto (formula: sum(valor*qtd) - desconto)",
+    "edit_load_preserves_quantidade": "PASS - Created OS via API with quantidade=[2,3], reopened via edit pencil in list. Modal showed Qtd 0='2' and Qtd 1='3' (NOT reset to 1), subtotals R$ 11.000,00 and R$ 4.500,00, total R$ 15.500,00",
+    "list_view_total": "PASS - OS row in list shows valor_total R$ 15.500,00 (e.g. OS-21 Test OS with quantidades visible after creation)",
+    "pdf_export_button": "PASS (UI present) - btn-export-os-{id} exists; backend endpoint /api/admin/ordens-servico/{id}/export-pdf reachable. Backend PDF rendering already validated per E1 (subtotals 11.000/4.500, total 15.500)"
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "OrdensServicoPage.jsx is 1573 lines - exceeds 700-line guideline. Consider splitting OS form, list, filters, and export logic into smaller modules for maintainability.",
+    "Qtd onBlur snaps empty/<=0 values back to 1 (line 1136-1142) which is correct UX; handleSubmit also defensively coerces quantidade>0 (line 403). Good defense-in-depth.",
+    "MoneyInput uses cents-based mask (digits/100). Edit-load passes numeric value via useEffect sync, correctly displays existing R$ 5.500,00 on reopen."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (skipped per request)", "frontend": "100%" },
+  "test_credentials": "test@test.com / password (admin) - confirmed in /app/memory/test_credentials.md",
+  "seed_data_creation": "Created and deleted one temporary OS via API (TEST_QTD_PRESERVE) to validate edit-load behavior; cleanup DELETE returned 200. No residual test data.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Frontend OS Qtd feature fully working: live subtotal per row, auto-computed Valor Total (sum(valor*qtd) - desconto), edit-load preserves quantidade. OS route is /administrativo/ordens-servico (not /ordens-servico). Login flow: /login -> /select-system -> direct goto OS URL. Token stored in localStorage as 'token'. PDF endpoint is /api/admin/ordens-servico/{id}/export-pdf (NOT /pdf).",
+  "rca of the issue": "No bugs found. Feature implementation verified end-to-end in frontend."
+}

@@ -427,13 +427,20 @@ async def export_ordem_servico_pdf(ordem_id: str):
             v_val = float(ve.get("valor") or 0)
         except (TypeError, ValueError):
             v_val = 0
+        try:
+            v_qtd = float(ve.get("quantidade") or 1)
+            if v_qtd <= 0:
+                v_qtd = 1
+        except (TypeError, ValueError):
+            v_qtd = 1
+        v_total = v_val * v_qtd
         v_desc = ve.get("descricao") or "Adicional"
         v_maq = ve.get("maquina_nome") or ""
         if v_maq:
             v_desc = f"{v_desc}<br/><font size='6' color='#666'>Máquina: {v_maq}</font>"
-        rows.append(["-", "1", "UN", Paragraph(v_desc, style_value),
-                     _brl(v_val), _brl(v_val), _brl(0), _brl(v_val)])
-        sub_total += v_val
+        rows.append(["-", f"{v_qtd:g}", "UN", Paragraph(v_desc, style_value),
+                     _brl(v_val), _brl(v_total), _brl(0), _brl(v_total)])
+        sub_total += v_total
 
     t_itens = Table(rows, colWidths=[1.8 * cm, 1.2 * cm, 1.0 * cm, 6.4 * cm, 2.0 * cm, 2.0 * cm, 2.0 * cm, 3.0 * cm])
     t_itens.setStyle(TableStyle([
