@@ -12,6 +12,14 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 22/06/2026 (sessão 38 - Exportação inline nas Contas + PDF da OS compacto)
+- **Pedido 1**: PDF da OS mais compacto (fontes e grades menores) para caber melhor e evitar página final quase vazia.
+  - **Fix** (`admin.py`): reduzidas fontes (label 7→6, value 8→7, section 9→8, itens 7.5→6.5), paddings das tabelas (3/4/5 → 2/2/3), espaçamentos e padding da assinatura (12→8). Validado: OS com vários campos cabe em 1 página com assinatura.
+- **Pedido 2**: botões de exportação direto em cada linha de Contas a Pagar/Receber (detalhado padrão + recibo), sem ir na ferramenta de exportação.
+  - **Frontend** (`ContasPagarPage.jsx`, `ContasReceberPage.jsx`): função `exportarConta(id, tipo)` + 2 botões por linha (FileText=detalhado, Receipt=recibo) com spinner; download via `/export/individual/{cat}/{id}` e `/export/recibo/{cat}/{id}`.
+  - **Fix backend**: corrigido bug pré-existente de HTTP 500 em `export_individual_item` (Paragraph(None) quando `conta_bancaria_nome` etc. era nulo) — sanitização de campos não-numéricos nulos → "-".
+- **Validação**: testing agent (iteration_41) backend 100% (4 rotas 200 + PDF) e frontend 100% (botões, downloads, toasts). ⚠️ Requer redeploy.
+
 ### 22/06/2026 (sessão 37 - PDF da OS: bloco de assinatura/rodapé sem quebra de página)
 - **Pedido**: evitar página final quase vazia no PDF da OS — no caso reportado, só o nome do cliente e o rodapé ficaram numa folha em branco (a tabela de assinaturas se dividia: linhas numa página, rótulos na outra).
 - **Fix** (`admin.py` export-pdf): bloco de assinaturas (linhas + Atendente/Cliente + nome) + rodapé agrupados em `KeepTogether`, impedindo divisão entre páginas. Se couber na página atual, fica nela; senão vai inteiro para a próxima.
