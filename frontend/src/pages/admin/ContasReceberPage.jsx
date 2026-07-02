@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, Search, Wallet, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Paperclip, UserPlus, Landmark, History, DollarSign, CircleDot, FileDown, TrendingUp, TrendingDown
+  Plus, Search, Wallet, Calendar, CheckCircle2, AlertCircle, Clock, Edit, Trash2, X, Paperclip, UserPlus, Landmark, History, DollarSign, CircleDot, FileDown, TrendingUp, TrendingDown, FileText, Receipt, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -395,6 +395,37 @@ export default function ContasReceberPage() {
     } catch (error) { toast.error("Erro ao excluir"); }
   };
 
+  // Exporta a conta em PDF diretamente da lista: tipo "detalhado" (padrão) ou "recibo"
+  const [exportandoId, setExportandoId] = useState(null);
+  const exportarConta = async (id, tipo) => {
+    setExportandoId(`${tipo}-${id}`);
+    try {
+      const endpoint = tipo === "recibo"
+        ? `${API}/export/recibo/contas_receber/${id}`
+        : `${API}/export/individual/contas_receber/${id}`;
+      const response = await axios.get(endpoint, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const cd = response.headers["content-disposition"];
+      let filename = `CRA_conta_receber_${tipo}_${id.slice(0, 8)}.pdf`;
+      if (cd) {
+        const m = cd.match(/filename=(.+)/);
+        if (m) filename = m[1].replace(/"/g, "");
+      }
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(tipo === "recibo" ? "Recibo exportado!" : "Relatório exportado!");
+    } catch (error) {
+      toast.error("Erro ao exportar PDF");
+    } finally {
+      setExportandoId(null);
+    }
+  };
+
   const openModal = (conta = null) => {
     if (conta) {
       setEditingConta(conta);
@@ -704,6 +735,8 @@ export default function ContasReceberPage() {
                         {(c.status === "em_aberto" || c.status === "pendente" || c.status === "parcial") && <Button size="sm" variant="outline" className="text-green-600" onClick={() => openQuitarModal(c)} title={c.status === "parcial" ? "Registrar Recebimento" : "Quitar"} data-testid={`quitar-btn-${c.id}`}><CheckCircle2 size={14} /></Button>}
                         {(c.recebimentos && c.recebimentos.length > 0) && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setQuitarContaInfo(c); setShowHistoricoRecebimentos(true); }} title="Ver Histórico"><History size={14} /></Button>}
                         <Button size="sm" variant="outline" onClick={() => openModal(c)}><Edit size={14} /></Button>
+                        <Button size="sm" variant="outline" className="text-slate-700" disabled={exportandoId === `detalhado-${c.id}`} onClick={() => exportarConta(c.id, "detalhado")} title="Exportar relatório detalhado (PDF)" data-testid={`export-detalhado-${c.id}`}>{exportandoId === `detalhado-${c.id}` ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}</Button>
+                        <Button size="sm" variant="outline" className="text-[#0f766e]" disabled={exportandoId === `recibo-${c.id}`} onClick={() => exportarConta(c.id, "recibo")} title="Exportar recibo (PDF)" data-testid={`export-recibo-${c.id}`}>{exportandoId === `recibo-${c.id}` ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />}</Button>
                         {(c.status === "em_aberto" || c.status === "pendente") && <Button size="sm" variant="outline" className="text-[#E31A1A]" onClick={() => handleCancelar(c.id)} title="Cancelar"><X size={14} /></Button>}
                         <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></Button>
                       </div>

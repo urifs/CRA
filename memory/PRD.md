@@ -12,6 +12,11 @@ ERP Full-stack (React + FastAPI + MongoDB) para gestão de Frota, Finanças, RH 
 
 ## Histórico de Implementações
 
+### 22/06/2026 (sessão 37 - PDF da OS: bloco de assinatura/rodapé sem quebra de página)
+- **Pedido**: evitar página final quase vazia no PDF da OS — no caso reportado, só o nome do cliente e o rodapé ficaram numa folha em branco (a tabela de assinaturas se dividia: linhas numa página, rótulos na outra).
+- **Fix** (`admin.py` export-pdf): bloco de assinaturas (linhas + Atendente/Cliente + nome) + rodapé agrupados em `KeepTogether`, impedindo divisão entre páginas. Se couber na página atual, fica nela; senão vai inteiro para a próxima.
+- **Validação**: curl + pypdf — com conteúdo longo forçando 2 páginas, linhas (`____`), rótulos, nome do cliente e rodapé "Sistema CRA" ficam todos juntos na mesma página. ⚠️ Requer redeploy.
+
 ### 22/06/2026 (sessão 36 - Quantidade em Valores Adicionais da OS)
 - **Pedido**: cada valor adicional da Ordem de Serviço precisa de um campo Quantidade, e o total da OS deve ser a soma de (valor unitário × quantidade) − desconto.
 - **Frontend** (`OrdensServicoPage.jsx`): adicionado input **Qtd** (padrão 1) e **Subtotal** (valor×qtd, somente leitura) por item; "Valor Total da OS" recalculado como Σ(valor×qtd) − desconto; submit envia `quantidade`; edição preserva a quantidade (default 1 para OS antigas).

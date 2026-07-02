@@ -1,0 +1,39 @@
+{
+  "summary": "Testado o novo recurso de exportação inline (Detalhado + Recibo) nas linhas de Contas a Pagar e Contas a Receber. Todos os 4 fluxos funcionaram: botões renderizados por linha, downloads reais de PDF e toasts corretos. Backend validado por curl (todas as 4 rotas retornam 200 + application/pdf).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ContasPagarPage / ContasReceberPage", "issues": ["Aviso de hidratação (não bloqueante) no console: <span> como filho de <tbody>/<tr>. Aparentemente causado por wrapper de dev-tool (data-ve-dynamic). Pré-existente, não relacionado a este feature."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "exportarConta está duplicado em ContasPagarPage e ContasReceberPage — considerar extrair para hook useExportConta(categoria) para DRY.",
+    "ContasPagarPage.jsx e ContasReceberPage.jsx têm >1600 linhas — recomendado dividir em subcomponentes (tabela, filtros, modal)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "test@test.com / password",
+  "seed_data_creation": "Nenhum. Foram usadas contas existentes (42 em CP, 16 em CR).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Rotas corretas: /administrativo/a-pagar e /administrativo/a-receber. Endpoints backend: /api/export/individual/{contas_pagar|contas_receber}/{id} e /api/export/recibo/{contas_pagar|contas_receber}/{id}. Ambos retornam application/pdf ~37KB.",
+  "verification_details": {
+    "backend_endpoints_tested": {
+      "/api/export/individual/contas_pagar/{id}": "HTTP 200, application/pdf, 37429 bytes",
+      "/api/export/recibo/contas_pagar/{id}": "HTTP 200, application/pdf, 37349 bytes",
+      "/api/export/individual/contas_receber/{id}": "HTTP 200, application/pdf, 37439 bytes",
+      "/api/export/recibo/contas_receber/{id}": "HTTP 200, application/pdf, 37359 bytes"
+    },
+    "frontend_flow": {
+      "CP_detalhado": "Download CRA_Conta_a_Pagar_*.pdf + toast 'Relatório exportado!'",
+      "CP_recibo": "Download CRA_Recibo_*.pdf + toast 'Recibo exportado!'",
+      "CR_detalhado": "Download CRA_Conta_a_Receber_*.pdf + toast 'Relatório exportado!'",
+      "CR_recibo": "Download CRA_Recibo_*.pdf + toast 'Recibo exportado!'"
+    },
+    "data_testids_verified": ["export-detalhado-{id}", "export-recibo-{id}"]
+  }
+}

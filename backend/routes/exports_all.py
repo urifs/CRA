@@ -1886,6 +1886,16 @@ async def export_individual_item(category: str, item_id: str, current_user: dict
             return f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         except:
             return str(v)
+
+    # Sanitiza campos NULOS (None) que não são numéricos → "-" para evitar
+    # falha do ReportLab ao renderizar Paragraph(None). O default de .get(k, "-")
+    # não cobre valores None quando a chave existe.
+    _NUMERIC_KEYS = {
+        "valor", "valor_final", "valor_pago", "valor_recebido", "saldo_restante",
+        "desconto", "valor_desconto", "juros", "multa", "acrescimo", "valor_original",
+        "total_parcelas", "numero_parcela",
+    }
+    item = {k: ("-" if (v is None and k not in _NUMERIC_KEYS) else v) for k, v in item.items()}
     
     # Criar PDF
     buffer = io.BytesIO()

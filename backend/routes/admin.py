@@ -49,7 +49,7 @@ async def export_ordem_servico_pdf(ordem_id: str):
     """Exporta a Ordem de Serviço (DAV-OS) em PDF no formato STT."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, KeepTogether
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
     import io
@@ -150,15 +150,15 @@ async def export_ordem_servico_pdf(ordem_id: str):
                             author="CRA Construtora")
     elements = []
 
-    # Estilos
-    style_label = ParagraphStyle("L", fontSize=7, fontName="Helvetica-Bold", textColor=colors.HexColor("#444"))
-    style_value = ParagraphStyle("V", fontSize=8, fontName="Helvetica", leading=10, wordWrap="CJK")
-    style_warn = ParagraphStyle("W", fontSize=7, fontName="Helvetica-Bold",
+    # Estilos (compactos)
+    style_label = ParagraphStyle("L", fontSize=6, fontName="Helvetica-Bold", textColor=colors.HexColor("#444"))
+    style_value = ParagraphStyle("V", fontSize=7, fontName="Helvetica", leading=8.5, wordWrap="CJK")
+    style_warn = ParagraphStyle("W", fontSize=6, fontName="Helvetica-Bold",
                                 textColor=colors.HexColor("#C62828"), alignment=1)
-    style_section = ParagraphStyle("S", fontSize=9, fontName="Helvetica-Bold",
+    style_section = ParagraphStyle("S", fontSize=8, fontName="Helvetica-Bold",
                                    textColor=colors.white, alignment=0)
-    style_brand = ParagraphStyle("Brand", fontSize=8, fontName="Helvetica-Bold",
-                                 textColor=colors.HexColor("#0f766e"), alignment=1, leading=10)
+    style_brand = ParagraphStyle("Brand", fontSize=7, fontName="Helvetica-Bold",
+                                 textColor=colors.HexColor("#0f766e"), alignment=1, leading=8.5)
 
     # Cabeçalho compacto: logo CRA à esquerda + identificação da OS + empresa
     from reportlab.platypus import Image as RLImage
@@ -187,20 +187,20 @@ async def export_ordem_servico_pdf(ordem_id: str):
         ("ALIGN", (0, 0), (0, 0), "CENTER"),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
     ]))
     elements.append(cab_table)
     # Linha divisória teal (identidade visual CRA)
     div = Table([[""]], colWidths=[19.4 * cm])
     div.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 1.2, colors.HexColor("#0f766e"))]))
     elements.append(div)
-    elements.append(Spacer(1, 0.1 * cm))
+    elements.append(Spacer(1, 0.08 * cm))
     elements.append(Paragraph(
         "NÃO É DOCUMENTO FISCAL — NÃO É VÁLIDO COMO RECIBO E COMO GARANTIA DE MERCADORIA — NÃO COMPROVA PAGAMENTO",
         style_warn,
     ))
-    elements.append(Spacer(1, 0.2 * cm))
+    elements.append(Spacer(1, 0.12 * cm))
 
     # Identificação do destinatário
     elements.append(Table(
@@ -208,7 +208,7 @@ async def export_ordem_servico_pdf(ordem_id: str):
         colWidths=[19.4 * cm],
         style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#444")),
                           ("LEFTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
-                          ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]),
+                          ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]),
     ))
 
     def _kv(label, value):
@@ -236,12 +236,12 @@ async def export_ordem_servico_pdf(ordem_id: str):
         ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#f0f0f0")),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     elements.append(t_cli)
-    elements.append(Spacer(1, 0.15 * cm))
+    elements.append(Spacer(1, 0.08 * cm))
 
     # Dados da obra/atendimento
     elements.append(Table(
@@ -249,7 +249,7 @@ async def export_ordem_servico_pdf(ordem_id: str):
         colWidths=[19.4 * cm],
         style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#444")),
                           ("LEFTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
-                          ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]),
+                          ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]),
     ))
     obra_data = [
         [_kv("End. Entrega", ordem.get("endereco_entrega"))[0], _kv("End. Entrega", ordem.get("endereco_entrega"))[1],
@@ -294,12 +294,12 @@ async def export_ordem_servico_pdf(ordem_id: str):
         ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#f0f0f0")),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     elements.append(t_obra)
-    elements.append(Spacer(1, 0.15 * cm))
+    elements.append(Spacer(1, 0.08 * cm))
 
     # Vínculos opcionais — Máquinas / Frotas / Fornecedores
     vinculos_data = []
@@ -347,7 +347,7 @@ async def export_ordem_servico_pdf(ordem_id: str):
             colWidths=[19.4 * cm],
             style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#444")),
                               ("LEFTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
-                              ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]),
+                              ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]),
         ))
         t_v = Table(vinculos_data, colWidths=[2.8 * cm, 16.6 * cm])
         t_v.setStyle(TableStyle([
@@ -355,12 +355,12 @@ async def export_ordem_servico_pdf(ordem_id: str):
             ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
             ("LEFTPADDING", (0, 0), (-1, -1), 4),
             ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         elements.append(t_v)
-        elements.append(Spacer(1, 0.15 * cm))
+        elements.append(Spacer(1, 0.08 * cm))
 
     # Descrição geral do serviço — SEMPRE exibida, mesmo quando há valores adicionais.
     if ordem.get("descricao"):
@@ -369,7 +369,7 @@ async def export_ordem_servico_pdf(ordem_id: str):
             colWidths=[19.4 * cm],
             style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#444")),
                               ("LEFTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
-                              ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]),
+                              ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]),
         ))
         desc_table = Table(
             [[Paragraph(str(ordem.get("descricao")).replace("\n", "<br/>"), style_value)]],
@@ -384,7 +384,7 @@ async def export_ordem_servico_pdf(ordem_id: str):
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         elements.append(desc_table)
-        elements.append(Spacer(1, 0.15 * cm))
+        elements.append(Spacer(1, 0.08 * cm))
 
     # Tabela de serviços
     elements.append(Table(
@@ -392,7 +392,7 @@ async def export_ordem_servico_pdf(ordem_id: str):
         colWidths=[19.4 * cm],
         style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#444")),
                           ("LEFTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 3),
-                          ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]),
+                          ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]),
     ))
     itens = ordem.get("itens") or []
     rows = [["Código", "Qtde", "UN", "Descrição Serviço", "Vlr Un.", "Vlr Total", "Vlr Desc", "Total Líq."]]
@@ -447,18 +447,18 @@ async def export_ordem_servico_pdf(ordem_id: str):
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#444")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+        ("FONTSIZE", (0, 0), (-1, -1), 6.5),
         ("ALIGN", (1, 1), (2, -1), "CENTER"),
         ("ALIGN", (4, 1), (-1, -1), "RIGHT"),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#bbb")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
         ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
     ]))
     elements.append(t_itens)
-    elements.append(Spacer(1, 0.15 * cm))
+    elements.append(Spacer(1, 0.08 * cm))
 
     # Resumo financeiro
     desc_geral = float(ordem.get("valor_desconto") or 0) + desc_total
@@ -500,23 +500,24 @@ async def export_ordem_servico_pdf(ordem_id: str):
             + (f" — {ordem.get('condicao_pagamento')}" if ordem.get("condicao_pagamento") else ""),
             style_value,
         ))
-        elements.append(Spacer(1, 0.15 * cm))
+        elements.append(Spacer(1, 0.08 * cm))
 
     # Observações de serviços / notas gerais — exibir TODOS os campos preenchidos
     if ordem.get("observacao_servicos"):
         elements.append(Paragraph("<b>OBSERVAÇÃO DOS SERVIÇOS:</b>", style_value))
         elements.append(Paragraph(str(ordem["observacao_servicos"]).replace("\n", "<br/>"), style_value))
-        elements.append(Spacer(1, 0.15 * cm))
+        elements.append(Spacer(1, 0.08 * cm))
     if ordem.get("notas_gerais"):
         elements.append(Paragraph("<b>NOTAS GERAIS:</b>", style_value))
         elements.append(Paragraph(str(ordem["notas_gerais"]).replace("\n", "<br/>"), style_value))
-        elements.append(Spacer(1, 0.15 * cm))
+        elements.append(Spacer(1, 0.08 * cm))
     if ordem.get("observacoes"):
         elements.append(Paragraph("<b>OBSERVAÇÕES:</b>", style_value))
         elements.append(Paragraph(str(ordem["observacoes"]).replace("\n", "<br/>"), style_value))
-        elements.append(Spacer(1, 0.3 * cm))
+        elements.append(Spacer(1, 0.12 * cm))
 
-    # Assinaturas
+    # Assinaturas — bloco mantido inteiro junto com o rodapé para evitar quebra
+    # entre páginas (linhas numa folha e nomes na outra) e páginas quase vazias.
     assinatura_data = [
         ["_" * 40, "_" * 40],
         [Paragraph(f"<b>Atendente</b><br/>{ordem.get('atendente_nome') or ordem.get('responsavel_nome') or '-'}",
@@ -526,20 +527,27 @@ async def export_ordem_servico_pdf(ordem_id: str):
     ]
     t_ass = Table(assinatura_data, colWidths=[9.7 * cm, 9.7 * cm])
     t_ass.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                               ("TOPPADDING", (0, 0), (-1, -1), 12),
+                               ("TOPPADDING", (0, 0), (-1, -1), 8),
                                ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
-    elements.append(t_ass)
 
     # Rodapé corporativo padronizado
-    elements.append(Spacer(1, 0.4 * cm))
     style_footer = ParagraphStyle(
         "Foot", fontSize=7, fontName="Helvetica", alignment=1,
         textColor=colors.HexColor("#94a3b8"),
     )
-    elements.append(Paragraph(
+    rodape = Paragraph(
         f"CRA Construtora · Documento gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')} pelo Sistema CRA",
         style_footer,
-    ))
+    )
+
+    # KeepTogether garante que assinaturas + rodapé não sejam separados nem
+    # divididos; se não couber no rodapé da página atual, vão juntos para a próxima.
+    elements.append(KeepTogether([
+        Spacer(1, 0.3 * cm),
+        t_ass,
+        Spacer(1, 0.25 * cm),
+        rodape,
+    ]))
 
     doc.build(elements)
     buffer.seek(0)
