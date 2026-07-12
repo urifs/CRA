@@ -1,0 +1,27 @@
+{
+  "summary": "Validated new partial payment (pendente) flow for Contas a Pagar e Contas a Receber via UI. Partial no longer counts until manually confirmed. Confirmar/Reverter cycle works. Quitar Total ainda quita imediatamente.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Contas a Pagar table", "issues": ["Hydration warning: <span data-ve-dynamic> wrapper is being rendered as child of <tbody> and <tr>, breaking HTML validity. Coming from Emergent editor overlay (x-excluded=true). Non-blocking but produces console errors."]}
+    ]
+  },
+  "test_report_links": ["/app/.screenshots/cr_done.png"],
+  "action_items": [
+    "(Optional) Investigate stale valor_pago local state after Reverter: when user Reverts a paid entry and immediately clicks 'Quitar Total' in the same page, the pre-fill uses stale saldo (previous confirmed value), causing full quitação to be short. Reproduce: partial 300 -> confirmar -> reverter -> open quitar modal -> Quitar Total -> only R$700 was pago in a R$1000 conta. Refreshing the account state after confirmarPagamento/Reverter, or recomputing saldo from server response, resolves it. Not a blocker but user-facing subtlety."
+  ],
+  "critical_code_review_comments": [
+    "ContasPagarPage.jsx state after confirmarPagamento/Reverter may not refresh quitarContaInfo.valor_pago, causing stale saldo pre-fill on subsequent Quitar Total.",
+    "Hydration errors due to editor wrapper spans inside tbody/tr — cosmetic only in preview env."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "test@test.com / password",
+  "seed_data_creation": "Created and cleaned 2x contas-pagar + 1x contas-receber prefixed TEST_",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All partial-payment flows verified end-to-end via UI: badge testids pagamento-status-<id>/recebimento-status-<id>, btn-confirmar-pagamento-<id>/btn-confirmar-recebimento-<id>, btn-reverter-pagamento-<id>/btn-reverter-recebimento-<id>. Toasts confirm pendente / confirmado / revertido. Full 'Quitar Total' still marks Quitada instantly.",
+  "rca of the issue": "N/A - feature works as expected."
+}

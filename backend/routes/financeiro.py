@@ -512,6 +512,27 @@ async def update_conta_pagar(
     return await db.contas_pagar.find_one({"id": id}, {"_id": 0})
 
 
+def _recompute_conta_state(lancamentos: list, valor_total: float):
+    """Recalcula (valor_confirmado, saldo, status) a partir dos lançamentos.
+    Conta APENAS entradas com status 'pago'. Entradas antigas sem 'status' são
+    consideradas 'pago' (compatibilidade com dados existentes)."""
+    pago = 0.0
+    for p in (lancamentos or []):
+        if p.get("status", "pago") == "pago":
+            pago += float(p.get("valor") or 0)
+    pago = round(pago, 2)
+    if valor_total and pago >= valor_total - 0.01:
+        return pago, 0.0, "quitada"
+    if pago > 0.01:
+        return pago, round(valor_total - pago, 2), "parcial"
+    return 0.0, round(valor_total, 2), "em_aberto"
+
+
+class ConfirmarPagamentoRequest(BaseModel):
+    pago: Optional[bool] = True
+    conta_bancaria_id: Optional[str] = None
+
+
 @financeiro_router.patch("/contas-pagar/{id}/quitar")
 async def quitar_conta_pagar(
     id: str,
@@ -526,25 +547,26 @@ async def quitar_conta_pagar(
     conta_bancaria_id = data.conta_bancaria_id if data else None
 
     valor_total = conta.get("valor_final") or conta.get("valor", 0)
-    valor_ja_pago = conta.get("valor_pago", 0) or 0
-    saldo_restante_atual = valor_total - valor_ja_pago
+    pagamentos_historico = conta.get("pagamentos", []) or []
 
-    valor_pago_agora = data.valor_pago if data and data.valor_pago is not None else saldo_restante_atual
+    ja_pago = sum(float(p.get("valor") or 0) for p in pagamentos_historico if p.get("status", "pago") == "pago")
+    ja_pendente = sum(float(p.get("valor") or 0) for p in pagamentos_historico if p.get("status", "pago") == "a_pagar")
 
-    if valor_pago_agora > saldo_restante_atual + 0.01:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Valor pago ({valor_pago_agora:.2f}) excede o saldo restante ({saldo_restante_atual:.2f})",
-        )
+    # Pagamento PARCIAL (usuário informou um valor) é registrado como PENDENTE ("a pagar"):
+    # não soma ao total pago nem move o banco até ser CONFIRMADO manualmente.
+    # Quitação TOTAL (valor_pago ausente) continua confirmada na hora.
+    registrar_pendente = bool(data and data.valor_pago is not None)
 
-    novo_valor_pago = valor_ja_pago + valor_pago_agora
-    novo_saldo_restante = valor_total - novo_valor_pago
-
-    if novo_saldo_restante <= 0.01:
-        novo_status = "quitada"
-        novo_saldo_restante = 0
+    if registrar_pendente:
+        valor_pago_agora = data.valor_pago
+        disponivel = valor_total - ja_pago - ja_pendente
+        if valor_pago_agora > disponivel + 0.01:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Valor ({valor_pago_agora:.2f}) excede o saldo ainda não lançado ({disponivel:.2f})",
+            )
     else:
-        novo_status = "parcial"
+        valor_pago_agora = valor_total - ja_pago - ja_pendente
 
     pagamento_registro = {
         "id": str(uuid.uuid4()),
@@ -555,16 +577,16 @@ async def quitar_conta_pagar(
         "valor_desconto": (data.valor_desconto or 0) if data else 0,
         "conta_bancaria_id": conta_bancaria_id,
         "observacao": data.observacao if data else None,
+        "status": "a_pagar" if registrar_pendente else "pago",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.get("name", current_user.get("email", "")),
     }
-
-    # Valor líquido realmente movimentado no banco (incluindo juros/multa/desconto)
-    ajuste_liquido = ((data.valor_juros or 0) + (data.valor_multa or 0) - (data.valor_desconto or 0)) if data else 0
-    valor_liquido_movimentado = valor_pago_agora + ajuste_liquido
-
-    pagamentos_historico = conta.get("pagamentos", []) or []
+    if not registrar_pendente:
+        pagamento_registro["data_confirmacao"] = data_pagamento
     pagamentos_historico.append(pagamento_registro)
+
+    # Estado da conta considera apenas lançamentos CONFIRMADOS (status pago)
+    novo_valor_pago, novo_saldo_restante, novo_status = _recompute_conta_state(pagamentos_historico, valor_total)
 
     update_data = {
         "status": novo_status,
@@ -576,7 +598,10 @@ async def quitar_conta_pagar(
     if novo_status == "quitada":
         update_data["data_pagamento"] = data_pagamento
 
-    if conta_bancaria_id:
+    # Movimenta o banco apenas quando o lançamento já entra confirmado (quitação total)
+    if conta_bancaria_id and not registrar_pendente:
+        ajuste_liquido = ((data.valor_juros or 0) + (data.valor_multa or 0) - (data.valor_desconto or 0)) if data else 0
+        valor_liquido_movimentado = valor_pago_agora + ajuste_liquido
         update_data["conta_bancaria_id"] = conta_bancaria_id
         conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
         if conta_bancaria:
@@ -588,18 +613,88 @@ async def quitar_conta_pagar(
 
     await db.contas_pagar.update_one({"id": id}, {"$set": update_data})
 
-    tipo_quitacao = "QUITADA" if novo_status == "quitada" else f"PAGAMENTO PARCIAL R$ {valor_pago_agora:.2f}"
+    if registrar_pendente:
+        tipo_quitacao = f"PAGAMENTO PARCIAL PENDENTE R$ {valor_pago_agora:.2f}"
+        msg = "Pagamento parcial registrado como PENDENTE (a pagar). Confirme como pago para somar ao total."
+    else:
+        tipo_quitacao = "QUITADA" if novo_status == "quitada" else f"PAGAMENTO R$ {valor_pago_agora:.2f}"
+        msg = "Pagamento registrado com sucesso"
     await create_audit_log(
         current_user, "update", "conta_pagar", id,
         f"{conta['descricao']} - {tipo_quitacao} em {data_pagamento}",
         module="Administrativo", snapshot=conta, reversible=True,
     )
     return {
-        "message": "Pagamento registrado com sucesso",
+        "message": msg,
         "data_pagamento": data_pagamento,
         "valor_pago": valor_pago_agora,
         "valor_total_pago": novo_valor_pago,
         "saldo_restante": novo_saldo_restante,
+        "status": novo_status,
+        "pendente": registrar_pendente,
+        "pagamento_id": pagamento_registro["id"],
+    }
+
+
+@financeiro_router.patch("/contas-pagar/{id}/pagamento/{pagamento_id}/confirmar")
+async def confirmar_pagamento_pagar(
+    id: str, pagamento_id: str,
+    data: Optional[ConfirmarPagamentoRequest] = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Confirma (marca como PAGO) ou reverte para pendente um pagamento parcial.
+    Só ao confirmar o valor é somado ao total pago da conta e movido no banco."""
+    conta = await db.contas_pagar.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    pagamentos = conta.get("pagamentos", []) or []
+    entry = next((p for p in pagamentos if p.get("id") == pagamento_id), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Lançamento de pagamento não encontrado")
+
+    marcar_pago = data.pago if (data and data.pago is not None) else True
+    estava_pago = entry.get("status", "pago") == "pago"
+    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    entry["status"] = "pago" if marcar_pago else "a_pagar"
+    if marcar_pago:
+        entry["data_confirmacao"] = hoje
+        if data and data.conta_bancaria_id:
+            entry["conta_bancaria_id"] = data.conta_bancaria_id
+
+    valor_total = conta.get("valor_final") or conta.get("valor", 0)
+    novo_valor_pago, novo_saldo, novo_status = _recompute_conta_state(pagamentos, valor_total)
+    update = {
+        "pagamentos": pagamentos,
+        "valor_pago": novo_valor_pago,
+        "saldo_restante": novo_saldo,
+        "status": novo_status,
+    }
+    if novo_status == "quitada":
+        update["data_pagamento"] = entry.get("data") or hoje
+
+    # Movimenta o banco somente na transição de status
+    cb_id = entry.get("conta_bancaria_id")
+    if cb_id and (marcar_pago != estava_pago):
+        ajuste = (entry.get("valor_juros", 0) or 0) + (entry.get("valor_multa", 0) or 0) - (entry.get("valor_desconto", 0) or 0)
+        liquido = (float(entry.get("valor") or 0)) + ajuste
+        conta_bancaria = await db.contas_bancarias.find_one({"id": cb_id}, {"_id": 0})
+        if conta_bancaria:
+            delta = -liquido if marcar_pago else liquido
+            await db.contas_bancarias.update_one(
+                {"id": cb_id},
+                {"$set": {"saldo_atual": (conta_bancaria.get("saldo_atual", 0) or 0) + delta, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            )
+
+    await db.contas_pagar.update_one({"id": id}, {"$set": update})
+    await create_audit_log(
+        current_user, "update", "conta_pagar", id,
+        f"{conta['descricao']} - PAGAMENTO {'CONFIRMADO' if marcar_pago else 'REVERTIDO P/ PENDENTE'} R$ {float(entry.get('valor') or 0):.2f}",
+        module="Administrativo", snapshot=conta, reversible=True,
+    )
+    return {
+        "message": "Pagamento confirmado" if marcar_pago else "Pagamento revertido para pendente",
+        "valor_total_pago": novo_valor_pago,
+        "saldo_restante": novo_saldo,
         "status": novo_status,
     }
 
@@ -969,28 +1064,28 @@ async def quitar_conta_receber(
     conta_bancaria_id = data.conta_bancaria_id if data else None
 
     valor_total = conta.get("valor_final") or conta.get("valor", 0)
-    valor_ja_recebido = conta.get("valor_recebido", 0) or 0
-    saldo_restante_atual = valor_total - valor_ja_recebido
+    recebimentos_historico = conta.get("recebimentos", []) or []
+
+    ja_recebido = sum(float(p.get("valor") or 0) for p in recebimentos_historico if p.get("status", "pago") == "pago")
+    ja_pendente = sum(float(p.get("valor") or 0) for p in recebimentos_historico if p.get("status", "pago") == "a_pagar")
 
     valor_recebido_input = None
     if data:
         valor_recebido_input = data.valor_recebido if data.valor_recebido is not None else data.valor_pago
-    valor_recebido_agora = valor_recebido_input if valor_recebido_input is not None else saldo_restante_atual
 
-    if valor_recebido_agora > saldo_restante_atual + 0.01:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Valor recebido ({valor_recebido_agora:.2f}) excede o saldo restante ({saldo_restante_atual:.2f})",
-        )
+    # Recebimento PARCIAL fica PENDENTE ("a receber") até ser confirmado manualmente.
+    registrar_pendente = valor_recebido_input is not None
 
-    novo_valor_recebido = valor_ja_recebido + valor_recebido_agora
-    novo_saldo_restante = valor_total - novo_valor_recebido
-
-    if novo_saldo_restante <= 0.01:
-        novo_status = "quitada"
-        novo_saldo_restante = 0
+    if registrar_pendente:
+        valor_recebido_agora = valor_recebido_input
+        disponivel = valor_total - ja_recebido - ja_pendente
+        if valor_recebido_agora > disponivel + 0.01:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Valor ({valor_recebido_agora:.2f}) excede o saldo ainda não lançado ({disponivel:.2f})",
+            )
     else:
-        novo_status = "parcial"
+        valor_recebido_agora = valor_total - ja_recebido - ja_pendente
 
     recebimento_registro = {
         "id": str(uuid.uuid4()),
@@ -1001,16 +1096,15 @@ async def quitar_conta_receber(
         "valor_desconto": (data.valor_desconto or 0) if data else 0,
         "conta_bancaria_id": conta_bancaria_id,
         "observacao": data.observacao if data else None,
+        "status": "a_pagar" if registrar_pendente else "pago",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "created_by": current_user.get("name", current_user.get("email", "")),
     }
-
-    # Valor líquido que entra na conta bancária (base + juros + multa - desconto)
-    ajuste_liquido = ((data.valor_juros or 0) + (data.valor_multa or 0) - (data.valor_desconto or 0)) if data else 0
-    valor_liquido_recebido = valor_recebido_agora + ajuste_liquido
-
-    recebimentos_historico = conta.get("recebimentos", []) or []
+    if not registrar_pendente:
+        recebimento_registro["data_confirmacao"] = data_recebimento
     recebimentos_historico.append(recebimento_registro)
+
+    novo_valor_recebido, novo_saldo_restante, novo_status = _recompute_conta_state(recebimentos_historico, valor_total)
 
     update_data = {
         "status": novo_status,
@@ -1022,7 +1116,9 @@ async def quitar_conta_receber(
     if novo_status == "quitada":
         update_data["data_recebimento"] = data_recebimento
 
-    if conta_bancaria_id:
+    if conta_bancaria_id and not registrar_pendente:
+        ajuste_liquido = ((data.valor_juros or 0) + (data.valor_multa or 0) - (data.valor_desconto or 0)) if data else 0
+        valor_liquido_recebido = valor_recebido_agora + ajuste_liquido
         update_data["conta_bancaria_id"] = conta_bancaria_id
         conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
         if conta_bancaria:
@@ -1034,18 +1130,86 @@ async def quitar_conta_receber(
 
     await db.contas_receber.update_one({"id": id}, {"$set": update_data})
 
-    tipo_quitacao = "QUITADA" if novo_status == "quitada" else f"RECEBIMENTO PARCIAL R$ {valor_recebido_agora:.2f}"
+    if registrar_pendente:
+        tipo_quitacao = f"RECEBIMENTO PARCIAL PENDENTE R$ {valor_recebido_agora:.2f}"
+        msg = "Recebimento parcial registrado como PENDENTE (a receber). Confirme como recebido para somar ao total."
+    else:
+        tipo_quitacao = "QUITADA" if novo_status == "quitada" else f"RECEBIMENTO R$ {valor_recebido_agora:.2f}"
+        msg = "Recebimento registrado com sucesso"
     await create_audit_log(
         current_user, "update", "conta_receber", id,
         f"{conta['descricao']} - {tipo_quitacao} em {data_recebimento}",
         module="Administrativo", snapshot=conta, reversible=True,
     )
     return {
-        "message": "Recebimento registrado com sucesso",
+        "message": msg,
         "data_recebimento": data_recebimento,
         "valor_recebido": valor_recebido_agora,
         "valor_total_recebido": novo_valor_recebido,
         "saldo_restante": novo_saldo_restante,
+        "status": novo_status,
+        "pendente": registrar_pendente,
+        "recebimento_id": recebimento_registro["id"],
+    }
+
+
+@financeiro_router.patch("/contas-receber/{id}/recebimento/{recebimento_id}/confirmar")
+async def confirmar_recebimento(
+    id: str, recebimento_id: str,
+    data: Optional[ConfirmarPagamentoRequest] = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Confirma (marca como RECEBIDO) ou reverte para pendente um recebimento parcial."""
+    conta = await db.contas_receber.find_one({"id": id}, {"_id": 0})
+    if not conta:
+        raise HTTPException(status_code=404, detail="Conta não encontrada")
+    recebimentos = conta.get("recebimentos", []) or []
+    entry = next((p for p in recebimentos if p.get("id") == recebimento_id), None)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Lançamento de recebimento não encontrado")
+
+    marcar_pago = data.pago if (data and data.pago is not None) else True
+    estava_pago = entry.get("status", "pago") == "pago"
+    hoje = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    entry["status"] = "pago" if marcar_pago else "a_pagar"
+    if marcar_pago:
+        entry["data_confirmacao"] = hoje
+        if data and data.conta_bancaria_id:
+            entry["conta_bancaria_id"] = data.conta_bancaria_id
+
+    valor_total = conta.get("valor_final") or conta.get("valor", 0)
+    novo_valor_recebido, novo_saldo, novo_status = _recompute_conta_state(recebimentos, valor_total)
+    update = {
+        "recebimentos": recebimentos,
+        "valor_recebido": novo_valor_recebido,
+        "saldo_restante": novo_saldo,
+        "status": novo_status,
+    }
+    if novo_status == "quitada":
+        update["data_recebimento"] = entry.get("data") or hoje
+
+    cb_id = entry.get("conta_bancaria_id")
+    if cb_id and (marcar_pago != estava_pago):
+        ajuste = (entry.get("valor_juros", 0) or 0) + (entry.get("valor_multa", 0) or 0) - (entry.get("valor_desconto", 0) or 0)
+        liquido = (float(entry.get("valor") or 0)) + ajuste
+        conta_bancaria = await db.contas_bancarias.find_one({"id": cb_id}, {"_id": 0})
+        if conta_bancaria:
+            delta = liquido if marcar_pago else -liquido
+            await db.contas_bancarias.update_one(
+                {"id": cb_id},
+                {"$set": {"saldo_atual": (conta_bancaria.get("saldo_atual", 0) or 0) + delta, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            )
+
+    await db.contas_receber.update_one({"id": id}, {"$set": update})
+    await create_audit_log(
+        current_user, "update", "conta_receber", id,
+        f"{conta['descricao']} - RECEBIMENTO {'CONFIRMADO' if marcar_pago else 'REVERTIDO P/ PENDENTE'} R$ {float(entry.get('valor') or 0):.2f}",
+        module="Administrativo", snapshot=conta, reversible=True,
+    )
+    return {
+        "message": "Recebimento confirmado" if marcar_pago else "Recebimento revertido para pendente",
+        "valor_total_recebido": novo_valor_recebido,
+        "saldo_restante": novo_saldo,
         "status": novo_status,
     }
 

@@ -358,9 +358,11 @@ export default function ContasReceberPage() {
         observacao: observacaoRecebimento || null
       });
       
-      const msg = response.data.status === "quitada" 
-        ? "Conta quitada com sucesso!" 
-        : `Recebimento parcial registrado! Saldo restante: ${formatCurrency(response.data.saldo_restante)}`;
+      const msg = response.data.pendente
+        ? `Recebimento parcial registrado como PENDENTE (a receber). Confirme no histórico (✓) para somar ao total.`
+        : response.data.status === "quitada"
+        ? "Conta quitada com sucesso!"
+        : `Recebimento registrado! Saldo restante: ${formatCurrency(response.data.saldo_restante)}`;
       toast.success(msg);
       
       setShowQuitarModal(false);
@@ -423,6 +425,24 @@ export default function ContasReceberPage() {
       toast.error("Erro ao exportar PDF");
     } finally {
       setExportandoId(null);
+    }
+  };
+
+  // Confirma (marca como recebido) ou reverte um recebimento parcial pendente
+  const [confirmandoPag, setConfirmandoPag] = useState(null);
+  const confirmarRecebimento = async (contaId, recebimentoId, pago) => {
+    setConfirmandoPag(recebimentoId);
+    try {
+      await axios.patch(`${API}/admin/contas-receber/${contaId}/recebimento/${recebimentoId}/confirmar`, { pago });
+      toast.success(pago ? "Recebimento confirmado!" : "Recebimento revertido para pendente");
+      const resp = await axios.get(`${API}/admin/contas-receber`);
+      const atualizada = (resp.data || []).find((c) => c.id === contaId);
+      if (atualizada) setQuitarContaInfo(atualizada);
+      fetchContas();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Erro ao confirmar recebimento");
+    } finally {
+      setConfirmandoPag(null);
     }
   };
 
@@ -1458,43 +1478,77 @@ export default function ContasReceberPage() {
                 <h4 className="font-medium text-sm">Recebimentos Realizados</h4>
                 {quitarContaInfo.recebimentos && quitarContaInfo.recebimentos.length > 0 ? (
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {quitarContaInfo.recebimentos.map((r, idx) => (
-                      <div key={r.id || idx} className="bg-white border rounded-lg p-3 space-y-1">
+                    {quitarContaInfo.recebimentos.map((r, idx) => {
+                      const rStatus = r.status || "pago";
+                      const isPendente = rStatus === "a_pagar";
+                      return (
+                      <div key={r.id || idx} className={`border rounded-lg p-3 space-y-1 ${isPendente ? "bg-amber-50 border-amber-300" : "bg-white"}`} data-testid={`recebimento-item-${r.id || idx}`}>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="text-sm text-gray-500">
-                            {formatDateBR(r.data)}
-                          </span>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-green-600">{formatCurrency(r.valor)}</span>
-                            {r.id && (
+                            <span className="text-sm text-gray-500">{formatDateBR(r.data)}</span>
+                            <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${isPendente ? "bg-amber-200 text-amber-800" : "bg-green-100 text-green-700"}`} data-testid={`recebimento-status-${r.id || idx}`}>
+                              {isPendente ? "A Receber" : "Recebido"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`font-bold ${isPendente ? "text-amber-700" : "text-green-600"}`}>{formatCurrency(r.valor)}</span>
+                            {isPendente ? (
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-xs text-blue-600 hover:bg-blue-50"
-                                title="Baixar recibo deste recebimento parcial"
-                                data-testid={`btn-recibo-parcial-${r.id}`}
-                                onClick={async () => {
-                                  try {
-                                    const resp = await axios.get(
-                                      `${API}/export/recibo/contas_receber/${quitarContaInfo.id}?pagamento_id=${r.id}`,
-                                      { responseType: 'blob' }
-                                    );
-                                    const url = window.URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }));
-                                    const link = document.createElement('a');
-                                    link.href = url;
-                                    link.setAttribute('download', `Recibo_Parcial_${r.id.substring(0,8)}.pdf`);
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    link.remove();
-                                    window.URL.revokeObjectURL(url);
-                                    toast.success("Recibo baixado");
-                                  } catch (err) {
-                                    toast.error("Erro ao baixar recibo");
-                                  }
-                                }}
+                                className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                disabled={confirmandoPag === r.id}
+                                title="Confirmar este recebimento (soma ao total recebido)"
+                                data-testid={`btn-confirmar-recebimento-${r.id}`}
+                                onClick={() => confirmarRecebimento(quitarContaInfo.id, r.id, true)}
                               >
-                                <FileDown size={12} className="mr-1" /> Recibo
+                                {confirmandoPag === r.id ? <Loader2 size={12} className="animate-spin" /> : <><CheckCircle2 size={12} className="mr-1" /> Confirmar</>}
                               </Button>
+                            ) : (
+                              <>
+                                {r.id && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-xs text-blue-600 hover:bg-blue-50"
+                                    title="Baixar recibo deste recebimento parcial"
+                                    data-testid={`btn-recibo-parcial-${r.id}`}
+                                    onClick={async () => {
+                                      try {
+                                        const resp = await axios.get(
+                                          `${API}/export/recibo/contas_receber/${quitarContaInfo.id}?pagamento_id=${r.id}`,
+                                          { responseType: 'blob' }
+                                        );
+                                        const url = window.URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }));
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', `Recibo_Parcial_${r.id.substring(0,8)}.pdf`);
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                        window.URL.revokeObjectURL(url);
+                                        toast.success("Recibo baixado");
+                                      } catch (err) {
+                                        toast.error("Erro ao baixar recibo");
+                                      }
+                                    }}
+                                  >
+                                    <FileDown size={12} className="mr-1" /> Recibo
+                                  </Button>
+                                )}
+                                {r.id && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-xs text-gray-500 hover:bg-gray-100"
+                                    disabled={confirmandoPag === r.id}
+                                    title="Reverter para pendente (retira do total recebido)"
+                                    data-testid={`btn-reverter-recebimento-${r.id}`}
+                                    onClick={() => confirmarRecebimento(quitarContaInfo.id, r.id, false)}
+                                  >
+                                    {confirmandoPag === r.id ? <Loader2 size={12} className="animate-spin" /> : "Reverter"}
+                                  </Button>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
@@ -1505,7 +1559,8 @@ export default function ContasReceberPage() {
                           Por: {r.created_by} em {formatDateTimeBR(r.created_at)}
                         </p>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500 text-center py-4">Nenhum recebimento registrado</p>
