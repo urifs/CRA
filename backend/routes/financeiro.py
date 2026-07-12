@@ -565,25 +565,47 @@ async def quitar_conta_pagar(
                 status_code=400,
                 detail=f"Valor ({valor_pago_agora:.2f}) excede o saldo ainda não lançado ({disponivel:.2f})",
             )
+        pagamento_registro = {
+            "id": str(uuid.uuid4()),
+            "data": data_pagamento,
+            "valor": valor_pago_agora,
+            "valor_juros": (data.valor_juros or 0) if data else 0,
+            "valor_multa": (data.valor_multa or 0) if data else 0,
+            "valor_desconto": (data.valor_desconto or 0) if data else 0,
+            "conta_bancaria_id": conta_bancaria_id,
+            "observacao": data.observacao if data else None,
+            "status": "a_pagar",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": current_user.get("name", current_user.get("email", "")),
+        }
+        pagamentos_historico.append(pagamento_registro)
     else:
-        valor_pago_agora = valor_total - ja_pago - ja_pendente
-
-    pagamento_registro = {
-        "id": str(uuid.uuid4()),
-        "data": data_pagamento,
-        "valor": valor_pago_agora,
-        "valor_juros": (data.valor_juros or 0) if data else 0,
-        "valor_multa": (data.valor_multa or 0) if data else 0,
-        "valor_desconto": (data.valor_desconto or 0) if data else 0,
-        "conta_bancaria_id": conta_bancaria_id,
-        "observacao": data.observacao if data else None,
-        "status": "a_pagar" if registrar_pendente else "pago",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "created_by": current_user.get("name", current_user.get("email", "")),
-    }
-    if not registrar_pendente:
-        pagamento_registro["data_confirmacao"] = data_pagamento
-    pagamentos_historico.append(pagamento_registro)
+        # QUITAÇÃO TOTAL: confirma todos os lançamentos pendentes e quita o restante.
+        for p in pagamentos_historico:
+            if p.get("status", "pago") == "a_pagar":
+                p["status"] = "pago"
+                p["data_confirmacao"] = data_pagamento
+        confirmado = sum(float(p.get("valor") or 0) for p in pagamentos_historico if p.get("status", "pago") == "pago")
+        valor_pago_agora = round(valor_total - confirmado, 2)
+        pagamento_registro = None
+        if valor_pago_agora > 0.01:
+            pagamento_registro = {
+                "id": str(uuid.uuid4()),
+                "data": data_pagamento,
+                "valor": valor_pago_agora,
+                "valor_juros": (data.valor_juros or 0) if data else 0,
+                "valor_multa": (data.valor_multa or 0) if data else 0,
+                "valor_desconto": (data.valor_desconto or 0) if data else 0,
+                "conta_bancaria_id": conta_bancaria_id,
+                "observacao": data.observacao if data else None,
+                "status": "pago",
+                "data_confirmacao": data_pagamento,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_by": current_user.get("name", current_user.get("email", "")),
+            }
+            pagamentos_historico.append(pagamento_registro)
+        else:
+            valor_pago_agora = 0
 
     # Estado da conta considera apenas lançamentos CONFIRMADOS (status pago)
     novo_valor_pago, novo_saldo_restante, novo_status = _recompute_conta_state(pagamentos_historico, valor_total)
@@ -598,10 +620,12 @@ async def quitar_conta_pagar(
     if novo_status == "quitada":
         update_data["data_pagamento"] = data_pagamento
 
-    # Movimenta o banco apenas quando o lançamento já entra confirmado (quitação total)
+    # Movimenta o banco apenas quando confirma (quitação total). Tudo que faltava
+    # confirmar (pendentes + restante) entra no banco informado.
     if conta_bancaria_id and not registrar_pendente:
+        base_movimentada = valor_total - ja_pago
         ajuste_liquido = ((data.valor_juros or 0) + (data.valor_multa or 0) - (data.valor_desconto or 0)) if data else 0
-        valor_liquido_movimentado = valor_pago_agora + ajuste_liquido
+        valor_liquido_movimentado = base_movimentada + ajuste_liquido
         update_data["conta_bancaria_id"] = conta_bancaria_id
         conta_bancaria = await db.contas_bancarias.find_one({"id": conta_bancaria_id}, {"_id": 0})
         if conta_bancaria:
